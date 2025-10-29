@@ -310,10 +310,6 @@ export default function Home() {
     }
   }, [activeTab, autoRefresh])
 
- 
-    // 최초 로드
-    fetchStandings()
-
     // 자동 새로고침 설정 (5분마다)
     const intervalId = setInterval(() => {
       fetchStandings()
@@ -323,33 +319,6 @@ export default function Home() {
     return () => clearInterval(intervalId)
   }, [selectedStandingsLeague])
 
-  // 뉴스 데이터 로드
-  useEffect(() => {
-    const fetchNews = async () => {
-      setLoadingNews(true)
-      try {
-        // 로컬 API 라우트를 통해 뉴스 가져오기 (CORS 회피)
-        const response = await fetch('/api/news')
-        
-        if (!response.ok) {
-          throw new Error('뉴스 로드 실패')
-        }
-        
-        const data = await response.json()
-        
-        // 데이터 설정
-        setNews(Array.isArray(data) ? data : [])
-      } catch (error) {
-        console.error('뉴스 로드 실패:', error)
-        // 실패 시 빈 배열
-        setNews([])
-      } finally {
-        setLoadingNews(false)
-      }
-    }
-
-    fetchNews()
-  }, [])
 
   // AI 분석 핸들러 - useCallback으로 최적화
   const handleAnalysis = useCallback(async (match: Match) => {
