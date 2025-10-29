@@ -1,7 +1,3 @@
-export async function GET(request: Request) {
-  // 디버깅 로그 추가
-  console.log('🔑 API Key 확인:', FOOTBALL_API_KEY ? '있음' : '없음')
-  console.log('🔑 API Key 길이:', FOOTBALL_API_KEY?.length || 0)
 
 import { NextResponse } from 'next/server'
 
@@ -17,6 +13,16 @@ const LEAGUES = {
   'FL1': 2015,   // Ligue 1
   'CL': 2001,    // Champions League
 }
+export async function GET(request: Request) {
+  // 🔍 디버깅 로그 (여기가 맞는 위치!)
+  console.log('🔑 API Key 확인:', FOOTBALL_API_KEY ? '있음' : '없음')
+  console.log('🔑 API Key 길이:', FOOTBALL_API_KEY?.length || 0)
+  
+  try {
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type') || 'scheduled'
+    
+    console.log('🔄 API 호출:', `matches-${type}`)
 
 export async function GET(request: Request) {
   try {
