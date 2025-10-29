@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { savePrediction } from '../lib/predictions'
+import { useState, useEffect } from 'react'
 
 interface Match {
   id: number
@@ -18,35 +17,6 @@ interface Match {
   status: string
 }
 
-interface StandingTeam {
-  position: number
-  team: {
-    name: string
-    shortName: string
-    crest: string
-  }
-  playedGames: number
-  won: number
-  draw: number
-  lost: number
-  points: number
-  goalsFor: number
-  goalsAgainst: number
-  goalDifference: number
-  form: string | null
-}
-
-interface StandingsData {
-  competition: {
-    name: string
-    emblem: string
-    code: string
-  }
-  season: {
-    currentMatchday: number
-  }
-  standings: StandingTeam[]
-}
 
 interface NewsItem {
   title: string
@@ -56,197 +26,168 @@ interface NewsItem {
   time?: string
 }
 
-// 팀 이름 번역 (한/영)
+// íŒ€ ì´ë¦„ ë²ˆì—­ (í•œ/ì˜)
 const getTeamName = (teamName: string, lang: 'ko' | 'en'): string => {
   if (lang === 'en') return teamName
   
   const teamTranslations: { [key: string]: string } = {
-    'Manchester United FC': '맨체스터 유나이티드',
-    'Manchester City FC': '맨체스터 시티',
-    'Liverpool FC': '리버풀',
-    'Chelsea FC': '첼시',
-    'Arsenal FC': '아스날',
-    'Tottenham Hotspur FC': '토트넘',
-    'FC Barcelona': '바르셀로나',
-    'Real Madrid CF': '레알 마드리드',
-    'Atlético de Madrid': '아틀레티코 마드리드',
-    'FC Bayern München': '바이에른 뮌헨',
-    'Borussia Dortmund': '도르트문트',
-    'Juventus FC': '유벤투스',
-    'Inter Milan': '인테르',
-    'AC Milan': '밀란',
-    'Paris Saint-Germain FC': '파리 생제르맹',
-    'SSC Napoli': '나폴리',
-    'US Lecce': '레체',
-    'Atalanta BC': '아탈란타',
-    'Como 1907': '코모',
-    'Hellas Verona': '베로나',
-    'AS Roma': '로마',
-    'Parma Calcio 1913': '파르마',
+    'Manchester United FC': 'ë§¨ì²´ìŠ¤í„° ìœ ë‚˜ì´í‹°ë“œ',
+    'Manchester City FC': 'ë§¨ì²´ìŠ¤í„° ì‹œí‹°',
+    'Liverpool FC': 'ë¦¬ë²„í’€',
+    'Chelsea FC': 'ì²¼ì‹œ',
+    'Arsenal FC': 'ì•„ìŠ¤ë‚ ',
+    'Tottenham Hotspur FC': 'í† íŠ¸ë„˜',
+    'FC Barcelona': 'ë°”ë¥´ì…€ë¡œë‚˜',
+    'Real Madrid CF': 'ë ˆì•Œ ë§ˆë“œë¦¬ë“œ',
+    'AtlÃ©tico de Madrid': 'ì•„í‹€ë ˆí‹°ì½” ë§ˆë“œë¦¬ë“œ',
+    'FC Bayern MÃ¼nchen': 'ë°”ì´ì—ë¥¸ ë®Œí—¨',
+    'Borussia Dortmund': 'ë„ë¥´íŠ¸ë¬¸íŠ¸',
+    'Juventus FC': 'ìœ ë²¤íˆ¬ìŠ¤',
+    'Inter Milan': 'ì¸í…Œë¥´',
+    'AC Milan': 'ë°€ëž€',
+    'Paris Saint-Germain FC': 'íŒŒë¦¬ ìƒì œë¥´ë§¹',
+    'SSC Napoli': 'ë‚˜í´ë¦¬',
+    'US Lecce': 'ë ˆì²´',
+    'Atalanta BC': 'ì•„íƒˆëž€íƒ€',
+    'Como 1907': 'ì½”ëª¨',
+    'Hellas Verona': 'ë² ë¡œë‚˜',
+    'AS Roma': 'ë¡œë§ˆ',
+    'Parma Calcio 1913': 'íŒŒë¥´ë§ˆ',
   }
   
   return teamTranslations[teamName] || teamName
 }
 
-// 팀 이름 한글 번역 (하위 호환)
+// íŒ€ ì´ë¦„ í•œê¸€ ë²ˆì—­ (í•˜ìœ„ í˜¸í™˜)
 const translateTeamName = (teamName: string): string => {
   return getTeamName(teamName, 'ko')
 }
 
-// 리그 이름 한글 번역
+// ë¦¬ê·¸ ì´ë¦„ í•œê¸€ ë²ˆì—­
 const translateLeagueName = (leagueName: string): string => {
   const leagueTranslations: { [key: string]: string } = {
-    'Premier League': '프리미어리그',
-    'Primera Division': '라리가',
-    'Serie A': '세리에 A',
-    'Bundesliga': '분데스리가',
-    'Ligue 1': '리그 1',
-    'UEFA Champions League': '챔피언스리그',
-    'Championship': '챔피언십',
-    '2. Bundesliga': '분데스2',
-    'Serie B': '세리에 B',
-    'Eredivisie': '에레디비시',
-    'Primeira Liga': '프리메이라리가',
-    'Scottish Premiership': '스코틀랜드 프리미어십',
+    'Premier League': 'í”„ë¦¬ë¯¸ì–´ë¦¬ê·¸',
+    'Primera Division': 'ë¼ë¦¬ê°€',
+    'Serie A': 'ì„¸ë¦¬ì— A',
+    'Bundesliga': 'ë¶„ë°ìŠ¤ë¦¬ê°€',
+    'Ligue 1': 'ë¦¬ê·¸ 1',
+    'UEFA Champions League': 'ì±”í”¼ì–¸ìŠ¤ë¦¬ê·¸',
+    'Championship': 'ì±”í”¼ì–¸ì‹­',
+    '2. Bundesliga': 'ë¶„ë°ìŠ¤2',
+    'Serie B': 'ì„¸ë¦¬ì— B',
+    'Eredivisie': 'ì—ë ˆë””ë¹„ì‹œ',
+    'Primeira Liga': 'í”„ë¦¬ë©”ì´ë¼ë¦¬ê°€',
+    'Scottish Premiership': 'ìŠ¤ì½”í‹€ëžœë“œ í”„ë¦¬ë¯¸ì–´ì‹­',
   }
   
   return leagueTranslations[leagueName] || leagueName
 }
 
-// 국기 이미지 URL 매핑 (flagcdn.com 무료 서비스)
+// êµ­ê¸° ì´ë¯¸ì§€ URL ë§¤í•‘ (flagcdn.com ë¬´ë£Œ ì„œë¹„ìŠ¤)
 const countryFlags: { [key: string]: string } = {
   'England': 'https://flagcdn.com/w40/gb-eng.png',
-  '잉글랜드': 'https://flagcdn.com/w40/gb-eng.png',
+  'ìž‰ê¸€ëžœë“œ': 'https://flagcdn.com/w40/gb-eng.png',
   'Spain': 'https://flagcdn.com/w40/es.png',
-  '스페인': 'https://flagcdn.com/w40/es.png',
+  'ìŠ¤íŽ˜ì¸': 'https://flagcdn.com/w40/es.png',
   'Italy': 'https://flagcdn.com/w40/it.png',
-  '이탈리아': 'https://flagcdn.com/w40/it.png',
+  'ì´íƒˆë¦¬ì•„': 'https://flagcdn.com/w40/it.png',
   'Germany': 'https://flagcdn.com/w40/de.png',
-  '독일': 'https://flagcdn.com/w40/de.png',
+  'ë…ì¼': 'https://flagcdn.com/w40/de.png',
   'France': 'https://flagcdn.com/w40/fr.png',
-  '프랑스': 'https://flagcdn.com/w40/fr.png',
+  'í”„ëž‘ìŠ¤': 'https://flagcdn.com/w40/fr.png',
   'Netherlands': 'https://flagcdn.com/w40/nl.png',
-  '네덜란드': 'https://flagcdn.com/w40/nl.png',
+  'ë„¤ëœëž€ë“œ': 'https://flagcdn.com/w40/nl.png',
   'Portugal': 'https://flagcdn.com/w40/pt.png',
-  '포르투갈': 'https://flagcdn.com/w40/pt.png',
+  'í¬ë¥´íˆ¬ê°ˆ': 'https://flagcdn.com/w40/pt.png',
   'Europe': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Europe.svg/40px-Flag_of_Europe.svg.png',
-  '유럽': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Europe.svg/40px-Flag_of_Europe.svg.png',
+  'ìœ ëŸ½': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Europe.svg/40px-Flag_of_Europe.svg.png',
 }
 
-// 리그 정보 (엠블럼, 국가 포함)
+// ë¦¬ê·¸ ì •ë³´ (ì— ë¸”ëŸ¼, êµ­ê°€ í¬í•¨)
 const leagueInfo: { [key: string]: { ko: string; en: string; logo: string; country: string; countryKo: string } } = {
   'Premier League': { 
-    ko: '프리미어리그', 
+    ko: 'í”„ë¦¬ë¯¸ì–´ë¦¬ê·¸', 
     en: 'Premier League',
     logo: 'https://crests.football-data.org/PL.png',
     country: 'England',
-    countryKo: '잉글랜드'
+    countryKo: 'ìž‰ê¸€ëžœë“œ'
   },
   'Championship': { 
-    ko: '챔피언십', 
+    ko: 'ì±”í”¼ì–¸ì‹­', 
     en: 'Championship',
     logo: 'https://crests.football-data.org/ELC.png',
     country: 'England',
-    countryKo: '잉글랜드'
+    countryKo: 'ìž‰ê¸€ëžœë“œ'
   },
   'Primera Division': { 
-    ko: '라리가', 
+    ko: 'ë¼ë¦¬ê°€', 
     en: 'La Liga',
     logo: 'https://crests.football-data.org/PD.png',
     country: 'Spain',
-    countryKo: '스페인'
+    countryKo: 'ìŠ¤íŽ˜ì¸'
   },
   'Serie A': { 
-    ko: '세리에 A', 
+    ko: 'ì„¸ë¦¬ì— A', 
     en: 'Serie A',
     logo: 'https://crests.football-data.org/SA.png',
     country: 'Italy',
-    countryKo: '이탈리아'
+    countryKo: 'ì´íƒˆë¦¬ì•„'
   },
   'Serie B': { 
-    ko: '세리에 B', 
+    ko: 'ì„¸ë¦¬ì— B', 
     en: 'Serie B',
     logo: 'https://crests.football-data.org/SA.png',
     country: 'Italy',
-    countryKo: '이탈리아'
+    countryKo: 'ì´íƒˆë¦¬ì•„'
   },
   'Bundesliga': { 
-    ko: '분데스리가', 
+    ko: 'ë¶„ë°ìŠ¤ë¦¬ê°€', 
     en: 'Bundesliga',
     logo: 'https://crests.football-data.org/BL1.png',
     country: 'Germany',
-    countryKo: '독일'
+    countryKo: 'ë…ì¼'
   },
   '2. Bundesliga': { 
-    ko: '분데스리가2', 
+    ko: 'ë¶„ë°ìŠ¤ë¦¬ê°€2', 
     en: '2. Bundesliga',
     logo: 'https://crests.football-data.org/BL1.png',
     country: 'Germany',
-    countryKo: '독일'
+    countryKo: 'ë…ì¼'
   },
   'Ligue 1': { 
-    ko: '리그 1', 
+    ko: 'ë¦¬ê·¸ 1', 
     en: 'Ligue 1',
     logo: 'https://crests.football-data.org/FL1.png',
     country: 'France',
-    countryKo: '프랑스'
+    countryKo: 'í”„ëž‘ìŠ¤'
   },
   'Eredivisie': { 
-    ko: '에레디비시', 
+    ko: 'ì—ë ˆë””ë¹„ì‹œ', 
     en: 'Eredivisie',
     logo: 'https://crests.football-data.org/DED.png',
     country: 'Netherlands',
-    countryKo: '네덜란드'
+    countryKo: 'ë„¤ëœëž€ë“œ'
   },
   'Primeira Liga': { 
-    ko: '프리메이라리가', 
+    ko: 'í”„ë¦¬ë©”ì´ë¼ë¦¬ê°€', 
     en: 'Primeira Liga',
     logo: 'https://crests.football-data.org/PPL.png',
     country: 'Portugal',
-    countryKo: '포르투갈'
+    countryKo: 'í¬ë¥´íˆ¬ê°ˆ'
   },
   'UEFA Champions League': { 
-    ko: '챔피언스리그', 
+    ko: 'ì±”í”¼ì–¸ìŠ¤ë¦¬ê·¸', 
     en: 'Champions League',
     logo: 'https://crests.football-data.org/CL.png',
     country: 'Europe',
-    countryKo: '유럽'
+    countryKo: 'ìœ ëŸ½'
   },
-}
-
-
-// 간단한 API 캐시 (메모리)
-const apiCache: { [key: string]: { data: any; timestamp: number } } = {}
-const CACHE_DURATION = 5 * 60 * 1000 // 5분
-
-const fetchWithCache = async (url: string, cacheKey: string) => {
-  // 캐시 확인
-  const cached = apiCache[cacheKey]
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log('✅ 캐시 사용:', cacheKey)
-    return cached.data
-  }
-  
-  // 새로 fetch
-  console.log('🔄 API 호출:', cacheKey)
-  const response = await fetch(url)
-  const data = await response.json()
-  
-  // 캐시 저장
-  apiCache[cacheKey] = { data, timestamp: Date.now() }
-  
-  return data
 }
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'scheduled' | 'results'>('scheduled')
   const [selectedLeague, setSelectedLeague] = useState<string>('all')
   const [matches, setMatches] = useState<Match[]>([])
-  
-  // 필터링된 경기 목록 - useMemo로 최적화
-  const filteredMatches = useMemo(() => {
-    return matches.filter(match => selectedLeague === 'all' || match.league === selectedLeague)
-  }, [matches, selectedLeague])
   const [loading, setLoading] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
@@ -259,49 +200,26 @@ export default function Home() {
   const [language, setLanguage] = useState<'ko' | 'en'>('ko')
   const [standings, setStandings] = useState<StandingsData | null>(null)
   const [loadingStandings, setLoadingStandings] = useState(false)
-  const [selectedStandingsLeague, setSelectedStandingsLeague] = useState<string>('PL') // 기본: 프리미어리그
-  const [selectedCountry, setSelectedCountry] = useState<string>(language === 'ko' ? '잉글랜드' : 'England') // 드롭다운 선택 국가
-  const [news, setNews] = useState<NewsItem[]>([])
-  const [loadingNews, setLoadingNews] = useState(false)
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date()) // 마지막 업데이트 시간
-  const [autoRefresh, setAutoRefresh] = useState(true) // 자동 새로고침 on/off
-  const [mounted, setMounted] = useState(false) // 클라이언트 마운트 여부
+  const [selectedStandingsLeague, setSelectedStandingsLeague] = useState<string>('PL') // ê¸°ë³¸: í”„ë¦¬ë¯¸ì–´ë¦¬ê·¸
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date()) // ë§ˆì§€ë§‰ ì—…ë°ì´íŠ¸ ì‹œê°„
+  const [autoRefresh, setAutoRefresh] = useState(true) // ìžë™ ìƒˆë¡œê³ ì¹¨ on/off
 
-  // 경기 ID 기반 고정 확률 생성 함수 (컴포넌트 레벨)
-  const generateFixedProbability = useCallback((matchId: number) => {
-    // 경기 ID를 시드로 사용하여 일관된 확률 생성
-    const seed = matchId * 9301 + 49297
-    const random = (seed % 233280) / 233280.0
-    
-    const homeWin = Math.floor(random * 30 + 35)
-    const draw = Math.floor(((seed * 7) % 100) / 100 * 15 + 20)
-    const awayWin = 100 - homeWin - draw
-    
-    return { homeWin, draw, awayWin }
-  }, [])
-
-  // 클라이언트 마운트 확인 및 타이틀 설정
-  useEffect(() => {
-    setMounted(true)
-    document.title = 'Tri-Ki | Football Match Predictions'
-  }, [])
-
-  // 언어 변경 시 선택된 국가도 업데이트
+  // ì–¸ì–´ ë³€ê²½ ì‹œ ì„ íƒëœ êµ­ê°€ë„ ì—…ë°ì´íŠ¸
   useEffect(() => {
     const countryMap: { [key: string]: string } = {
-      '잉글랜드': 'England', 'England': '잉글랜드',
-      '스페인': 'Spain', 'Spain': '스페인',
-      '이탈리아': 'Italy', 'Italy': '이탈리아',
-      '독일': 'Germany', 'Germany': '독일',
-      '프랑스': 'France', 'France': '프랑스',
-      '네덜란드': 'Netherlands', 'Netherlands': '네덜란드',
-      '포르투갈': 'Portugal', 'Portugal': '포르투갈',
-      '유럽': 'Europe', 'Europe': '유럽',
+      'ìž‰ê¸€ëžœë“œ': 'England', 'England': 'ìž‰ê¸€ëžœë“œ',
+      'ìŠ¤íŽ˜ì¸': 'Spain', 'Spain': 'ìŠ¤íŽ˜ì¸',
+      'ì´íƒˆë¦¬ì•„': 'Italy', 'Italy': 'ì´íƒˆë¦¬ì•„',
+      'ë…ì¼': 'Germany', 'Germany': 'ë…ì¼',
+      'í”„ëž‘ìŠ¤': 'France', 'France': 'í”„ëž‘ìŠ¤',
+      'ë„¤ëœëž€ë“œ': 'Netherlands', 'Netherlands': 'ë„¤ëœëž€ë“œ',
+      'í¬ë¥´íˆ¬ê°ˆ': 'Portugal', 'Portugal': 'í¬ë¥´íˆ¬ê°ˆ',
+      'ìœ ëŸ½': 'Europe', 'Europe': 'ìœ ëŸ½',
     }
-    setSelectedCountry(countryMap[selectedCountry] || (language === 'ko' ? '잉글랜드' : 'England'))
+    setSelectedCountry(countryMap[selectedCountry] || (language === 'ko' ? 'ìž‰ê¸€ëžœë“œ' : 'England'))
   }, [language])
 
-  // 다크모드 토글
+  // ë‹¤í¬ëª¨ë“œ í† ê¸€
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark')
@@ -310,86 +228,57 @@ export default function Home() {
     }
   }, [darkMode])
 
-  // 경기 데이터 로드 (자동 새로고침 포함)
+  // ê²½ê¸° ë°ì´í„° ë¡œë“œ (ìžë™ ìƒˆë¡œê³ ì¹¨ í¬í•¨)
   useEffect(() => {
     const fetchMatches = async () => {
       setLoading(true)
       try {
-        const data = await fetchWithCache(
-          `/api/matches?type=${activeTab}`,
-          `matches-${activeTab}`
-        )
+        const response = await fetch(`/api/matches?type=${activeTab}`)
+        const data = await response.json()
         setMatches(data)
-        setLastUpdate(new Date()) // 업데이트 시간 기록
+        setLastUpdate(new Date()) // ì—…ë°ì´íŠ¸ ì‹œê°„ ê¸°ë¡
       } catch (error) {
-        console.error('경기 로드 실패:', error)
+        console.error('ê²½ê¸° ë¡œë“œ ì‹¤íŒ¨:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    // 최초 로드
+    // ìµœì´ˆ ë¡œë“œ
     fetchMatches()
 
-    // 자동 새로고침 설정 (60초마다) - autoRefresh가 true일 때만
+    // ìžë™ ìƒˆë¡œê³ ì¹¨ ì„¤ì • (30ì´ˆë§ˆë‹¤) - autoRefreshê°€ trueì¼ ë•Œë§Œ
     if (autoRefresh) {
       const intervalId = setInterval(() => {
         fetchMatches()
-      }, 60000) // 60초 = 60,000ms
+      }, 30000) // 30ì´ˆ = 30,000ms
 
-      // 클린업: 컴포넌트 언마운트 시 interval 정리
+      // í´ë¦°ì—…: ì»´í¬ë„ŒíŠ¸ ì–¸ë§ˆìš´íŠ¸ ì‹œ interval ì •ë¦¬
       return () => clearInterval(intervalId)
     }
   }, [activeTab, autoRefresh])
 
-  // 순위표 데이터 로드 (자동 새로고침 포함)
+  // ìˆœìœ„í‘œ ë°ì´í„° ë¡œë“œ (ìžë™ ìƒˆë¡œê³ ì¹¨ í¬í•¨)
   useEffect(() => {
     const fetchStandings = async () => {
       setLoadingStandings(true)
       try {
-        const data = await fetchWithCache(
-          `/api/standings?league=${selectedStandingsLeague}`,
-          `standings-${selectedStandingsLeague}`
-        )
-        setStandings(data)
-      } catch (error) {
-        console.error('순위표 로드 실패:', error)
-      } finally {
-        setLoadingStandings(false)
-      }
-    }
-
-    // 최초 로드
-    fetchStandings()
-
-    // 자동 새로고침 설정 (5분마다)
-    const intervalId = setInterval(() => {
-      fetchStandings()
-    }, 300000) // 5분 = 300,000ms
-
-    // 클린업
-    return () => clearInterval(intervalId)
-  }, [selectedStandingsLeague])
-
-  // 뉴스 데이터 로드
-  useEffect(() => {
-    const fetchNews = async () => {
-      setLoadingNews(true)
+        const response = await fetch(`/api/standings?league=${selectedStandingsLeague}`)
       try {
-        // 로컬 API 라우트를 통해 뉴스 가져오기 (CORS 회피)
+        // ë¡œì»¬ API ë¼ìš°íŠ¸ë¥¼ í†µí•´ ë‰´ìŠ¤ ê°€ì ¸ì˜¤ê¸° (CORS íšŒí”¼)
         const response = await fetch('/api/news')
         
         if (!response.ok) {
-          throw new Error('뉴스 로드 실패')
+          throw new Error('ë‰´ìŠ¤ ë¡œë“œ ì‹¤íŒ¨')
         }
         
         const data = await response.json()
         
-        // 데이터 설정
+        // ë°ì´í„° ì„¤ì •
         setNews(Array.isArray(data) ? data : [])
       } catch (error) {
-        console.error('뉴스 로드 실패:', error)
-        // 실패 시 빈 배열
+        console.error('ë‰´ìŠ¤ ë¡œë“œ ì‹¤íŒ¨:', error)
+        // ì‹¤íŒ¨ ì‹œ ë¹ˆ ë°°ì—´
         setNews([])
       } finally {
         setLoadingNews(false)
@@ -399,8 +288,8 @@ export default function Home() {
     fetchNews()
   }, [])
 
-  // AI 분석 핸들러 - useCallback으로 최적화
-  const handleAnalysis = useCallback(async (match: Match) => {
+  // AI ë¶„ì„ í•¸ë“¤ëŸ¬
+  const handleAnalysis = async (match: Match) => {
     setSelectedMatch(match)
     setShowAnalysisModal(true)
     setLoadingAnalysis(true)
@@ -414,7 +303,7 @@ export default function Home() {
       })
       
       if (!response.ok) {
-        throw new Error(`API 오류: ${response.status}`)
+        throw new Error(`API ì˜¤ë¥˜: ${response.status}`)
       }
       
       const data = await response.json()
@@ -422,18 +311,18 @@ export default function Home() {
       if (data.analysis) {
         setAnalysis(data.analysis)
       } else {
-        throw new Error('분석 데이터가 없습니다')
+        throw new Error('ë¶„ì„ ë°ì´í„°ê°€ ì—†ìŠµë‹ˆë‹¤')
       }
     } catch (error) {
-      console.error('분석 오류:', error)
-      setAnalysis(`## ⚠️ 분석을 불러올 수 없습니다\n\n죄송합니다. 현재 AI 분석 서비스에 일시적인 문제가 발생했습니다.\n\n**가능한 원인:**\n- API 호출 제한 도달\n- 네트워크 연결 문제\n- 서버 일시적 오류\n\n**해결 방법:**\n- 잠시 후 다시 시도해주세요\n- 페이지를 새로고침 해보세요\n- 문제가 계속되면 관리자에게 문의해주세요\n\n오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+      console.error('ë¶„ì„ ì˜¤ë¥˜:', error)
+      setAnalysis(`## âš ï¸ ë¶„ì„ì„ ë¶ˆëŸ¬ì˜¬ ìˆ˜ ì—†ìŠµë‹ˆë‹¤\n\nì£„ì†¡í•©ë‹ˆë‹¤. í˜„ìž¬ AI ë¶„ì„ ì„œë¹„ìŠ¤ì— ì¼ì‹œì ì¸ ë¬¸ì œê°€ ë°œìƒí–ˆìŠµë‹ˆë‹¤.\n\n**ê°€ëŠ¥í•œ ì›ì¸:**\n- API í˜¸ì¶œ ì œí•œ ë„ë‹¬\n- ë„¤íŠ¸ì›Œí¬ ì—°ê²° ë¬¸ì œ\n- ì„œë²„ ì¼ì‹œì  ì˜¤ë¥˜\n\n**í•´ê²° ë°©ë²•:**\n- ìž ì‹œ í›„ ë‹¤ì‹œ ì‹œë„í•´ì£¼ì„¸ìš”\n- íŽ˜ì´ì§€ë¥¼ ìƒˆë¡œê³ ì¹¨ í•´ë³´ì„¸ìš”\n- ë¬¸ì œê°€ ê³„ì†ë˜ë©´ ê´€ë¦¬ìžì—ê²Œ ë¬¸ì˜í•´ì£¼ì„¸ìš”\n\nì˜¤ë¥˜ ìƒì„¸: ${error instanceof Error ? error.message : 'ì•Œ ìˆ˜ ì—†ëŠ” ì˜¤ë¥˜'}`)
     } finally {
       setLoadingAnalysis(false)
     }
-  }, [])
+  }
 
-  // H2H 분석 핸들러 - useCallback으로 최적화
-  const handleH2H = useCallback(async (match: Match) => {
+  // H2H ë¶„ì„ í•¸ë“¤ëŸ¬
+  const handleH2H = async (match: Match) => {
     setSelectedMatch(match)
     setShowH2HModal(true)
     setLoadingH2H(true)
@@ -447,7 +336,7 @@ export default function Home() {
       })
       
       if (!response.ok) {
-        throw new Error(`API 오류: ${response.status}`)
+        throw new Error(`API ì˜¤ë¥˜: ${response.status}`)
       }
       
       const data = await response.json()
@@ -455,17 +344,17 @@ export default function Home() {
       if (data.h2h) {
         setH2H(data.h2h)
       } else {
-        throw new Error('H2H 데이터가 없습니다')
+        throw new Error('H2H ë°ì´í„°ê°€ ì—†ìŠµë‹ˆë‹¤')
       }
     } catch (error) {
-      console.error('H2H 오류:', error)
-      setH2H(`## ⚠️ 상대전적을 불러올 수 없습니다\n\n죄송합니다. 현재 H2H 분석 서비스에 일시적인 문제가 발생했습니다.\n\n**가능한 원인:**\n- API 호출 제한 도달\n- 네트워크 연결 문제\n- 서버 일시적 오류\n\n**해결 방법:**\n- 잠시 후 다시 시도해주세요\n- 페이지를 새로고침 해보세요\n- AI 분석을 먼저 시도해보세요\n\n오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+      console.error('H2H ì˜¤ë¥˜:', error)
+      setH2H(`## âš ï¸ ìƒëŒ€ì „ì ì„ ë¶ˆëŸ¬ì˜¬ ìˆ˜ ì—†ìŠµë‹ˆë‹¤\n\nì£„ì†¡í•©ë‹ˆë‹¤. í˜„ìž¬ H2H ë¶„ì„ ì„œë¹„ìŠ¤ì— ì¼ì‹œì ì¸ ë¬¸ì œê°€ ë°œìƒí–ˆìŠµë‹ˆë‹¤.\n\n**ê°€ëŠ¥í•œ ì›ì¸:**\n- API í˜¸ì¶œ ì œí•œ ë„ë‹¬\n- ë„¤íŠ¸ì›Œí¬ ì—°ê²° ë¬¸ì œ\n- ì„œë²„ ì¼ì‹œì  ì˜¤ë¥˜\n\n**í•´ê²° ë°©ë²•:**\n- ìž ì‹œ í›„ ë‹¤ì‹œ ì‹œë„í•´ì£¼ì„¸ìš”\n- íŽ˜ì´ì§€ë¥¼ ìƒˆë¡œê³ ì¹¨ í•´ë³´ì„¸ìš”\n- AI ë¶„ì„ì„ ë¨¼ì € ì‹œë„í•´ë³´ì„¸ìš”\n\nì˜¤ë¥˜ ìƒì„¸: ${error instanceof Error ? error.message : 'ì•Œ ìˆ˜ ì—†ëŠ” ì˜¤ë¥˜'}`)
     } finally {
       setLoadingH2H(false)
     }
-  }, [])
+  }
 
-  // 리그별 활성 클래스 반환
+  // ë¦¬ê·¸ë³„ í™œì„± í´ëž˜ìŠ¤ ë°˜í™˜
   const getLeagueActiveClass = (leagueName: string): string => {
     const classes: { [key: string]: string } = {
       'Premier League': 'bg-purple-600 text-white shadow-lg',
@@ -485,33 +374,33 @@ export default function Home() {
   return (
     <div className={darkMode ? 'bg-gray-900' : 'bg-white'}>
       <div className="min-h-screen">
-        {/* 최상단 GNB 헤더 - 블랙 계열 */}
+        {/* ìµœìƒë‹¨ GNB í—¤ë” - ë¸”ëž™ ê³„ì—´ */}
         <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between h-16">
-              {/* 좌측: 로고 */}
+              {/* ì¢Œì¸¡: ë¡œê³  */}
               <div className="flex items-center gap-8">
                 <div className="flex items-center gap-2 text-white font-bold text-xl cursor-pointer hover:text-blue-400 transition-colors">
-                  <span className="text-2xl">⚽</span>
+                  <span className="text-2xl">âš½</span>
                   <span>FOOTBALL PREDICT</span>
                 </div>
 
-                {/* 메뉴 */}
+                {/* ë©”ë‰´ */}
                 <nav className="hidden md:flex items-center gap-1">
-                  {/* 리그 정보 드롭다운 */}
+                  {/* ë¦¬ê·¸ ì •ë³´ ë“œë¡­ë‹¤ìš´ */}
                   <div className="relative group">
                     <button className="px-4 py-2 text-white hover:bg-gray-800 rounded-lg transition-colors font-medium flex items-center gap-1">
-                      <span>{language === 'ko' ? '리그 정보' : 'League Info'}</span>
+                      <span>{language === 'ko' ? 'ë¦¬ê·¸ ì •ë³´' : 'League Info'}</span>
                       <span className="text-xs bg-blue-600 px-2 py-0.5 rounded-full">
                         {Object.keys(leagueInfo).length}
                       </span>
-                      <span className="text-xs">▼</span>
+                      <span className="text-xs">â–¼</span>
                     </button>
                     
-                    {/* 드롭다운 메뉴 - 2열 가로 레이아웃 */}
+                    {/* ë“œë¡­ë‹¤ìš´ ë©”ë‰´ - 2ì—´ ê°€ë¡œ ë ˆì´ì•„ì›ƒ */}
                     <div className="absolute top-full left-0 mt-1 bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-[500px] z-50">
                       {(() => {
-                        // 국가별로 리그 그룹화
+                        // êµ­ê°€ë³„ë¡œ ë¦¬ê·¸ ê·¸ë£¹í™”
                         const groupedLeagues: { [country: string]: Array<[string, typeof leagueInfo[string]]> } = {}
                         
                         Object.entries(leagueInfo).forEach(([key, info]) => {
@@ -522,23 +411,23 @@ export default function Home() {
                           groupedLeagues[country].push([key, info])
                         })
                         
-                        // 국가 순서 정의
+                        // êµ­ê°€ ìˆœì„œ ì •ì˜
                         const countryOrder = language === 'ko' 
-                          ? ['잉글랜드', '스페인', '이탈리아', '독일', '프랑스', '네덜란드', '포르투갈', '유럽']
+                          ? ['ìž‰ê¸€ëžœë“œ', 'ìŠ¤íŽ˜ì¸', 'ì´íƒˆë¦¬ì•„', 'ë…ì¼', 'í”„ëž‘ìŠ¤', 'ë„¤ëœëž€ë“œ', 'í¬ë¥´íˆ¬ê°ˆ', 'ìœ ëŸ½']
                           : ['England', 'Spain', 'Italy', 'Germany', 'France', 'Netherlands', 'Portugal', 'Europe']
                         
-                        // 현재 선택된 국가의 리그 목록
+                        // í˜„ìž¬ ì„ íƒëœ êµ­ê°€ì˜ ë¦¬ê·¸ ëª©ë¡
                         const currentLeagues = groupedLeagues[selectedCountry] || []
                         
                         return (
                           <div className="flex">
-                            {/* 좌측: 국가 탭 */}
+                            {/* ì¢Œì¸¡: êµ­ê°€ íƒ­ */}
                             <div className="w-40 border-r border-gray-700 py-2">
                               {countryOrder.map(country => {
                                 const leagues = groupedLeagues[country]
                                 if (!leagues) return null
                                 
-                                // 해당 국가의 총 경기 수 계산
+                                // í•´ë‹¹ êµ­ê°€ì˜ ì´ ê²½ê¸° ìˆ˜ ê³„ì‚°
                                 const totalCount = leagues.reduce((sum, [key]) => {
                                   return sum + matches.filter(m => m.league.includes(key.split(' ')[0])).length
                                 }, 0)
@@ -558,9 +447,9 @@ export default function Home() {
                                         <img 
                                           src={countryFlags[country]} 
                                           alt={country}
-                                          loading="lazy" className="w-5 h-4 object-cover rounded-sm"
+                                          className="w-5 h-4 object-cover rounded-sm"
                                           onError={(e) => {
-                                            e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="16"><text y="12" font-size="12">🌍</text></svg>'
+                                            e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="16"><text y="12" font-size="12">ðŸŒ</text></svg>'
                                           }}
                                         />
                                         <span>{country}</span>
@@ -572,7 +461,7 @@ export default function Home() {
                               })}
                             </div>
                             
-                            {/* 우측: 리그 목록 */}
+                            {/* ìš°ì¸¡: ë¦¬ê·¸ ëª©ë¡ */}
                             <div className="flex-1 py-2 max-h-[400px] overflow-y-auto">
                               {currentLeagues.length > 0 ? (
                                 currentLeagues.map(([key, info]) => {
@@ -583,7 +472,7 @@ export default function Home() {
                                       key={key}
                                       onClick={() => {
                                         setSelectedLeague(key)
-                                        // 드롭다운 닫기 (포커스 이동)
+                                        // ë“œë¡­ë‹¤ìš´ ë‹«ê¸° (í¬ì»¤ìŠ¤ ì´ë™)
                                         document.activeElement?.blur()
                                       }}
                                       className={`w-full block px-4 py-2.5 text-left text-white hover:bg-gray-700 transition-colors ${
@@ -595,9 +484,9 @@ export default function Home() {
                                           <img 
                                             src={info.logo} 
                                             alt={info[language]}
-                                            loading="lazy" className="w-full h-full object-contain"
+                                            className="w-full h-full object-contain"
                                             onError={(e) => {
-                                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text y="20" font-size="20">⚽</text></svg>'
+                                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text y="20" font-size="20">âš½</text></svg>'
                                             }}
                                           />
                                         </div>
@@ -609,7 +498,7 @@ export default function Home() {
                                 })
                               ) : (
                                 <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                                  {language === 'ko' ? '리그가 없습니다' : 'No leagues'}
+                                  {language === 'ko' ? 'ë¦¬ê·¸ê°€ ì—†ìŠµë‹ˆë‹¤' : 'No leagues'}
                                 </div>
                               )}
                             </div>
@@ -627,7 +516,7 @@ export default function Home() {
                         : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                     }`}
                   >
-                    {language === 'ko' ? '예정 경기' : 'Scheduled'}
+                    {language === 'ko' ? 'ì˜ˆì • ê²½ê¸°' : 'Scheduled'}
                   </button>
                   <button 
                     onClick={() => setActiveTab('results')}
@@ -637,14 +526,14 @@ export default function Home() {
                         : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                     }`}
                   >
-                    {language === 'ko' ? '경기 결과' : 'Results'}
+                    {language === 'ko' ? 'ê²½ê¸° ê²°ê³¼' : 'Results'}
                   </button>
                 </nav>
               </div>
 
-              {/* 우측: 언어 선택 + 다크모드 + 자동 새로고침 */}
+              {/* ìš°ì¸¡: ì–¸ì–´ ì„ íƒ + ë‹¤í¬ëª¨ë“œ + ìžë™ ìƒˆë¡œê³ ì¹¨ */}
               <div className="flex items-center gap-3">
-                {/* 자동 새로고침 토글 + 업데이트 시간 */}
+                {/* ìžë™ ìƒˆë¡œê³ ì¹¨ í† ê¸€ + ì—…ë°ì´íŠ¸ ì‹œê°„ */}
                 <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-1.5">
                   <button
                     onClick={() => setAutoRefresh(!autoRefresh)}
@@ -653,22 +542,22 @@ export default function Home() {
                         ? 'text-green-400 hover:text-green-300' 
                         : 'text-gray-500 hover:text-gray-400'
                     }`}
-                    title={autoRefresh ? '자동 새로고침 켜짐' : '자동 새로고침 꺼짐'}
+                    title={autoRefresh ? 'ìžë™ ìƒˆë¡œê³ ì¹¨ ì¼œì§' : 'ìžë™ ìƒˆë¡œê³ ì¹¨ êº¼ì§'}
                   >
-                    <span className={`${autoRefresh ? 'animate-spin' : ''}`}>🔄</span>
+                    <span className={`${autoRefresh ? 'animate-spin' : ''}`}>ðŸ”„</span>
                     <span>{autoRefresh ? (language === 'ko' ? 'ON' : 'ON') : (language === 'ko' ? 'OFF' : 'OFF')}</span>
                   </button>
                   <span className="text-gray-500 text-xs">|</span>
-                  <span className="text-gray-400 text-xs" title="마지막 업데이트">
-                    {mounted ? lastUpdate.toLocaleTimeString(language === 'ko' ? 'ko-KR' : 'en-US', { 
+                  <span className="text-gray-400 text-xs" title="ë§ˆì§€ë§‰ ì—…ë°ì´íŠ¸">
+                    {lastUpdate.toLocaleTimeString(language === 'ko' ? 'ko-KR' : 'en-US', { 
                       hour: '2-digit', 
                       minute: '2-digit',
                       second: '2-digit'
-                    }) : '--:--:--'}
+                    })}
                   </span>
                 </div>
 
-                {/* 언어 선택 */}
+                {/* ì–¸ì–´ ì„ íƒ */}
                 <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-1">
                   <button 
                     onClick={() => setLanguage('ko')}
@@ -680,10 +569,10 @@ export default function Home() {
                   >
                     <img 
                       src="https://flagcdn.com/w40/kr.png"
-                      alt="한국"
-                      loading="lazy" className="w-5 h-4 object-cover rounded-sm"
+                      alt="í•œêµ­"
+                      className="w-5 h-4 object-cover rounded-sm"
                       onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 30"><text y="20" font-size="20">🇰🇷</text></svg>'
+                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 30"><text y="20" font-size="20">ðŸ‡°ðŸ‡·</text></svg>'
                       }}
                     />
                     <span>KR</span>
@@ -699,28 +588,28 @@ export default function Home() {
                     <img 
                       src="https://flagcdn.com/w40/us.png"
                       alt="USA"
-                      loading="lazy" className="w-5 h-4 object-cover rounded-sm"
+                      className="w-5 h-4 object-cover rounded-sm"
                       onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 30"><text y="20" font-size="20">🇺🇸</text></svg>'
+                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 30"><text y="20" font-size="20">ðŸ‡ºðŸ‡¸</text></svg>'
                       }}
                     />
                     <span>EN</span>
                   </button>
                 </div>
 
-                {/* 다크모드 토글 */}
+                {/* ë‹¤í¬ëª¨ë“œ í† ê¸€ */}
                 <button
                   onClick={() => setDarkMode(!darkMode)}
                   className="px-3 py-1.5 rounded-lg bg-gray-800 text-white hover:bg-gray-700 transition-colors"
                 >
-                  {darkMode ? '🌙' : '☀️'}
+                  {darkMode ? 'ðŸŒ™' : 'â˜€ï¸'}
                 </button>
               </div>
             </div>
           </div>
         </header>
 
-        {/* 승률 배너 - 풀사이즈 스크롤 (모든 탭) */}
+        {/* ìŠ¹ë¥  ë°°ë„ˆ - í’€ì‚¬ì´ì¦ˆ ìŠ¤í¬ë¡¤ (ëª¨ë“  íƒ­) */}
         {matches.length > 0 && (
           <div className="w-full overflow-hidden shadow-lg mb-6">
             <div className={`${darkMode ? 'bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-y-2 border-slate-700' : 'bg-gradient-to-r from-blue-50 via-white to-blue-50 border-y-2 border-blue-200'} py-5`}>
@@ -729,19 +618,14 @@ export default function Home() {
                     const originalIndex = index % matches.length
                     const originalMatch = matches[originalIndex]
                     
-                    // 결과 탭인지 확인
+                    // ê²°ê³¼ íƒ­ì¸ì§€ í™•ì¸
                     const isResult = activeTab === 'results' && match.homeScore !== null
                     
-                    // 경기 ID 기반 고정 확률 사용
-                    const { homeWin, draw, awayWin } = generateFixedProbability(match.id)
+                    // ëžœë¤ ìŠ¹ë¥  ìƒì„± (ì˜ˆì • íƒ­ìš©)
+                    const homeWin = Math.floor(Math.random() * 30 + 35)
+                    const draw = Math.floor(Math.random() * 15 + 20)
+                    const awayWin = 100 - homeWin - draw
                     
-                    // 🔥 Supabase에 예측 저장 (예정 경기만, 중복 방지)
-                    if (activeTab === 'scheduled' && index < 10) {
-                      savePrediction(match, { homeWin, draw, awayWin }).catch(err => {
-                        console.error('저장 실패:', err)
-                      })
-                    }
-
                     return (
                       <div
                         key={`banner-${match.id}-${index}`}
@@ -752,12 +636,12 @@ export default function Home() {
                         }`}
                         onClick={() => activeTab === 'scheduled' && handleAnalysis(originalMatch)}
                       >
-                        {/* 홈팀 */}
+                        {/* í™ˆíŒ€ */}
                         <div className="flex items-center gap-2">
                           <img 
                             src={match.homeCrest} 
                             alt="" 
-                            loading="lazy" className="w-6 h-6 object-contain"
+                            className="w-6 h-6 object-contain"
                           />
                           <span className={`text-base font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {translateTeamName(match.homeTeam).substring(0, 8)}
@@ -766,7 +650,7 @@ export default function Home() {
                         
                         <span className={`text-sm font-bold ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>VS</span>
                         
-                        {/* 원정팀 */}
+                        {/* ì›ì •íŒ€ */}
                         <div className="flex items-center gap-2">
                           <span className={`text-base font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {translateTeamName(match.awayTeam).substring(0, 8)}
@@ -774,17 +658,17 @@ export default function Home() {
                           <img 
                             src={match.awayCrest} 
                             alt="" 
-                            loading="lazy" className="w-6 h-6 object-contain"
+                            className="w-6 h-6 object-contain"
                           />
                         </div>
                         
-                        {/* 결과 또는 승률 표시 */}
+                        {/* ê²°ê³¼ ë˜ëŠ” ìŠ¹ë¥  í‘œì‹œ */}
                         {isResult ? (
-                          // 경기 결과 표시
+                          // ê²½ê¸° ê²°ê³¼ í‘œì‹œ
                           <div className="flex items-center gap-2 ml-3 pl-3 border-l-2 border-gray-300 dark:border-slate-600">
                             <div className="text-center">
                               <div className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                                {language === 'ko' ? '최종' : 'Final'}
+                                {language === 'ko' ? 'ìµœì¢…' : 'Final'}
                               </div>
                               <div className={`text-lg font-extrabold ${
                                 match.homeScore! > match.awayScore! ? 'text-emerald-500' : 
@@ -796,11 +680,11 @@ export default function Home() {
                             </div>
                           </div>
                         ) : (
-                          // 승률 표시
+                          // ìŠ¹ë¥  í‘œì‹œ
                           <div className="flex gap-3 ml-3 pl-3 border-l-2 border-gray-300 dark:border-slate-600">
                             <div className="text-center">
                               <div className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                                {language === 'ko' ? '홈' : 'Home'}
+                                {language === 'ko' ? 'í™ˆ' : 'Home'}
                               </div>
                               <div className={`text-lg font-extrabold ${homeWin > 50 ? 'text-emerald-500' : 'text-blue-500'}`}>
                                 {homeWin}%
@@ -808,7 +692,7 @@ export default function Home() {
                             </div>
                             <div className="text-center">
                               <div className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                                {language === 'ko' ? '무' : 'Draw'}
+                                {language === 'ko' ? 'ë¬´' : 'Draw'}
                               </div>
                               <div className={`text-lg font-extrabold ${darkMode ? 'text-slate-400' : 'text-gray-400'}`}>
                                 {draw}%
@@ -816,7 +700,7 @@ export default function Home() {
                             </div>
                             <div className="text-center">
                               <div className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                                {language === 'ko' ? '원정' : 'Away'}
+                                {language === 'ko' ? 'ì›ì •' : 'Away'}
                               </div>
                               <div className={`text-lg font-extrabold ${awayWin > 50 ? 'text-emerald-500' : 'text-red-500'}`}>
                                 {awayWin}%
@@ -832,9 +716,9 @@ export default function Home() {
             </div>
           )}
 
-        {/* 메인 컨텐츠 영역 */}
+        {/* ë©”ì¸ ì»¨í…ì¸  ì˜ì—­ */}
         <div className="container mx-auto px-4 py-8">
-          {/* 리그 필터 */}
+          {/* ë¦¬ê·¸ í•„í„° */}
           <div className={`mb-6 overflow-x-auto ${darkMode ? 'bg-slate-900' : 'bg-gray-100'} rounded-xl`}>
             <div className="flex items-center gap-2 py-3 px-2 min-w-max">
               <button
@@ -847,7 +731,7 @@ export default function Home() {
                       : 'text-slate-600 hover:bg-gray-200'
                 }`}
               >
-                🌍 {language === 'ko' ? '전체' : 'All'}
+                ðŸŒ {language === 'ko' ? 'ì „ì²´' : 'All'}
               </button>
 
               {Array.from(new Set(matches.map(m => m.league))).map(league => {
@@ -869,13 +753,13 @@ export default function Home() {
                       <img 
                         src={leagueLogo} 
                         alt={league}
-                        loading="lazy" className="w-5 h-5 object-contain"
+                        className="w-5 h-5 object-contain"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none'
                         }}
                       />
                     ) : (
-                      <span className="text-lg">⚽</span>
+                      <span className="text-lg">âš½</span>
                     )}
                     <span>{translateLeagueName(league)}</span>
                   </button>
@@ -884,15 +768,15 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 메인 컨텐츠: 좌측 경기 목록 + 우측 순위표 */}
+          {/* ë©”ì¸ ì»¨í…ì¸ : ì¢Œì¸¡ ê²½ê¸° ëª©ë¡ + ìš°ì¸¡ ìˆœìœ„í‘œ */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* 좌측: 경기 목록 (75%) */}
+            {/* ì¢Œì¸¡: ê²½ê¸° ëª©ë¡ (75%) */}
             <div className="lg:col-span-9">
               {loading ? (
                 <div className="text-center py-20">
-                  <div className="text-6xl mb-4">⚽</div>
+                  <div className="text-6xl mb-4">âš½</div>
                   <p className={`text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {language === 'ko' ? '로딩 중...' : 'Loading...'}
+                    {language === 'ko' ? 'ë¡œë”© ì¤‘...' : 'Loading...'}
                   </p>
                 </div>
               ) : (
@@ -900,7 +784,7 @@ export default function Home() {
                   {selectedLeague !== 'all' && (
                     <div className={`text-center py-4 ${darkMode ? 'text-slate-400' : 'text-gray-700'}`}>
                       <p className="text-sm font-medium">
-                        {translateLeagueName(selectedLeague)} {language === 'ko' ? '경기' : 'Matches'}: {matches.filter(m => m.league === selectedLeague).length}{language === 'ko' ? '개' : ''}
+                        {translateLeagueName(selectedLeague)} {language === 'ko' ? 'ê²½ê¸°' : 'Matches'}: {matches.filter(m => m.league === selectedLeague).length}{language === 'ko' ? 'ê°œ' : ''}
                       </p>
                     </div>
                   )}
@@ -909,13 +793,15 @@ export default function Home() {
                     <div className={`text-center py-20 ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                       <p className="text-xl font-medium">
                         {language === 'ko' 
-                          ? `${translateLeagueName(selectedLeague)}의 경기가 없습니다` 
+                          ? `${translateLeagueName(selectedLeague)}ì˜ ê²½ê¸°ê°€ ì—†ìŠµë‹ˆë‹¤` 
                           : `No matches in ${selectedLeague}`}
                       </p>
                     </div>
                   ) : (
                     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2">
-                      {filteredMatches.map((match, index) => (
+                      {matches
+                      .filter(match => selectedLeague === 'all' || match.league === selectedLeague)
+                      .map((match, index) => (
                         <div
                           key={match.id}
                           className={`rounded-2xl p-6 border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105 animate-fade-in ${
@@ -925,33 +811,17 @@ export default function Home() {
                           }`}
                           style={{ animationDelay: `${index * 0.1}s` }}
                         >
-                          {/* 리그 & 날짜 */}
-                          <div className={`mb-4 pb-3 border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                {match.leagueLogo && (
-                                  <img 
-                                    src={match.leagueLogo} 
-                                    alt={match.league}
-                                    loading="lazy" className="w-5 h-5 object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none'
-                                    }}
-                                  />
-                                )}
-                                <span className={`text-sm font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                                  {translateLeagueName(match.league)}
-                                </span>
-                              </div>
-                              <span className={`text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                                {match.date} • {match.time}
-                              </span>
+                          {/* ë¦¬ê·¸ & ë‚ ì§œ */}
+                          <div className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                            <div className="font-bold text-blue-500">
+                              {translateLeagueName(match.league)}
                             </div>
+                            <div>{match.date} {match.time}</div>
                           </div>
 
-                          {/* 경기 정보 */}
+                          {/* ê²½ê¸° ì •ë³´ */}
                           <div className="flex items-center justify-between">
-                            {/* 홈 팀 */}
+                            {/* í™ˆ íŒ€ */}
                             <div className="flex-1 text-center">
                               <div className="mb-3 flex justify-center">
                                 <span className={`px-4 py-1.5 rounded-full text-xs font-black shadow-lg ${
@@ -959,15 +829,15 @@ export default function Home() {
                                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-2 border-blue-400' 
                                     : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-2 border-blue-300'
                                 }`}>
-                                  {language === 'ko' ? '홈' : 'HOME'}
+                                  ðŸ  {language === 'ko' ? 'í™ˆ' : 'HOME'}
                                 </span>
                               </div>
                               <img
                                 src={match.homeCrest}
                                 alt={match.homeTeam}
-                                loading="lazy" className="w-20 h-20 mx-auto mb-3 object-contain drop-shadow-lg"
+                                className="w-20 h-20 mx-auto mb-3 object-contain drop-shadow-lg"
                                 onError={(e) => {
-                                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><text y="40" font-size="40">⚽</text></svg>'
+                                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><text y="40" font-size="40">âš½</text></svg>'
                                 }}
                               />
                               <div className={`font-bold text-base leading-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -975,7 +845,7 @@ export default function Home() {
                               </div>
                             </div>
 
-                            {/* VS 또는 스코어 */}
+                            {/* VS ë˜ëŠ” ìŠ¤ì½”ì–´ */}
                             <div className="flex-1 text-center px-4">
                               {match.status === 'FINISHED' && match.homeScore !== null ? (
                                 <div className={`text-4xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -988,7 +858,7 @@ export default function Home() {
                               )}
                             </div>
 
-                            {/* 원정 팀 */}
+                            {/* ì›ì • íŒ€ */}
                             <div className="flex-1 text-center">
                               <div className="mb-3 flex justify-center">
                                 <span className={`px-4 py-1.5 rounded-full text-xs font-black shadow-lg ${
@@ -996,15 +866,15 @@ export default function Home() {
                                     ? 'bg-gradient-to-r from-red-600 to-red-700 text-white border-2 border-red-400' 
                                     : 'bg-gradient-to-r from-red-500 to-red-600 text-white border-2 border-red-300'
                                 }`}>
-                                  {language === 'ko' ? '원정' : 'AWAY'}
+                                  âœˆï¸ {language === 'ko' ? 'ì›ì •' : 'AWAY'}
                                 </span>
                               </div>
                               <img
                                 src={match.awayCrest}
                                 alt={match.awayTeam}
-                                loading="lazy" className="w-20 h-20 mx-auto mb-3 object-contain drop-shadow-lg"
+                                className="w-20 h-20 mx-auto mb-3 object-contain drop-shadow-lg"
                                 onError={(e) => {
-                                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><text y="40" font-size="40">⚽</text></svg>'
+                                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><text y="40" font-size="40">âš½</text></svg>'
                                 }}
                               />
                               <div className={`font-bold text-base leading-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -1013,7 +883,7 @@ export default function Home() {
                             </div>
                           </div>
 
-                          {/* AI 분석 & H2H 버튼 (예정 경기만) */}
+                          {/* AI ë¶„ì„ & H2H ë²„íŠ¼ (ì˜ˆì • ê²½ê¸°ë§Œ) */}
                           {activeTab === 'scheduled' && (
                             <div className="mt-4 pt-4 border-t-2 border-gray-200 dark:border-slate-700">
                               <div className="grid grid-cols-2 gap-3">
@@ -1025,8 +895,8 @@ export default function Home() {
                                       : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white'
                                   }`}
                                 >
-                                  <span className="animate-pulse-slow">🤖</span>
-                                  <span>{language === 'ko' ? 'AI 분석' : 'AI Analysis'}</span>
+                                  <span className="animate-pulse-slow">ðŸ¤–</span>
+                                  <span>{language === 'ko' ? 'AI ë¶„ì„' : 'AI Analysis'}</span>
                                 </button>
                                 <button
                                   onClick={() => handleH2H(match)}
@@ -1036,8 +906,8 @@ export default function Home() {
                                       : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white'
                                   }`}
                                 >
-                                  <span>📊</span>
-                                  <span>{language === 'ko' ? 'H2H 전적' : 'H2H Stats'}</span>
+                                  <span>ðŸ“Š</span>
+                                  <span>{language === 'ko' ? 'H2H ì „ì ' : 'H2H Stats'}</span>
                                 </button>
                               </div>
                             </div>
@@ -1050,22 +920,22 @@ export default function Home() {
             )}
             </div>
 
-            {/* 우측: 뉴스 섹션 (상단) + 순위표 (하단) */}
+            {/* ìš°ì¸¡: ë‰´ìŠ¤ ì„¹ì…˜ (ìƒë‹¨) + ìˆœìœ„í‘œ (í•˜ë‹¨) */}
             <div className="lg:col-span-3">
-              {/* 매치 프리뷰 섹션 - 상단 */}
+              {/* ë§¤ì¹˜ í”„ë¦¬ë·° ì„¹ì…˜ - ìƒë‹¨ */}
               <div className={`sticky top-20 rounded-2xl p-4 border-2 mb-6 ${
                 darkMode 
                   ? 'bg-slate-800 border-slate-700' 
                   : 'bg-white border-gray-200'
               }`}>
-                {/* 프리뷰 헤더 */}
+                {/* í”„ë¦¬ë·° í—¤ë” */}
                 <div className={`mb-4 pb-3 border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
                   <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    🎯 {language === 'ko' ? '경기 프리뷰' : 'Match Preview'}
+                    ðŸŽ¯ {language === 'ko' ? 'ê²½ê¸° í”„ë¦¬ë·°' : 'Match Preview'}
                   </h3>
                 </div>
 
-                {/* 프리뷰 카드들 */}
+                {/* í”„ë¦¬ë·° ì¹´ë“œë“¤ */}
                 <div className="space-y-4">
                   {matches
                     .filter(match => match.status === 'SCHEDULED' || match.status === 'TIMED')
@@ -1079,7 +949,7 @@ export default function Home() {
                             handleAnalysis(match)
                           }}
                         >
-                          {/* 프리뷰 카드 */}
+                          {/* í”„ë¦¬ë·° ì¹´ë“œ */}
                           <div 
                             className="relative w-full rounded-2xl overflow-hidden shadow-xl border-2 border-white/10"
                             style={{
@@ -1087,7 +957,7 @@ export default function Home() {
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                             }}
                           >
-                            {/* 애니메이션 배경 */}
+                            {/* ì• ë‹ˆë©”ì´ì…˜ ë°°ê²½ */}
                             <div className="absolute inset-0 opacity-20">
                               <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
                               <div className="absolute inset-0" style={{
@@ -1096,10 +966,20 @@ export default function Home() {
                               }}></div>
                             </div>
 
-                            {/* 팀 정보 - 중앙 */}
+                            {/* ë¦¬ê·¸ ë°°ì§€ */}
+                            <div className="absolute top-3 left-3 bg-gradient-to-r from-white/25 to-white/15 backdrop-blur-xl px-4 py-1.5 rounded-full text-xs font-bold text-white shadow-xl border border-white/20">
+                              {match.league}
+                            </div>
+
+                            {/* ë‚ ì§œ */}
+                            <div className="absolute top-3 right-3 bg-gradient-to-r from-white/25 to-white/15 backdrop-blur-xl px-4 py-1.5 rounded-full text-xs font-bold text-white shadow-xl border border-white/20">
+                              {match.date}
+                            </div>
+
+                            {/* íŒ€ ì •ë³´ - ì¤‘ì•™ */}
                             <div className="absolute inset-0 flex items-center justify-center">
                               <div className="flex items-center justify-between w-full px-8">
-                                {/* 홈 팀 */}
+                                {/* í™ˆ íŒ€ */}
                                 <div className="flex flex-col items-center space-y-3 group-hover:scale-110 transition-transform duration-300">
                                   <div className="relative">
                                     <div className="absolute inset-0 bg-white/30 rounded-full blur-md"></div>
@@ -1107,9 +987,9 @@ export default function Home() {
                                       <img 
                                         src={match.homeCrest} 
                                         alt={match.homeTeam}
-                                        loading="lazy" className="w-full h-full object-contain"
+                                        className="w-full h-full object-contain"
                                         onError={(e) => {
-                                          e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Ctext x="50%25" y="50%25" font-size="40" text-anchor="middle" dy=".3em"%3E⚽%3C/text%3E%3C/svg%3E'
+                                          e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Ctext x="50%25" y="50%25" font-size="40" text-anchor="middle" dy=".3em"%3Eâš½%3C/text%3E%3C/svg%3E'
                                         }}
                                       />
                                     </div>
@@ -1125,7 +1005,7 @@ export default function Home() {
                                   <div className="w-16 h-1 bg-white/60 rounded-full"></div>
                                 </div>
 
-                                {/* 원정 팀 */}
+                                {/* ì›ì • íŒ€ */}
                                 <div className="flex flex-col items-center space-y-3 group-hover:scale-110 transition-transform duration-300">
                                   <div className="relative">
                                     <div className="absolute inset-0 bg-white/30 rounded-full blur-md"></div>
@@ -1133,9 +1013,9 @@ export default function Home() {
                                       <img 
                                         src={match.awayCrest} 
                                         alt={match.awayTeam}
-                                        loading="lazy" className="w-full h-full object-contain"
+                                        className="w-full h-full object-contain"
                                         onError={(e) => {
-                                          e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Ctext x="50%25" y="50%25" font-size="40" text-anchor="middle" dy=".3em"%3E⚽%3C/text%3E%3C/svg%3E'
+                                          e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Ctext x="50%25" y="50%25" font-size="40" text-anchor="middle" dy=".3em"%3Eâš½%3C/text%3E%3C/svg%3E'
                                         }}
                                       />
                                     </div>
@@ -1147,7 +1027,12 @@ export default function Home() {
                               </div>
                             </div>
 
-                            {/* 클릭 유도 아이콘 */}
+                            {/* Preview ë¼ë²¨ - ì™¼ìª½ í•˜ë‹¨ */}
+                            <div className="absolute bottom-3 left-3 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-black px-4 py-2 rounded-lg shadow-xl">
+                              âš¡ Preview
+                            </div>
+
+                            {/* í´ë¦­ ìœ ë„ ì•„ì´ì½˜ */}
                             <div className="absolute top-1/2 right-4 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                               <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
                                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1157,14 +1042,14 @@ export default function Home() {
                             </div>
                           </div>
 
-                          {/* 경기 시간 - 강화된 디자인 */}
+                          {/* ê²½ê¸° ì‹œê°„ - ê°•í™”ëœ ë””ìžì¸ */}
                           <div className="mt-3 flex justify-center">
                             <div className={`relative flex items-center gap-3 px-5 py-3 rounded-2xl font-bold shadow-2xl ${
                               darkMode 
                                 ? 'bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 border-2 border-slate-600' 
                                 : 'bg-gradient-to-br from-white via-gray-50 to-white border-2 border-blue-200'
                             }`}>
-                              {/* 아이콘 */}
+                              {/* ì•„ì´ì½˜ */}
                               <div className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-xl ${
                                 darkMode 
                                   ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/50' 
@@ -1175,12 +1060,12 @@ export default function Home() {
                                 </svg>
                               </div>
                               
-                              {/* 텍스트 */}
+                              {/* í…ìŠ¤íŠ¸ */}
                               <div className="relative z-10 flex flex-col">
                                 <span className={`text-xs font-semibold uppercase tracking-wider ${
                                   darkMode ? 'text-blue-400' : 'text-blue-600'
                                 }`}>
-                                  {language === 'ko' ? '킥오프 시간' : 'Kickoff'}
+                                  {language === 'ko' ? 'í‚¥ì˜¤í”„ ì‹œê°„' : 'Kickoff'}
                                 </span>
                                 <span className={`text-xl font-black tracking-tight ${
                                   darkMode ? 'text-white' : 'text-gray-900'
@@ -1189,7 +1074,7 @@ export default function Home() {
                                 </span>
                               </div>
                               
-                              {/* 우측 장식 */}
+                              {/* ìš°ì¸¡ ìž¥ì‹ */}
                               <div className="relative z-10 flex items-center">
                                 <div className={`w-2 h-2 rounded-full animate-pulse ${
                                   darkMode ? 'bg-green-400' : 'bg-green-500'
@@ -1205,31 +1090,31 @@ export default function Home() {
                 {matches.filter(m => m.status === 'SCHEDULED' || m.status === 'TIMED').length === 0 && (
                   <div className={`text-center py-10 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
                     <p className="text-sm">
-                      {language === 'ko' ? '예정된 경기가 없습니다' : 'No upcoming matches'}
+                      {language === 'ko' ? 'ì˜ˆì •ëœ ê²½ê¸°ê°€ ì—†ìŠµë‹ˆë‹¤' : 'No upcoming matches'}
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* 순위표 섹션 - 하단 */}
+              {/* ìˆœìœ„í‘œ ì„¹ì…˜ - í•˜ë‹¨ */}
               <div className={`rounded-2xl p-4 border-2 ${
                 darkMode 
                   ? 'bg-slate-800 border-slate-700' 
                   : 'bg-white border-gray-200'
               }`}>
-                {/* 순위표 내용 */}
+                {/* ìˆœìœ„í‘œ ë‚´ìš© */}
                 {loadingStandings ? (
                   <div className="text-center py-10">
-                    <div className="text-4xl mb-2">⚽</div>
+                    <div className="text-4xl mb-2">âš½</div>
                     <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                      {language === 'ko' ? '로딩 중...' : 'Loading...'}
+                      {language === 'ko' ? 'ë¡œë”© ì¤‘...' : 'Loading...'}
                     </p>
                   </div>
                 ) : standings ? (
                   <div>
-                    {/* 리그 정보 + 화살표 네비게이션 */}
+                    {/* ë¦¬ê·¸ ì •ë³´ + í™”ì‚´í‘œ ë„¤ë¹„ê²Œì´ì…˜ */}
                     <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}">
-                      {/* 좌측 화살표 */}
+                      {/* ì¢Œì¸¡ í™”ì‚´í‘œ */}
                       <button
                         onClick={() => {
                           const leagues = ['PL', 'PD', 'SA', 'BL1', 'FL1', 'CL']
@@ -1242,187 +1127,24 @@ export default function Home() {
                             ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
                             : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
                         }`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                      
-                      {/* 리그 정보 */}
-                      <div className="flex items-center gap-2 flex-1 justify-center">
-                        <img 
-                          src={standings?.competition?.emblem || 'https://crests.football-data.org/PL.png'} 
-                          alt={standings?.competition?.name || 'League'}
-                          loading="lazy" className="w-8 h-8 object-contain"
-                        />
-                        <div className="text-center">
-                          <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {language === 'ko' ? leagueInfo[standings?.competition?.name]?.ko || standings?.competition?.name || 'League' : standings?.competition?.name || 'League'}
-                          </h3>
-                          <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                            {language === 'ko' ? 'R' : 'MD'} {standings?.season?.currentMatchday || 0}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* 우측 화살표 */}
-                      <button
-                        onClick={() => {
-                          const leagues = ['PL', 'PD', 'SA', 'BL1', 'FL1', 'CL']
-                          const currentIndex = leagues.indexOf(selectedStandingsLeague)
-                          const nextIndex = currentIndex === leagues.length - 1 ? 0 : currentIndex + 1
-                          setSelectedStandingsLeague(leagues[nextIndex])
-                        }}
-                        className={`p-1.5 rounded-lg transition-all ${
-                          darkMode
-                            ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
-                            : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* 순위 테이블 헤더 - 간결하게 */}
-                    <div className={`grid grid-cols-12 gap-1 text-xs font-bold mb-2 pb-1 border-b ${
-                      darkMode ? 'text-slate-400 border-slate-700' : 'text-gray-600 border-gray-200'
-                    }`}>
-                      <div className="col-span-1 text-center">#</div>
-                      <div className="col-span-6">{language === 'ko' ? '팀' : 'Team'}</div>
-                      <div className="col-span-2 text-center">{language === 'ko' ? 'P' : 'P'}</div>
-                      <div className="col-span-2 text-center">{language === 'ko' ? 'GD' : 'GD'}</div>
-                      <div className="col-span-1 text-center">{language === 'ko' ? 'Pts' : 'Pts'}</div>
-                    </div>
-
-                    {/* 순위 목록 - 간결하게 */}
-                    <div className="space-y-1 max-h-[600px] overflow-y-auto">
-                      {(standings?.standings || []).map((team, index) => (
-                        <div
-                          key={team.position}
-                          className={`grid grid-cols-12 gap-1 items-center py-1.5 px-2 rounded-lg transition-colors ${
-                            darkMode
-                              ? 'hover:bg-slate-700'
-                              : 'hover:bg-gray-100'
-                          } ${
-                            index < 4 
-                              ? 'border-l-4 border-blue-500' 
-                              : index < 6 
-                                ? 'border-l-4 border-emerald-500'
-                                : index >= standings.standings.length - 3
-                                  ? 'border-l-4 border-red-500'
-                                  : ''
-                          }`}
-                        >
-                          {/* 순위 */}
-                          <div className={`col-span-1 text-center font-bold ${
-                            darkMode ? 'text-white' : 'text-gray-900'
-                          }`}>
-                            {team.position}
-                          </div>
-                          
-                          {/* 팀 이름 + 로고 */}
-                          <div className="col-span-6 flex items-center gap-1.5">
-                            <img 
-                              src={team.team.crest} 
-                              alt={team.team.name}
-                              loading="lazy" className="w-4 h-4 object-contain flex-shrink-0"
-                              onError={(e) => {
-                                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><text y="12" font-size="12">⚽</text></svg>'
-                              }}
-                            />
-                            <span className={`text-xs font-medium truncate ${
-                              darkMode ? 'text-white' : 'text-gray-900'
-                            }`}>
-                              {language === 'ko' ? getTeamName(team.team.shortName, 'ko') : team.team.shortName}
-                            </span>
-                          </div>
-                          
-                          {/* 경기 수 */}
-                          <div className={`col-span-2 text-center text-xs ${
-                            darkMode ? 'text-slate-400' : 'text-gray-600'
-                          }`}>
-                            {team.playedGames}
-                          </div>
-                          
-                          {/* 득실차 */}
-                          <div className={`col-span-2 text-center text-xs font-semibold ${
-                            team.goalDifference > 0 
-                              ? 'text-emerald-500' 
-                              : team.goalDifference < 0 
-                                ? 'text-red-500' 
-                                : darkMode ? 'text-slate-400' : 'text-gray-600'
-                          }`}>
-                            {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
-                          </div>
-                          
-                          {/* 승점 */}
-                          <div className={`col-span-1 text-center text-sm font-bold ${
-                            darkMode ? 'text-white' : 'text-gray-900'
-                          }`}>
-                            {team.points}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* 범례 - 간결하게 */}
-                    <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 bg-blue-500 rounded"></div>
-                          <span className={darkMode ? 'text-slate-400' : 'text-gray-600'}>
-                            {language === 'ko' ? 'UCL' : 'UCL'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 bg-emerald-500 rounded"></div>
-                          <span className={darkMode ? 'text-slate-400' : 'text-gray-600'}>
-                            {language === 'ko' ? 'UEL' : 'UEL'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 bg-red-500 rounded"></div>
-                          <span className={darkMode ? 'text-slate-400' : 'text-gray-600'}>
-                            {language === 'ko' ? '강등' : 'REL'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={`text-center py-10 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                    <p className="text-sm">
-                      {language === 'ko' ? '순위표를 불러올 수 없습니다' : 'Cannot load standings'}
-                    </p>
-                  </div>
-                )}
+                    : 'text-gray-400 hover:text-white'
+                }`}>
+                  ê°œì¸ì •ë³´ì²˜ë¦¬ë°©ì¹¨
+                </a>
+                <a href="#" className={`transition-colors ${
+                  darkMode 
+                    ? 'text-slate-400 hover:text-white' 
+                    : 'text-gray-400 hover:text-white'
+                }`}>
+                  ë¬¸ì˜í•˜ê¸°
+                </a>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 푸터 - 심플 카피라이트만 */}
-        <footer className={`mt-12 border-t ${
-          darkMode 
-            ? 'bg-slate-900 border-slate-800' 
-            : 'bg-gray-900 border-gray-800'
-        }`}>
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex justify-center items-center">
-              {/* 카피라이트 */}
-              <p className={`text-sm ${
-                darkMode ? 'text-slate-400' : 'text-gray-400'
-              }`}>
-                © Tri-Ki. All rights reserved.
-              </p>
             </div>
           </div>
         </footer>
       </div>
 
-      {/* AI 분석 모달 */}
+      {/* AI ë¶„ì„ ëª¨ë‹¬ */}
       {showAnalysisModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
@@ -1436,7 +1158,7 @@ export default function Home() {
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                🤖 {language === 'ko' ? 'AI 경기 분석' : 'AI Match Analysis'}
+                ðŸ¤– {language === 'ko' ? 'AI ê²½ê¸° ë¶„ì„' : 'AI Match Analysis'}
               </h2>
               <button
                 onClick={() => setShowAnalysisModal(false)}
@@ -1444,7 +1166,7 @@ export default function Home() {
                   darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'
                 }`}
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -1464,12 +1186,12 @@ export default function Home() {
 
             {loadingAnalysis ? (
               <div className="text-center py-8">
-                <div className="inline-block animate-spin text-5xl mb-4">🤖</div>
-                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>AI가 경기를 분석 중입니다...</p>
+                <div className="inline-block animate-spin text-5xl mb-4">ðŸ¤–</div>
+                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>AIê°€ ê²½ê¸°ë¥¼ ë¶„ì„ ì¤‘ìž…ë‹ˆë‹¤...</p>
               </div>
-            ) : analysis.includes('불러올 수 없습니다') ? (
+            ) : analysis.includes('ë¶ˆëŸ¬ì˜¬ ìˆ˜ ì—†ìŠµë‹ˆë‹¤') ? (
               <div className="text-center py-8">
-                <div className="text-5xl mb-4">⚠️</div>
+                <div className="text-5xl mb-4">âš ï¸</div>
                 <div className={`whitespace-pre-wrap leading-relaxed mb-6 ${
                   darkMode ? 'text-slate-300' : 'text-gray-700'
                 }`}>
@@ -1479,7 +1201,7 @@ export default function Home() {
                   onClick={() => selectedMatch && handleAnalysis(selectedMatch)}
                   className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all transform hover:scale-105"
                 >
-                  🔄 다시 시도
+                  ðŸ”„ ë‹¤ì‹œ ì‹œë„
                 </button>
               </div>
             ) : (
@@ -1489,10 +1211,10 @@ export default function Home() {
                   const title = lines[0].replace(/^#+\s*/, '').trim()
                   const content = lines.slice(1).join('\n').trim()
                   
-                  const icons = ['📊', '⚽', '🎯', '📈', '💡', '🏆']
-                  const icon = icons[index] || '📋'
+                  const icons = ['ðŸ“Š', 'âš½', 'ðŸŽ¯', 'ðŸ“ˆ', 'ðŸ’¡', 'ðŸ†']
+                  const icon = icons[index] || 'ðŸ“‹'
                   
-                  const isPrediction = title.includes('예상 승률') || title.includes('승부 예측')
+                  const isPrediction = title.includes('ì˜ˆìƒ ìŠ¹ë¥ ') || title.includes('ìŠ¹ë¶€ ì˜ˆì¸¡')
                   
                   return (
                     <div
@@ -1551,7 +1273,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* H2H 모달 */}
+      {/* H2H ëª¨ë‹¬ */}
       {showH2HModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
@@ -1565,7 +1287,7 @@ export default function Home() {
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                📊 {language === 'ko' ? '상대 전적 (H2H)' : 'Head-to-Head (H2H)'}
+                ðŸ“Š {language === 'ko' ? 'ìƒëŒ€ ì „ì  (H2H)' : 'Head-to-Head (H2H)'}
               </h2>
               <button
                 onClick={() => setShowH2HModal(false)}
@@ -1573,7 +1295,7 @@ export default function Home() {
                   darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'
                 }`}
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -1593,8 +1315,8 @@ export default function Home() {
 
             {loadingH2H ? (
               <div className="text-center py-8">
-                <div className="inline-block animate-spin text-5xl mb-4">📊</div>
-                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>전적을 분석 중입니다...</p>
+                <div className="inline-block animate-spin text-5xl mb-4">ðŸ“Š</div>
+                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>ì „ì ì„ ë¶„ì„ ì¤‘ìž…ë‹ˆë‹¤...</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1603,8 +1325,8 @@ export default function Home() {
                   const title = lines[0].replace(/^#+\s*/, '').trim()
                   const content = lines.slice(1).join('\n').trim()
                   
-                  const icons = ['🔄', '🏠', '✈️', '⚽', '📈', '🎯']
-                  const icon = icons[index] || '📋'
+                  const icons = ['ðŸ”„', 'ðŸ ', 'âœˆï¸', 'âš½', 'ðŸ“ˆ', 'ðŸŽ¯']
+                  const icon = icons[index] || 'ðŸ“‹'
                   
                   return (
                     <div
@@ -1637,7 +1359,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* H2H 모달 */}
+      {/* H2H ëª¨ë‹¬ */}
       {showH2HModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
@@ -1651,7 +1373,7 @@ export default function Home() {
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                📊 {language === 'ko' ? '상대 전적 (H2H)' : 'Head-to-Head (H2H)'}
+                ðŸ“Š {language === 'ko' ? 'ìƒëŒ€ ì „ì  (H2H)' : 'Head-to-Head (H2H)'}
               </h2>
               <button
                 onClick={() => setShowH2HModal(false)}
@@ -1659,7 +1381,7 @@ export default function Home() {
                   darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'
                 }`}
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -1679,8 +1401,8 @@ export default function Home() {
 
             {loadingH2H ? (
               <div className="text-center py-8">
-                <div className="inline-block animate-spin text-5xl mb-4">📊</div>
-                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>전적을 분석 중입니다...</p>
+                <div className="inline-block animate-spin text-5xl mb-4">ðŸ“Š</div>
+                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>ì „ì ì„ ë¶„ì„ ì¤‘ìž…ë‹ˆë‹¤...</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1689,8 +1411,8 @@ export default function Home() {
                   const title = lines[0].replace(/^#+\s*/, '').trim()
                   const content = lines.slice(1).join('\n').trim()
                   
-                  const icons = ['🔄', '🏠', '✈️', '⚽', '📈', '🎯']
-                  const icon = icons[index] || '📋'
+                  const icons = ['ðŸ”„', 'ðŸ ', 'âœˆï¸', 'âš½', 'ðŸ“ˆ', 'ðŸŽ¯']
+                  const icon = icons[index] || 'ðŸ“‹'
                   
                   return (
                     <div
@@ -1787,7 +1509,7 @@ export default function Home() {
           animation: pulse-slow 2s ease-in-out infinite;
         }
 
-        /* 스크롤바 스타일링 */
+        /* ìŠ¤í¬ë¡¤ë°” ìŠ¤íƒ€ì¼ë§ */
         ::-webkit-scrollbar {
           width: 8px;
           height: 8px;
