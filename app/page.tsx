@@ -1210,12 +1210,12 @@ if (activeTab === 'scheduled' && index < 10) {
               </div>
 
               {/* 순위표 섹션 - 하단 */}
+              {/* 
               <div className={`rounded-2xl p-4 border-2 ${
                 darkMode 
                   ? 'bg-slate-800 border-slate-700' 
                   : 'bg-white border-gray-200'
               }`}>
-                {/* 순위표 내용 */}
                 {loadingStandings ? (
                   <div className="text-center py-10">
                     <div className="text-4xl mb-2">⚽</div>
@@ -1225,9 +1225,7 @@ if (activeTab === 'scheduled' && index < 10) {
                   </div>
                 ) : standings ? (
                   <div>
-                    {/* 리그 정보 + 화살표 네비게이션 */}
                     <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}">
-                      {/* 좌측 화살표 */}
                       <button
                         onClick={() => {
                           const leagues = ['PL', 'PD', 'SA', 'BL1', 'FL1', 'CL']
@@ -1246,7 +1244,6 @@ if (activeTab === 'scheduled' && index < 10) {
                         </svg>
                       </button>
                       
-                      {/* 리그 정보 */}
                       <div className="flex items-center gap-2 flex-1 justify-center">
                         <img 
                           src={standings?.competition?.emblem || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><text y="24" font-size="24">⚽</text></svg>'} 
@@ -1263,7 +1260,6 @@ if (activeTab === 'scheduled' && index < 10) {
                         </div>
                       </div>
                       
-                      {/* 우측 화살표 */}
                       <button
                         onClick={() => {
                           const leagues = ['PL', 'PD', 'SA', 'BL1', 'FL1', 'CL']
@@ -1283,7 +1279,6 @@ if (activeTab === 'scheduled' && index < 10) {
                       </button>
                     </div>
 
-                    {/* 순위 테이블 헤더 - 간결하게 */}
                     <div className={`grid grid-cols-12 gap-1 text-xs font-bold mb-2 pb-1 border-b ${
                       darkMode ? 'text-slate-400 border-slate-700' : 'text-gray-600 border-gray-200'
                     }`}>
@@ -1294,7 +1289,6 @@ if (activeTab === 'scheduled' && index < 10) {
                       <div className="col-span-1 text-center">{language === 'ko' ? 'Pts' : 'Pts'}</div>
                     </div>
 
-                    {/* 순위 목록 - 간결하게 */}
                     <div className="space-y-1 max-h-[600px] overflow-y-auto">
                       {standings?.standings?.map((team, index) => (
                         <div
@@ -1313,14 +1307,12 @@ if (activeTab === 'scheduled' && index < 10) {
                                   : ''
                           }`}
                         >
-                          {/* 순위 */}
                           <div className={`col-span-1 text-center font-bold ${
                             darkMode ? 'text-white' : 'text-gray-900'
                           }`}>
                             {team.position}
                           </div>
                           
-                          {/* 팀 이름 + 로고 */}
                           <div className="col-span-6 flex items-center gap-1.5">
                             <img 
                               src={team.team.crest} 
@@ -1337,14 +1329,12 @@ if (activeTab === 'scheduled' && index < 10) {
                             </span>
                           </div>
                           
-                          {/* 경기 수 */}
                           <div className={`col-span-2 text-center text-xs ${
                             darkMode ? 'text-slate-400' : 'text-gray-600'
                           }`}>
                             {team.playedGames}
                           </div>
                           
-                          {/* 득실차 */}
                           <div className={`col-span-2 text-center text-xs font-semibold ${
                             team.goalDifference > 0 
                               ? 'text-emerald-500' 
@@ -1355,7 +1345,6 @@ if (activeTab === 'scheduled' && index < 10) {
                             {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
                           </div>
                           
-                          {/* 승점 */}
                           <div className={`col-span-1 text-center text-sm font-bold ${
                             darkMode ? 'text-white' : 'text-gray-900'
                           }`}>
@@ -1365,7 +1354,6 @@ if (activeTab === 'scheduled' && index < 10) {
                       ))}
                     </div>
 
-                    {/* 범례 - 간결하게 */}
                     <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
                       <div className="space-y-1 text-xs">
                         <div className="flex items-center gap-1.5">
@@ -1397,6 +1385,7 @@ if (activeTab === 'scheduled' && index < 10) {
                   </div>
                 )}
               </div>
+              */}
             </div>
           </div>
         </div>
