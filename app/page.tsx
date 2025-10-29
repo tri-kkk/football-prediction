@@ -1,7 +1,7 @@
 'use client'
 
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { savePrediction } from '../lib/predictions'
-import { useState, useEffect, useCallback, useMemo } from 'react'
 
 interface Match {
   id: number
@@ -18,6 +18,35 @@ interface Match {
   status: string
 }
 
+interface StandingTeam {
+  position: number
+  team: {
+    name: string
+    shortName: string
+    crest: string
+  }
+  playedGames: number
+  won: number
+  draw: number
+  lost: number
+  points: number
+  goalsFor: number
+  goalsAgainst: number
+  goalDifference: number
+  form: string | null
+}
+
+interface StandingsData {
+  competition: {
+    name: string
+    emblem: string
+    code: string
+  }
+  season: {
+    currentMatchday: number
+  }
+  standings: StandingTeam[]
+}
 
 interface NewsItem {
   title: string
@@ -228,25 +257,15 @@ export default function Home() {
   const [loadingH2H, setLoadingH2H] = useState(false)
   const [showH2HModal, setShowH2HModal] = useState(false)
   const [language, setLanguage] = useState<'ko' | 'en'>('ko')
+  const [standings, setStandings] = useState<StandingsData | null>(null)
+  const [loadingStandings, setLoadingStandings] = useState(false)
+  const [selectedStandingsLeague, setSelectedStandingsLeague] = useState<string>('PL') // 기본: 프리미어리그
   const [selectedCountry, setSelectedCountry] = useState<string>(language === 'ko' ? '잉글랜드' : 'England') // 드롭다운 선택 국가
   const [news, setNews] = useState<NewsItem[]>([])
   const [loadingNews, setLoadingNews] = useState(false)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date()) // 마지막 업데이트 시간
   const [autoRefresh, setAutoRefresh] = useState(true) // 자동 새로고침 on/off
   const [mounted, setMounted] = useState(false) // 클라이언트 마운트 여부
-
-  // 경기 ID 기반 고정 확률 생성 함수 (컴포넌트 레벨)
-  const generateFixedProbability = useCallback((matchId: number) => {
-    // 경기 ID를 시드로 사용하여 일관된 확률 생성
-    const seed = matchId * 9301 + 49297
-    const random = (seed % 233280) / 233280.0
-    
-    const homeWin = Math.floor(random * 30 + 35)
-    const draw = Math.floor(((seed * 7) % 100) / 100 * 15 + 20)
-    const awayWin = 100 - homeWin - draw
-    
-    return { homeWin, draw, awayWin }
-  }, [])
 
   // 클라이언트 마운트 확인 및 타이틀 설정
   useEffect(() => {
@@ -310,12 +329,62 @@ export default function Home() {
     }
   }, [activeTab, autoRefresh])
 
+  // 순위표 데이터 로드 (자동 새로고침 포함)
+  useEffect(() => {
+    const fetchStandings = async () => {
+      setLoadingStandings(true)
+      try {
+        const data = await fetchWithCache(
+          `/api/standings?league=${selectedStandingsLeague}`,
+          `standings-${selectedStandingsLeague}`
+        )
+        setStandings(data)
+      } catch (error) {
+        console.error('순위표 로드 실패:', error)
+      } finally {
+        setLoadingStandings(false)
+      }
+    }
+
+    // 최초 로드
+    fetchStandings()
+
     // 자동 새로고침 설정 (5분마다)
     const intervalId = setInterval(() => {
       fetchStandings()
     }, 300000) // 5분 = 300,000ms
 
-   
+    // 클린업
+    return () => clearInterval(intervalId)
+  }, [selectedStandingsLeague])
+
+  // 뉴스 데이터 로드
+  useEffect(() => {
+    const fetchNews = async () => {
+      setLoadingNews(true)
+      try {
+        // 로컬 API 라우트를 통해 뉴스 가져오기 (CORS 회피)
+        const response = await fetch('/api/news')
+        
+        if (!response.ok) {
+          throw new Error('뉴스 로드 실패')
+        }
+        
+        const data = await response.json()
+        
+        // 데이터 설정
+        setNews(Array.isArray(data) ? data : [])
+      } catch (error) {
+        console.error('뉴스 로드 실패:', error)
+        // 실패 시 빈 배열
+        setNews([])
+      } finally {
+        setLoadingNews(false)
+      }
+    }
+
+    fetchNews()
+  }, [])
 
   // AI 분석 핸들러 - useCallback으로 최적화
   const handleAnalysis = useCallback(async (match: Match) => {
@@ -350,52 +419,39 @@ export default function Home() {
     }
   }, [])
 
-// H2H 분석 핸들러 - useCallback으로 최적화
-const handleH2H = useCallback(async (match: Match) => {
-  setSelectedMatch(match)
-  setShowH2HModal(true)
-  setLoadingH2H(true)
-  setH2H('')
-  
-  try {
-    const response = await fetch('/api/h2h', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ match })
-    })
-    
-    if (!response.ok) {
-      throw new Error(`API 오류: ${response.status}`)
+  // H2H 분석 핸들러 - useCallback으로 최적화
+  const handleH2H = useCallback(async (match: Match) => {
+    setSelectedMatch(match)
+    setShowH2HModal(true)
+    setLoadingH2H(true)
+    setH2H('')
+
+    try {
+      const response = await fetch('/api/h2h', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ match })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`API 오류: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (data.h2h) {
+        setH2H(data.h2h)
+      } else {
+        throw new Error('H2H 데이터가 없습니다')
+      }
+    } catch (error) {
+      console.error('H2H 오류:', error)
+      setH2H(`## ⚠️ 상대전적을 불러올 수 없습니다\n\n죄송합니다. 현재 H2H 분석 서비스에 일시적인 문제가 발생했습니다.\n\n**가능한 원인:**\n- API 호출 제한 도달\n- 네트워크 연결 문제\n- 서버 일시적 오류\n\n**해결 방법:**\n- 잠시 후 다시 시도해주세요\n- 페이지를 새로고침 해보세요\n- AI 분석을 먼저 시도해보세요\n\n오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+    } finally {
+      setLoadingH2H(false)
     }
-    
-    const data = await response.json()
-    
-    if (data.h2h) {
-      setH2H(data.h2h)
-    } else {
-      throw new Error('H2H 데이터가 없습니다')
-    }
-  } catch (error) {
-    console.error('H2H 오류:', error)
-    setH2H(`## ⚠️ 상대전적을 불러올 수 없습니다
+  }, [])
 
-죄송합니다. 현재 H2H 분석 서비스에 일시적인 문제가 발생했습니다.
-
-**가능한 원인:**
-- API 호출 제한 도달
-- 네트워크 연결 문제
-- 서버 일시적 오류
-
-**해결 방법:**
-- 잠시 후 다시 시도해주세요
-- 페이지를 새로고침 해보세요
-- AI 분석을 먼저 시도해보세요
-
-오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
-  } finally {
-    setLoadingH2H(false)
-  }
-}, [])
   // 리그별 활성 클래스 반환
   const getLeagueActiveClass = (leagueName: string): string => {
     const classes: { [key: string]: string } = {
@@ -515,7 +571,7 @@ const handleH2H = useCallback(async (match: Match) => {
                                       onClick={() => {
                                         setSelectedLeague(key)
                                         // 드롭다운 닫기 (포커스 이동)
-                                        document.activeElement?.blur()
+                                        (document.activeElement as HTMLElement)?.blur()
                                       }}
                                       className={`w-full block px-4 py-2.5 text-left text-white hover:bg-gray-700 transition-colors ${
                                         count === 0 ? 'opacity-50' : ''
@@ -663,15 +719,26 @@ const handleH2H = useCallback(async (match: Match) => {
                     // 결과 탭인지 확인
                     const isResult = activeTab === 'results' && match.homeScore !== null
                     
-                    // 경기 ID 기반 고정 확률 사용
-                    const { homeWin, draw, awayWin } = generateFixedProbability(match.id)
-                    
-                    // 🔥 Supabase에 예측 저장 (예정 경기만, 중복 방지)
-                    if (activeTab === 'scheduled' && index < 10) {
-                      savePrediction(match, { homeWin, draw, awayWin }).catch(err => {
-                        console.error('저장 실패:', err)
-                      })
+                    // 경기 ID 기반 고정 확률 생성 (언어 변경 시에도 동일한 값 유지)
+                    const generateFixedProbability = (matchId: number) => {
+                      // 경기 ID를 시드로 사용하여 일관된 확률 생성
+                      const seed = matchId * 9301 + 49297
+                      const random = (seed % 233280) / 233280.0
+                      
+                      const homeWin = Math.floor(random * 30 + 35)
+                      const draw = Math.floor(((seed * 7) % 100) / 100 * 15 + 20)
+                      const awayWin = 100 - homeWin - draw
+                      
+                      return { homeWin, draw, awayWin }
                     }
+                    
+                    const { homeWin, draw, awayWin } = generateFixedProbability(match.id)
+                    // 🔥 Supabase에 예측 저장
+if (activeTab === 'scheduled' && index < 10) {
+  savePrediction(match, { homeWin, draw, awayWin }).catch(err => {
+    console.error('저장 실패:', err)
+  })
+}
 
                     return (
                       <div
@@ -1142,7 +1209,197 @@ const handleH2H = useCallback(async (match: Match) => {
                 )}
               </div>
 
-          
+              {/* 순위표 섹션 - 하단 */}
+              <div className={`rounded-2xl p-4 border-2 ${
+                darkMode 
+                  ? 'bg-slate-800 border-slate-700' 
+                  : 'bg-white border-gray-200'
+              }`}>
+                {/* 순위표 내용 */}
+                {loadingStandings ? (
+                  <div className="text-center py-10">
+                    <div className="text-4xl mb-2">⚽</div>
+                    <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                      {language === 'ko' ? '로딩 중...' : 'Loading...'}
+                    </p>
+                  </div>
+                ) : standings ? (
+                  <div>
+                    {/* 리그 정보 + 화살표 네비게이션 */}
+                    <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}">
+                      {/* 좌측 화살표 */}
+                      <button
+                        onClick={() => {
+                          const leagues = ['PL', 'PD', 'SA', 'BL1', 'FL1', 'CL']
+                          const currentIndex = leagues.indexOf(selectedStandingsLeague)
+                          const prevIndex = currentIndex === 0 ? leagues.length - 1 : currentIndex - 1
+                          setSelectedStandingsLeague(leagues[prevIndex])
+                        }}
+                        className={`p-1.5 rounded-lg transition-all ${
+                          darkMode
+                            ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
+                            : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      
+                      {/* 리그 정보 */}
+                      <div className="flex items-center gap-2 flex-1 justify-center">
+                        <img 
+                          src={standings.competition.emblem} 
+                          alt={standings.competition.name}
+                          loading="lazy" className="w-8 h-8 object-contain"
+                        />
+                        <div className="text-center">
+                          <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {language === 'ko' ? leagueInfo[standings.competition.name]?.ko || standings.competition.name : standings.competition.name}
+                          </h3>
+                          <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                            {language === 'ko' ? 'R' : 'MD'} {standings.season.currentMatchday}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* 우측 화살표 */}
+                      <button
+                        onClick={() => {
+                          const leagues = ['PL', 'PD', 'SA', 'BL1', 'FL1', 'CL']
+                          const currentIndex = leagues.indexOf(selectedStandingsLeague)
+                          const nextIndex = currentIndex === leagues.length - 1 ? 0 : currentIndex + 1
+                          setSelectedStandingsLeague(leagues[nextIndex])
+                        }}
+                        className={`p-1.5 rounded-lg transition-all ${
+                          darkMode
+                            ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
+                            : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* 순위 테이블 헤더 - 간결하게 */}
+                    <div className={`grid grid-cols-12 gap-1 text-xs font-bold mb-2 pb-1 border-b ${
+                      darkMode ? 'text-slate-400 border-slate-700' : 'text-gray-600 border-gray-200'
+                    }`}>
+                      <div className="col-span-1 text-center">#</div>
+                      <div className="col-span-6">{language === 'ko' ? '팀' : 'Team'}</div>
+                      <div className="col-span-2 text-center">{language === 'ko' ? 'P' : 'P'}</div>
+                      <div className="col-span-2 text-center">{language === 'ko' ? 'GD' : 'GD'}</div>
+                      <div className="col-span-1 text-center">{language === 'ko' ? 'Pts' : 'Pts'}</div>
+                    </div>
+
+                    {/* 순위 목록 - 간결하게 */}
+                    <div className="space-y-1 max-h-[600px] overflow-y-auto">
+                      {standings.standings.map((team, index) => (
+                        <div
+                          key={team.position}
+                          className={`grid grid-cols-12 gap-1 items-center py-1.5 px-2 rounded-lg transition-colors ${
+                            darkMode
+                              ? 'hover:bg-slate-700'
+                              : 'hover:bg-gray-100'
+                          } ${
+                            index < 4 
+                              ? 'border-l-4 border-blue-500' 
+                              : index < 6 
+                                ? 'border-l-4 border-emerald-500'
+                                : index >= standings.standings.length - 3
+                                  ? 'border-l-4 border-red-500'
+                                  : ''
+                          }`}
+                        >
+                          {/* 순위 */}
+                          <div className={`col-span-1 text-center font-bold ${
+                            darkMode ? 'text-white' : 'text-gray-900'
+                          }`}>
+                            {team.position}
+                          </div>
+                          
+                          {/* 팀 이름 + 로고 */}
+                          <div className="col-span-6 flex items-center gap-1.5">
+                            <img 
+                              src={team.team.crest} 
+                              alt={team.team.name}
+                              loading="lazy" className="w-4 h-4 object-contain flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><text y="12" font-size="12">⚽</text></svg>'
+                              }}
+                            />
+                            <span className={`text-xs font-medium truncate ${
+                              darkMode ? 'text-white' : 'text-gray-900'
+                            }`}>
+                              {language === 'ko' ? getTeamName(team.team.shortName, 'ko') : team.team.shortName}
+                            </span>
+                          </div>
+                          
+                          {/* 경기 수 */}
+                          <div className={`col-span-2 text-center text-xs ${
+                            darkMode ? 'text-slate-400' : 'text-gray-600'
+                          }`}>
+                            {team.playedGames}
+                          </div>
+                          
+                          {/* 득실차 */}
+                          <div className={`col-span-2 text-center text-xs font-semibold ${
+                            team.goalDifference > 0 
+                              ? 'text-emerald-500' 
+                              : team.goalDifference < 0 
+                                ? 'text-red-500' 
+                                : darkMode ? 'text-slate-400' : 'text-gray-600'
+                          }`}>
+                            {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
+                          </div>
+                          
+                          {/* 승점 */}
+                          <div className={`col-span-1 text-center text-sm font-bold ${
+                            darkMode ? 'text-white' : 'text-gray-900'
+                          }`}>
+                            {team.points}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 범례 - 간결하게 */}
+                    <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 bg-blue-500 rounded"></div>
+                          <span className={darkMode ? 'text-slate-400' : 'text-gray-600'}>
+                            {language === 'ko' ? 'UCL' : 'UCL'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 bg-emerald-500 rounded"></div>
+                          <span className={darkMode ? 'text-slate-400' : 'text-gray-600'}>
+                            {language === 'ko' ? 'UEL' : 'UEL'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 bg-red-500 rounded"></div>
+                          <span className={darkMode ? 'text-slate-400' : 'text-gray-600'}>
+                            {language === 'ko' ? '강등' : 'REL'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`text-center py-10 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                    <p className="text-sm">
+                      {language === 'ko' ? '순위표를 불러올 수 없습니다' : 'Cannot load standings'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* 푸터 - 심플 카피라이트만 */}
         <footer className={`mt-12 border-t ${
@@ -1289,6 +1546,96 @@ const handleH2H = useCallback(async (match: Match) => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* H2H 모달 */}
+      {showH2HModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowH2HModal(false)}
+        >
+          <div
+            className={`rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl ${
+              darkMode ? 'bg-slate-800' : 'bg-white'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                📊 {language === 'ko' ? '상대 전적 (H2H)' : 'Head-to-Head (H2H)'}
+              </h2>
+              <button
+                onClick={() => setShowH2HModal(false)}
+                className={`text-3xl transition-transform hover:scale-110 ${
+                  darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                ×
+              </button>
+            </div>
+
+            {selectedMatch && (
+              <div className={`mb-4 pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <div className="text-center">
+                  <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {translateTeamName(selectedMatch.homeTeam)}
+                  </span>
+                  <span className={`mx-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>vs</span>
+                  <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {translateTeamName(selectedMatch.awayTeam)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {loadingH2H ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin text-5xl mb-4">📊</div>
+                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>전적을 분석 중입니다...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {h2h.split('##').filter(section => section.trim()).map((section, index) => {
+                  const lines = section.trim().split('\n')
+                  const title = lines[0].replace(/^#+\s*/, '').trim()
+                  const content = lines.slice(1).join('\n').trim()
+                  
+                  const icons = ['🔄', '🏠', '✈️', '⚽', '📈', '🎯']
+                  const icon = icons[index] || '📋'
+                  
+                  return (
+                    <div
+                      key={index}
+                      className={`p-5 rounded-xl border transition-all ${
+                        darkMode 
+                          ? 'bg-slate-700 border-slate-600 hover:border-slate-500' 
+                          : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-2xl">{icon}</span>
+                        <h3 className={`text-lg font-bold ${
+                          darkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {title}
+                        </h3>
+                      </div>
+                      <div className={`whitespace-pre-wrap leading-relaxed ${
+                        darkMode ? 'text-slate-300' : 'text-gray-700'
+                      }`}>
+                        {content}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* H2H 모달 */}
       {showH2HModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
