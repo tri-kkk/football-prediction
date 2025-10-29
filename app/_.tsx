@@ -571,7 +571,7 @@ export default function Home() {
                                       onClick={() => {
                                         setSelectedLeague(key)
                                         // 드롭다운 닫기 (포커스 이동)
-                                        document.activeElement?.blur()
+                                        (document.activeElement as HTMLElement)?.blur()
                                       }}
                                       className={`w-full block px-4 py-2.5 text-left text-white hover:bg-gray-700 transition-colors ${
                                         count === 0 ? 'opacity-50' : ''
