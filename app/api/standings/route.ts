@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server'
 
-const FOOTBALL_API_KEY = process.env.FOOTBALL_DATA_API_KEY || ''
+const FOOTBALL_DATA_API_KEY = process.env.FOOTBALL_DATA_API_KEY || ''
 const BASE_URL = 'https://api.football-data.org/v4'
 
-// 리그 코드 매핑
 const LEAGUES: { [key: string]: number } = {
-  'PL': 2021,    // Premier League
-  'PD': 2014,    // La Liga
-  'SA': 2019,    // Serie A
-  'BL1': 2002,   // Bundesliga
-  'FL1': 2015,   // Ligue 1
-  'CL': 2001,    // Champions League
+  'PL': 2021,
+  'PD': 2014,
+  'SA': 2019,
+  'BL1': 2002,
+  'FL1': 2015,
+  'CL': 2001,
 }
 
 export async function GET(request: Request) {
@@ -18,18 +17,17 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const league = searchParams.get('league') || 'PL'
     
-    console.log('🔄 API 호출:', `standings-${league}`)
+    console.log('Standings API 호출:', league)
     
-    // API 키 확인
-    if (!FOOTBALL_API_KEY) {
-      console.warn('⚠️ FOOTBALL_DATA_API_KEY가 설정되지 않음 - 더미 데이터 반환')
+    if (!FOOTBALL_DATA_API_KEY) {
+      console.warn('API KEY 없음 - 더미 데이터')
       return NextResponse.json(getDummyStandings(league))
     }
     
     const leagueId = LEAGUES[league]
     
     if (!leagueId) {
-      console.warn(`⚠️ 알 수 없는 리그: ${league}`)
+      console.warn('알 수 없는 리그:', league)
       return NextResponse.json(getDummyStandings('PL'))
     }
     
@@ -37,20 +35,19 @@ export async function GET(request: Request) {
       `${BASE_URL}/competitions/${leagueId}/standings`,
       {
         headers: {
-          'X-Auth-Token': FOOTBALL_API_KEY
+          'X-Auth-Token': FOOTBALL_DATA_API_KEY
         },
-        next: { revalidate: 300 } // 5분 캐시
+        next: { revalidate: 300 }
       }
     )
     
     if (!response.ok) {
-      console.error(`❌ Standings API 에러:`, response.status)
+      console.error('Standings API 에러:', response.status)
       return NextResponse.json(getDummyStandings(league))
     }
     
     const data = await response.json()
     
-    // 데이터 형식 변환
     const standings = {
       competition: {
         name: data.competition?.name || league,
@@ -79,16 +76,15 @@ export async function GET(request: Request) {
       })) || []
     }
     
-    console.log(`✅ ${standings.standings.length}개 팀 순위 로드 완료`)
+    console.log('순위표 로드 완료:', standings.standings.length, '팀')
     return NextResponse.json(standings)
     
   } catch (error) {
-    console.error('❌ Standings API 에러:', error)
+    console.error('Standings API 에러:', error)
     return NextResponse.json(getDummyStandings('PL'))
   }
 }
 
-// 더미 데이터 (API 실패 시 백업용)
 function getDummyStandings(league: string) {
   const leagueNames: { [key: string]: string } = {
     'PL': 'Premier League',
