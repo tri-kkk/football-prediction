@@ -1298,7 +1298,7 @@ export default function Home() {
 
                     {/* 순위 목록 - 간결하게 */}
                     <div className="space-y-1 max-h-[600px] overflow-y-auto">
-                      {standings.standings.map((team, index) => (
+                      {(standings?.standings || []).map((team, index) => (
                         <div
                           key={team.position}
                           className={`grid grid-cols-12 gap-1 items-center py-1.5 px-2 rounded-lg transition-colors ${
