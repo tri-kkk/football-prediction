@@ -350,8 +350,8 @@ export default function Home() {
     }
   }, [])
 
-  // H2H 분석 핸들러 - useCallback으로 최적화
-  const handleH2H = useCallback(async (match: Match) => {
+// H2H 분석 핸들러 - useCallback으로 최적화
+const handleH2H = useCallback(async (match: Match) => {
   setSelectedMatch(match)
   setShowH2HModal(true)
   setLoadingH2H(true)
@@ -377,12 +377,25 @@ export default function Home() {
     }
   } catch (error) {
     console.error('H2H 오류:', error)
-    setH2H(`## ⚠️ 상대전적을 불러올 수 없습니다\n\n죄송합니다. 현재 H2H 분석 서비스에 일시적인 문제가 발생했습니다.\n\n**가능한 원인:**\n- API 호출 제한 도달\n- 네트워크 연결 문제\n- 서버 일시적 오류\n\n**해결 방법:**\n- 잠시 후 다시 시도해주세요\n- 페이지를 새로고침 해보세요\n- AI 분석을 먼저 시도해보세요\n\n오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+    setH2H(`## ⚠️ 상대전적을 불러올 수 없습니다
+
+죄송합니다. 현재 H2H 분석 서비스에 일시적인 문제가 발생했습니다.
+
+**가능한 원인:**
+- API 호출 제한 도달
+- 네트워크 연결 문제
+- 서버 일시적 오류
+
+**해결 방법:**
+- 잠시 후 다시 시도해주세요
+- 페이지를 새로고침 해보세요
+- AI 분석을 먼저 시도해보세요
+
+오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
   } finally {
     setLoadingH2H(false)
   }
 }, [])
-
   // 리그별 활성 클래스 반환
   const getLeagueActiveClass = (leagueName: string): string => {
     const classes: { [key: string]: string } = {
