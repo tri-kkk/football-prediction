@@ -315,10 +315,7 @@ export default function Home() {
       fetchStandings()
     }, 300000) // 5분 = 300,000ms
 
-    // 클린업
-    return () => clearInterval(intervalId)
-  }, [selectedStandingsLeague])
-
+   
 
   // AI 분석 핸들러 - useCallback으로 최적화
   const handleAnalysis = useCallback(async (match: Match) => {
