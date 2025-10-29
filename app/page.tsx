@@ -1249,16 +1249,16 @@ if (activeTab === 'scheduled' && index < 10) {
                       {/* 리그 정보 */}
                       <div className="flex items-center gap-2 flex-1 justify-center">
                         <img 
-                          src={standings.competition.emblem} 
-                          alt={standings.competition.name}
-                          loading="lazy" className="w-8 h-8 object-contain"
+                          src={standings?.competition?.emblem || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><text y="24" font-size="24">⚽</text></svg>'} 
+                          alt={standings?.competition?.name || 'League'}
+                          className="w-8 h-8 object-contain"
                         />
                         <div className="text-center">
                           <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {language === 'ko' ? leagueInfo[standings.competition.name]?.ko || standings.competition.name : standings.competition.name}
+                            {standings?.competition?.name ? (language === 'ko' ? leagueInfo[standings.competition.name]?.ko || standings.competition.name : standings.competition.name) : 'Loading...'}
                           </h3>
                           <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                            {language === 'ko' ? 'R' : 'MD'} {standings.season.currentMatchday}
+                            {language === 'ko' ? 'R' : 'MD'} {standings?.season?.currentMatchday || '-'}
                           </p>
                         </div>
                       </div>
@@ -1296,7 +1296,7 @@ if (activeTab === 'scheduled' && index < 10) {
 
                     {/* 순위 목록 - 간결하게 */}
                     <div className="space-y-1 max-h-[600px] overflow-y-auto">
-                      {standings.standings.map((team, index) => (
+                      {standings?.standings?.map((team, index) => (
                         <div
                           key={team.position}
                           className={`grid grid-cols-12 gap-1 items-center py-1.5 px-2 rounded-lg transition-colors ${
@@ -1308,7 +1308,7 @@ if (activeTab === 'scheduled' && index < 10) {
                               ? 'border-l-4 border-blue-500' 
                               : index < 6 
                                 ? 'border-l-4 border-emerald-500'
-                                : index >= standings.standings.length - 3
+                                : index >= (standings?.standings?.length || 0) - 3
                                   ? 'border-l-4 border-red-500'
                                   : ''
                           }`}
