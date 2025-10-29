@@ -17,36 +17,43 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const league = searchParams.get('league') || 'PL'
     
-    console.log('Standings API 호출:', league)
+    console.log('=== STANDINGS DEBUG ===')
+    console.log('Has API Key:', !!FOOTBALL_DATA_API_KEY)
+    console.log('Key Length:', FOOTBALL_DATA_API_KEY.length)
+    console.log('League:', league)
     
     if (!FOOTBALL_DATA_API_KEY) {
-      console.warn('API KEY 없음 - 더미 데이터')
+      console.log('NO API KEY')
       return NextResponse.json(getDummyStandings(league))
     }
     
     const leagueId = LEAGUES[league]
-    
     if (!leagueId) {
-      console.warn('알 수 없는 리그:', league)
+      console.log('Unknown league:', league)
       return NextResponse.json(getDummyStandings('PL'))
     }
     
-    const response = await fetch(
-      `${BASE_URL}/competitions/${leagueId}/standings`,
-      {
-        headers: {
-          'X-Auth-Token': FOOTBALL_DATA_API_KEY
-        },
-        next: { revalidate: 300 }
-      }
-    )
+    const url = `${BASE_URL}/competitions/${leagueId}/standings`
+    console.log('Fetching:', url)
+    
+    const response = await fetch(url, {
+      headers: {
+        'X-Auth-Token': FOOTBALL_DATA_API_KEY
+      },
+      next: { revalidate: 300 }
+    })
+    
+    console.log('Response Status:', response.status)
     
     if (!response.ok) {
-      console.error('Standings API 에러:', response.status)
+      console.error('API Error:', response.status, response.statusText)
+      const errorText = await response.text()
+      console.error('Error details:', errorText)
       return NextResponse.json(getDummyStandings(league))
     }
     
     const data = await response.json()
+    console.log('Teams count:', data.standings?.[0]?.table?.length || 0)
     
     const standings = {
       competition: {
@@ -76,16 +83,18 @@ export async function GET(request: Request) {
       })) || []
     }
     
-    console.log('순위표 로드 완료:', standings.standings.length, '팀')
+    console.log('SUCCESS: Returning real data')
     return NextResponse.json(standings)
     
   } catch (error) {
-    console.error('Standings API 에러:', error)
+    console.error('Exception:', error)
     return NextResponse.json(getDummyStandings('PL'))
   }
 }
 
 function getDummyStandings(league: string) {
+  console.log('RETURNING DUMMY DATA for:', league)
+  
   const leagueNames: { [key: string]: string } = {
     'PL': 'Premier League',
     'PD': 'La Liga',
@@ -164,40 +173,6 @@ function getDummyStandings(league: string) {
         goalsAgainst: 18,
         goalDifference: 24,
         form: 'W,W,D,W,W'
-      },
-      {
-        position: 4,
-        team: {
-          name: 'Chelsea FC',
-          shortName: 'Chelsea',
-          crest: 'https://crests.football-data.org/61.png'
-        },
-        playedGames: 20,
-        won: 12,
-        draw: 5,
-        lost: 3,
-        points: 41,
-        goalsFor: 38,
-        goalsAgainst: 22,
-        goalDifference: 16,
-        form: 'W,D,W,L,W'
-      },
-      {
-        position: 5,
-        team: {
-          name: 'Manchester United FC',
-          shortName: 'Man Utd',
-          crest: 'https://crests.football-data.org/66.png'
-        },
-        playedGames: 20,
-        won: 11,
-        draw: 6,
-        lost: 3,
-        points: 39,
-        goalsFor: 35,
-        goalsAgainst: 25,
-        goalDifference: 10,
-        form: 'D,W,W,D,L'
       }
     ]
   }
