@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
 import { savePrediction } from '../lib/predictions'
+import { useState, useEffect, useCallback } from 'react'
 
 interface Match {
   id: number
@@ -356,6 +356,7 @@ export default function Home() {
   setShowH2HModal(true)
   setLoadingH2H(true)
   setH2H('')
+  
   try {
     const response = await fetch('/api/h2h', {
       method: 'POST',
@@ -364,7 +365,7 @@ export default function Home() {
     })
     
     if (!response.ok) {
-      throw new Error(`API 오류: ${response.status}`)  // ✅ 수정
+      throw new Error(`API 오류: ${response.status}`)
     }
     
     const data = await response.json()
@@ -376,7 +377,7 @@ export default function Home() {
     }
   } catch (error) {
     console.error('H2H 오류:', error)
-    setH2H(`## ⚠️ 상대전적을 불러올 수 없습니다\n\n죄송합니다. 현재 H2H 분석 서비스에 일시적인 문제가 발생했습니다.\n\n**가능한 원인:**\n- API 호출 제한 도달\n- 네트워크 연결 문제\n- 서버 일시적 오류\n\n**해결 방법:**\n- 잠시 후 다시 시도해주세요\n- 페이지를 새로고침 해보세요\n- AI 분석을 먼저 시도해보세요\n\n오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)  // ✅ 수정
+    setH2H(`## ⚠️ 상대전적을 불러올 수 없습니다\n\n죄송합니다. 현재 H2H 분석 서비스에 일시적인 문제가 발생했습니다.\n\n**가능한 원인:**\n- API 호출 제한 도달\n- 네트워크 연결 문제\n- 서버 일시적 오류\n\n**해결 방법:**\n- 잠시 후 다시 시도해주세요\n- 페이지를 새로고침 해보세요\n- AI 분석을 먼저 시도해보세요\n\n오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
   } finally {
     setLoadingH2H(false)
   }
