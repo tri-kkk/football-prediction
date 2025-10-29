@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const FOOTBALL_API_KEY = process.env.FOOTBALL_DATA_API_KEY || ''
+const FOOTBALL_DATA_API_KEY = process.env.FOOTBALL_DATA_API_KEY || ''
 const BASE_URL = 'https://api.football-data.org/v4'
 
 const LEAGUES = {
@@ -9,22 +9,25 @@ const LEAGUES = {
   'SA': 2019,
   'BL1': 2002,
   'FL1': 2015,
-  'CL': 2001,
 }
 
 export async function GET(request: Request) {
+  console.log('=== API DEBUG ===')
+  console.log('Has API Key:', !!FOOTBALL_DATA_API_KEY)
+  console.log('Key Length:', FOOTBALL_DATA_API_KEY.length)
+  
   try {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') || 'scheduled'
     
-    if (!FOOTBALL_API_KEY) {
+    if (!FOOTBALL_DATA_API_KEY) {
+      console.log('NO KEY - dummy data')
       return NextResponse.json(getDummyMatches(type))
     }
     
-    const allMatches: any[] = []
-    const leagueCodes = ['PL', 'PD', 'SA', 'BL1', 'FL1']
+    const matches: any[] = []
     
-    for (const code of leagueCodes) {
+    for (const code of ['PL', 'PD', 'SA']) {
       try {
         const leagueId = LEAGUES[code as keyof typeof LEAGUES]
         const status = type === 'scheduled' ? 'SCHEDULED' : 'FINISHED'
@@ -32,53 +35,55 @@ export async function GET(request: Request) {
         const response = await fetch(
           `${BASE_URL}/competitions/${leagueId}/matches?status=${status}`,
           {
-            headers: {
-              'X-Auth-Token': FOOTBALL_API_KEY
-            },
+            headers: { 'X-Auth-Token': FOOTBALL_DATA_API_KEY },
             next: { revalidate: 60 }
           }
         )
         
-        if (!response.ok) continue
+        console.log(`${code}: ${response.status}`)
         
-        const data = await response.json()
-        
-        if (data.matches && Array.isArray(data.matches)) {
-          const formattedMatches = data.matches.slice(0, 10).map((match: any) => ({
-            id: match.id,
-            league: data.competition?.name || code,
-            leagueLogo: data.competition?.emblem || '',
-            date: match.utcDate?.split('T')[0] || '',
-            time: match.utcDate?.split('T')[1]?.substring(0, 5) || '',
-            homeTeam: match.homeTeam?.name || '',
-            awayTeam: match.awayTeam?.name || '',
-            homeCrest: match.homeTeam?.crest || '',
-            awayCrest: match.awayTeam?.crest || '',
-            homeScore: match.score?.fullTime?.home ?? null,
-            awayScore: match.score?.fullTime?.away ?? null,
-            status: match.status || 'SCHEDULED'
-          }))
+        if (response.ok) {
+          const data = await response.json()
+          console.log(`${code} matches: ${data.matches?.length || 0}`)
           
-          allMatches.push(...formattedMatches)
+          if (data.matches) {
+            matches.push(...data.matches.slice(0, 5).map((m: any) => ({
+              id: m.id,
+              league: data.competition?.name || code,
+              leagueLogo: data.competition?.emblem || '',
+              date: m.utcDate?.split('T')[0] || '',
+              time: m.utcDate?.split('T')[1]?.substring(0, 5) || '',
+              homeTeam: m.homeTeam?.name || '',
+              awayTeam: m.awayTeam?.name || '',
+              homeCrest: m.homeTeam?.crest || '',
+              awayCrest: m.awayTeam?.crest || '',
+              homeScore: m.score?.fullTime?.home ?? null,
+              awayScore: m.score?.fullTime?.away ?? null,
+              status: m.status || 'SCHEDULED'
+            })))
+          }
         }
-      } catch (error) {
-        continue
+      } catch (err) {
+        console.error(`${code} error:`, err)
       }
     }
     
-    if (allMatches.length === 0) {
+    console.log(`Total: ${matches.length} matches`)
+    
+    if (matches.length === 0) {
       return NextResponse.json(getDummyMatches(type))
     }
     
-    return NextResponse.json(allMatches)
+    return NextResponse.json(matches)
     
   } catch (error) {
+    console.error('API Error:', error)
     return NextResponse.json(getDummyMatches('scheduled'))
   }
 }
 
 function getDummyMatches(type: string) {
-  const baseMatches = [
+  const matches = [
     {
       id: 1,
       league: 'Premier League',
@@ -95,7 +100,7 @@ function getDummyMatches(type: string) {
     },
     {
       id: 2,
-      league: 'Primera Division',
+      league: 'La Liga',
       leagueLogo: 'https://crests.football-data.org/PD.png',
       date: '2025-01-30',
       time: '21:00',
@@ -124,13 +129,13 @@ function getDummyMatches(type: string) {
   ]
   
   if (type === 'results') {
-    return baseMatches.map(match => ({
-      ...match,
+    return matches.map(m => ({
+      ...m,
       homeScore: Math.floor(Math.random() * 4),
       awayScore: Math.floor(Math.random() * 4),
       status: 'FINISHED'
     }))
   }
   
-  return baseMatches
+  return matches
 }
