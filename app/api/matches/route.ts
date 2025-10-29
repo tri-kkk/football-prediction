@@ -1,15 +1,4 @@
-🚨 여전히 코드 순서 문제!
-파일에 잘못된 코드가 섞여 있어요.
-
-🔧 완전히 새로 만들기
-app/api/matches/route.ts 완전 교체
-powershell# 기존 파일 삭제
-del app\api\matches\route.ts
-
-# 새로 생성
-notepad app\api\matches\route.ts
-아래 내용을 전체 복사해서 붙여넣으세요:
-typescriptimport { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 const FOOTBALL_API_KEY = process.env.FOOTBALL_DATA_API_KEY || ''
 const BASE_URL = 'https://api.football-data.org/v4'
@@ -29,7 +18,6 @@ export async function GET(request: Request) {
     const type = searchParams.get('type') || 'scheduled'
     
     if (!FOOTBALL_API_KEY) {
-      console.warn('API KEY 없음 - 더미 데이터 반환')
       return NextResponse.json(getDummyMatches(type))
     }
     
@@ -51,10 +39,7 @@ export async function GET(request: Request) {
           }
         )
         
-        if (!response.ok) {
-          console.error(`${code} API 에러:`, response.status)
-          continue
-        }
+        if (!response.ok) continue
         
         const data = await response.json()
         
@@ -77,7 +62,7 @@ export async function GET(request: Request) {
           allMatches.push(...formattedMatches)
         }
       } catch (error) {
-        console.error(`${code} 리그 에러:`, error)
+        continue
       }
     }
     
@@ -88,7 +73,6 @@ export async function GET(request: Request) {
     return NextResponse.json(allMatches)
     
   } catch (error) {
-    console.error('Matches API 에러:', error)
     return NextResponse.json(getDummyMatches('scheduled'))
   }
 }
