@@ -1251,16 +1251,16 @@ export default function Home() {
                       {/* 리그 정보 */}
                       <div className="flex items-center gap-2 flex-1 justify-center">
                         <img 
-                          src={standings.competition.emblem} 
-                          alt={standings.competition.name}
+                          src={standings?.competition?.emblem || 'https://crests.football-data.org/PL.png'} 
+                          alt={standings?.competition?.name || 'League'}
                           loading="lazy" className="w-8 h-8 object-contain"
                         />
                         <div className="text-center">
                           <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {language === 'ko' ? leagueInfo[standings.competition.name]?.ko || standings.competition.name : standings.competition.name}
+                            {language === 'ko' ? leagueInfo[standings?.competition?.name]?.ko || standings?.competition?.name || 'League' : standings?.competition?.name || 'League'}
                           </h3>
                           <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                            {language === 'ko' ? 'R' : 'MD'} {standings.season.currentMatchday}
+                            {language === 'ko' ? 'R' : 'MD'} {standings?.season?.currentMatchday || 0}
                           </p>
                         </div>
                       </div>
