@@ -352,36 +352,35 @@ export default function Home() {
 
   // H2H 분석 핸들러 - useCallback으로 최적화
   const handleH2H = useCallback(async (match: Match) => {
-    setSelectedMatch(match)
-    setShowH2HModal(true)
-    setLoadingH2H(true)
-    setH2H('')
-
-    try {
-      const response = await fetch('/api/h2h', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ match })
-      })
-      
-      if (!response.ok) {
-        throw new Error(`API 오류: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (data.h2h) {
-        setH2H(data.h2h)
-      } else {
-        throw new Error('H2H 데이터가 없습니다')
-      }
-    } catch (error) {
-      console.error('H2H 오류:', error)
-      setH2H(`## ⚠️ 상대전적을 불러올 수 없습니다\n\n죄송합니다. 현재 H2H 분석 서비스에 일시적인 문제가 발생했습니다.\n\n**가능한 원인:**\n- API 호출 제한 도달\n- 네트워크 연결 문제\n- 서버 일시적 오류\n\n**해결 방법:**\n- 잠시 후 다시 시도해주세요\n- 페이지를 새로고침 해보세요\n- AI 분석을 먼저 시도해보세요\n\n오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
-    } finally {
-      setLoadingH2H(false)
+  setSelectedMatch(match)
+  setShowH2HModal(true)
+  setLoadingH2H(true)
+  setH2H('')
+  try {
+    const response = await fetch('/api/h2h', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ match })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`)  // ✅ 수정
     }
-  }, [])
+    
+    const data = await response.json()
+    
+    if (data.h2h) {
+      setH2H(data.h2h)
+    } else {
+      throw new Error('H2H 데이터가 없습니다')
+    }
+  } catch (error) {
+    console.error('H2H 오류:', error)
+    setH2H(`## ⚠️ 상대전적을 불러올 수 없습니다\n\n죄송합니다. 현재 H2H 분석 서비스에 일시적인 문제가 발생했습니다.\n\n**가능한 원인:**\n- API 호출 제한 도달\n- 네트워크 연결 문제\n- 서버 일시적 오류\n\n**해결 방법:**\n- 잠시 후 다시 시도해주세요\n- 페이지를 새로고침 해보세요\n- AI 분석을 먼저 시도해보세요\n\n오류 상세: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)  // ✅ 수정
+  } finally {
+    setLoadingH2H(false)
+  }
+}, [])
 
   // 리그별 활성 클래스 반환
   const getLeagueActiveClass = (leagueName: string): string => {
