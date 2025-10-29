@@ -1,7 +1,7 @@
 'use client'
 
 import { savePrediction } from '../lib/predictions'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 interface Match {
   id: number
@@ -1289,96 +1289,6 @@ const handleH2H = useCallback(async (match: Match) => {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* H2H 모달 */}
-      {showH2HModal && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          onClick={() => setShowH2HModal(false)}
-        >
-          <div
-            className={`rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl ${
-              darkMode ? 'bg-slate-800' : 'bg-white'
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                📊 {language === 'ko' ? '상대 전적 (H2H)' : 'Head-to-Head (H2H)'}
-              </h2>
-              <button
-                onClick={() => setShowH2HModal(false)}
-                className={`text-3xl transition-transform hover:scale-110 ${
-                  darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'
-                }`}
-              >
-                ×
-              </button>
-            </div>
-
-            {selectedMatch && (
-              <div className={`mb-4 pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                <div className="text-center">
-                  <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {translateTeamName(selectedMatch.homeTeam)}
-                  </span>
-                  <span className={`mx-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>vs</span>
-                  <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {translateTeamName(selectedMatch.awayTeam)}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {loadingH2H ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin text-5xl mb-4">📊</div>
-                <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>전적을 분석 중입니다...</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {h2h.split('##').filter(section => section.trim()).map((section, index) => {
-                  const lines = section.trim().split('\n')
-                  const title = lines[0].replace(/^#+\s*/, '').trim()
-                  const content = lines.slice(1).join('\n').trim()
-                  
-                  const icons = ['🔄', '🏠', '✈️', '⚽', '📈', '🎯']
-                  const icon = icons[index] || '📋'
-                  
-                  return (
-                    <div
-                      key={index}
-                      className={`p-5 rounded-xl border transition-all ${
-                        darkMode 
-                          ? 'bg-slate-700 border-slate-600 hover:border-slate-500' 
-                          : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-2xl">{icon}</span>
-                        <h3 className={`text-lg font-bold ${
-                          darkMode ? 'text-white' : 'text-gray-900'
-                        }`}>
-                          {title}
-                        </h3>
-                      </div>
-                      <div className={`whitespace-pre-wrap leading-relaxed ${
-                        darkMode ? 'text-slate-300' : 'text-gray-700'
-                      }`}>
-                        {content}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* H2H 모달 */}
       {showH2HModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
