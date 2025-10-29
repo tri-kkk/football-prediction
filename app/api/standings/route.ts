@@ -16,25 +16,31 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const league = searchParams.get('league') || 'PL'
+    const debug = searchParams.get('debug')
     
-    console.log('=== STANDINGS DEBUG ===')
-    console.log('Has API Key:', !!FOOTBALL_DATA_API_KEY)
-    console.log('Key Length:', FOOTBALL_DATA_API_KEY.length)
-    console.log('League:', league)
+    // 디버그 모드
+    if (debug === '1') {
+      return NextResponse.json({
+        hasApiKey: !!FOOTBALL_DATA_API_KEY,
+        keyLength: FOOTBALL_DATA_API_KEY.length,
+        keyFirst5: FOOTBALL_DATA_API_KEY.substring(0, 5),
+        keyLast5: FOOTBALL_DATA_API_KEY.substring(FOOTBALL_DATA_API_KEY.length - 5),
+        league: league,
+        leagueId: LEAGUES[league],
+        url: `${BASE_URL}/competitions/${LEAGUES[league]}/standings`
+      })
+    }
     
     if (!FOOTBALL_DATA_API_KEY) {
-      console.log('NO API KEY')
       return NextResponse.json(getDummyStandings(league))
     }
     
     const leagueId = LEAGUES[league]
     if (!leagueId) {
-      console.log('Unknown league:', league)
       return NextResponse.json(getDummyStandings('PL'))
     }
     
     const url = `${BASE_URL}/competitions/${leagueId}/standings`
-    console.log('Fetching:', url)
     
     const response = await fetch(url, {
       headers: {
@@ -43,17 +49,18 @@ export async function GET(request: Request) {
       next: { revalidate: 300 }
     })
     
-    console.log('Response Status:', response.status)
-    
     if (!response.ok) {
-      console.error('API Error:', response.status, response.statusText)
       const errorText = await response.text()
-      console.error('Error details:', errorText)
-      return NextResponse.json(getDummyStandings(league))
+      return NextResponse.json({
+        error: true,
+        status: response.status,
+        statusText: response.statusText,
+        message: errorText,
+        fallbackToDummy: true
+      })
     }
     
     const data = await response.json()
-    console.log('Teams count:', data.standings?.[0]?.table?.length || 0)
     
     const standings = {
       competition: {
@@ -83,18 +90,18 @@ export async function GET(request: Request) {
       })) || []
     }
     
-    console.log('SUCCESS: Returning real data')
     return NextResponse.json(standings)
     
-  } catch (error) {
-    console.error('Exception:', error)
-    return NextResponse.json(getDummyStandings('PL'))
+  } catch (error: any) {
+    return NextResponse.json({
+      error: true,
+      message: error.message,
+      stack: error.stack
+    })
   }
 }
 
 function getDummyStandings(league: string) {
-  console.log('RETURNING DUMMY DATA for:', league)
-  
   const leagueNames: { [key: string]: string } = {
     'PL': 'Premier League',
     'PD': 'La Liga',
