@@ -1,141 +1,138 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-const FOOTBALL_DATA_API_KEY = process.env.FOOTBALL_DATA_API_KEY || ''
-const BASE_URL = 'https://api.football-data.org/v4'
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const type = searchParams.get('type') || 'scheduled'
 
-const LEAGUES = {
-  'PL': 2021,
-  'PD': 2014,
-  'SA': 2019,
-  'BL1': 2002,
-  'FL1': 2015,
-}
-
-export async function GET(request: Request) {
-  console.log('=== API DEBUG ===')
-  console.log('Has API Key:', !!FOOTBALL_DATA_API_KEY)
-  console.log('Key Length:', FOOTBALL_DATA_API_KEY.length)
-  
   try {
-    const { searchParams } = new URL(request.url)
-    const type = searchParams.get('type') || 'scheduled'
+    let apiUrl = ''
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
     
-    if (!FOOTBALL_DATA_API_KEY) {
-      console.log('NO KEY - dummy data')
-      return NextResponse.json(getDummyMatches(type))
+    const threeDaysAgo = new Date(today)
+    threeDaysAgo.setDate(today.getDate() - 3)
+    
+    const sevenDaysLater = new Date(today)
+    sevenDaysLater.setDate(today.getDate() + 7)
+    
+    if (type === 'scheduled') {
+      const dateFrom = today.toISOString().split('T')[0]
+      const dateTo = sevenDaysLater.toISOString().split('T')[0]
+      apiUrl = `https://api.football-data.org/v4/matches?status=SCHEDULED&dateFrom=${dateFrom}&dateTo=${dateTo}`
+    } else if (type === 'results') {
+      const dateFrom = threeDaysAgo.toISOString().split('T')[0]
+      const dateTo = yesterday.toISOString().split('T')[0]
+      apiUrl = `https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${dateFrom}&dateTo=${dateTo}`
     }
+
+    console.log('API 요청:', { type, apiUrl })
+
+    const response = await fetch(apiUrl, {
+      headers: {
+        'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY!  // 👈 수정!
+      },
+      next: { revalidate: 300 }
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Football API 오류:', response.status, errorText)
+      throw new Error(`Football API 오류: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log('받은 경기 수:', data.matches?.length || 0)
+
+    const MAJOR_LEAGUES = [
+      'Premier League',
+      'Championship',
+      'Bundesliga',
+      '2. Bundesliga',
+      'Serie A',
+      'Serie B',
+      'La Liga',
+      'Segunda División',
+      'Ligue 1',
+      'Ligue 2',
+      'Eredivisie',
+      'Eerste Divisie',
+      'UEFA Champions League',
+      'UEFA Europa League',
+      'UEFA Europa Conference League'
+    ]
+
+    let matches = data.matches || []
     
-    const matches: any[] = []
+    matches = matches.filter((match: any) => 
+      MAJOR_LEAGUES.includes(match.competition.name)
+    )
     
-    for (const code of ['PL', 'PD', 'SA']) {
-      try {
-        const leagueId = LEAGUES[code as keyof typeof LEAGUES]
-        const status = type === 'scheduled' ? 'SCHEDULED' : 'FINISHED'
+    console.log('필터링 후 경기 수:', matches.length)
+    
+    if (matches.length === 0 && type === 'results') {
+      console.log('결과 없음, 지난 7일로 범위 확대...')
+      const sevenDaysAgo = new Date(today)
+      sevenDaysAgo.setDate(today.getDate() - 7)
+      const dateFrom = sevenDaysAgo.toISOString().split('T')[0]
+      const dateTo = yesterday.toISOString().split('T')[0]
+      
+      const retryUrl = `https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${dateFrom}&dateTo=${dateTo}`
+      console.log('재시도 URL:', retryUrl)
+      
+      const retryResponse = await fetch(retryUrl, {
+        headers: {
+          'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY!  // 👈 수정!
+        }
+      })
+      
+      if (retryResponse.ok) {
+        const retryData = await retryResponse.json()
+        matches = retryData.matches || []
         
-        const response = await fetch(
-          `${BASE_URL}/competitions/${leagueId}/matches?status=${status}`,
-          {
-            headers: { 'X-Auth-Token': FOOTBALL_DATA_API_KEY },
-            next: { revalidate: 60 }
-          }
+        matches = matches.filter((match: any) => 
+          MAJOR_LEAGUES.includes(match.competition.name)
         )
         
-        console.log(`${code}: ${response.status}`)
-        
-        if (response.ok) {
-          const data = await response.json()
-          console.log(`${code} matches: ${data.matches?.length || 0}`)
-          
-          if (data.matches) {
-            matches.push(...data.matches.slice(0, 5).map((m: any) => ({
-              id: m.id,
-              league: data.competition?.name || code,
-              leagueLogo: data.competition?.emblem || '',
-              date: m.utcDate?.split('T')[0] || '',
-              time: m.utcDate?.split('T')[1]?.substring(0, 5) || '',
-              homeTeam: m.homeTeam?.name || '',
-              awayTeam: m.awayTeam?.name || '',
-              homeCrest: m.homeTeam?.crest || '',
-              awayCrest: m.awayTeam?.crest || '',
-              homeScore: m.score?.fullTime?.home ?? null,
-              awayScore: m.score?.fullTime?.away ?? null,
-              status: m.status || 'SCHEDULED'
-            })))
-          }
-        }
-      } catch (err) {
-        console.error(`${code} error:`, err)
+        console.log('재시도 결과:', matches.length, '경기')
       }
     }
-    
-    console.log(`Total: ${matches.length} matches`)
-    
-    if (matches.length === 0) {
-      return NextResponse.json(getDummyMatches(type))
-    }
-    
-    return NextResponse.json(matches)
-    
-  } catch (error) {
-    console.error('API Error:', error)
-    return NextResponse.json(getDummyMatches('scheduled'))
-  }
-}
 
-function getDummyMatches(type: string) {
-  const matches = [
-    {
-      id: 1,
-      league: 'Premier League',
-      leagueLogo: 'https://crests.football-data.org/PL.png',
-      date: '2025-01-30',
-      time: '20:00',
-      homeTeam: 'Manchester United FC',
-      awayTeam: 'Liverpool FC',
-      homeCrest: 'https://crests.football-data.org/66.png',
-      awayCrest: 'https://crests.football-data.org/64.png',
-      homeScore: null,
-      awayScore: null,
-      status: 'SCHEDULED'
-    },
-    {
-      id: 2,
-      league: 'La Liga',
-      leagueLogo: 'https://crests.football-data.org/PD.png',
-      date: '2025-01-30',
-      time: '21:00',
-      homeTeam: 'FC Barcelona',
-      awayTeam: 'Real Madrid CF',
-      homeCrest: 'https://crests.football-data.org/81.png',
-      awayCrest: 'https://crests.football-data.org/86.png',
-      homeScore: null,
-      awayScore: null,
-      status: 'SCHEDULED'
-    },
-    {
-      id: 3,
-      league: 'Serie A',
-      leagueLogo: 'https://crests.football-data.org/SA.png',
-      date: '2025-01-31',
-      time: '19:00',
-      homeTeam: 'Inter Milan',
-      awayTeam: 'AC Milan',
-      homeCrest: 'https://crests.football-data.org/108.png',
-      awayCrest: 'https://crests.football-data.org/98.png',
-      homeScore: null,
-      awayScore: null,
-      status: 'SCHEDULED'
-    }
-  ]
-  
-  if (type === 'results') {
-    return matches.map(m => ({
-      ...m,
-      homeScore: Math.floor(Math.random() * 4),
-      awayScore: Math.floor(Math.random() * 4),
-      status: 'FINISHED'
-    }))
+    const transformedMatches = matches
+      .sort((a: any, b: any) => {
+        if (type === 'scheduled') {
+          return new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
+        } else {
+          return new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime()
+        }
+      })
+      .slice(0, 20)
+      .map((match: any) => ({
+        id: match.id,
+        league: match.competition.name,
+        leagueLogo: match.competition.emblem,
+        date: new Date(match.utcDate).toLocaleDateString('ko-KR'),
+        time: new Date(match.utcDate).toLocaleTimeString('ko-KR', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }),
+        homeTeam: match.homeTeam.name,
+        awayTeam: match.awayTeam.name,
+        homeCrest: match.homeTeam.crest,
+        awayCrest: match.awayTeam.crest,
+        homeScore: match.score?.fullTime?.home ?? null,
+        awayScore: match.score?.fullTime?.away ?? null,
+        status: match.status
+      }))
+
+    console.log('반환 경기 수:', transformedMatches.length)
+    return NextResponse.json(transformedMatches)
+
+  } catch (error: any) {
+    console.error('API 오류:', error)
+    return NextResponse.json(
+      { error: '경기 정보를 불러올 수 없습니다: ' + error.message },
+      { status: 500 }
+    )
   }
-  
-  return matches
 }
