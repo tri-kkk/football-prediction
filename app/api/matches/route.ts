@@ -1,3 +1,8 @@
+export async function GET(request: Request) {
+  // 디버깅 로그 추가
+  console.log('🔑 API Key 확인:', FOOTBALL_API_KEY ? '있음' : '없음')
+  console.log('🔑 API Key 길이:', FOOTBALL_API_KEY?.length || 0)
+
 import { NextResponse } from 'next/server'
 
 const FOOTBALL_API_KEY = process.env.FOOTBALL_DATA_API_KEY || ''
