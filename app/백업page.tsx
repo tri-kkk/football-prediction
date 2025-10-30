@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
-import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
+import { getTeamLogo } from './teamLogos'
 
 // 리그 정보 (국기 이미지 포함)
 const LEAGUES = [
@@ -71,10 +71,8 @@ interface Match {
   leagueLogo: string
   date: string
   time: string
-  homeTeam: string      // 영문 팀명 (API에서 받은 원본)
-  awayTeam: string      // 영문 팀명 (API에서 받은 원본)
-  homeTeamKR: string    // 한글 팀명 (화면 표시용)
-  awayTeamKR: string    // 한글 팀명 (화면 표시용)
+  homeTeam: string
+  awayTeam: string
   homeCrest: string
   awayCrest: string
   homeScore: number | null
@@ -132,32 +130,6 @@ function generateNewsKeywords(): NewsKeyword[] {
     { keyword: '감독 전술 변경', count: 7, sentiment: 'neutral' },
     { keyword: '홈 경기 강세', count: 6, sentiment: 'positive' },
   ]
-}
-
-// 팀명을 한글로 번역하는 함수
-function translateTeamName(englishName: string): string {
-  // TEAM_NAME_KR에서 한글명 찾기
-  if (TEAM_NAME_KR[englishName]) {
-    return TEAM_NAME_KR[englishName]
-  }
-  
-  // 대소문자 무시하고 찾기
-  const normalized = englishName.toLowerCase()
-  for (const [key, value] of Object.entries(TEAM_NAME_KR)) {
-    if (key.toLowerCase() === normalized) {
-      return value
-    }
-  }
-  
-  // 부분 매칭 시도
-  for (const [key, value] of Object.entries(TEAM_NAME_KR)) {
-    if (key.toLowerCase().includes(normalized) || normalized.includes(key.toLowerCase())) {
-      return value
-    }
-  }
-  
-  // 번역 실패 시 원본 반환 (영문 그대로)
-  return englishName
 }
 
 // 시간 포맷 함수
@@ -324,37 +296,26 @@ export default function Home() {
         console.log('🔍 DB에서 가져온 오즈:', allMatches.length)
         
         // DB 데이터를 Match 형식으로 변환
-        const convertedMatches = allMatches.map((odds: any) => {
-          const homeTeamEng = odds.home_team || 'Unknown'
-          const awayTeamEng = odds.away_team || 'Unknown'
-          
-          // 영문 팀명 → 한글 팀명 번역
-          const homeTeamKR = translateTeamName(homeTeamEng)
-          const awayTeamKR = translateTeamName(awayTeamEng)
-          
-          return {
-            id: odds.match_id || Math.random(),
-            league: odds.league || 'Unknown',
-            leagueCode: odds.league || 'XX',
-            leagueLogo: getLeagueLogo(odds.league),
-            date: formatDate(odds.commence_time),
-            time: formatTime(odds.commence_time),
-            homeTeam: homeTeamEng,           // 영문 원본 (API 데이터)
-            awayTeam: awayTeamEng,           // 영문 원본 (API 데이터)
-            homeTeamKR: homeTeamKR,          // 한글 번역 (화면 표시용)
-            awayTeamKR: awayTeamKR,          // 한글 번역 (화면 표시용)
-            homeCrest: getTeamLogo(homeTeamKR),  // 한글명으로 로고 매칭
-            awayCrest: getTeamLogo(awayTeamKR),  // 한글명으로 로고 매칭
-            homeScore: null,
-            awayScore: null,
-            status: 'SCHEDULED',
-            utcDate: odds.commence_time,
-            homeWinRate: odds.home_probability || 0,
-            drawRate: odds.draw_probability || 0,
-            awayWinRate: odds.away_probability || 0,
-            oddsSource: 'live' as const
-          }
-        })
+        const convertedMatches = allMatches.map((odds: any) => ({
+          id: odds.match_id || Math.random(),
+          league: odds.league || 'Unknown',
+          leagueCode: odds.league || 'XX',
+          leagueLogo: getLeagueLogo(odds.league),
+          date: formatDate(odds.commence_time),
+          time: formatTime(odds.commence_time),
+          homeTeam: odds.home_team || 'Unknown',
+          awayTeam: odds.away_team || 'Unknown',
+          homeCrest: getTeamLogo(odds.home_team),
+          awayCrest: getTeamLogo(odds.away_team),
+          homeScore: null,
+          awayScore: null,
+          status: 'SCHEDULED',
+          utcDate: odds.commence_time,
+          homeWinRate: odds.home_probability || 0,
+          drawRate: odds.draw_probability || 0,
+          awayWinRate: odds.away_probability || 0,
+          oddsSource: 'live' as const
+        }))
         
         // 날짜순 정렬
         convertedMatches.sort((a, b) => {
@@ -554,13 +515,12 @@ export default function Home() {
                 ? Math.round(latestTrend.awayWinProbability)
                 : match.awayWinRate
               
-              // 한글 팀명 사용 (화면 표시용)
-              const homeTeam = match.homeTeamKR.length > 15 
-                ? match.homeTeamKR.substring(0, 15) + '...' 
-                : match.homeTeamKR
-              const awayTeam = match.awayTeamKR.length > 15 
-                ? match.awayTeamKR.substring(0, 15) + '...' 
-                : match.awayTeamKR
+              const homeTeam = match.homeTeam.length > 15 
+                ? match.homeTeam.substring(0, 15) + '...' 
+                : match.homeTeam
+              const awayTeam = match.awayTeam.length > 15 
+                ? match.awayTeam.substring(0, 15) + '...' 
+                : match.awayTeam
               
               const isHomeWinning = homeWin > awayWin
               const winningTeam = isHomeWinning ? homeTeam : awayTeam
@@ -586,7 +546,7 @@ export default function Home() {
                     />
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm font-bold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {winningTeam}
+                        {winningTeam.split(' ')[0]}
                       </div>
                       <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                         {isHomeWinning ? 'Home' : 'Away'}
@@ -606,7 +566,7 @@ export default function Home() {
                   <div className={`text-xs font-medium mt-2 pt-2 border-t ${
                     darkMode ? 'border-slate-600 text-slate-400' : 'border-gray-200 text-gray-500'
                   }`}>
-                    {match.homeTeamKR} - {match.awayTeamKR}
+                    {match.homeTeam.split(' ')[0]} - {match.awayTeam.split(' ')[0]}
                   </div>
                   <div className={`text-xs ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>
                     {match.time}
@@ -722,9 +682,9 @@ export default function Home() {
                     {/* 팀 정보 */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3 flex-1">
-                        <img src={match.homeCrest} alt={match.homeTeamKR} className="w-12 h-12" />
+                        <img src={match.homeCrest} alt={match.homeTeam} className="w-12 h-12" />
                         <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {match.homeTeamKR}
+                          {match.homeTeam}
                         </span>
                       </div>
                       <span className={`text-2xl font-black mx-4 ${darkMode ? 'text-slate-600' : 'text-gray-300'}`}>
@@ -732,9 +692,9 @@ export default function Home() {
                       </span>
                       <div className="flex items-center gap-3 flex-1 justify-end">
                         <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {match.awayTeamKR}
+                          {match.awayTeam}
                         </span>
-                        <img src={match.awayCrest} alt={match.awayTeamKR} className="w-12 h-12" />
+                        <img src={match.awayCrest} alt={match.awayTeam} className="w-12 h-12" />
                       </div>
                     </div>
 
