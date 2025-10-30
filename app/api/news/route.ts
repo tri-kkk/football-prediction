@@ -1,3 +1,4 @@
+// Test comment - 2025-10-30
 // app/api/news/route.ts
 import { NextResponse } from 'next/server'
 
