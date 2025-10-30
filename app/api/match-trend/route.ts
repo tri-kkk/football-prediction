@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     
     // lightweight-charts 포맷으로 변환
     const formatted = data.map(point => ({
-      timestamp: point.timestamp || point.created_at,
+      timestamp: (point as any).timestamp || (point as any).created_at,
       homeWinProbability: point.home_probability,
       drawProbability: point.draw_probability,
       awayWinProbability: point.away_probability
