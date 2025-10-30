@@ -1,0 +1,7 @@
+// teamLogos.ts 파일에서:
+export const TEAM_LOGOS: Record<string, string> = {
+  // ... 기존 팀들
+  
+  // 새 팀 추가:
+  'Your Team Name': 'https://crests.football-data.org/123.png',
+}
