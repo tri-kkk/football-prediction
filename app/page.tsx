@@ -128,35 +128,6 @@ interface NewsKeyword {
   sentiment: 'positive' | 'negative' | 'neutral'
 }
 
-// 24시간 트렌드 데이터 생성
-function generate24HourTrend(currentHomeRate: number, currentDrawRate: number, currentAwayRate: number): TrendData[] {
-  const data: TrendData[] = []
-  const now = new Date()
-  
-  // 현재 시간을 정각으로 설정
-  const currentHour = new Date(now)
-  currentHour.setMinutes(0)
-  currentHour.setSeconds(0)
-  currentHour.setMilliseconds(0)
-  
-  for (let i = 24; i >= 0; i--) {
-    // 정각 기준으로 시간 생성
-    const timestamp = new Date(currentHour.getTime() - i * 60 * 60 * 1000)
-    
-    const homeVariation = (Math.random() - 0.5) * 10
-    const drawVariation = (Math.random() - 0.5) * 10
-    const awayVariation = -(homeVariation + drawVariation)
-    
-    data.push({
-      timestamp: timestamp.toISOString(),
-      homeWinProbability: Math.max(0, Math.min(100, currentHomeRate + homeVariation)),
-      drawProbability: Math.max(0, Math.min(100, currentDrawRate + drawVariation)),
-      awayWinProbability: Math.max(0, Math.min(100, currentAwayRate + awayVariation)),
-    })
-  }
-  
-  return data
-}
 
 // 뉴스 키워드 생성
 function generateNewsKeywords(): NewsKeyword[] {
@@ -456,12 +427,9 @@ export default function Home() {
           throw new Error('No trend data available')
         }
       } catch (err) {
-        console.warn(`⚠️ 트렌드 데이터 로드 실패 (match ${matchId}), 가짜 데이터 생성`)
-        // 실패 시 가짜 데이터 생성
-        const fakeTrend = generate24HourTrend(match.homeWinRate, match.drawRate, match.awayWinRate)
-        console.log(`🎲 Generated fake trend for match ${matchId}`)
-        return fakeTrend
-      }
+  console.warn('⚠️ 트렌드 데이터 로드 실패 (match ${matchId}):', err)
+  return [] // 빈 배열 반환 (차트 표시 안 함)
+}
     }
     
     // 트렌드 데이터 로드 (기존 함수 - 카드 클릭 시 사용)
@@ -479,23 +447,18 @@ export default function Home() {
           throw new Error('No trend data available')
         }
       } catch (err) {
-        console.warn('⚠️ 트렌드 API 미사용, 가짜 데이터로 대체')
-        // 실패 시 가짜 데이터 생성
-        const targetMatch = match || matches.find(m => String(m.id) === matchId)
-        if (targetMatch) {
-          const fakeTrend = generate24HourTrend(targetMatch.homeWinRate, targetMatch.drawRate, targetMatch.awayWinRate)
-          setTrendData(prev => ({
-            ...prev,
-            [matchId]: fakeTrend
-          }))
-          console.log(`🎲 Generated fake trend for match ${matchId}`)
-          return fakeTrend
-        }
-      }
-    }
+    console.warn('⚠️ 트렌드 API 호출 실패:', err)
+    // 트렌드 데이터 없음을 표시
+    setTrendData(prev => ({
+      ...prev,
+      [matchId]: []
+    }))
+    return []
+  }
+}  // ← fetchTrendData 함수 닫기
 
-    fetchMatches()
-  }, [selectedLeague])
+  fetchMatches()
+}, [selectedLeague])
 
   // 경기 클릭 핸들러
   const handleMatchClick = (match: Match) => {
@@ -504,20 +467,16 @@ export default function Home() {
     } else {
       setExpandedMatchId(match.id)
       setNewsKeywords(generateNewsKeywords())
-      
-      // 트렌드 데이터가 없으면 생성
-      if (!trendData[match.id]) {
-        const fakeTrend = generate24HourTrend(match.homeWinRate, match.drawRate, match.awayWinRate)
-        setTrendData(prev => ({ ...prev, [match.id]: fakeTrend }))
-      }
-      
+                  
       setTimeout(() => {
-        const chartContainer = document.getElementById(`trend-chart-${match.id}`)
-        const currentTrend = trendData[match.id] || generate24HourTrend(match.homeWinRate, match.drawRate, match.awayWinRate)
-        if (chartContainer && currentTrend) {
-          renderChart(chartContainer, currentTrend)
-        }
-      }, 100)
+  const chartContainer = document.getElementById(`trend-chart-${match.id}`)
+  const currentTrend = trendData[match.id]
+  
+  // 트렌드 데이터가 있을 때만 차트 렌더링
+  if (chartContainer && currentTrend && currentTrend.length > 0) {
+    renderChart(chartContainer, currentTrend)
+  }
+}, 100)
     }
   }
 
