@@ -558,8 +558,8 @@ export const TEAM_LOGOS: Record<string, string> = {
   'ASSE': 'https://crests.football-data.org/1063.png',
 
   // 한글 팀명 (Korean team names)
-  //'맨체스터 유나이티드': 'https://crests.football-data.org/66.png',
-  //'맨체스터 시티': 'https://crests.football-data.org/65.png',
+  '맨체스터 유나이티드': 'https://crests.football-data.org/66.png',
+  '맨체스터 시티': 'https://crests.football-data.org/65.png',
   '리버풀': 'https://crests.football-data.org/64.png',
   '첼시': 'https://crests.football-data.org/61.png',
   '아스널': 'https://crests.football-data.org/57.png',

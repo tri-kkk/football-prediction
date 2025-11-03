@@ -1,5 +1,5 @@
 'use client'
-import NewsKeywords from './components/NewsKeywords'
+
 import { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
@@ -133,15 +133,8 @@ function generate24HourTrend(currentHomeRate: number, currentDrawRate: number, c
   const data: TrendData[] = []
   const now = new Date()
   
-  // 현재 시간을 정각으로 설정
-  const currentHour = new Date(now)
-  currentHour.setMinutes(0)
-  currentHour.setSeconds(0)
-  currentHour.setMilliseconds(0)
-  
   for (let i = 24; i >= 0; i--) {
-    // 정각 기준으로 시간 생성
-    const timestamp = new Date(currentHour.getTime() - i * 60 * 60 * 1000)
+    const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000)
     
     const homeVariation = (Math.random() - 0.5) * 10
     const drawVariation = (Math.random() - 0.5) * 10
@@ -415,24 +408,10 @@ export default function Home() {
         
         setMatches(futureMatches)
         
-        // 🔥 트렌드 데이터를 병렬로 모두 로드 (초기 화면에 증감 표시하기 위해)
-        const trendPromises = futureMatches.map((match: any) => 
-          fetchTrendDataSync(match.id, match)
-        )
-        
-        // 모든 트렌드 데이터 로드 완료 대기
-        const trendResults = await Promise.all(trendPromises)
-        
-        // 배치 업데이트: 모든 트렌드 데이터를 한 번에 설정
-        const allTrendData: { [key: number]: TrendData[] } = {}
-        trendResults.forEach((result, index) => {
-          if (result) {
-            allTrendData[futureMatches[index].id] = result
-          }
+        // 트렌드 데이터 로드 (각 경기마다)
+        futureMatches.forEach((match: any) => {
+          fetchTrendData(match.id)
         })
-        
-        setTrendData(allTrendData)
-        console.log('✅ 모든 트렌드 데이터 로드 완료:', Object.keys(allTrendData).length, '경기')
         
       } catch (error: any) {
         console.error('❌ 에러:', error)
@@ -442,30 +421,8 @@ export default function Home() {
       }
     }
     
-    // 트렌드 데이터 로드 (동기 버전 - Promise 반환)
-    async function fetchTrendDataSync(matchId: string, match: any): Promise<TrendData[] | null> {
-      try {
-        const response = await fetch(`/api/match-trend?matchId=${matchId}`)
-        const result = await response.json()
-        
-        if (result.success && result.data.length > 0) {
-          console.log(`📈 Loaded trend for match ${matchId}:`, result.data.length, 'points')
-          return result.data
-        } else {
-          // API 응답은 있지만 데이터가 없는 경우
-          throw new Error('No trend data available')
-        }
-      } catch (err) {
-        console.warn(`⚠️ 트렌드 데이터 로드 실패 (match ${matchId}), 가짜 데이터 생성`)
-        // 실패 시 가짜 데이터 생성
-        const fakeTrend = generate24HourTrend(match.homeWinRate, match.drawRate, match.awayWinRate)
-        console.log(`🎲 Generated fake trend for match ${matchId}`)
-        return fakeTrend
-      }
-    }
-    
-    // 트렌드 데이터 로드 (기존 함수 - 카드 클릭 시 사용)
-    async function fetchTrendData(matchId: string, match?: any) {
+    // 트렌드 데이터 로드 (24시간)
+    async function fetchTrendData(matchId: string) {
       try {
         const response = await fetch(`/api/match-trend?matchId=${matchId}`)
         const result = await response.json()
@@ -473,23 +430,16 @@ export default function Home() {
         if (result.success && result.data.length > 0) {
           setTrendData(prev => ({ ...prev, [matchId]: result.data }))
           console.log(`📈 Loaded trend for match ${matchId}:`, result.data.length, 'points')
-          return result.data
-        } else {
-          // API 응답은 있지만 데이터가 없는 경우
-          throw new Error('No trend data available')
         }
       } catch (err) {
-        console.warn('⚠️ 트렌드 API 미사용, 가짜 데이터로 대체')
+        console.error('트렌드 데이터 로드 실패:', err)
         // 실패 시 가짜 데이터 생성
-        const targetMatch = match || matches.find(m => m.id === matchId)
-        if (targetMatch) {
-          const fakeTrend = generate24HourTrend(targetMatch.homeWinRate, targetMatch.drawRate, targetMatch.awayWinRate)
+        const match = matches.find(m => m.id === matchId)
+        if (match) {
           setTrendData(prev => ({
             ...prev,
-            [matchId]: fakeTrend
+            [matchId]: generate24HourTrend(match.homeWinRate, match.drawRate, match.awayWinRate)
           }))
-          console.log(`🎲 Generated fake trend for match ${matchId}`)
-          return fakeTrend
         }
       }
     }
@@ -505,17 +455,10 @@ export default function Home() {
       setExpandedMatchId(match.id)
       setNewsKeywords(generateNewsKeywords())
       
-      // 트렌드 데이터가 없으면 생성
-      if (!trendData[match.id]) {
-        const fakeTrend = generate24HourTrend(match.homeWinRate, match.drawRate, match.awayWinRate)
-        setTrendData(prev => ({ ...prev, [match.id]: fakeTrend }))
-      }
-      
       setTimeout(() => {
         const chartContainer = document.getElementById(`trend-chart-${match.id}`)
-        const currentTrend = trendData[match.id] || generate24HourTrend(match.homeWinRate, match.drawRate, match.awayWinRate)
-        if (chartContainer && currentTrend) {
-          renderChart(chartContainer, currentTrend)
+        if (chartContainer && trendData[match.id]) {
+          renderChart(chartContainer, trendData[match.id])
         }
       }, 100)
     }
@@ -529,20 +472,20 @@ export default function Home() {
       width: container.clientWidth,
       height: 300,
       layout: {
-        background: { type: ColorType.Solid, color: darkMode ? '#000000' : '#ffffff' },
-        textColor: darkMode ? '#ffffff' : '#000000',
+        background: { type: ColorType.Solid, color: darkMode ? '#1e293b' : '#ffffff' },
+        textColor: darkMode ? '#e2e8f0' : '#1e293b',
       },
       grid: {
-        vertLines: { color: darkMode ? '#1f1f1f' : '#f3f4f6' },
-        horzLines: { color: darkMode ? '#1f1f1f' : '#f3f4f6' },
+        vertLines: { color: darkMode ? '#334155' : '#f1f5f9' },
+        horzLines: { color: darkMode ? '#334155' : '#f1f5f9' },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
-        borderColor: darkMode ? '#1f1f1f' : '#e5e7eb',
+        borderColor: darkMode ? '#475569' : '#e2e8f0',
       },
       rightPriceScale: {
-        borderColor: darkMode ? '#1f1f1f' : '#e5e7eb',
+        borderColor: darkMode ? '#475569' : '#e2e8f0',
       },
     })
 
@@ -596,8 +539,8 @@ export default function Home() {
       } shadow-lg`}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()}>
-              <span className="text-3xl">📈</span>
+            <div className="flex items-center gap-2">
+              <span className="text-3xl">⚽</span>
               <h1 className={`text-2xl font-black ${
                 darkMode 
                   ? 'text-white' 
@@ -618,6 +561,18 @@ export default function Home() {
                 }`}
               >
                 {language === 'ko' ? '🇰🇷 KO' : '🇺🇸 EN'}
+              </button>
+              
+              {/* 다크모드 토글 */}
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className={`p-2 rounded-lg transition-all ${
+                  darkMode 
+                    ? 'bg-gray-900 text-white hover:bg-gray-800 border border-gray-800' 
+                    : 'bg-gray-100 text-black hover:bg-gray-200 border border-gray-200'
+                }`}
+              >
+                {darkMode ? '🌙' : '🌞'}
               </button>
             </div>
           </div>
@@ -658,15 +613,7 @@ export default function Home() {
               return (
                 <div
                   key={`${match.id}-${index}`}
-                  onClick={() => {
-                    // 경기 카드로 스크롤
-                    const element = document.getElementById(`match-card-${match.id}`)
-                    if (element) {
-                      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    }
-                    // 경기 확장
-                    handleMatchClick(match)
-                  }}
+                  onClick={() => handleMatchClick(match)}
                   className={`flex flex-col p-3 rounded-lg min-w-[160px] cursor-pointer transition-all ${
                     darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
                   } ${expandedMatchId === match.id ? 'ring-2 ring-white' : 'hover:scale-105'}`}
@@ -786,7 +733,7 @@ export default function Home() {
                 : 0
               
               return (
-                <div key={match.id} id={`match-card-${match.id}`}>
+                <div key={match.id}>
                   {/* 경기 카드 - 가로 배치 */}
                   <div
                     onClick={() => handleMatchClick(match)}
@@ -796,52 +743,51 @@ export default function Home() {
                         : 'bg-white border border-gray-200'
                     } ${expandedMatchId === match.id ? 'ring-2 ring-white scale-105' : 'hover:shadow-xl'}`}
                   >
-                    {/* 상단: 리그 정보 + 날짜/시간 - 한 줄 중앙 배치 */}
-                    <div className={`flex items-center justify-center gap-3 px-4 pt-4 pb-3 border-b ${
+                    {/* 상단: 리그 정보 + 날짜/시간 - 중앙 배치 */}
+                    <div className={`flex flex-col items-center gap-2 px-4 pt-4 pb-3 border-b ${
                       darkMode ? 'border-gray-800' : 'border-gray-200'
                     }`}>
-                      {/* 리그 국기 이미지 */}
-                      {(() => {
-                        const flag = getLeagueFlag(match.leagueCode)
-                        if (flag.isEmoji) {
-                          return <span className="text-xl">{flag.url}</span>
-                        } else {
-                          return (
-                            <img 
-                              src={flag.url} 
-                              alt={match.league}
-                              className="w-6 h-6 object-contain"
-                            />
-                          )
-                        }
-                      })()}
+                      {/* 리그 정보 - 국기 + 이름 */}
+                      <div className="flex items-center gap-2.5">
+                        {/* 리그 국기 이미지 (필터와 동일) */}
+                        {(() => {
+                          const flag = getLeagueFlag(match.leagueCode)
+                          if (flag.isEmoji) {
+                            return <span className="text-xl">{flag.url}</span>
+                          } else {
+                            return (
+                              <img 
+                                src={flag.url} 
+                                alt={match.league}
+                                className="w-6 h-6 object-contain"
+                              />
+                            )
+                          }
+                        })()}
+                        {/* 리그명 */}
+                        <span className={`text-base font-bold ${
+                          darkMode ? 'text-white' : 'text-black'
+                        }`}>
+                          {match.league}
+                        </span>
+                      </div>
                       
-                      {/* 리그명 */}
-                      <span className={`text-base font-bold ${
-                        darkMode ? 'text-white' : 'text-black'
+                      {/* 날짜 + 시간 - 강조 */}
+                      <div className={`flex items-center gap-2 px-4 py-1.5 rounded-lg ${
+                        darkMode ? 'bg-gray-800' : 'bg-gray-100'
                       }`}>
-                        {match.league}
-                      </span>
-                      
-                      {/* 구분선 */}
-                      <span className={`text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
-                      
-                      {/* 날짜 */}
-                      <span className={`text-sm font-semibold ${
-                        darkMode ? 'text-gray-300' : 'text-gray-700'
-                      }`}>
-                        {formatDate(match.utcDate)}
-                      </span>
-                      
-                      {/* 구분선 */}
-                      <span className={`text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
-                      
-                      {/* 시간 */}
-                      <span className={`text-lg font-bold ${
-                        darkMode ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {match.time}
-                      </span>
+                        <span className="text-base">⏰</span>
+                        <span className={`text-sm font-semibold ${
+                          darkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>
+                          {formatDate(match.utcDate)}
+                        </span>
+                        <span className={`text-lg font-bold ${
+                          darkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {match.time}
+                        </span>
+                      </div>
                     </div>
 
                     {/* 메인 콘텐츠 영역 */}
@@ -850,7 +796,7 @@ export default function Home() {
                       <div className="flex items-center justify-center gap-3 mb-6">
                         {/* 홈팀 */}
                         <div className="flex items-center gap-2">
-                          <img src={match.homeCrest} alt={match.homeTeamKR} className="w-12 h-12" />
+                          <img src={match.homeCrest} alt={match.homeTeamKR} className="w-10 h-10" />
                           <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {match.homeTeamKR}
                           </span>
@@ -868,7 +814,7 @@ export default function Home() {
                           <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {match.awayTeamKR}
                           </span>
-                          <img src={match.awayCrest} alt={match.awayTeamKR} className="w-12 h-12" />
+                          <img src={match.awayCrest} alt={match.awayTeamKR} className="w-10 h-10" />
                         </div>
                       </div>
 
@@ -889,12 +835,12 @@ export default function Home() {
                           ></div>
                           
                           <div className="relative z-10 flex flex-col items-center">
-                            <div className={`text-sm font-medium mb-2 ${
+                            <div className={`text-xs font-medium mb-2 ${
                               darkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               홈
                             </div>
-                            <div className={`text-3xl font-black transition-all duration-500 ${
+                            <div className={`text-2xl font-black transition-all duration-500 ${
                               darkMode ? 'text-white' : 'text-black'
                             } ${homeChange > 0 ? 'animate-pulse' : ''}`}>
                               {latestTrend ? Math.round(latestTrend.homeWinProbability) : match.homeWinRate}%
@@ -902,7 +848,7 @@ export default function Home() {
                             <div className="h-5 mt-2">
                               {homeChange !== 0 && (
                                 <div className={`text-xs font-bold ${
-                                  homeChange > 0 ? 'text-green-500' : 'text-red-500'
+                                  darkMode ? 'text-gray-400' : 'text-gray-600'
                                 }`}>
                                   {homeChange > 0 ? '↑' : '↓'} {Math.abs(homeChange).toFixed(1)}%
                                 </div>
@@ -926,12 +872,12 @@ export default function Home() {
                           ></div>
                           
                           <div className="relative z-10 flex flex-col items-center">
-                            <div className={`text-sm font-medium mb-2 ${
+                            <div className={`text-xs font-medium mb-2 ${
                               darkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               무승부
                             </div>
-                            <div className={`text-3xl font-black ${
+                            <div className={`text-2xl font-black ${
                               darkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               {latestTrend ? Math.round(latestTrend.drawProbability) : match.drawRate}%
@@ -955,12 +901,12 @@ export default function Home() {
                           ></div>
                           
                           <div className="relative z-10 flex flex-col items-center">
-                            <div className={`text-sm font-medium mb-2 ${
+                            <div className={`text-xs font-medium mb-2 ${
                               darkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               원정
                             </div>
-                            <div className={`text-3xl font-black transition-all duration-500 ${
+                            <div className={`text-2xl font-black transition-all duration-500 ${
                               darkMode ? 'text-white' : 'text-black'
                             } ${awayChange > 0 ? 'animate-pulse' : ''}`}>
                               {latestTrend ? Math.round(latestTrend.awayWinProbability) : match.awayWinRate}%
@@ -968,7 +914,7 @@ export default function Home() {
                             <div className="h-5 mt-2">
                               {awayChange !== 0 && (
                                 <div className={`text-xs font-bold ${
-                                  awayChange > 0 ? 'text-green-500' : 'text-red-500'
+                                  darkMode ? 'text-gray-400' : 'text-gray-600'
                                 }`}>
                                   {awayChange > 0 ? '↑' : '↓'} {Math.abs(awayChange).toFixed(1)}%
                                 </div>
@@ -979,15 +925,9 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-<div className={`mt-3 pt-3 border-t ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
-  <NewsKeywords
-    homeTeam={match.homeTeam}
-    awayTeam={match.awayTeam}
-    matchId={match.id}
-  />
-</div>
+
                   {/* 확장된 트렌드 차트 */}
-                  {expandedMatchId === match.id && (
+                  {expandedMatchId === match.id && trendData[match.id] && (
                     <div className={`mt-4 p-6 rounded-2xl animate-fadeIn ${
                       darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
                     }`}>
@@ -996,7 +936,27 @@ export default function Home() {
                       </h3>
                       <div id={`trend-chart-${match.id}`} className="mb-4"></div>
 
-
+                      {/* 뉴스 키워드 */}
+                      <div className="mt-4">
+                        <h4 className={`text-sm font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          🔍 주요 이슈
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {newsKeywords.map((keyword, index) => (
+                            <span
+                              key={index}
+                              className={`px-3 py-1 rounded-full text-xs font-medium animate-fadeIn ${
+                                darkMode 
+                                  ? 'bg-gray-800 text-gray-300 border border-gray-700'
+                                  : 'bg-gray-100 text-gray-700 border border-gray-200'
+                              }`}
+                              style={{ animationDelay: `${index * 100}ms` }}
+                            >
+                              {keyword.keyword} ({keyword.count})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
