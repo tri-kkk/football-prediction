@@ -141,52 +141,62 @@ export async function GET(request: Request) {
         console.log(`✅ Got ${data.length} matches for ${league.code}`)
         
         // 각 경기 오즈 저장
-        for (const match of data) {
-          try {
-            const bookmaker = match.bookmakers?.[0]
-            if (!bookmaker) continue
-            
-            const h2hMarket = bookmaker.markets.find((m: any) => m.key === 'h2h')
-            if (!h2hMarket || h2hMarket.outcomes.length < 2) continue
-            
-            const outcomes = h2hMarket.outcomes
-            const homeOutcome = outcomes.find((o: any) => o.name === match.home_team)
-            const awayOutcome = outcomes.find((o: any) => o.name === match.away_team)
-            const drawOutcome = outcomes.find((o: any) => o.name === 'Draw')
-            
-            const homeOdds = homeOutcome?.price || 2.5
-            const drawOdds = drawOutcome?.price || 3.0
-            const awayOdds = awayOutcome?.price || 2.5
-            
-            const homeProbability = (1 / homeOdds) * 100
-            const drawProbability = (1 / drawOdds) * 100
-            const awayProbability = (1 / awayOdds) * 100
-            
-            // 정규화
-            const total = homeProbability + drawProbability + awayProbability
-            
-            const oddsData: OddsData = {
-              matchId: match.id,
-              homeTeam: match.home_team,
-              awayTeam: match.away_team,
-              homeOdds: Number(homeOdds.toFixed(2)),
-              drawOdds: Number(drawOdds.toFixed(2)),
-              awayOdds: Number(awayOdds.toFixed(2)),
-              homeProbability: Number(((homeProbability / total) * 100).toFixed(2)),
-              drawProbability: Number(((drawProbability / total) * 100).toFixed(2)),
-              awayProbability: Number(((awayProbability / total) * 100).toFixed(2)),
-              timestamp: new Date().toISOString(),
-              commenceTime: match.commence_time
-            }
-            
-            await saveOddsToDatabase(oddsData, league.code)
-            totalSaved++
-            
-          } catch (matchError) {
-            console.error('Error saving match:', matchError)
-            errors++
-          }
-        }
+for (const match of data) {
+  try {
+    // 🔥 경기 3일 전부터만 수집
+    const commenceTime = new Date(match.commence_time).getTime()
+    const now = Date.now()
+    const hoursUntilMatch = (commenceTime - now) / (1000 * 60 * 60)
+    
+    // 경기가 이미 끝났거나 3일(72시간) 이상 남았으면 스킵
+    if (hoursUntilMatch < 0 || hoursUntilMatch > 72) {
+      continue
+    }
+    
+    const bookmaker = match.bookmakers?.[0]
+    if (!bookmaker) continue
+    
+    const h2hMarket = bookmaker.markets.find((m: any) => m.key === 'h2h')
+    if (!h2hMarket || h2hMarket.outcomes.length < 2) continue
+    
+    const outcomes = h2hMarket.outcomes
+    const homeOutcome = outcomes.find((o: any) => o.name === match.home_team)
+    const awayOutcome = outcomes.find((o: any) => o.name === match.away_team)
+    const drawOutcome = outcomes.find((o: any) => o.name === 'Draw')
+    
+    const homeOdds = homeOutcome?.price || 2.5
+    const drawOdds = drawOutcome?.price || 3.0
+    const awayOdds = awayOutcome?.price || 2.5
+    
+    const homeProbability = (1 / homeOdds) * 100
+    const drawProbability = (1 / drawOdds) * 100
+    const awayProbability = (1 / awayOdds) * 100
+    
+    // 정규화
+    const total = homeProbability + drawProbability + awayProbability
+    
+    const oddsData: OddsData = {
+      matchId: match.id,
+      homeTeam: match.home_team,
+      awayTeam: match.away_team,
+      homeOdds: Number(homeOdds.toFixed(2)),
+      drawOdds: Number(drawOdds.toFixed(2)),
+      awayOdds: Number(awayOdds.toFixed(2)),
+      homeProbability: Number(((homeProbability / total) * 100).toFixed(2)),
+      drawProbability: Number(((drawProbability / total) * 100).toFixed(2)),
+      awayProbability: Number(((awayProbability / total) * 100).toFixed(2)),
+      timestamp: new Date().toISOString(),
+      commenceTime: match.commence_time
+    }
+    
+    await saveOddsToDatabase(oddsData, league.code)
+    totalSaved++
+    
+  } catch (matchError) {
+    console.error('Error saving match:', matchError)
+    errors++
+  }
+}
         
         // API 제한 방지 (리그 간 1초 대기)
         await new Promise(resolve => setTimeout(resolve, 1000))
