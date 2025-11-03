@@ -481,7 +481,7 @@ export default function Home() {
       } catch (err) {
         console.warn('⚠️ 트렌드 API 미사용, 가짜 데이터로 대체')
         // 실패 시 가짜 데이터 생성
-        const targetMatch = match || matches.find(m => m.id === matchId)
+        const targetMatch = match || matches.find(m => String(m.id) === matchId)
         if (targetMatch) {
           const fakeTrend = generate24HourTrend(targetMatch.homeWinRate, targetMatch.drawRate, targetMatch.awayWinRate)
           setTrendData(prev => ({
