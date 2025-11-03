@@ -670,7 +670,23 @@ export const TEAM_LOGOS: { [key: string]: string } = {
   '르아브르': 'https://upload.wikimedia.org/wikipedia/en/thumb/f/fc/Le_Havre_AC_logo.svg/170px-Le_Havre_AC_logo.svg.png',
   '메스': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/FC_Metz_2021_Logo.svg/150px-FC_Metz_2021_Logo.svg.png',
   '생테티엔': 'https://crests.football-data.org/1063.png',
+   'Ajax': 'https://i.namu.wiki/i/ai9Jk8FElN2c9QYIbx5xPCvnj7BPXbCT9CAGqwHZXc3qhW7tn0t_8ixYvfEm-16mAXhSQJuWQgXfVYzmBu7pGsxvC2C4gT9ocPPQotwUbUys0DnPGel8C-dOs1f4YgoO5pwL82OJgBRmm6WJ81rWCA.svg',
+  'Galatasaray': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Galatasaray_4_Sterne_Logo.svg/150px-Galatasaray_4_Sterne_Logo.svg.png',
+    'Union Saint-Gilloise': 'https://upload.wikimedia.org/wikipedia/ko/thumb/2/2e/%EC%9C%84%EB%8B%88%EC%98%B9_SG_%EB%A1%9C%EA%B3%A0.png/250px-%EC%9C%84%EB%8B%88%EC%98%B9_SG_%EB%A1%9C%EA%B3%A0.png',
+  'Benfica': 'https://upload.wikimedia.org/wikipedia/en/a/a2/SL_Benfica_logo.svg',
+  'Bodø/Glimt': 'https://upload.wikimedia.org/wikipedia/en/thumb/8/8d/FK_Bodo_Glimt_logo.svg/200px-FK_Bodo_Glimt_logo.svg.png',
+  'Club Brugge': 'https://upload.wikimedia.org/wikipedia/en/d/d0/Club_Brugge_KV_logo.svg',
+  'FC Kairat': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/FCKairat_logo.png/250px-FCKairat_logo.png',
+  'Sporting Lisbon': 'https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Sporting_CP_crest.svg/180px-Sporting_CP_crest.svg.png',
+  'Olympiakos Piraeus': 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/Olympiacos_FC_crest.svg/250px-Olympiacos_FC_crest.svg.png',
+  'PSV Eindhoven': 'https://upload.wikimedia.org/wikipedia/en/0/05/PSV_Eindhoven.svg',
+  'Pafos FC': 'https://upload.wikimedia.org/wikipedia/en/thumb/9/9b/Pafos_FC_crest.svg/250px-Pafos_FC_crest.svg.png',
+  'Qarabağ FK': 'https://upload.wikimedia.org/wikipedia/en/thumb/f/fe/Qaraba%C4%9F_FK_logo.svg/180px-Qaraba%C4%9F_FK_logo.svg.png',
+  'Slavia Praha': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/SK_Slavia_Praha_full_logo.svg/250px-SK_Slavia_Praha_full_logo.svg.png',
+  'FC Copenhagen': 'https://upload.wikimedia.org/wikipedia/en/thumb/2/26/FC_Copenhagen_logo.svg/250px-FC_Copenhagen_logo.svg.png',
+
 }
+
 
 // 팀 로고를 가져오는 헬퍼 함수 (개선 버전)
 export function getTeamLogo(teamName: string): string {
