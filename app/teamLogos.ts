@@ -582,7 +582,7 @@ export const TEAM_LOGOS: { [key: string]: string } = {
   '레알 베티스': 'https://crests.football-data.org/90.png',
   '아틀레틱 빌바오': 'https://crests.football-data.org/77.png',
   '지로나': 'https://crests.football-data.org/298.png',
-  '오사수나': 'https://upload.wikimedia.org/wikipedia/en/0/0e/CA_Osasuna_logo.svg',
+  '오사수나': 'https://crests.football-data.org/79.png',
   '셀타 비고': 'https://crests.football-data.org/558.png',
   '라요 바예카노': 'https://crests.football-data.org/87.png',
   '헤타페': 'https://crests.football-data.org/82.png',
