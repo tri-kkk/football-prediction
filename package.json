@@ -33,3 +33,11 @@
     "typescript": "5.3.3"
   }
 }
+
+{
+  "overrides": {
+    "swr": {
+      "react": "$react"
+    }
+  }
+}
