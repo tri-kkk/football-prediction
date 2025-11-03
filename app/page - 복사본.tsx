@@ -417,22 +417,12 @@ export default function Home() {
         
         // 🔥 트렌드 데이터를 병렬로 모두 로드 (초기 화면에 증감 표시하기 위해)
         const trendPromises = futureMatches.map((match: any) => 
-          fetchTrendDataSync(match.id, match)
+          fetchTrendData(match.id)
         )
         
         // 모든 트렌드 데이터 로드 완료 대기
-        const trendResults = await Promise.all(trendPromises)
-        
-        // 배치 업데이트: 모든 트렌드 데이터를 한 번에 설정
-        const allTrendData: { [key: number]: TrendData[] } = {}
-        trendResults.forEach((result, index) => {
-          if (result) {
-            allTrendData[futureMatches[index].id] = result
-          }
-        })
-        
-        setTrendData(allTrendData)
-        console.log('✅ 모든 트렌드 데이터 로드 완료:', Object.keys(allTrendData).length, '경기')
+        await Promise.all(trendPromises)
+        console.log('✅ 모든 트렌드 데이터 로드 완료')
         
       } catch (error: any) {
         console.error('❌ 에러:', error)
@@ -442,30 +432,8 @@ export default function Home() {
       }
     }
     
-    // 트렌드 데이터 로드 (동기 버전 - Promise 반환)
-    async function fetchTrendDataSync(matchId: string, match: any): Promise<TrendData[] | null> {
-      try {
-        const response = await fetch(`/api/match-trend?matchId=${matchId}`)
-        const result = await response.json()
-        
-        if (result.success && result.data.length > 0) {
-          console.log(`📈 Loaded trend for match ${matchId}:`, result.data.length, 'points')
-          return result.data
-        } else {
-          // API 응답은 있지만 데이터가 없는 경우
-          throw new Error('No trend data available')
-        }
-      } catch (err) {
-        console.warn(`⚠️ 트렌드 데이터 로드 실패 (match ${matchId}), 가짜 데이터 생성`)
-        // 실패 시 가짜 데이터 생성
-        const fakeTrend = generate24HourTrend(match.homeWinRate, match.drawRate, match.awayWinRate)
-        console.log(`🎲 Generated fake trend for match ${matchId}`)
-        return fakeTrend
-      }
-    }
-    
-    // 트렌드 데이터 로드 (기존 함수 - 카드 클릭 시 사용)
-    async function fetchTrendData(matchId: string, match?: any) {
+    // 트렌드 데이터 로드 (24시간)
+    async function fetchTrendData(matchId: string) {
       try {
         const response = await fetch(`/api/match-trend?matchId=${matchId}`)
         const result = await response.json()
@@ -473,23 +441,16 @@ export default function Home() {
         if (result.success && result.data.length > 0) {
           setTrendData(prev => ({ ...prev, [matchId]: result.data }))
           console.log(`📈 Loaded trend for match ${matchId}:`, result.data.length, 'points')
-          return result.data
-        } else {
-          // API 응답은 있지만 데이터가 없는 경우
-          throw new Error('No trend data available')
         }
       } catch (err) {
-        console.warn('⚠️ 트렌드 API 미사용, 가짜 데이터로 대체')
+        console.error('트렌드 데이터 로드 실패:', err)
         // 실패 시 가짜 데이터 생성
-        const targetMatch = match || matches.find(m => m.id === matchId)
-        if (targetMatch) {
-          const fakeTrend = generate24HourTrend(targetMatch.homeWinRate, targetMatch.drawRate, targetMatch.awayWinRate)
+        const match = matches.find(m => m.id === matchId)
+        if (match) {
           setTrendData(prev => ({
             ...prev,
-            [matchId]: fakeTrend
+            [matchId]: generate24HourTrend(match.homeWinRate, match.drawRate, match.awayWinRate)
           }))
-          console.log(`🎲 Generated fake trend for match ${matchId}`)
-          return fakeTrend
         }
       }
     }
