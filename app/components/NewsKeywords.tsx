@@ -158,7 +158,7 @@ export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywor
       setError(null)
       
       const response = await fetch(
-        `/api/news/keywords?homeTeam=${encodeURIComponent(homeTeam)}&awayTeam=${encodeURIComponent(awayTeam)}`
+        `/api/news?homeTeam=${encodeURIComponent(homeTeam)}&awayTeam=${encodeURIComponent(awayTeam)}`
       )
       
       if (!response.ok) {
