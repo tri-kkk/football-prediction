@@ -57,13 +57,15 @@ async function saveOddsToDatabase(odds: OddsData, leagueCode: string) {
   }
   
   // 2. 최신 오즈 업데이트 (UPSERT)
-  const latestResponse = await fetch(`${supabaseUrl}/rest/v1/match_odds_latest`, {
+ const latestResponse = await fetch(
+  `${supabaseUrl}/rest/v1/match_odds_latest?match_id=eq.${odds.matchId}`,
+  {
     method: 'POST',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`,
       'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates,return=minimal'
+      'Prefer': 'resolution=merge-duplicates'
     },
     body: JSON.stringify({
       match_id: odds.matchId,
@@ -77,14 +79,15 @@ async function saveOddsToDatabase(odds: OddsData, leagueCode: string) {
       home_probability: odds.homeProbability,
       draw_probability: odds.drawProbability,
       away_probability: odds.awayProbability,
-      odds_source: 'the-odds-api',
-      updated_at: new Date().toISOString()
+      odds_source: 'the-odds-api'
     })
-  })
-  
-  if (!latestResponse.ok) {
-    throw new Error(`Failed to save latest: ${latestResponse.status}`)
   }
+)
+
+if (!latestResponse.ok) {
+  const errorText = await latestResponse.text()
+  throw new Error(`Failed to save latest: ${latestResponse.status} - ${errorText}`)
+}
 }
 
 export async function GET(request: Request) {
