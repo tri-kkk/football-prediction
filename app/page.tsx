@@ -667,8 +667,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7853814871438044"
-     crossorigin="anonymous"></script>
       </header>
 
       {/* 승률 배너 (자동 스크롤) */}
