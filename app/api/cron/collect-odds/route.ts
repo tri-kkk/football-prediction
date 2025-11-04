@@ -21,7 +21,7 @@ interface OddsData {
 // Supabase에 오즈 저장
 async function saveOddsToDatabase(odds: OddsData, leagueCode: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY // 서비스 키 사용!
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY
   
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Supabase credentials not configured')
@@ -56,39 +56,37 @@ async function saveOddsToDatabase(odds: OddsData, leagueCode: string) {
     throw new Error(`Failed to save history: ${historyResponse.status}`)
   }
   
-  // 2. 최신 오즈 업데이트 (UPSERT)
- 
-const latestResponse = await fetch(
-  `${supabaseUrl}/rest/v1/match_odds_latest`,
-  {
-    method: 'POST',
-    headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
-    },
-  body: JSON.stringify({
-      match_id: odds.matchId,
-      home_team: odds.homeTeam,
-      away_team: odds.awayTeam,
-      league_code: leagueCode,
-      commence_time: odds.commenceTime,
-      home_odds: odds.homeOdds,
-      draw_odds: odds.drawOdds,
-      away_odds: odds.awayOdds,
-      home_probability: odds.homeProbability,
-      draw_probability: odds.drawProbability,
-      away_probability: odds.awayProbability,
-      odds_source: 'the-odds-api'
-    })
+  // 2. 최신 오즈 UPSERT (RPC 함수 사용)
+  const latestResponse = await fetch(
+    `${supabaseUrl}/rest/v1/rpc/upsert_match_odds_latest`,
+    {
+      method: 'POST',
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        p_match_id: odds.matchId,
+        p_home_team: odds.homeTeam,
+        p_away_team: odds.awayTeam,
+        p_league_code: leagueCode,
+        p_commence_time: odds.commenceTime,
+        p_home_odds: odds.homeOdds,
+        p_draw_odds: odds.drawOdds,
+        p_away_odds: odds.awayOdds,
+        p_home_probability: odds.homeProbability,
+        p_draw_probability: odds.drawProbability,
+        p_away_probability: odds.awayProbability,
+        p_odds_source: 'the-odds-api'
+      })
+    }
+  )
+  
+  if (!latestResponse.ok) {
+    const errorText = await latestResponse.text()
+    throw new Error(`Failed to save latest: ${latestResponse.status} - ${errorText}`)
   }
-)
-
-if (!latestResponse.ok) {
-  const errorText = await latestResponse.text()
-  throw new Error(`Failed to save latest: ${latestResponse.status} - ${errorText}`)
-}
 }
 
 export async function GET(request: Request) {
