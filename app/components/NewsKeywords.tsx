@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect } from 'react'
 
 interface NewsKeyword {
@@ -31,16 +33,6 @@ interface NewsKeywordsProps {
   matchId: number
 }
 
-interface TeamForm {
-  team: string
-  recentMatches: {
-    opponent: string
-    result: 'W' | 'D' | 'L'  // Win, Draw, Loss
-    score: string
-    homeAway: 'H' | 'A'  // Home or Away
-  }[]
-}
-
 export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywordsProps) {
   const [newsData, setNewsData] = useState<NewsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -49,8 +41,6 @@ export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywor
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedUrl, setSelectedUrl] = useState<string>('')
   const [iframeLoading, setIframeLoading] = useState(false)
-  const [teamForm, setTeamForm] = useState<{ home: TeamForm | null, away: TeamForm | null }>({ home: null, away: null })
-  const [formLoading, setFormLoading] = useState(true)
 
   // 키워드 감성 분석 (긍정/부정/중립)
   const analyzeKeywordSentiment = (keyword: string): 'positive' | 'negative' | 'neutral' => {
@@ -148,52 +138,7 @@ export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywor
 
   useEffect(() => {
     fetchNewsKeywords()
-    fetchTeamForm()
   }, [homeTeam, awayTeam, matchId])
-
-  // 팀 폼 데이터 가져오기
-  const fetchTeamForm = async () => {
-    try {
-      setFormLoading(true)
-      
-      // 임시로 모의 데이터 생성 (실제로는 API 호출)
-      const generateMockForm = (team: string): TeamForm => {
-        const matches = []
-        
-        for (let i = 0; i < 5; i++) {
-          const rand = Math.random()
-          const result = rand > 0.6 ? 'W' : rand > 0.3 ? 'D' : 'L'
-          
-          const score = result === 'W' 
-            ? `${Math.floor(Math.random() * 2) + 2}-${Math.floor(Math.random() * 2)}`
-            : result === 'L'
-              ? `${Math.floor(Math.random() * 2)}-${Math.floor(Math.random() * 2) + 2}`
-              : `${Math.floor(Math.random() * 2) + 1}-${Math.floor(Math.random() * 2) + 1}`
-          
-          matches.push({
-            opponent: 'Team',
-            result,
-            score,
-            homeAway: Math.random() > 0.5 ? 'H' : 'A' as 'H' | 'A'
-          })
-        }
-        
-        return {
-          team,
-          recentMatches: matches.reverse() // 최신순
-        }
-      }
-      
-      setTeamForm({
-        home: generateMockForm(homeTeam),
-        away: generateMockForm(awayTeam)
-      })
-    } catch (err) {
-      console.error('Error fetching team form:', err)
-    } finally {
-      setFormLoading(false)
-    }
-  }
 
   // ESC 키로 모달 닫기
   useEffect(() => {
@@ -260,70 +205,6 @@ export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywor
 
   return (
     <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
-      {/* 팀 폼 (최근 전적) 섹션 */}
-      {!formLoading && (teamForm.home || teamForm.away) && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-              <span className="text-blue-400">📊</span>
-              최근 전적
-            </h3>
-          </div>
-
-          <div className="space-y-4">
-            {/* 홈팀 폼 */}
-            {teamForm.home && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-green-400">🏠 {homeTeam}</span>
-                </div>
-                <div className="flex gap-1.5">
-                  {teamForm.home.recentMatches.map((match, index) => (
-                    <div
-                      key={index}
-                      className={`
-                        flex-1 py-2 px-1.5 rounded text-center text-xs font-bold
-                        ${match.result === 'W' ? 'bg-green-600 text-white' : ''}
-                        ${match.result === 'D' ? 'bg-gray-600 text-white' : ''}
-                        ${match.result === 'L' ? 'bg-red-600 text-white' : ''}
-                      `}
-                      title={`${match.score} (${match.homeAway === 'H' ? '홈' : '원정'})`}
-                    >
-                      {match.score}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 원정팀 폼 */}
-            {teamForm.away && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-400">✈️ {awayTeam}</span>
-                </div>
-                <div className="flex gap-1.5">
-                  {teamForm.away.recentMatches.map((match, index) => (
-                    <div
-                      key={index}
-                      className={`
-                        flex-1 py-2 px-1.5 rounded text-center text-xs font-bold
-                        ${match.result === 'W' ? 'bg-green-600 text-white' : ''}
-                        ${match.result === 'D' ? 'bg-gray-600 text-white' : ''}
-                        ${match.result === 'L' ? 'bg-red-600 text-white' : ''}
-                      `}
-                      title={`${match.score} (${match.homeAway === 'H' ? '홈' : '원정'})`}
-                    >
-                      {match.score}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* 헤드라인 섹션 */}
       {limitedHeadlines.length > 0 && (
         <div>
