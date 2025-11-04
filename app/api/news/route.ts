@@ -67,9 +67,9 @@ async function fetchNaverNews(teamA: string, teamB: string): Promise<NewsSource[
     const teamA_KR = getKoreanTeamName(teamA)
     const teamB_KR = getKoreanTeamName(teamB)
     
-    // 한글 팀명으로 검색 (더 정확한 한국 뉴스 검색)
-    const query = `${teamA_KR} ${teamB_KR} 축구`
-    const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(query)}&display=10&sort=date`
+    // 한글 팀명 + "경기" 또는 "대결" 키워드 추가 (더 관련성 높은 최신 기사)
+    const query = `${teamA_KR} ${teamB_KR} 경기`
+    const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(query)}&display=20&sort=date`
     
     console.log(`🔍 네이버 뉴스 검색: ${query}`)
     
@@ -89,17 +89,36 @@ async function fetchNaverNews(teamA: string, teamB: string): Promise<NewsSource[
     
     const data = await response.json()
     const articles: NewsSource[] = []
+    const now = new Date()
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
     
     data.items?.forEach((item: any) => {
-      articles.push({
-        title: item.title.replace(/<[^>]*>/g, ''),  // HTML 태그 제거
-        content: item.description.replace(/<[^>]*>/g, ''),
-        url: item.link,
-        publishedAt: item.pubDate
-      })
+      // 날짜 필터링: 3일 이내 기사만
+      try {
+        const articleDate = new Date(item.pubDate)
+        
+        if (articleDate >= threeDaysAgo && articles.length < 10) {
+          articles.push({
+            title: item.title.replace(/<[^>]*>/g, ''),  // HTML 태그 제거
+            content: item.description.replace(/<[^>]*>/g, ''),
+            url: item.link,
+            publishedAt: item.pubDate
+          })
+        }
+      } catch (error) {
+        // 날짜 파싱 실패 시에도 포함
+        if (articles.length < 10) {
+          articles.push({
+            title: item.title.replace(/<[^>]*>/g, ''),
+            content: item.description.replace(/<[^>]*>/g, ''),
+            url: item.link,
+            publishedAt: item.pubDate
+          })
+        }
+      }
     })
     
-    console.log(`📰 네이버 뉴스: ${articles.length}개 수집`)
+    console.log(`📰 네이버 뉴스: ${articles.length}개 수집 (3일 이내)`)
     return articles
   } catch (error) {
     console.error('Naver News fetch error:', error)
@@ -114,9 +133,9 @@ async function fetchNaverBlog(teamA: string, teamB: string): Promise<NewsSource[
     const teamA_KR = getKoreanTeamName(teamA)
     const teamB_KR = getKoreanTeamName(teamB)
     
-    // 한글 팀명 + 경기/분석 키워드로 검색
-    const query = `${teamA_KR} ${teamB_KR} 경기 분석`
-    const url = `https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(query)}&display=10&sort=date`
+    // 한글 팀명 + "프리뷰" 또는 "분석" 키워드
+    const query = `${teamA_KR} ${teamB_KR} 프리뷰`
+    const url = `https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(query)}&display=20&sort=date`
     
     console.log(`🔍 네이버 블로그 검색: ${query}`)
     
@@ -136,17 +155,41 @@ async function fetchNaverBlog(teamA: string, teamB: string): Promise<NewsSource[
     
     const data = await response.json()
     const articles: NewsSource[] = []
+    const now = new Date()
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
     
     data.items?.forEach((item: any) => {
-      articles.push({
-        title: item.title.replace(/<[^>]*>/g, ''),  // HTML 태그 제거
-        content: item.description.replace(/<[^>]*>/g, ''),
-        url: item.link,
-        publishedAt: item.postdate
-      })
+      // 날짜 필터링: 3일 이내만
+      try {
+        // 네이버 블로그 날짜 형식: YYYYMMDD
+        const dateStr = item.postdate
+        const year = parseInt(dateStr.substring(0, 4))
+        const month = parseInt(dateStr.substring(4, 6)) - 1
+        const day = parseInt(dateStr.substring(6, 8))
+        const articleDate = new Date(year, month, day)
+        
+        if (articleDate >= threeDaysAgo && articles.length < 10) {
+          articles.push({
+            title: item.title.replace(/<[^>]*>/g, ''),
+            content: item.description.replace(/<[^>]*>/g, ''),
+            url: item.link,
+            publishedAt: articleDate.toISOString()
+          })
+        }
+      } catch (error) {
+        // 날짜 파싱 실패 시에도 포함
+        if (articles.length < 10) {
+          articles.push({
+            title: item.title.replace(/<[^>]*>/g, ''),
+            content: item.description.replace(/<[^>]*>/g, ''),
+            url: item.link,
+            publishedAt: item.postdate
+          })
+        }
+      }
     })
     
-    console.log(`📝 네이버 블로그: ${articles.length}개 수집`)
+    console.log(`📝 네이버 블로그: ${articles.length}개 수집 (3일 이내)`)
     return articles
   } catch (error) {
     console.error('Naver Blog fetch error:', error)
@@ -157,8 +200,12 @@ async function fetchNaverBlog(teamA: string, teamB: string): Promise<NewsSource[
 // Native fetch를 사용한 Google News 수집
 async function fetchGoogleNews(teamA: string, teamB: string): Promise<NewsSource[]> {
   try {
-    const query = encodeURIComponent(`${teamA} vs ${teamB} football`)
-    const url = `https://news.google.com/rss/search?q=${query}&hl=ko&gl=KR&ceid=KR:ko`
+    // when:7d를 쿼리에 직접 포함 (최근 7일 이내)
+    const query = `${teamA} vs ${teamB} football when:7d`
+    const encodedQuery = encodeURIComponent(query)
+    const url = `https://news.google.com/rss/search?q=${encodedQuery}&hl=en&gl=US&ceid=US:en`
+    
+    console.log(`🔍 Google News 검색: ${query}`)
     
     const response = await fetch(url, {
       method: 'GET',
@@ -175,22 +222,52 @@ async function fetchGoogleNews(teamA: string, teamB: string): Promise<NewsSource
     const data = await response.text()
     const $ = cheerio.load(data, { xmlMode: true })
     const articles: NewsSource[] = []
+    const now = new Date()
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
     
-    $('item').slice(0, 10).each((_, element) => {
+    $('item').each((_, element) => {
       const title = $(element).find('title').text()
       const description = $(element).find('description').text()
       const link = $(element).find('link').text()
       const pubDate = $(element).find('pubDate').text()
       
-      articles.push({
-        title,
-        content: description || title,
-        url: link,
-        publishedAt: pubDate
-      })
+      // 날짜 필터링: 3일 이내의 기사만
+      try {
+        const articleDate = new Date(pubDate)
+        
+        if (articleDate >= threeDaysAgo && articles.length < 15) {
+          articles.push({
+            title,
+            content: description || title,
+            url: link,
+            publishedAt: pubDate
+          })
+        }
+      } catch (error) {
+        // 날짜 파싱 실패 시에도 포함 (최신 기사일 가능성)
+        if (articles.length < 15) {
+          articles.push({
+            title,
+            content: description || title,
+            url: link,
+            publishedAt: pubDate || new Date().toISOString()
+          })
+        }
+      }
     })
     
-    return articles
+    // 최신순으로 정렬
+    articles.sort((a, b) => {
+      try {
+        return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+      } catch {
+        return 0
+      }
+    })
+    
+    console.log(`📰 Google News: ${articles.length}개 수집 (3일 이내)`)
+    
+    return articles.slice(0, 10)
   } catch (error) {
     console.error('Google News fetch error:', error)
     return []
@@ -484,11 +561,38 @@ export async function GET(request: NextRequest) {
     
     console.log(`📰 총 ${allArticles.length}개 기사 수집 완료 (네이버 뉴스: ${naverNewsCount}, 네이버 블로그: ${naverBlogCount}, Google: ${googleCount}, ESPN: ${espnCount}, BBC: ${bbcCount})`)
     
-    // 키워드 추출
-    const keywords = extractKeywords(allArticles, homeTeam, awayTeam)
+    // 🔥 날짜 필터링: 최근 14일 이내 기사만 (오래된 기사 제외)
+    const now = new Date()
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
     
-    // 주요 헤드라인 생성
-    const headlinesRaw = generateHeadlines(allArticles, keywords)
+    const recentArticles = allArticles.filter(article => {
+      try {
+        const articleDate = new Date(article.publishedAt)
+        return articleDate >= fourteenDaysAgo && articleDate <= now
+      } catch {
+        // 날짜 파싱 실패 시 포함 (최신 기사일 가능성)
+        return true
+      }
+    })
+    
+    console.log(`📅 최근 기사 필터링: ${allArticles.length}개 → ${recentArticles.length}개`)
+    
+    // 🔥 최신순 정렬
+    recentArticles.sort((a, b) => {
+      try {
+        const dateA = new Date(a.publishedAt).getTime()
+        const dateB = new Date(b.publishedAt).getTime()
+        return dateB - dateA  // 최신순 (내림차순)
+      } catch {
+        return 0
+      }
+    })
+    
+    // 키워드 추출 (최신 기사 기준)
+    const keywords = extractKeywords(recentArticles, homeTeam, awayTeam)
+    
+    // 주요 헤드라인 생성 (최신 기사 기준)
+    const headlinesRaw = generateHeadlines(recentArticles, keywords)
     
     // NewsKeywords 컴포넌트가 기대하는 형식으로 변환
     const headlines = headlinesRaw.map(article => ({
@@ -501,7 +605,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       keywords: keywords.slice(0, 8), // 상위 8개 키워드
       headlines: headlines,
-      totalArticles: allArticles.length,
+      totalArticles: recentArticles.length,  // 최신 기사 개수
       sources: {
         naverNews: naverNewsCount,
         naverBlog: naverBlogCount,
