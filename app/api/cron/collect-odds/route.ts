@@ -143,13 +143,13 @@ export async function GET(request: Request) {
         // 각 경기 오즈 저장
 for (const match of data) {
   try {
-    // 🔥 경기 3일 전부터만 수집
+    // 🔥 경기 3일 전부터 경기 종료 후 1시간까지 수집
     const commenceTime = new Date(match.commence_time).getTime()
     const now = Date.now()
     const hoursUntilMatch = (commenceTime - now) / (1000 * 60 * 60)
     
-    // 경기가 이미 끝났거나 3일(72시간) 이상 남았으면 스킵
-    if (hoursUntilMatch < 0 || hoursUntilMatch > 72) {
+    // 경기 종료 후 1시간 지났거나 3일(72시간) 이상 남았으면 스킵
+    if (hoursUntilMatch < -1 || hoursUntilMatch > 72) {
       continue
     }
     
