@@ -641,30 +641,15 @@ export default function Home() {
       } shadow-lg`}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()}>
-              <span className="text-3xl">📈</span>
-              <h1 className={`text-2xl font-black ${
-                darkMode 
-                  ? 'text-white' 
-                  : 'text-black'
-              }`}>
-                SOCCER TREND
-              </h1>
-            </div>
+<div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.reload()}>
+  <img 
+    src="/logo.svg" 
+    alt="Trend Soccer" 
+    className="h-14 w-auto"
+  />
+</div>
             
-            <div className="flex items-center gap-4">
-              {/* 언어 전환 */}
-              <button
-                onClick={() => setLanguage(language === 'ko' ? 'en' : 'ko')}
-                className={`px-3 py-1 rounded-lg font-medium transition-all ${
-                  darkMode 
-                    ? 'bg-gray-900 text-white hover:bg-gray-800 border border-gray-800' 
-                    : 'bg-gray-100 text-black hover:bg-gray-200 border border-gray-200'
-                }`}
-              >
-                {language === 'ko' ? '🇰🇷 KO' : '🇺🇸 EN'}
-              </button>
-            </div>
+
           </div>
         </div>
       </header>
@@ -1067,7 +1052,7 @@ export default function Home() {
  <footer className={`mt-12 py-6 border-t ${darkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white'}`}>
         <div className="container mx-auto px-4 text-center">
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            © 2025 tri-kk. All rights reserved.
+            © 2025 tri-k. All rights reserved.
           </p>
         </div>
       </footer>
