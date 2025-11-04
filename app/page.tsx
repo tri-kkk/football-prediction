@@ -1064,7 +1064,13 @@ export default function Home() {
           </div>
         )}
       </div>
-
+ <footer className={`mt-12 py-6 border-t ${darkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white'}`}>
+        <div className="container mx-auto px-4 text-center">
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            © 2025 tri-kk. All rights reserved.
+          </p>
+        </div>
+      </footer>
       <style jsx global>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
