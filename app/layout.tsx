@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import GoogleTagManager from './GoogleTagManager'
 
 export const metadata: Metadata = {
   title: '⚽ Sports Prediction - Real Time',
@@ -26,12 +27,17 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
+        {/* Google Tag Manager */}
+        <GoogleTagManager />
+
+        {/* Google AdSense */}
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7858814871438044"
           crossOrigin="anonymous"
           strategy="beforeInteractive"
         />
+        
         {children}
       </body>
     </html>
