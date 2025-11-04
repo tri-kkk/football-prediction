@@ -364,7 +364,7 @@ export default function Home() {
         
         if (selectedLeague === 'ALL') {
           // 모든 리그의 오즈 가져오기
-          const leagues = ['PL', 'PD', 'BL1', 'SA', 'FL1']
+          const leagues = ['PL', 'PD', 'BL1', 'SA', 'FL1' ,'CL']
           const promises = leagues.map(league => 
             fetch(`/api/odds-from-db?league=${league}`)
               .then(r => r.json())
