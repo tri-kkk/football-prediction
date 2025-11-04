@@ -2,6 +2,13 @@
 
 import { useEffect } from 'react'
 
+// Window 인터페이스 확장
+declare global {
+  interface Window {
+    dataLayer: any[]
+  }
+}
+
 export default function GoogleTagManager() {
   useEffect(() => {
     // dataLayer 초기화
