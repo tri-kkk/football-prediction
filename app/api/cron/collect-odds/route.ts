@@ -57,17 +57,18 @@ async function saveOddsToDatabase(odds: OddsData, leagueCode: string) {
   }
   
   // 2. 최신 오즈 업데이트 (UPSERT)
- const latestResponse = await fetch(
-  `${supabaseUrl}/rest/v1/match_odds_latest?match_id=eq.${odds.matchId}`,
+ 
+const latestResponse = await fetch(
+  `${supabaseUrl}/rest/v1/match_odds_latest`,
   {
     method: 'POST',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`,
       'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates'
+      'Prefer': 'return=minimal'
     },
-    body: JSON.stringify({
+  body: JSON.stringify({
       match_id: odds.matchId,
       home_team: odds.homeTeam,
       away_team: odds.awayTeam,
