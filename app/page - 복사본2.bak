@@ -667,8 +667,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7853814871438044"
-     crossorigin="anonymous"></script>
       </header>
 
       {/* 승률 배너 (자동 스크롤) */}
@@ -782,23 +780,19 @@ export default function Home() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                 }`}
               >
-                {/* 모바일: 약자만, 데스크탑: 국기 + 이름 */}
-                <span className="sm:hidden font-bold">{league.code}</span>
-                <span className="hidden sm:flex items-center gap-2">
-                  {league.isEmoji ? (
-                    <span className="text-base">{league.flag}</span>
-                  ) : (
-                    <img 
-                      src={league.flag} 
-                      alt={league.name}
-                      className="w-4 h-3 object-cover rounded"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
-                  )}
-                  <span>{league.name}</span>
-                </span>
+                {league.isEmoji ? (
+                  <span className="text-base">{league.flag}</span>
+                ) : (
+                  <img 
+                    src={league.flag} 
+                    alt={league.name}
+                    className="w-4 h-3 object-cover rounded"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                )}
+                <span>{league.name}</span>
               </button>
             ))}
           </div>

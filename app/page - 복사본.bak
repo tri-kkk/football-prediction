@@ -219,7 +219,7 @@ export default function Home() {
     }
   }, [darkMode])
 
-  // 자동 스크롤 효과 + 터치/마우스 드래그 지원
+  // 자동 스크롤 효과
   useEffect(() => {
     const container = scrollContainerRef.current
     if (!container || matches.length === 0) return
@@ -228,14 +228,10 @@ export default function Home() {
     const scrollSpeed = 0.5
     let intervalId: NodeJS.Timeout | null = null
     let isScrolling = true
-    let isDragging = false
-    let startX = 0
-    let scrollLeft = 0
-    let resumeTimer: NodeJS.Timeout | null = null
 
     const startScrolling = () => {
       intervalId = setInterval(() => {
-        if (!isScrolling || isDragging) return
+        if (!isScrolling) return
         
         scrollPosition += scrollSpeed
         if (container) {
@@ -250,105 +246,23 @@ export default function Home() {
       }, 20)
     }
 
-    const stopScrolling = () => {
+    const handleMouseEnter = () => {
       isScrolling = false
-      if (intervalId) {
-        clearInterval(intervalId)
-        intervalId = null
-      }
-    }
-
-    const resumeScrollAfterDelay = () => {
-      if (resumeTimer) clearTimeout(resumeTimer)
-      resumeTimer = setTimeout(() => {
-        scrollPosition = container.scrollLeft
-        isScrolling = true
-        startScrolling()
-      }, 2000)
-    }
-
-    // 터치 이벤트
-    const handleTouchStart = (e: TouchEvent) => {
-      isDragging = true
-      stopScrolling()
-      startX = e.touches[0].pageX - container.offsetLeft
-      scrollLeft = container.scrollLeft
-    }
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDragging) return
-      e.preventDefault()
-      const x = e.touches[0].pageX - container.offsetLeft
-      const walk = (x - startX) * 2
-      container.scrollLeft = scrollLeft - walk
-    }
-
-    const handleTouchEnd = () => {
-      isDragging = false
-      resumeScrollAfterDelay()
-    }
-
-    // 마우스 드래그
-    const handleMouseDown = (e: MouseEvent) => {
-      isDragging = true
-      stopScrolling()
-      startX = e.pageX - container.offsetLeft
-      scrollLeft = container.scrollLeft
-      container.style.cursor = 'grabbing'
-      container.style.userSelect = 'none'
-    }
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return
-      e.preventDefault()
-      const x = e.pageX - container.offsetLeft
-      const walk = (x - startX) * 2
-      container.scrollLeft = scrollLeft - walk
-    }
-
-    const handleMouseUp = () => {
-      if (!isDragging) return
-      isDragging = false
-      container.style.cursor = 'grab'
-      container.style.userSelect = ''
-      resumeScrollAfterDelay()
     }
 
     const handleMouseLeave = () => {
-      if (isDragging) {
-        isDragging = false
-        container.style.cursor = 'grab'
-        container.style.userSelect = ''
-        resumeScrollAfterDelay()
-      }
+      isScrolling = true
     }
 
-    // 커서 스타일
-    container.style.cursor = 'grab'
-
-    // 이벤트 리스너 등록
-    container.addEventListener('touchstart', handleTouchStart, { passive: true })
-    container.addEventListener('touchmove', handleTouchMove, { passive: false })
-    container.addEventListener('touchend', handleTouchEnd)
-    container.addEventListener('mousedown', handleMouseDown)
-    container.addEventListener('mousemove', handleMouseMove)
-    container.addEventListener('mouseup', handleMouseUp)
+    container.addEventListener('mouseenter', handleMouseEnter)
     container.addEventListener('mouseleave', handleMouseLeave)
 
     startScrolling()
 
     return () => {
       if (intervalId) clearInterval(intervalId)
-      if (resumeTimer) clearTimeout(resumeTimer)
-      container.removeEventListener('touchstart', handleTouchStart)
-      container.removeEventListener('touchmove', handleTouchMove)
-      container.removeEventListener('touchend', handleTouchEnd)
-      container.removeEventListener('mousedown', handleMouseDown)
-      container.removeEventListener('mousemove', handleMouseMove)
-      container.removeEventListener('mouseup', handleMouseUp)
+      container.removeEventListener('mouseenter', handleMouseEnter)
       container.removeEventListener('mouseleave', handleMouseLeave)
-      container.style.cursor = ''
-      container.style.userSelect = ''
     }
   }, [matches])
 
@@ -667,8 +581,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7853814871438044"
-     crossorigin="anonymous"></script>
       </header>
 
       {/* 승률 배너 (자동 스크롤) */}
@@ -764,15 +676,15 @@ export default function Home() {
       {/* 트렌드 컨텐츠 영역 */}
       <div className="container mx-auto px-4 py-8">
         {/* 리그 필터 */}
-        <div className={`mb-6 p-3 rounded-2xl ${
+        <div className={`mb-6 p-4 rounded-2xl ${
           darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
         }`}>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {LEAGUES.map((league) => (
               <button
                 key={league.code}
                 onClick={() => setSelectedLeague(league.code)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                   selectedLeague === league.code
                     ? darkMode 
                       ? 'bg-white text-black shadow-lg transform scale-105'
@@ -782,23 +694,19 @@ export default function Home() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                 }`}
               >
-                {/* 모바일: 약자만, 데스크탑: 국기 + 이름 */}
-                <span className="sm:hidden font-bold">{league.code}</span>
-                <span className="hidden sm:flex items-center gap-2">
-                  {league.isEmoji ? (
-                    <span className="text-base">{league.flag}</span>
-                  ) : (
-                    <img 
-                      src={league.flag} 
-                      alt={league.name}
-                      className="w-4 h-3 object-cover rounded"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
-                  )}
-                  <span>{league.name}</span>
-                </span>
+                {league.isEmoji ? (
+                  <span className="text-lg">{league.flag}</span>
+                ) : (
+                  <img 
+                    src={league.flag} 
+                    alt={league.name}
+                    className="w-5 h-4 object-cover rounded"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                )}
+                <span>{league.name}</span>
               </button>
             ))}
           </div>
