@@ -21,6 +21,139 @@ const STOP_WORDS = new Set([
   '경기', '팀', '선수', '축구', 'football', 'match', 'game', 'soccer', 'vs', 'against'
 ])
 
+// 팀명 한글 변환 함수 (TEAM_NAME_KR 사용)
+function getKoreanTeamName(englishName: string): string {
+  // TEAM_NAME_KR는 별도 파일에 있다고 가정
+  // 실제 사용 시 import 필요: import { TEAM_NAME_KR } from '@/app/teamLogos'
+  
+  // 임시 주요 팀명 매핑
+  const teamNameKR: Record<string, string> = {
+    // 프리미어리그
+    'Arsenal': '아스날',
+    'Liverpool': '리버풀',
+    'Manchester City': '맨체스터시티',
+    'Manchester United': '맨체스터유나이티드',
+    'Chelsea': '첼시',
+    'Tottenham': '토트넘',
+    'Newcastle': '뉴캐슬',
+    'Brighton': '브라이튼',
+    
+    // 라리가
+    'Barcelona': '바르셀로나',
+    'Real Madrid': '레알마드리드',
+    'Atletico Madrid': '아틀레티코마드리드',
+    
+    // 분데스리가
+    'Bayern Munich': '바이에른뮌헨',
+    'Borussia Dortmund': '도르트문트',
+    
+    // 세리에A
+    'Juventus': '유벤투스',
+    'Inter': '인터밀란',
+    'AC Milan': '밀란',
+    
+    // 챔피언스리그 추가 팀들
+    'Slavia Praha': '슬라비아프라하',
+    'Slavia Prague': '슬라비아프라하',
+  }
+  
+  return teamNameKR[englishName] || englishName
+}
+
+// 네이버 뉴스 검색 (한글 팀명 사용)
+async function fetchNaverNews(teamA: string, teamB: string): Promise<NewsSource[]> {
+  try {
+    // 영문 팀명을 한글로 변환
+    const teamA_KR = getKoreanTeamName(teamA)
+    const teamB_KR = getKoreanTeamName(teamB)
+    
+    // 한글 팀명으로 검색 (더 정확한 한국 뉴스 검색)
+    const query = `${teamA_KR} ${teamB_KR} 축구`
+    const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(query)}&display=10&sort=date`
+    
+    console.log(`🔍 네이버 뉴스 검색: ${query}`)
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID!,
+        'X-Naver-Client-Secret': process.env.NAVER_CLIENT_SECRET!,
+        'User-Agent': 'Mozilla/5.0'
+      },
+      signal: AbortSignal.timeout(5000)
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    const articles: NewsSource[] = []
+    
+    data.items?.forEach((item: any) => {
+      articles.push({
+        title: item.title.replace(/<[^>]*>/g, ''),  // HTML 태그 제거
+        content: item.description.replace(/<[^>]*>/g, ''),
+        url: item.link,
+        publishedAt: item.pubDate
+      })
+    })
+    
+    console.log(`📰 네이버 뉴스: ${articles.length}개 수집`)
+    return articles
+  } catch (error) {
+    console.error('Naver News fetch error:', error)
+    return []
+  }
+}
+
+// 네이버 블로그 검색 (한글 팀명 사용)
+async function fetchNaverBlog(teamA: string, teamB: string): Promise<NewsSource[]> {
+  try {
+    // 영문 팀명을 한글로 변환
+    const teamA_KR = getKoreanTeamName(teamA)
+    const teamB_KR = getKoreanTeamName(teamB)
+    
+    // 한글 팀명 + 경기/분석 키워드로 검색
+    const query = `${teamA_KR} ${teamB_KR} 경기 분석`
+    const url = `https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(query)}&display=10&sort=date`
+    
+    console.log(`🔍 네이버 블로그 검색: ${query}`)
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID!,
+        'X-Naver-Client-Secret': process.env.NAVER_CLIENT_SECRET!,
+        'User-Agent': 'Mozilla/5.0'
+      },
+      signal: AbortSignal.timeout(5000)
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    const articles: NewsSource[] = []
+    
+    data.items?.forEach((item: any) => {
+      articles.push({
+        title: item.title.replace(/<[^>]*>/g, ''),  // HTML 태그 제거
+        content: item.description.replace(/<[^>]*>/g, ''),
+        url: item.link,
+        publishedAt: item.postdate
+      })
+    })
+    
+    console.log(`📝 네이버 블로그: ${articles.length}개 수집`)
+    return articles
+  } catch (error) {
+    console.error('Naver Blog fetch error:', error)
+    return []
+  }
+}
+
 // Native fetch를 사용한 Google News 수집
 async function fetchGoogleNews(teamA: string, teamB: string): Promise<NewsSource[]> {
   try {
@@ -258,23 +391,33 @@ export async function GET(request: NextRequest) {
     
     console.log(`🔍 뉴스 수집 시작: ${homeTeam} vs ${awayTeam}`)
     
-    // 병렬로 여러 소스에서 뉴스 수집 (Promise.allSettled 사용)
+    // 병렬로 여러 소스에서 뉴스 수집 (네이버 우선 순위)
     const results = await Promise.allSettled([
-      fetchGoogleNews(homeTeam, awayTeam),
-      fetchESPNNews(homeTeam, awayTeam),
-      fetchBBCNews(homeTeam, awayTeam)
+      fetchNaverNews(homeTeam, awayTeam),     // 🥇 1순위: 네이버 뉴스
+      fetchNaverBlog(homeTeam, awayTeam),     // 🥈 2순위: 네이버 블로그
+      fetchGoogleNews(homeTeam, awayTeam),    // 3순위
+      fetchESPNNews(homeTeam, awayTeam),      // 4순위
+      fetchBBCNews(homeTeam, awayTeam)        // 5순위
     ])
     
-    // 성공한 결과만 수집
+    // 성공한 결과를 네이버 우선으로 수집
     const allArticles: NewsSource[] = []
-    let googleCount = 0, espnCount = 0, bbcCount = 0
+    let naverNewsCount = 0, naverBlogCount = 0, googleCount = 0, espnCount = 0, bbcCount = 0
     
     results.forEach((result, index) => {
       if (result.status === 'fulfilled') {
-        allArticles.push(...result.value)
-        if (index === 0) googleCount = result.value.length
-        if (index === 1) espnCount = result.value.length
-        if (index === 2) bbcCount = result.value.length
+        // 네이버 기사를 배열 앞쪽에 추가 (우선 노출)
+        if (index === 0 || index === 1) {
+          allArticles.unshift(...result.value)  // 앞쪽에 추가
+        } else {
+          allArticles.push(...result.value)      // 뒤쪽에 추가
+        }
+        
+        if (index === 0) naverNewsCount = result.value.length
+        if (index === 1) naverBlogCount = result.value.length
+        if (index === 2) googleCount = result.value.length
+        if (index === 3) espnCount = result.value.length
+        if (index === 4) bbcCount = result.value.length
       }
     })
     
@@ -284,11 +427,11 @@ export async function GET(request: NextRequest) {
         headlines: [],
         message: '관련 뉴스를 찾을 수 없습니다',
         totalArticles: 0,
-        sources: { google: 0, espn: 0, bbc: 0 }
+        sources: { naverNews: 0, naverBlog: 0, google: 0, espn: 0, bbc: 0 }
       })
     }
     
-    console.log(`📰 총 ${allArticles.length}개 기사 수집 완료`)
+    console.log(`📰 총 ${allArticles.length}개 기사 수집 완료 (네이버 뉴스: ${naverNewsCount}, 네이버 블로그: ${naverBlogCount}, Google: ${googleCount}, ESPN: ${espnCount}, BBC: ${bbcCount})`)
     
     // 키워드 추출
     const keywords = extractKeywords(allArticles, homeTeam, awayTeam)
@@ -301,6 +444,8 @@ export async function GET(request: NextRequest) {
       headlines: headlines,
       totalArticles: allArticles.length,
       sources: {
+        naverNews: naverNewsCount,
+        naverBlog: naverBlogCount,
         google: googleCount,
         espn: espnCount,
         bbc: bbcCount
