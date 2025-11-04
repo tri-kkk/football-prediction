@@ -546,13 +546,54 @@ export default function Home() {
   fetchMatches()
 }, [selectedLeague])
 
+  // 뉴스 키워드 가져오기
+  const fetchNewsKeywords = async (homeTeam: string, awayTeam: string) => {
+    try {
+      console.log(`🔍 뉴스 키워드 요청: ${homeTeam} vs ${awayTeam}`)
+      
+      const response = await fetch(
+        `/api/news?homeTeam=${encodeURIComponent(homeTeam)}&awayTeam=${encodeURIComponent(awayTeam)}`
+      )
+      
+      if (!response.ok) {
+        throw new Error('뉴스 데이터 로드 실패')
+      }
+      
+      const data = await response.json()
+      console.log('📰 뉴스 키워드 응답:', data)
+      
+      // API 응답의 keywords를 NewsKeyword 형식으로 변환
+      if (data.keywords && Array.isArray(data.keywords)) {
+        const formattedKeywords: NewsKeyword[] = data.keywords.map((kw: any) => ({
+          keyword: kw.keyword,
+          count: kw.count,
+          sentiment: 'neutral' as const  // API에서 sentiment를 제공하지 않으면 neutral로 설정
+        }))
+        
+        setNewsKeywords(formattedKeywords)
+        console.log('✅ 뉴스 키워드 설정 완료:', formattedKeywords.length, '개')
+      } else {
+        // 데이터가 없으면 빈 배열
+        setNewsKeywords([])
+        console.log('⚠️ 뉴스 키워드 없음')
+      }
+      
+    } catch (error) {
+      console.error('❌ 뉴스 키워드 로드 에러:', error)
+      // 에러 시 더미 데이터 사용
+      setNewsKeywords(generateNewsKeywords())
+    }
+  }
+
   // 경기 클릭 핸들러
   const handleMatchClick = (match: Match) => {
     if (expandedMatchId === match.id) {
       setExpandedMatchId(null)
     } else {
       setExpandedMatchId(match.id)
-      setNewsKeywords(generateNewsKeywords())
+      
+      // 실제 뉴스 API 호출 (영문 팀명 사용)
+      fetchNewsKeywords(match.homeTeam, match.awayTeam)
                   
       setTimeout(() => {
   const chartContainer = document.getElementById(`trend-chart-${match.id}`)

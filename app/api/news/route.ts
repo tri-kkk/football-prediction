@@ -358,8 +358,8 @@ function extractKeywords(articles: NewsSource[], teamA: string, teamB: string): 
 }
 
 // 주요 헤드라인 생성
-function generateHeadlines(articles: NewsSource[], keywords: KeywordCount[]): string[] {
-  const headlines: string[] = []
+function generateHeadlines(articles: NewsSource[], keywords: KeywordCount[]): NewsSource[] {
+  const headlines: NewsSource[] = []
   const topKeywords = keywords.slice(0, 3).map(k => k.keyword)
   
   // 키워드가 포함된 중요 뉴스 찾기
@@ -367,13 +367,64 @@ function generateHeadlines(articles: NewsSource[], keywords: KeywordCount[]): st
     const title = article.title.toLowerCase()
     const matchedKeywords = topKeywords.filter(kw => title.includes(kw.toLowerCase()))
     
-    if (matchedKeywords.length > 0) {
-      headlines.push(article.title)
+    if (matchedKeywords.length > 0 && headlines.length < 5) {
+      headlines.push(article)
     }
   })
   
+  // 키워드 매칭이 5개 미만이면 최신 기사로 채우기
+  if (headlines.length < 5) {
+    articles.forEach(article => {
+      if (headlines.length < 5 && !headlines.includes(article)) {
+        headlines.push(article)
+      }
+    })
+  }
+  
   // 최대 5개의 헤드라인 반환
   return headlines.slice(0, 5)
+}
+
+// URL에서 출처 추출
+function determineSource(url: string): string {
+  if (url.includes('news.google.com')) return 'Google News'
+  if (url.includes('naver.com')) return 'Naver'
+  if (url.includes('espn.com')) return 'ESPN'
+  if (url.includes('bbc.co.uk') || url.includes('bbc.com')) return 'BBC Sport'
+  
+  // 도메인 추출
+  try {
+    const domain = new URL(url).hostname.replace('www.', '')
+    return domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1)
+  } catch {
+    return 'Unknown'
+  }
+}
+
+// 날짜 포맷팅
+function formatPublishDate(dateString: string): string {
+  if (!dateString) return ''
+  
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+    
+    if (diffMins < 60) {
+      return `${diffMins}분 전`
+    } else if (diffHours < 24) {
+      return `${diffHours}시간 전`
+    } else if (diffDays < 7) {
+      return `${diffDays}일 전`
+    } else {
+      return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+    }
+  } catch {
+    return dateString
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -437,7 +488,15 @@ export async function GET(request: NextRequest) {
     const keywords = extractKeywords(allArticles, homeTeam, awayTeam)
     
     // 주요 헤드라인 생성
-    const headlines = generateHeadlines(allArticles, keywords)
+    const headlinesRaw = generateHeadlines(allArticles, keywords)
+    
+    // NewsKeywords 컴포넌트가 기대하는 형식으로 변환
+    const headlines = headlinesRaw.map(article => ({
+      title: article.title,
+      url: article.url,
+      source: determineSource(article.url), // URL에서 출처 추출
+      date: formatPublishDate(article.publishedAt)
+    }))
     
     return NextResponse.json({
       keywords: keywords.slice(0, 8), // 상위 8개 키워드
