@@ -25,15 +25,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body>
+      <head>
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7858814871438044"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
         />
-        {children}
-      </body>
+      </head>
+      <body>{children}</body>
     </html>
   )
 }
