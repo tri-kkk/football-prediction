@@ -31,16 +31,6 @@ interface NewsKeywordsProps {
   matchId: number
 }
 
-interface TeamForm {
-  team: string
-  recentMatches: {
-    opponent: string
-    result: 'W' | 'D' | 'L'  // Win, Draw, Loss
-    score: string
-    homeAway: 'H' | 'A'  // Home or Away
-  }[]
-}
-
 export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywordsProps) {
   const [newsData, setNewsData] = useState<NewsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -49,151 +39,10 @@ export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywor
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedUrl, setSelectedUrl] = useState<string>('')
   const [iframeLoading, setIframeLoading] = useState(false)
-  const [teamForm, setTeamForm] = useState<{ home: TeamForm | null, away: TeamForm | null }>({ home: null, away: null })
-  const [formLoading, setFormLoading] = useState(true)
-
-  // 키워드 감성 분석 (긍정/부정/중립)
-  const analyzeKeywordSentiment = (keyword: string): 'positive' | 'negative' | 'neutral' => {
-    const positiveWords = ['연승', '승리', '강세', '복귀', '호조', '상승', '득점', '공격', '압박', '선두', '우승', '질주']
-    const negativeWords = ['부상', '결장', '연패', '패배', '약세', '부진', '실점', '수비', '위기', '하락', '출전']
-    
-    const lowerKeyword = keyword.toLowerCase()
-    
-    if (positiveWords.some(word => lowerKeyword.includes(word))) return 'positive'
-    if (negativeWords.some(word => lowerKeyword.includes(word))) return 'negative'
-    return 'neutral'
-  }
-
-  // 키워드를 팀별로 분류
-  const categorizeKeywords = () => {
-    if (!newsData?.keywords) return { home: [], away: [], neutral: [] }
-    
-    const homeKeywords: NewsKeyword[] = []
-    const awayKeywords: NewsKeyword[] = []
-    const neutralKeywords: NewsKeyword[] = []
-    
-    newsData.keywords.forEach(kw => {
-      const keyword = kw.keyword.toLowerCase()
-      const homeTeamLower = homeTeam.toLowerCase()
-      const awayTeamLower = awayTeam.toLowerCase()
-      
-      // 팀 이름이 포함되어 있거나 관련 키워드 판단
-      if (keyword.includes(homeTeamLower) || keyword.includes('홈') || keyword.includes('home')) {
-        homeKeywords.push(kw)
-      } else if (keyword.includes(awayTeamLower) || keyword.includes('원정') || keyword.includes('away')) {
-        awayKeywords.push(kw)
-      } else {
-        neutralKeywords.push(kw)
-      }
-    })
-    
-    return { home: homeKeywords, away: awayKeywords, neutral: neutralKeywords }
-  }
-
-  // 헤드라인에서 인사이트 추출
-  const extractInsights = () => {
-    if (!newsData?.headlines) return { home: [], away: [], general: [] }
-    
-    const homeInsights: string[] = []
-    const awayInsights: string[] = []
-    const generalInsights: string[] = []
-    
-    const homeTeamLower = homeTeam.toLowerCase()
-    const awayTeamLower = awayTeam.toLowerCase()
-    
-    newsData.headlines.forEach(headline => {
-      const title = headline.title.toLowerCase()
-      
-      // 선수 관련 정보 추출 (득점, 부상 등)
-      let insight = ''
-      
-      if (title.includes('score') || title.includes('goal')) {
-        // 득점 관련
-        const playerMatch = headline.title.match(/^([A-Za-z\s]+)\s+vs/)
-        if (playerMatch) {
-          const player = playerMatch[1].trim()
-          insight = `${player} 득점 예상`
-        }
-      } else if (title.includes('injury') || title.includes('out') || title.includes('doubt')) {
-        // 부상 관련
-        const playerMatch = headline.title.match(/^([A-Za-z\s]+)\s+/)
-        if (playerMatch) {
-          const player = playerMatch[1].trim()
-          insight = `${player} 부상 우려`
-        }
-      } else if (title.includes('lineup') || title.includes('starting')) {
-        insight = '선발 라인업 발표'
-      } else if (title.includes('preview') || title.includes('prediction')) {
-        insight = '경기 프리뷰'
-      }
-      
-      if (insight) {
-        // 어느 팀인지 판단
-        if (title.includes(homeTeamLower)) {
-          homeInsights.push(insight)
-        } else if (title.includes(awayTeamLower)) {
-          awayInsights.push(insight)
-        } else {
-          generalInsights.push(insight)
-        }
-      }
-    })
-    
-    return { 
-      home: homeInsights.slice(0, 3), 
-      away: awayInsights.slice(0, 3), 
-      general: generalInsights.slice(0, 2) 
-    }
-  }
 
   useEffect(() => {
     fetchNewsKeywords()
-    fetchTeamForm()
   }, [homeTeam, awayTeam, matchId])
-
-  // 팀 폼 데이터 가져오기
-  const fetchTeamForm = async () => {
-    try {
-      setFormLoading(true)
-      
-      // 임시로 모의 데이터 생성 (실제로는 API 호출)
-      const generateMockForm = (team: string): TeamForm => {
-        const matches = []
-        
-        for (let i = 0; i < 5; i++) {
-          const rand = Math.random()
-          const result = rand > 0.6 ? 'W' : rand > 0.3 ? 'D' : 'L'
-          
-          const score = result === 'W' 
-            ? `${Math.floor(Math.random() * 2) + 2}-${Math.floor(Math.random() * 2)}`
-            : result === 'L'
-              ? `${Math.floor(Math.random() * 2)}-${Math.floor(Math.random() * 2) + 2}`
-              : `${Math.floor(Math.random() * 2) + 1}-${Math.floor(Math.random() * 2) + 1}`
-          
-          matches.push({
-            opponent: 'Team',
-            result,
-            score,
-            homeAway: Math.random() > 0.5 ? 'H' : 'A' as 'H' | 'A'
-          })
-        }
-        
-        return {
-          team,
-          recentMatches: matches.reverse() // 최신순
-        }
-      }
-      
-      setTeamForm({
-        home: generateMockForm(homeTeam),
-        away: generateMockForm(awayTeam)
-      })
-    } catch (err) {
-      console.error('Error fetching team form:', err)
-    } finally {
-      setFormLoading(false)
-    }
-  }
 
   // ESC 키로 모달 닫기
   useEffect(() => {
@@ -260,66 +109,33 @@ export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywor
 
   return (
     <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
-      {/* 팀 폼 (최근 전적) 섹션 */}
-      {!formLoading && (teamForm.home || teamForm.away) && (
-        <div className="space-y-3">
+      {/* 키워드 섹션 */}
+      {newsData.keywords && newsData.keywords.length > 0 && (
+        <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-              <span className="text-blue-400">📊</span>
-              최근 전적
+              <span className="text-blue-400">💬</span>
+              주요 이슈
             </h3>
+            <span className="text-xs text-gray-500">
+              {newsData.totalArticles}개 기사 분석
+            </span>
           </div>
-
-          <div className="space-y-4">
-            {/* 홈팀 폼 */}
-            {teamForm.home && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-green-400">🏠 {homeTeam}</span>
-                </div>
-                <div className="flex gap-1.5">
-                  {teamForm.home.recentMatches.map((match, index) => (
-                    <div
-                      key={index}
-                      className={`
-                        flex-1 py-2 px-1.5 rounded text-center text-xs font-bold
-                        ${match.result === 'W' ? 'bg-green-600 text-white' : ''}
-                        ${match.result === 'D' ? 'bg-gray-600 text-white' : ''}
-                        ${match.result === 'L' ? 'bg-red-600 text-white' : ''}
-                      `}
-                      title={`${match.score} (${match.homeAway === 'H' ? '홈' : '원정'})`}
-                    >
-                      {match.score}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 원정팀 폼 */}
-            {teamForm.away && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-400">✈️ {awayTeam}</span>
-                </div>
-                <div className="flex gap-1.5">
-                  {teamForm.away.recentMatches.map((match, index) => (
-                    <div
-                      key={index}
-                      className={`
-                        flex-1 py-2 px-1.5 rounded text-center text-xs font-bold
-                        ${match.result === 'W' ? 'bg-green-600 text-white' : ''}
-                        ${match.result === 'D' ? 'bg-gray-600 text-white' : ''}
-                        ${match.result === 'L' ? 'bg-red-600 text-white' : ''}
-                      `}
-                      title={`${match.score} (${match.homeAway === 'H' ? '홈' : '원정'})`}
-                    >
-                      {match.score}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          
+          {/* 키워드 배지들 */}
+          <div className="flex flex-wrap gap-2">
+            {newsData.keywords.map((kw, index) => (
+              <span
+                key={index}
+                className="px-3 py-1.5 bg-blue-500/20 text-blue-300 rounded-full text-sm font-medium hover:bg-blue-500/30 transition-colors cursor-default"
+                title={`${kw.count}회 언급`}
+              >
+                #{kw.keyword}
+                <span className="ml-1 text-xs text-blue-400">
+                  {kw.count}
+                </span>
+              </span>
+            ))}
           </div>
         </div>
       )}
