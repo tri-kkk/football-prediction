@@ -203,6 +203,46 @@ function formatDate(dateString: string): string {
   }
 }
 
+// 📦 캐시 헬퍼 함수
+const CACHE_DURATION = 5 * 60 * 1000 // 5분
+const CACHE_KEY_PREFIX = 'football_'
+
+function getCachedData(key: string) {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY_PREFIX + key)
+    if (!cached) return null
+    
+    const { data, timestamp } = JSON.parse(cached)
+    const now = Date.now()
+    
+    // 캐시가 유효한지 확인
+    if (now - timestamp < CACHE_DURATION) {
+      console.log('📦 캐시에서 로드:', key)
+      return data
+    }
+    
+    // 만료된 캐시 삭제
+    localStorage.removeItem(CACHE_KEY_PREFIX + key)
+    return null
+  } catch (error) {
+    console.error('캐시 로드 실패:', error)
+    return null
+  }
+}
+
+function setCachedData(key: string, data: any) {
+  try {
+    const cacheData = {
+      data,
+      timestamp: Date.now()
+    }
+    localStorage.setItem(CACHE_KEY_PREFIX + key, JSON.stringify(cacheData))
+    console.log('💾 캐시에 저장:', key)
+  } catch (error) {
+    console.error('캐시 저장 실패:', error)
+  }
+}
+
 export default function Home() {
   const [selectedLeague, setSelectedLeague] = useState('ALL')
   const [matches, setMatches] = useState<Match[]>([])
@@ -214,6 +254,13 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(true)
   const [language, setLanguage] = useState<'ko' | 'en'>('ko')
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [standings, setStandings] = useState<any[]>([])
+  const [standingsLoading, setStandingsLoading] = useState(false)
+  const [currentLeagueIndex, setCurrentLeagueIndex] = useState(0)
+  const [allLeagueStandings, setAllLeagueStandings] = useState<{ [key: string]: any[] }>({})
+
+  // 전체 리그 목록 (전체 제외)
+  const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
 
   // 다크모드 토글
   useEffect(() => {
@@ -357,6 +404,54 @@ export default function Home() {
     }
   }, [matches])
 
+  // 트렌드 데이터 로드 함수 (useEffect 밖으로 이동)
+  const fetchTrendData = async (matchId: string, match?: any) => {
+    try {
+      // 🚀 캐시 확인
+      const cacheKey = `trend_${matchId}`
+      const cachedTrend = getCachedData(cacheKey)
+      
+      if (cachedTrend) {
+        setTrendData(prev => ({ ...prev, [matchId]: cachedTrend }))
+        console.log(`📦 캐시에서 트렌드 로드: ${matchId}`)
+        return cachedTrend
+      }
+      
+      // ⏱️ 5초 타임아웃 설정
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      
+      const response = await fetch(`/api/match-trend?matchId=${matchId}`, {
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
+      
+      const result = await response.json()
+      
+      if (result.success && result.data.length > 0) {
+        // 💾 캐시에 저장
+        setCachedData(cacheKey, result.data)
+        
+        setTrendData(prev => ({ ...prev, [matchId]: result.data }))
+        console.log(`📈 Loaded trend for match ${matchId}:`, result.data.length, 'points')
+        return result.data
+      } else {
+        throw new Error('No trend data available')
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.warn('⏱️ 트렌드 API 타임아웃')
+      } else {
+        console.warn('⚠️ 트렌드 API 호출 실패:', err)
+      }
+      setTrendData(prev => ({
+        ...prev,
+        [matchId]: []
+      }))
+      return []
+    }
+  }
+
   // Supabase에서 실제 오즈 데이터 직접 가져오기
   useEffect(() => {
     async function fetchMatches() {
@@ -364,6 +459,18 @@ export default function Home() {
       setError(null)
       
       try {
+        // 🚀 캐시 확인
+        const cacheKey = `matches_${selectedLeague}`
+        const cachedMatches = getCachedData(cacheKey)
+        
+        if (cachedMatches) {
+          // 캐시된 데이터 사용
+          setMatches(cachedMatches)
+          setLoading(false)
+          console.log('✅ 캐시에서 경기 로드:', cachedMatches.length)
+          return
+        }
+        
         // DB에서 실제 오즈만 가져오기
         let allMatches = []
         
@@ -371,7 +478,11 @@ export default function Home() {
           // 모든 리그의 오즈 가져오기
           const leagues = ['PL', 'PD', 'BL1', 'SA', 'FL1' ,'CL']
           const promises = leagues.map(league => 
-            fetch(`/api/odds-from-db?league=${league}`)
+            fetch(`/api/odds-from-db?league=${league}`, {
+              headers: {
+                'Cache-Control': 'public, max-age=300' // 5분 캐시
+              }
+            })
               .then(r => r.json())
               .then(result => ({
                 league,  // 리그 코드 추가로 전달
@@ -390,7 +501,12 @@ export default function Home() {
         } else {
           // 단일 리그 오즈 가져오기
           const response = await fetch(
-            `/api/odds-from-db?league=${selectedLeague}`
+            `/api/odds-from-db?league=${selectedLeague}`,
+            {
+              headers: {
+                'Cache-Control': 'public, max-age=300' // 5분 캐시
+              }
+            }
           )
           
           if (!response.ok) {
@@ -469,26 +585,13 @@ export default function Home() {
           })
         }
         
+        // 💾 캐시에 저장
+        setCachedData(cacheKey, futureMatches)
+        
         setMatches(futureMatches)
         
-        // 🔥 트렌드 데이터를 병렬로 모두 로드 (초기 화면에 증감 표시하기 위해)
-        const trendPromises = futureMatches.map((match: any) => 
-          fetchTrendDataSync(match.id, match)
-        )
-        
-        // 모든 트렌드 데이터 로드 완료 대기
-        const trendResults = await Promise.all(trendPromises)
-        
-        // 배치 업데이트: 모든 트렌드 데이터를 한 번에 설정
-        const allTrendData: { [key: number]: TrendData[] } = {}
-        trendResults.forEach((result, index) => {
-          if (result) {
-            allTrendData[futureMatches[index].id] = result
-          }
-        })
-        
-        setTrendData(allTrendData)
-        console.log('✅ 모든 트렌드 데이터 로드 완료:', Object.keys(allTrendData).length, '경기')
+        // ⚡ 트렌드 데이터는 카드 클릭 시에만 로드 (자동 로딩 비활성화)
+        console.log('✅ 경기 데이터 로드 완료. 트렌드는 카드 클릭 시 로드됩니다.')
         
       } catch (error: any) {
         console.error('❌ 에러:', error)
@@ -501,49 +604,142 @@ export default function Home() {
     // 트렌드 데이터 로드 (동기 버전 - Promise 반환)
     async function fetchTrendDataSync(matchId: string, match: any): Promise<TrendData[] | null> {
       try {
-        const response = await fetch(`/api/match-trend?matchId=${matchId}`)
+        // 🚀 캐시 확인
+        const cacheKey = `trend_${matchId}`
+        const cachedTrend = getCachedData(cacheKey)
+        
+        if (cachedTrend) {
+          setTrendData(prev => ({ ...prev, [matchId]: cachedTrend }))
+          return cachedTrend
+        }
+        
+        // ⏱️ 3초 타임아웃 설정
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 3000)
+        
+        const response = await fetch(`/api/match-trend?matchId=${matchId}`, {
+          signal: controller.signal
+        })
+        clearTimeout(timeoutId)
+        
         const result = await response.json()
         
         if (result.success && result.data.length > 0) {
           console.log(`📈 Loaded trend for match ${matchId}:`, result.data.length, 'points')
-          return result.data
-        } else {
-          // API 응답은 있지만 데이터가 없는 경우
-          throw new Error('No trend data available')
-        }
-      } catch (err) {
-  console.warn('⚠️ 트렌드 데이터 로드 실패 (match ${matchId}):', err)
-  return [] // 빈 배열 반환 (차트 표시 안 함)
-}
-    }
-    
-    // 트렌드 데이터 로드 (기존 함수 - 카드 클릭 시 사용)
-    async function fetchTrendData(matchId: string, match?: any) {
-      try {
-        const response = await fetch(`/api/match-trend?matchId=${matchId}`)
-        const result = await response.json()
-        
-        if (result.success && result.data.length > 0) {
+          
+          // 💾 캐시에 저장
+          setCachedData(cacheKey, result.data)
+          
           setTrendData(prev => ({ ...prev, [matchId]: result.data }))
-          console.log(`📈 Loaded trend for match ${matchId}:`, result.data.length, 'points')
           return result.data
         } else {
           // API 응답은 있지만 데이터가 없는 경우
           throw new Error('No trend data available')
         }
-      } catch (err) {
-    console.warn('⚠️ 트렌드 API 호출 실패:', err)
-    // 트렌드 데이터 없음을 표시
-    setTrendData(prev => ({
-      ...prev,
-      [matchId]: []
-    }))
-    return []
-  }
-}  // ← fetchTrendData 함수 닫기
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          console.warn(`⏱️ 트렌드 로딩 타임아웃 (match ${matchId})`)
+        } else {
+          console.warn(`⚠️ 트렌드 데이터 로드 실패 (match ${matchId}):`, err)
+        }
+        return [] // 빈 배열 반환 (차트 표시 안 함)
+      }
+    }
 
   fetchMatches()
 }, [selectedLeague])
+
+  // 순위표 데이터 가져오기
+  const fetchStandings = async (league: string) => {
+    if (league === 'ALL') {
+      // 전체 리그 선택 시 모든 리그의 순위표 로드
+      setStandingsLoading(true)
+      const allStandings: { [key: string]: any[] } = {}
+      
+      for (const l of availableLeagues) {
+        try {
+          const cacheKey = `standings_${l.code}`
+          const cached = getCachedData(cacheKey)
+          
+          if (cached) {
+            allStandings[l.code] = cached
+          } else {
+            const response = await fetch(`/api/standings?league=${l.code}`)
+            if (response.ok) {
+              const data = await response.json()
+              const standingsData = data.standings || []
+              allStandings[l.code] = standingsData
+              setCachedData(cacheKey, standingsData)
+            }
+          }
+        } catch (error) {
+          console.error(`순위표 로드 실패 (${l.code}):`, error)
+        }
+      }
+      
+      setAllLeagueStandings(allStandings)
+      setStandingsLoading(false)
+      
+      // 첫 번째 리그 표시
+      if (availableLeagues.length > 0) {
+        setStandings(allStandings[availableLeagues[0].code] || [])
+      }
+      return
+    }
+    
+    // 🚀 캐시 확인
+    const cacheKey = `standings_${league}`
+    const cachedStandings = getCachedData(cacheKey)
+    
+    if (cachedStandings) {
+      setStandings(cachedStandings)
+      console.log('📦 캐시에서 순위표 로드:', league)
+      return
+    }
+    
+    setStandingsLoading(true)
+    try {
+      const response = await fetch(`/api/standings?league=${league}`, {
+        headers: {
+          'Cache-Control': 'public, max-age=300' // 5분 캐시
+        }
+      })
+      if (!response.ok) throw new Error('Failed to fetch standings')
+      const data = await response.json()
+      const standingsData = data.standings || []
+      
+      // 💾 캐시에 저장
+      setCachedData(cacheKey, standingsData)
+      
+      setStandings(standingsData)
+    } catch (error) {
+      console.error('Error fetching standings:', error)
+      setStandings([])
+    } finally {
+      setStandingsLoading(false)
+    }
+  }
+
+  // 리그 변경 시 순위표도 로드
+  useEffect(() => {
+    fetchStandings(selectedLeague)
+  }, [selectedLeague])
+
+  // 트렌드 데이터 변경 시 차트 렌더링
+  useEffect(() => {
+    if (expandedMatchId) {
+      const currentTrend = trendData[expandedMatchId]
+      if (currentTrend && currentTrend.length > 0) {
+        setTimeout(() => {
+          const chartContainer = document.getElementById(`trend-chart-${expandedMatchId}`)
+          if (chartContainer) {
+            console.log('📈 차트 자동 렌더링:', currentTrend.length, 'points')
+            renderChart(chartContainer, currentTrend)
+          }
+        }, 200)
+      }
+    }
+  }, [trendData, expandedMatchId, darkMode])
 
   // 뉴스 키워드 가져오기
   const fetchNewsKeywords = async (homeTeam: string, awayTeam: string) => {
@@ -585,7 +781,7 @@ export default function Home() {
   }
 
   // 경기 클릭 핸들러
-  const handleMatchClick = (match: Match) => {
+  const handleMatchClick = async (match: Match) => {
     if (expandedMatchId === match.id) {
       setExpandedMatchId(null)
     } else {
@@ -593,16 +789,25 @@ export default function Home() {
       
       // 실제 뉴스 API 호출 (영문 팀명 사용)
       fetchNewsKeywords(match.homeTeam, match.awayTeam)
+      
+      // 🔥 트렌드 데이터가 없으면 로드
+      if (!trendData[match.id] || trendData[match.id].length === 0) {
+        console.log('📊 트렌드 데이터 로딩 시작:', match.id)
+        await fetchTrendData(match.id.toString(), match)
+      }
                   
       setTimeout(() => {
-  const chartContainer = document.getElementById(`trend-chart-${match.id}`)
-  const currentTrend = trendData[match.id]
-  
-  // 트렌드 데이터가 있을 때만 차트 렌더링
-  if (chartContainer && currentTrend && currentTrend.length > 0) {
-    renderChart(chartContainer, currentTrend)
-  }
-}, 100)
+        const chartContainer = document.getElementById(`trend-chart-${match.id}`)
+        const currentTrend = trendData[match.id]
+        
+        // 트렌드 데이터가 있을 때만 차트 렌더링
+        if (chartContainer && currentTrend && currentTrend.length > 0) {
+          console.log('📈 차트 렌더링 시작:', currentTrend.length, 'points')
+          renderChart(chartContainer, currentTrend)
+        } else {
+          console.log('⚠️ 차트 렌더링 실패 - 데이터 없음')
+        }
+      }, 100)
     }
   }
 
@@ -757,11 +962,9 @@ export default function Home() {
   }
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-black' : 'bg-white'}`}>
+    <div className="min-h-screen bg-[#0f0f0f]">
       {/* 헤더 */}
-      <header className={`sticky top-0 z-50 ${
-        darkMode ? 'bg-black border-b border-gray-800' : 'bg-white border-b border-gray-200'
-      } shadow-lg`}>
+      <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
 <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.reload()}>
@@ -778,7 +981,7 @@ export default function Home() {
       </header>
 
       {/* 승률 배너 (자동 스크롤) */}
-      <div className={`${darkMode ? 'bg-black border-b border-gray-900' : 'bg-white border-b border-gray-100'}`}>
+      <div className="bg-[#0f0f0f] border-b border-gray-900">
         <div className="py-4 overflow-hidden">
           <div 
             ref={scrollContainerRef}
@@ -820,9 +1023,9 @@ export default function Home() {
                     // 경기 확장
                     handleMatchClick(match)
                   }}
-                  className={`flex flex-col p-3 rounded-lg min-w-[160px] cursor-pointer transition-all ${
-                    darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
-                  } ${expandedMatchId === match.id ? 'ring-2 ring-white' : 'hover:scale-105'}`}
+                  className={`flex flex-col p-3 rounded-lg min-w-[160px] cursor-pointer transition-all bg-[#1a1a1a] border border-gray-800 ${
+                    expandedMatchId === match.id ? 'ring-2 ring-blue-500' : 'hover:scale-105 hover:border-gray-700'
+                  }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <img 
@@ -873,7 +1076,7 @@ export default function Home() {
           {/* 왼쪽 사이드바 (데스크톱만) */}
           <aside className={`hidden lg:block w-64 flex-shrink-0`}>
             <div className={`sticky top-24 rounded-2xl p-4 ${
-              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+              darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
             }`}>
               <h2 className={`text-lg font-bold mb-4 ${
                 darkMode ? 'text-white' : 'text-gray-900'
@@ -920,7 +1123,7 @@ export default function Home() {
           <main className="flex-1 min-w-0">
             {/* 리그 필터 (모바일만) */}
             <div className={`lg:hidden mb-6 p-3 rounded-2xl ${
-              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+              darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
             }`}>
               <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                 {LEAGUES.map((league) => (
@@ -975,9 +1178,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* 경기 목록 - 데스크탑: 1열, 모바일: 2열 */}
+        {/* 경기 목록 - 1열 레이아웃 */}
         {!loading && !error && (
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-1">
+          <div className="grid gap-6 grid-cols-1">
             {matches.map((match) => {
               const currentTrend = trendData[match.id]
               const latestTrend = currentTrend?.[currentTrend.length - 1]
@@ -998,7 +1201,7 @@ export default function Home() {
                     className={`
                       relative rounded-2xl transition-all duration-200 cursor-pointer group
                       ${darkMode 
-                        ? 'bg-gray-900 border border-gray-800 hover:border-blue-500' 
+                        ? 'bg-[#1a1a1a] border border-gray-800 hover:border-blue-500' 
                         : 'bg-white border border-gray-200 hover:border-blue-400'
                       } 
                       ${expandedMatchId === match.id 
@@ -1086,23 +1289,17 @@ export default function Home() {
                       {/* 승률 표시 - 프로그레스 바 포함 */}
                       <div className="grid grid-cols-3 gap-3">
                         {/* 홈팀 승률 */}
-                        <div className={`relative overflow-hidden rounded-xl py-2 px-3 ${
-                          darkMode ? 'bg-gray-800' : 'bg-gray-100'
-                        }`}>
+                        <div className="relative overflow-hidden rounded-xl py-2 px-3 bg-[#0f0f0f]">
                           {/* 프로그레스 바 */}
                           <div 
-                            className={`absolute bottom-0 left-0 h-1 transition-all duration-500 ${
-                              darkMode ? 'bg-white' : 'bg-black'
-                            }`}
+                            className="absolute bottom-0 left-0 h-1 transition-all duration-500 bg-blue-500"
                             style={{ 
                               width: `${latestTrend ? latestTrend.homeWinProbability : match.homeWinRate}%` 
                             }}
                           ></div>
                           
                           <div className="relative z-10 flex flex-col items-center">
-                            <div className={`text-xs font-medium mb-1 ${
-                              darkMode ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <div className="text-xs font-medium mb-1 text-gray-500">
                               홈
                             </div>
                             <div className={`text-4xl font-black transition-all duration-500 ${
@@ -1123,28 +1320,20 @@ export default function Home() {
                         </div>
 
                         {/* 무승부 */}
-                        <div className={`relative overflow-hidden rounded-xl py-2 px-3 ${
-                          darkMode ? 'bg-gray-800' : 'bg-gray-100'
-                        }`}>
+                        <div className="relative overflow-hidden rounded-xl py-2 px-3 bg-[#0f0f0f]">
                           {/* 프로그레스 바 */}
                           <div 
-                            className={`absolute bottom-0 left-0 h-1 transition-all duration-500 ${
-                              darkMode ? 'bg-gray-600' : 'bg-gray-400'
-                            }`}
+                            className="absolute bottom-0 left-0 h-1 transition-all duration-500 bg-gray-600"
                             style={{ 
                               width: `${latestTrend ? latestTrend.drawProbability : match.drawRate}%` 
                             }}
                           ></div>
                           
                           <div className="relative z-10 flex flex-col items-center">
-                            <div className={`text-xs font-medium mb-1 ${
-                              darkMode ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <div className="text-xs font-medium mb-1 text-gray-500">
                               무승부
                             </div>
-                            <div className={`text-4xl font-black ${
-                              darkMode ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <div className="text-4xl font-black text-gray-400">
                               {latestTrend ? Math.round(latestTrend.drawProbability) : match.drawRate}%
                             </div>
                             <div className="h-4 mt-1"></div>
@@ -1152,28 +1341,22 @@ export default function Home() {
                         </div>
 
                         {/* 원정팀 승률 */}
-                        <div className={`relative overflow-hidden rounded-xl py-2 px-3 ${
-                          darkMode ? 'bg-gray-800' : 'bg-gray-100'
-                        }`}>
+                        <div className="relative overflow-hidden rounded-xl py-2 px-3 bg-[#0f0f0f]">
                           {/* 프로그레스 바 */}
                           <div 
-                            className={`absolute bottom-0 left-0 h-1 transition-all duration-500 ${
-                              darkMode ? 'bg-white' : 'bg-black'
-                            }`}
+                            className="absolute bottom-0 left-0 h-1 transition-all duration-500 bg-red-500"
                             style={{ 
                               width: `${latestTrend ? latestTrend.awayWinProbability : match.awayWinRate}%` 
                             }}
                           ></div>
                           
                           <div className="relative z-10 flex flex-col items-center">
-                            <div className={`text-xs font-medium mb-1 ${
-                              darkMode ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <div className="text-xs font-medium mb-1 text-gray-500">
                               원정
                             </div>
-                            <div className={`text-4xl font-black transition-all duration-500 ${
-                              darkMode ? 'text-white' : 'text-black'
-                            } ${awayChange > 0 ? 'animate-pulse' : ''}`}>
+                            <div className={`text-4xl font-black transition-all duration-500 text-white ${
+                              awayChange > 0 ? 'animate-pulse' : ''
+                            }`}>
                               {latestTrend ? Math.round(latestTrend.awayWinProbability) : match.awayWinRate}%
                             </div>
                             <div className="h-4 mt-1">
@@ -1215,13 +1398,23 @@ export default function Home() {
                   {/* 확장된 트렌드 차트 */}
                   {expandedMatchId === match.id && (
                     <div className={`mt-4 p-6 rounded-2xl animate-fadeIn ${
-                      darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                      darkMode ? 'bg-[#0f0f0f] border border-gray-800' : 'bg-white border border-gray-200'
                     }`}>
                       <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         📈 24시간 트렌드
                       </h3>
-                      <div id={`trend-chart-${match.id}`} className="mb-4"></div>
-
+                      
+                      {/* 트렌드 데이터 로딩 중 */}
+                      {!trendData[match.id] || trendData[match.id].length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="text-4xl mb-3 animate-bounce">📊</div>
+                          <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                            트렌드 데이터 로딩 중...
+                          </p>
+                        </div>
+                      ) : (
+                        <div id={`trend-chart-${match.id}`} className="mb-4"></div>
+                      )}
 
                     </div>
                   )}
@@ -1241,9 +1434,303 @@ export default function Home() {
           </div>
         )}
           </main>
+
+          {/* 우측 순위표 사이드바 */}
+          <aside className="hidden lg:block w-80 flex-shrink-0">
+            {/* 전체 리그 선택 시 - 캐러셀 */}
+            {selectedLeague === 'ALL' && (
+              <div className={`sticky top-24 rounded-xl overflow-hidden ${
+                darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
+              }`}>
+                {/* 헤더 with 좌우 화살표 */}
+                <div className={`p-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                  <div className="flex items-center justify-between">
+                    {/* 왼쪽 화살표 */}
+                    <button
+                      onClick={() => {
+                        const newIndex = currentLeagueIndex === 0 
+                          ? availableLeagues.length - 1 
+                          : currentLeagueIndex - 1
+                        setCurrentLeagueIndex(newIndex)
+                        setStandings(allLeagueStandings[availableLeagues[newIndex].code] || [])
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${
+                        darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+
+                    {/* 리그명 + 로고 */}
+                    <div className="flex items-center gap-3">
+                      <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {availableLeagues[currentLeagueIndex]?.name || '프리미어리그'}
+                      </h2>
+                      <div className="w-10 h-10 bg-white rounded-lg p-1.5 flex items-center justify-center">
+                        {availableLeagues[currentLeagueIndex]?.isEmoji ? (
+                          <span className="text-2xl">{availableLeagues[currentLeagueIndex]?.logo}</span>
+                        ) : (
+                          <img 
+                            src={availableLeagues[currentLeagueIndex]?.logo}
+                            alt={availableLeagues[currentLeagueIndex]?.name}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/40?text=?'
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 오른쪽 화살표 */}
+                    <button
+                      onClick={() => {
+                        const newIndex = currentLeagueIndex === availableLeagues.length - 1 
+                          ? 0 
+                          : currentLeagueIndex + 1
+                        setCurrentLeagueIndex(newIndex)
+                        setStandings(allLeagueStandings[availableLeagues[newIndex].code] || [])
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${
+                        darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 테이블 헤더 */}
+                <div className={`px-4 py-2 flex items-center text-xs font-semibold ${
+                  darkMode ? 'text-gray-500 bg-[#0f0f0f]' : 'text-gray-600 bg-gray-50'
+                }`}>
+                  <div className="w-8">#</div>
+                  <div className="flex-1">경기</div>
+                  <div className="w-12 text-center">=</div>
+                  <div className="w-12 text-right">승점</div>
+                </div>
+
+                {/* 순위표 내용 */}
+                <div className="p-0">
+                  {standingsLoading ? (
+                    <div className="text-center py-12">
+                      <div className="text-3xl mb-2 animate-bounce">⚽</div>
+                      <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        로딩 중...
+                      </p>
+                    </div>
+                  ) : standings.length > 0 ? (
+                    <div>
+                      {standings.slice(0, 20).map((team: any, index: number) => {
+                        const position = team.position || index + 1
+                        const isTopFour = position <= 4
+                        const isRelegation = position >= 18
+                        
+                        return (
+                          <div 
+                            key={team.team?.id || index}
+                            className={`flex items-center px-4 py-2.5 transition-colors ${
+                              darkMode 
+                                ? 'hover:bg-gray-800/50 border-b border-gray-800' 
+                                : 'hover:bg-gray-50 border-b border-gray-100'
+                            }`}
+                          >
+                            <div className="w-8 flex items-center">
+                              <span className={`text-sm font-bold ${
+                                isRelegation 
+                                  ? 'text-red-500' 
+                                  : isTopFour 
+                                    ? 'text-green-500' 
+                                    : darkMode ? 'text-gray-400' : 'text-gray-600'
+                              }`}>
+                                {position}
+                              </span>
+                            </div>
+
+                            <div className="flex-1 flex items-center gap-2 min-w-0">
+                              <img 
+                                src={team.team?.crest || getTeamLogo(team.team?.name || '')}
+                                alt={team.team?.name}
+                                className="w-5 h-5 object-contain flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://via.placeholder.com/20?text=?'
+                                }}
+                              />
+                              <span className={`text-sm font-medium truncate ${
+                                darkMode ? 'text-white' : 'text-gray-900'
+                              }`}>
+                                {team.team?.name}
+                              </span>
+                            </div>
+
+                            <div className={`w-12 text-center text-sm ${
+                              darkMode ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                              {team.playedGames || 10}
+                            </div>
+                            
+                            <div className={`w-12 text-center text-sm ${
+                              darkMode ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                              {team.goalDifference > 0 ? '+' : ''}{team.goalDifference || 0}
+                            </div>
+
+                            <div className="w-12 text-right">
+                              <span className="text-sm font-bold text-white">
+                                {team.points || 0}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        순위표 정보가 없습니다
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* 특정 리그 선택 시 - 기존 순위표 */}
+            {selectedLeague !== 'ALL' && (
+              <div className={`sticky top-24 rounded-xl overflow-hidden ${
+                darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
+              }`}>
+                {/* 헤더 */}
+                <div className={`p-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                  <div className="flex items-center justify-between">
+                    <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {getLeagueName(selectedLeague)}
+                    </h2>
+                    {/* 리그 로고 */}
+                    <div className="w-10 h-10 bg-white rounded-lg p-1.5 flex items-center justify-center">
+                      {LEAGUES.find(l => l.code === selectedLeague)?.isEmoji ? (
+                        <span className="text-2xl">{LEAGUES.find(l => l.code === selectedLeague)?.logo}</span>
+                      ) : (
+                        <img 
+                          src={LEAGUES.find(l => l.code === selectedLeague)?.logo}
+                          alt={getLeagueName(selectedLeague)}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/40?text=?'
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 테이블 헤더 */}
+                <div className={`px-4 py-2 flex items-center text-xs font-semibold ${
+                  darkMode ? 'text-gray-500 bg-[#0f0f0f]' : 'text-gray-600 bg-gray-50'
+                }`}>
+                  <div className="w-8">#</div>
+                  <div className="flex-1">경기</div>
+                  <div className="w-12 text-center">=</div>
+                  <div className="w-12 text-right">승점</div>
+                </div>
+
+                {/* 순위표 내용 */}
+                <div className="p-0">
+                  {standingsLoading ? (
+                    <div className="text-center py-12">
+                      <div className="text-3xl mb-2 animate-bounce">⚽</div>
+                      <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        로딩 중...
+                      </p>
+                    </div>
+                  ) : standings.length > 0 ? (
+                    <div>
+                      {standings.slice(0, 20).map((team: any, index: number) => {
+                        const position = team.position || index + 1
+                        const isTopFour = position <= 4
+                        const isRelegation = position >= 18
+                        
+                        return (
+                          <div 
+                            key={team.team?.id || index}
+                            className={`flex items-center px-4 py-2.5 transition-colors ${
+                              darkMode 
+                                ? 'hover:bg-gray-800/50 border-b border-gray-800' 
+                                : 'hover:bg-gray-50 border-b border-gray-100'
+                            }`}
+                          >
+                            {/* 순위 */}
+                            <div className="w-8 flex items-center">
+                              <span className={`text-sm font-bold ${
+                                isRelegation 
+                                  ? 'text-red-500' 
+                                  : isTopFour 
+                                    ? 'text-green-500' 
+                                    : darkMode ? 'text-gray-400' : 'text-gray-600'
+                              }`}>
+                                {position}
+                              </span>
+                            </div>
+
+                            {/* 팀 로고 + 이름 */}
+                            <div className="flex-1 flex items-center gap-2 min-w-0">
+                              <img 
+                                src={team.team?.crest || getTeamLogo(team.team?.name || '')}
+                                alt={team.team?.name}
+                                className="w-5 h-5 object-contain flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://via.placeholder.com/20?text=?'
+                                }}
+                              />
+                              <span className={`text-sm font-medium truncate ${
+                                darkMode ? 'text-white' : 'text-gray-900'
+                              }`}>
+                                {team.team?.name}
+                              </span>
+                            </div>
+
+                            {/* 경기 수 */}
+                            <div className={`w-12 text-center text-sm ${
+                              darkMode ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                              {team.playedGames || 10}
+                            </div>
+                            
+                            {/* 득실차 */}
+                            <div className={`w-12 text-center text-sm ${
+                              darkMode ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                              {team.goalDifference > 0 ? '+' : ''}{team.goalDifference || 0}
+                            </div>
+
+                            {/* 승점 */}
+                            <div className="w-12 text-right">
+                              <span className="text-sm font-bold text-white">
+                                {team.points || 0}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        순위표 정보가 없습니다
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
       </div>
- <footer className={`mt-12 py-6 border-t ${darkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white'}`}>
+ <footer className={`mt-12 py-6 border-t ${darkMode ? 'border-gray-800 bg-[#1a1a1a]' : 'border-gray-200 bg-white'}`}>
         <div className="container mx-auto px-4 text-center">
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             © 2025 tri-k. All rights reserved.
