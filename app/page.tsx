@@ -1288,7 +1288,7 @@ export default function Home() {
                             <div className="text-xs font-medium mb-1 text-gray-500">
                               홈
                             </div>
-                            <div className={`text-4xl font-black transition-all duration-500 ${
+                            <div className={`text-2xl md:text-4xl font-black transition-all duration-500 ${
                               darkMode ? 'text-white' : 'text-black'
                             } ${homeChange > 0 ? 'animate-pulse' : ''}`}>
                               {latestTrend ? Math.round(latestTrend.homeWinProbability) : match.homeWinRate}%
@@ -1319,7 +1319,7 @@ export default function Home() {
                             <div className="text-xs font-medium mb-1 text-gray-500">
                               무승부
                             </div>
-                            <div className="text-4xl font-black text-gray-400">
+                            <div className="text-2xl md:text-4xl font-black text-gray-400">
                               {latestTrend ? Math.round(latestTrend.drawProbability) : match.drawRate}%
                             </div>
                             <div className="h-4 mt-1"></div>
@@ -1340,7 +1340,7 @@ export default function Home() {
                             <div className="text-xs font-medium mb-1 text-gray-500">
                               원정
                             </div>
-                            <div className={`text-4xl font-black transition-all duration-500 text-white ${
+                            <div className={`text-2xl md:text-4xl font-black transition-all duration-500 text-white ${
                               awayChange > 0 ? 'animate-pulse' : ''
                             }`}>
                               {latestTrend ? Math.round(latestTrend.awayWinProbability) : match.awayWinRate}%
