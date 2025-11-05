@@ -866,12 +866,12 @@ export default function Home() {
         <div className={`mb-6 p-3 rounded-2xl ${
           darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
         }`}>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {LEAGUES.map((league) => (
               <button
                 key={league.code}
                 onClick={() => setSelectedLeague(league.code)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap flex-shrink-0 ${
                   selectedLeague === league.code
                     ? darkMode 
                       ? 'bg-white text-black shadow-lg transform scale-105'
@@ -881,9 +881,8 @@ export default function Home() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                 }`}
               >
-                {/* 모바일: 약자만, 데스크탑: 국기 + 이름 */}
-                <span className="sm:hidden font-bold">{league.code}</span>
-                <span className="hidden sm:flex items-center gap-2">
+                {/* 모바일/데스크탑 모두: 국기 + 이름 */}
+                <span className="flex items-center gap-2">
                   {league.isEmoji ? (
                     <span className="text-base">{league.flag}</span>
                   ) : (
@@ -1031,7 +1030,7 @@ export default function Home() {
                       {/* 승률 표시 - 프로그레스 바 포함 */}
                       <div className="grid grid-cols-3 gap-3">
                         {/* 홈팀 승률 */}
-                        <div className={`relative overflow-hidden rounded-xl p-3 ${
+                        <div className={`relative overflow-hidden rounded-xl py-2 px-3 ${
                           darkMode ? 'bg-gray-800' : 'bg-gray-100'
                         }`}>
                           {/* 프로그레스 바 */}
@@ -1045,17 +1044,17 @@ export default function Home() {
                           ></div>
                           
                           <div className="relative z-10 flex flex-col items-center">
-                            <div className={`text-sm font-medium mb-2 ${
+                            <div className={`text-xs font-medium mb-1 ${
                               darkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               홈
                             </div>
-                            <div className={`text-3xl font-black transition-all duration-500 ${
+                            <div className={`text-4xl font-black transition-all duration-500 ${
                               darkMode ? 'text-white' : 'text-black'
                             } ${homeChange > 0 ? 'animate-pulse' : ''}`}>
                               {latestTrend ? Math.round(latestTrend.homeWinProbability) : match.homeWinRate}%
                             </div>
-                            <div className="h-5 mt-2">
+                            <div className="h-4 mt-1">
                               {homeChange !== 0 && (
                                 <div className={`text-xs font-bold ${
                                   homeChange > 0 ? 'text-green-500' : 'text-red-500'
@@ -1068,7 +1067,7 @@ export default function Home() {
                         </div>
 
                         {/* 무승부 */}
-                        <div className={`relative overflow-hidden rounded-xl p-3 ${
+                        <div className={`relative overflow-hidden rounded-xl py-2 px-3 ${
                           darkMode ? 'bg-gray-800' : 'bg-gray-100'
                         }`}>
                           {/* 프로그레스 바 */}
@@ -1082,22 +1081,22 @@ export default function Home() {
                           ></div>
                           
                           <div className="relative z-10 flex flex-col items-center">
-                            <div className={`text-sm font-medium mb-2 ${
+                            <div className={`text-xs font-medium mb-1 ${
                               darkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               무승부
                             </div>
-                            <div className={`text-3xl font-black ${
+                            <div className={`text-4xl font-black ${
                               darkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               {latestTrend ? Math.round(latestTrend.drawProbability) : match.drawRate}%
                             </div>
-                            <div className="h-5 mt-2"></div>
+                            <div className="h-4 mt-1"></div>
                           </div>
                         </div>
 
                         {/* 원정팀 승률 */}
-                        <div className={`relative overflow-hidden rounded-xl p-3 ${
+                        <div className={`relative overflow-hidden rounded-xl py-2 px-3 ${
                           darkMode ? 'bg-gray-800' : 'bg-gray-100'
                         }`}>
                           {/* 프로그레스 바 */}
@@ -1111,17 +1110,17 @@ export default function Home() {
                           ></div>
                           
                           <div className="relative z-10 flex flex-col items-center">
-                            <div className={`text-sm font-medium mb-2 ${
+                            <div className={`text-xs font-medium mb-1 ${
                               darkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                               원정
                             </div>
-                            <div className={`text-3xl font-black transition-all duration-500 ${
+                            <div className={`text-4xl font-black transition-all duration-500 ${
                               darkMode ? 'text-white' : 'text-black'
                             } ${awayChange > 0 ? 'animate-pulse' : ''}`}>
                               {latestTrend ? Math.round(latestTrend.awayWinProbability) : match.awayWinRate}%
                             </div>
-                            <div className="h-5 mt-2">
+                            <div className="h-4 mt-1">
                               {awayChange !== 0 && (
                                 <div className={`text-xs font-bold ${
                                   awayChange > 0 ? 'text-green-500' : 'text-red-500'
