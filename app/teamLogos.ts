@@ -357,8 +357,8 @@ export const TEAM_LOGOS: { [key: string]: string } = {
   'CD Leganés': 'https://crests.football-data.org/745.png',
   'Levante': 'https://upload.wikimedia.org/wikipedia/en/7/7b/Levante_Unión_Deportiva%2C_S.A.D._logo.svg',
   'Levante UD': 'https://upload.wikimedia.org/wikipedia/en/7/7b/Levante_Unión_Deportiva%2C_S.A.D._logo.svg',
-  'Oviedo': 'https://crests.football-data.org/5566.png',
-  'Real Oviedo': 'https://crests.football-data.org/5566.png',
+  'Oviedo': 'https://crests.football-data.org/1048.png',
+  'Real Oviedo': 'https://crests.football-data.org/1048.png',
   'Bayern Munich': 'https://crests.football-data.org/5.png',
   'FC Bayern München': 'https://crests.football-data.org/5.png',
   'Bayern München': 'https://crests.football-data.org/5.png',
@@ -415,9 +415,9 @@ export const TEAM_LOGOS: { [key: string]: string } = {
   'SpVgg Greuther Fürth': 'https://crests.football-data.org/29.png',
   'Greuther Furth': 'https://crests.football-data.org/29.png',
   'FC Heidenheim': 'https://crests.football-data.org/787.png',
-  '1. FC Heidenheim': 'https://crests.football-data.org/787.png',
-  '1. FC Heidenheim 1846': 'https://crests.football-data.org/787.png',
-  'Heidenheim': 'https://crests.football-data.org/787.png',
+  '1. FC Heidenheim': 'https://crests.football-data.org/44.png',
+  '1. FC Heidenheim 1846': 'https://crests.football-data.org/44.png',
+  'Heidenheim': 'https://crests.football-data.org/44.png',
   'SV Darmstadt 98': 'https://crests.football-data.org/55.png',
   'Darmstadt': 'https://crests.football-data.org/55.png',
   'Holstein Kiel': 'https://crests.football-data.org/5951.png',
@@ -461,11 +461,12 @@ export const TEAM_LOGOS: { [key: string]: string } = {
   'Empoli FC': 'https://crests.football-data.org/445.png',
   'Verona': 'https://crests.football-data.org/450.png',
   'Hellas Verona FC': 'https://crests.football-data.org/450.png',
+  'Hellas Verona': 'https://crests.football-data.org/450.png',  // 추가
   'Monza': 'https://crests.football-data.org/1106.png',
   'AC Monza': 'https://crests.football-data.org/1106.png',
-  'Lecce': 'https://crests.football-data.org/1030.png',
-  'US Lecce': 'https://crests.football-data.org/1030.png',
-  'U.S. Lecce': 'https://crests.football-data.org/1030.png',
+  'Lecce': 'https://crests.football-data.org/5890.png',
+  'US Lecce': 'https://crests.football-data.org/5890.png',
+  'U.S. Lecce': 'https://crests.football-data.org/5890.png',
   'Salernitana': 'https://crests.football-data.org/455.png',
   'US Salernitana': 'https://crests.football-data.org/455.png',
   'Spezia': 'https://crests.football-data.org/488.png',
@@ -476,24 +477,24 @@ export const TEAM_LOGOS: { [key: string]: string } = {
   'US Cremonese': 'https://crests.football-data.org/453.png',
   'Parma': 'https://crests.football-data.org/112.png',
   'Parma Calcio 1913': 'https://crests.football-data.org/112.png',
-  'Como': 'https://crests.football-data.org/5774.png',
-  'Como 1907': 'https://crests.football-data.org/5774.png',
+  'Como': 'https://crests.football-data.org/7397.png',
+  'Como 1907': 'https://crests.football-data.org/7397.png',
   'Venezia': 'https://crests.football-data.org/454.png',
   'Venezia FC': 'https://crests.football-data.org/454.png',
   'Frosinone': 'https://crests.football-data.org/472.png',
   'Frosinone Calcio': 'https://crests.football-data.org/472.png',
-  'Pisa': 'https://crests.football-data.org/5902.png',
-  'Pisa SC': 'https://crests.football-data.org/5902.png',
+  'Pisa': 'https://crests.football-data.org/487.png',
+  'Pisa SC': 'https://crests.football-data.org/487.png',
   'Paris Saint-Germain': 'https://crests.football-data.org/524.png',
   'Paris Saint-Germain FC': 'https://crests.football-data.org/524.png',
   'Paris Saint Germain': 'https://crests.football-data.org/524.png',
   'PSG': 'https://crests.football-data.org/524.png',
   'Paris SG': 'https://crests.football-data.org/524.png',
-  'Paris FC': 'https://upload.wikimedia.org/wikipedia/en/e/e8/Paris_FC_logo_%282020%29.svg',
-  'PFC': 'https://upload.wikimedia.org/wikipedia/en/e/e8/Paris_FC_logo_%282020%29.svg',
-  'Marseille': 'https://crests.football-data.org/525.png',
-  'Olympique de Marseille': 'https://crests.football-data.org/525.png',
-  'OM': 'https://crests.football-data.org/525.png',
+  'Paris FC': 'https://crests.football-data.org/1045.png',
+  'PFC': 'https://crests.football-data.org/1045.png',
+  'Marseille': 'https://crests.football-data.org/516.png',
+  'Olympique de Marseille': 'https://crests.football-data.org/516.png',
+  'OM': 'https://crests.football-data.org/516.png',
   'Lyon': 'https://crests.football-data.org/523.png',
   'Olympique Lyonnais': 'https://crests.football-data.org/523.png',
   'OL': 'https://crests.football-data.org/523.png',
@@ -518,30 +519,30 @@ export const TEAM_LOGOS: { [key: string]: string } = {
   'FC Nantes': 'https://crests.football-data.org/543.png',
   'Reims': 'https://crests.football-data.org/547.png',
   'Stade de Reims': 'https://crests.football-data.org/547.png',
-  'Brest': 'https://crests.football-data.org/512.png',
-  'Stade Brestois 29': 'https://crests.football-data.org/512.png',
-  'Stade Brestois': 'https://crests.football-data.org/512.png',
-  'Lorient': 'https://crests.football-data.org/533.png',
-  'FC Lorient': 'https://crests.football-data.org/533.png',
+  'Brest': 'https://upload.wikimedia.org/wikipedia/en/thumb/0/05/Stade_Brestois_29_logo.svg/250px-Stade_Brestois_29_logo.svg.png',
+  'Stade Brestois 29': 'https://upload.wikimedia.org/wikipedia/en/thumb/0/05/Stade_Brestois_29_logo.svg/250px-Stade_Brestois_29_logo.svg.png',
+  'Stade Brestois': 'https://upload.wikimedia.org/wikipedia/en/thumb/0/05/Stade_Brestois_29_logo.svg/250px-Stade_Brestois_29_logo.svg.png',
+  'Lorient': 'https://upload.wikimedia.org/wikipedia/en/thumb/4/4c/FC_Lorient_logo.svg/250px-FC_Lorient_logo.svg.png',
+  'FC Lorient': 'https://upload.wikimedia.org/wikipedia/en/thumb/4/4c/FC_Lorient_logo.svg/250px-FC_Lorient_logo.svg.png',
   'Angers': 'https://crests.football-data.org/532.png',
   'Angers SCO': 'https://crests.football-data.org/532.png',
   'Toulouse': 'https://crests.football-data.org/511.png',
   'Toulouse FC': 'https://crests.football-data.org/511.png',
-  'Auxerre': 'https://upload.wikimedia.org/wikipedia/en/3/33/AJ_Auxerre_Logo.svg',
-  'AJ Auxerre': 'https://upload.wikimedia.org/wikipedia/en/3/33/AJ_Auxerre_Logo.svg',
-  'AJA': 'https://upload.wikimedia.org/wikipedia/en/3/33/AJ_Auxerre_Logo.svg',
+  'Auxerre': 'https://crests.football-data.org/519.png',
+  'AJ Auxerre': 'https://crests.football-data.org/519.png',
+  'AJA': 'https://crests.football-data.org/519.png',
   'Troyes': 'https://crests.football-data.org/513.png',
   'ES Troyes AC': 'https://crests.football-data.org/513.png',
   'Ajaccio': 'https://crests.football-data.org/1031.png',
   'AC Ajaccio': 'https://crests.football-data.org/1031.png',
   'Clermont': 'https://crests.football-data.org/1074.png',
   'Clermont Foot': 'https://crests.football-data.org/1074.png',
-  'Le Havre': 'https://crests.football-data.org/1082.png',
-  'Le Havre AC': 'https://crests.football-data.org/1082.png',
-  'HAC': 'https://crests.football-data.org/1082.png',
-  'Metz': 'https://upload.wikimedia.org/wikipedia/en/4/43/FC_Metz_logo.svg',
-  'FC Metz': 'https://upload.wikimedia.org/wikipedia/en/4/43/FC_Metz_logo.svg',
-  'FCM': 'https://upload.wikimedia.org/wikipedia/en/4/43/FC_Metz_logo.svg',
+  'Le Havre': 'https://upload.wikimedia.org/wikipedia/en/thumb/f/fc/Le_Havre_AC_logo.svg/170px-Le_Havre_AC_logo.svg.png',
+  'Le Havre AC': 'https://upload.wikimedia.org/wikipedia/en/thumb/f/fc/Le_Havre_AC_logo.svg/170px-Le_Havre_AC_logo.svg.png',
+  'HAC': 'https://upload.wikimedia.org/wikipedia/en/thumb/f/fc/Le_Havre_AC_logo.svg/170px-Le_Havre_AC_logo.svg.png',
+  'Metz': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/FC_Metz_2021_Logo.svg/150px-FC_Metz_2021_Logo.svg.png',
+  'FC Metz': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/FC_Metz_2021_Logo.svg/150px-FC_Metz_2021_Logo.svg.png',
+  'FCM': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/FC_Metz_2021_Logo.svg/150px-FC_Metz_2021_Logo.svg.png',
   'Saint-Étienne': 'https://crests.football-data.org/1063.png',
   'Saint-Etienne': 'https://crests.football-data.org/1063.png',
   'AS Saint-Étienne': 'https://crests.football-data.org/1063.png',
@@ -688,67 +689,35 @@ export const TEAM_LOGOS: { [key: string]: string } = {
 }
 
 
-// 팀 로고를 가져오는 헬퍼 함수 (개선 버전)
+// 팀 로고를 가져오는 헬퍼 함수 (간소화 버전 - 영문 우선)
 export function getTeamLogo(teamName: string): string {
-  // Step 1: 정확한 영문 매칭 시도
+  // Step 1: 정확한 매칭 (대소문자 구분)
   if (TEAM_LOGOS[teamName]) {
     return TEAM_LOGOS[teamName]
   }
-
-  // Step 2: 영문 → 한글 번역 후 매칭 시도
-  const koreanName = TEAM_NAME_KR[teamName]
-  if (koreanName && TEAM_LOGOS[koreanName]) {
-    return TEAM_LOGOS[koreanName]
-  }
-
-  // Step 3: 대소문자 무시하고 영문 매칭 시도
-  const normalizedName = teamName.toLowerCase()
+  
+  // Step 2: 대소문자 무시 매칭
+  const normalizedName = teamName.toLowerCase().trim()
   for (const [key, value] of Object.entries(TEAM_LOGOS)) {
-    if (key.toLowerCase() === normalizedName) {
+    if (key.toLowerCase().trim() === normalizedName) {
       return value
     }
   }
-
-  // Step 4: 영문 팀명의 한글 번역으로 매칭 시도 (대소문자 무시)
-  for (const [engName, krName] of Object.entries(TEAM_NAME_KR)) {
-    if (engName.toLowerCase() === normalizedName) {
-      if (TEAM_LOGOS[krName]) {
-        return TEAM_LOGOS[krName]
-      }
-      // 한글명으로도 다시 검색
-      for (const [logoKey, logoValue] of Object.entries(TEAM_LOGOS)) {
-        if (logoKey.toLowerCase() === krName.toLowerCase()) {
-          return logoValue
-        }
-      }
-    }
-  }
-
-  // Step 5: 부분 매칭 시도 (영문)
+  
+  // Step 3: 부분 매칭 (영문만, 조심스럽게)
   for (const [key, value] of Object.entries(TEAM_LOGOS)) {
     const keyLower = key.toLowerCase()
-    if (keyLower.includes(normalizedName) || normalizedName.includes(keyLower)) {
+    
+    // 긴 쪽이 짧은 쪽을 포함하는 경우만 매칭
+    if (keyLower.includes(normalizedName) && normalizedName.length >= 4) {
+      return value
+    }
+    if (normalizedName.includes(keyLower) && keyLower.length >= 4) {
       return value
     }
   }
-
-  // Step 6: 부분 매칭 시도 (한글 변환 후)
-  for (const [engName, krName] of Object.entries(TEAM_NAME_KR)) {
-    const engLower = engName.toLowerCase()
-    if (engLower.includes(normalizedName) || normalizedName.includes(engLower)) {
-      if (TEAM_LOGOS[krName]) {
-        return TEAM_LOGOS[krName]
-      }
-      // 한글명으로도 부분 매칭 시도
-      for (const [logoKey, logoValue] of Object.entries(TEAM_LOGOS)) {
-        if (logoKey.includes(krName) || krName.includes(logoKey)) {
-          return logoValue
-        }
-      }
-    }
-  }
-
-  // Step 7: 매칭 실패 시 placeholder 이미지
+  
+  // Step 4: 실패 시 placeholder
   const initials = teamName
     .split(' ')
     .map(word => word[0])
@@ -756,5 +725,6 @@ export function getTeamLogo(teamName: string): string {
     .substring(0, 3)
     .toUpperCase()
   
-  return `https://via.placeholder.com/40?text=${encodeURIComponent(initials)}`
+  console.warn(`⚠️ 로고 없음: "${teamName}"`)
+  return `https://via.placeholder.com/48x48/1e293b/ffffff?text=${encodeURIComponent(initials)}`
 }
