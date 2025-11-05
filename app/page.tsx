@@ -10,43 +10,50 @@ const LEAGUES = [
     code: 'ALL', 
     name: '전체', 
     flag: '🌍',
+    logo: '🌍',
     isEmoji: true
   },
   { 
     code: 'PL', 
     name: '프리미어리그', 
     flag: 'https://flagcdn.com/w40/gb-eng.png',
+    logo: 'https://crests.football-data.org/PL.png',
     isEmoji: false
   },
   { 
     code: 'PD', 
     name: '라리가', 
     flag: 'https://flagcdn.com/w40/es.png',
+    logo: 'https://crests.football-data.org/PD.png',
     isEmoji: false
   },
   { 
     code: 'BL1', 
     name: '분데스리가', 
     flag: 'https://flagcdn.com/w40/de.png',
+    logo: 'https://crests.football-data.org/BL1.png',
     isEmoji: false
   },
   { 
     code: 'SA', 
     name: '세리에A', 
     flag: 'https://flagcdn.com/w40/it.png',
+    logo: 'https://crests.football-data.org/SA.png',
     isEmoji: false
   },
   { 
     code: 'FL1', 
     name: '리그1', 
     flag: 'https://flagcdn.com/w40/fr.png',
+    logo: 'https://crests.football-data.org/FL1.png',
     isEmoji: false
   },
   { 
     code: 'CL', 
     name: '챔피언스리그', 
     flag: '⭐',
-    isEmoji: true
+    logo: 'https://crests.football-data.org/CL.png',
+    isEmoji: false
   },
 ]
 
@@ -862,45 +869,94 @@ export default function Home() {
 
       {/* 트렌드 컨텐츠 영역 */}
       <div className="container mx-auto px-4 py-8">
-        {/* 리그 필터 */}
-        <div className={`mb-6 p-3 rounded-2xl ${
-          darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
-        }`}>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {LEAGUES.map((league) => (
-              <button
-                key={league.code}
-                onClick={() => setSelectedLeague(league.code)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap flex-shrink-0 ${
-                  selectedLeague === league.code
-                    ? darkMode 
-                      ? 'bg-white text-black shadow-lg transform scale-105'
-                      : 'bg-black text-white shadow-lg transform scale-105'
-                    : darkMode
-                      ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-                }`}
-              >
-                {/* 모바일/데스크탑 모두: 국기 + 이름 */}
-                <span className="flex items-center gap-2">
-                  {league.isEmoji ? (
-                    <span className="text-base">{league.flag}</span>
-                  ) : (
-                    <img 
-                      src={league.flag} 
-                      alt={league.name}
-                      className="w-4 h-3 object-cover rounded"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
-                  )}
-                  <span>{league.name}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <div className="flex gap-8">
+          {/* 왼쪽 사이드바 (데스크톱만) */}
+          <aside className={`hidden lg:block w-64 flex-shrink-0`}>
+            <div className={`sticky top-24 rounded-2xl p-4 ${
+              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+            }`}>
+              <h2 className={`text-lg font-bold mb-4 ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              }`}>
+                Popular Leagues
+              </h2>
+              <nav className="space-y-2">
+                {LEAGUES.map((league) => (
+                  <button
+                    key={league.code}
+                    onClick={() => setSelectedLeague(league.code)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-left ${
+                      selectedLeague === league.code
+                        ? darkMode 
+                          ? 'bg-white text-black shadow-lg'
+                          : 'bg-black text-white shadow-lg'
+                        : darkMode
+                          ? 'text-gray-300 hover:bg-gray-800'
+                          : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {league.isEmoji ? (
+                      <span className="text-2xl">{league.logo}</span>
+                    ) : (
+                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1 flex-shrink-0">
+                        <img 
+                          src={league.logo} 
+                          alt={league.name}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      </div>
+                    )}
+                    <span className="text-sm">{league.name}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
+          {/* 메인 콘텐츠 */}
+          <main className="flex-1 min-w-0">
+            {/* 리그 필터 (모바일만) */}
+            <div className={`lg:hidden mb-6 p-3 rounded-2xl ${
+              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+            }`}>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                {LEAGUES.map((league) => (
+                  <button
+                    key={league.code}
+                    onClick={() => setSelectedLeague(league.code)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap flex-shrink-0 ${
+                      selectedLeague === league.code
+                        ? darkMode 
+                          ? 'bg-white text-black shadow-lg transform scale-105'
+                          : 'bg-black text-white shadow-lg transform scale-105'
+                        : darkMode
+                          ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                    }`}
+                  >
+                    {/* 모바일/데스크탑 모두: 국기 + 이름 */}
+                    <span className="flex items-center gap-2">
+                      {league.isEmoji ? (
+                        <span className="text-base">{league.flag}</span>
+                      ) : (
+                        <img 
+                          src={league.flag} 
+                          alt={league.name}
+                          className="w-4 h-3 object-cover rounded"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      )}
+                      <span>{league.name}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
         {/* 로딩 */}
         {loading && (
@@ -1184,6 +1240,8 @@ export default function Home() {
             </p>
           </div>
         )}
+          </main>
+        </div>
       </div>
  <footer className={`mt-12 py-6 border-t ${darkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white'}`}>
         <div className="container mx-auto px-4 text-center">
