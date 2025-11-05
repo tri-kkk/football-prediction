@@ -603,6 +603,21 @@ export default function Home() {
   function renderChart(container: HTMLElement, trend: TrendData[]) {
     container.innerHTML = ''
 
+    // Y축 범위 동적 계산
+    const allValues = trend.flatMap(point => [
+      point.homeWinProbability,
+      point.drawProbability,
+      point.awayWinProbability
+    ])
+    const minValue = Math.min(...allValues)
+    const maxValue = Math.max(...allValues)
+    
+    // 여유 공간 추가 (변화를 더 크게 보이도록)
+    const range = maxValue - minValue
+    const padding = Math.max(range * 0.2, 5) // 최소 5% 패딩
+    const yMin = Math.max(0, minValue - padding)
+    const yMax = Math.min(100, maxValue + padding)
+
     const chart = createChart(container, {
       width: container.clientWidth,
       height: 300,
@@ -621,24 +636,33 @@ export default function Home() {
       },
       rightPriceScale: {
         borderColor: darkMode ? '#1f1f1f' : '#e5e7eb',
+        // 동적 Y축 범위 적용
+        autoScale: false,
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.1,
+        },
       },
     })
 
+    // 홈팀 승률 (파란색 영역)
     const homeSeries = chart.addAreaSeries({
-      topColor: 'rgba(59, 130, 246, 0.3)',
+      topColor: 'rgba(59, 130, 246, 0.4)',
       bottomColor: 'rgba(59, 130, 246, 0.05)',
       lineColor: '#3b82f6',
       lineWidth: 3,
     })
 
+    // 무승부 (회색 선)
     const drawSeries = chart.addLineSeries({
       color: '#9ca3af',
-      lineWidth: 2,
-      lineStyle: 2,
+      lineWidth: 3,
+      lineStyle: 2, // 점선
     })
 
+    // 원정팀 승률 (빨간색 영역)
     const awaySeries = chart.addAreaSeries({
-      topColor: 'rgba(239, 68, 68, 0.3)',
+      topColor: 'rgba(239, 68, 68, 0.4)',
       bottomColor: 'rgba(239, 68, 68, 0.05)',
       lineColor: '#ef4444',
       lineWidth: 3,
@@ -662,6 +686,65 @@ export default function Home() {
     homeSeries.setData(homeData)
     drawSeries.setData(drawData)
     awaySeries.setData(awayData)
+
+    // 데이터 포인트 마커 추가 (각 시간대별)
+    const markers = trend.map((point, index) => {
+      const time = Math.floor(new Date(point.timestamp).getTime() / 1000) as any
+      
+      // 최고값을 가진 팀에만 마커 표시
+      const maxProb = Math.max(
+        point.homeWinProbability,
+        point.drawProbability,
+        point.awayWinProbability
+      )
+      
+      let color = '#9ca3af'
+      let position: 'belowBar' | 'aboveBar' = 'aboveBar'
+      
+      if (maxProb === point.homeWinProbability) {
+        color = '#3b82f6'
+        position = 'aboveBar'
+      } else if (maxProb === point.awayWinProbability) {
+        color = '#ef4444'
+        position = 'belowBar'
+      }
+      
+      return {
+        time,
+        position,
+        color,
+        shape: 'circle' as const,
+        size: 0.5,
+      }
+    })
+    
+    // 홈팀 시리즈에 마커 추가
+    homeSeries.setMarkers(markers.filter(m => m.color === '#3b82f6'))
+    // 원정팀 시리즈에 마커 추가
+    awaySeries.setMarkers(markers.filter(m => m.color === '#ef4444'))
+
+    // Y축 범위 수동 설정
+    chart.priceScale('right').applyOptions({
+      autoScale: false,
+      scaleMargins: {
+        top: 0.1,
+        bottom: 0.1,
+      },
+    })
+    
+    // 모든 시리즈에 동일한 Y축 범위 적용
+    homeSeries.priceScale().applyOptions({
+      autoScale: false,
+      mode: 0, // Normal
+      invertScale: false,
+      alignLabels: true,
+      borderVisible: true,
+      borderColor: darkMode ? '#1f1f1f' : '#e5e7eb',
+      scaleMargins: {
+        top: 0.1,
+        bottom: 0.1,
+      },
+    })
 
     chart.timeScale().fitContent()
   }
@@ -857,11 +940,17 @@ export default function Home() {
                   {/* 경기 카드 - 가로 배치 */}
                   <div
                     onClick={() => handleMatchClick(match)}
-                    className={`rounded-2xl transition-all cursor-pointer ${
-                      darkMode 
-                        ? 'bg-gray-900 border border-gray-800' 
-                        : 'bg-white border border-gray-200'
-                    } ${expandedMatchId === match.id ? 'ring-2 ring-white scale-105' : 'hover:shadow-xl'}`}
+                    className={`
+                      relative rounded-2xl transition-all duration-200 cursor-pointer group
+                      ${darkMode 
+                        ? 'bg-gray-900 border border-gray-800 hover:border-blue-500' 
+                        : 'bg-white border border-gray-200 hover:border-blue-400'
+                      } 
+                      ${expandedMatchId === match.id 
+                        ? 'ring-2 ring-blue-500 scale-[1.02]' 
+                        : 'hover:shadow-xl hover:scale-[1.02]'
+                      }
+                    `}
                   >
                     {/* 상단: 리그 정보 + 날짜/시간 - 한 줄 중앙 배치 */}
                     <div className={`flex items-center justify-center gap-3 px-4 pt-4 pb-3 border-b ${
@@ -1043,6 +1132,21 @@ export default function Home() {
                             </div>
                           </div>
                         </div>
+                      </div>
+                      
+                      {/* 트렌드 보기 힌트 - hover 시에만 표시 */}
+                      <div className={`
+                        mt-3 flex items-center justify-center gap-2
+                        text-xs font-medium
+                        opacity-0 group-hover:opacity-100
+                        transition-opacity duration-200
+                        ${darkMode ? 'text-gray-400' : 'text-gray-500'}
+                      `}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span>클릭하면 24시간 트렌드를 볼 수 있습니다</span>
                       </div>
                     </div>
                   </div>
