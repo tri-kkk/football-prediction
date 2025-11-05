@@ -1,5 +1,5 @@
-// Vercel Cron Job: 1시간마다 실행
-// vercel.json에 설정 필요
+// app/api/cron/collect-odds/route.ts
+// Vercel Cron Job: 2시간마다 실행
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5분 타임아웃
@@ -16,6 +16,89 @@ interface OddsData {
   awayProbability: number
   timestamp: string
   commenceTime: string
+}
+
+// 🔥 실제 Champions League 진출 팀 목록 (2024-25 시즌)
+const CHAMPIONS_LEAGUE_TEAMS = new Set([
+  // 영국
+  'Manchester City', 'Liverpool', 'Arsenal', 'Aston Villa',
+  // 스페인  
+  'Real Madrid', 'Barcelona', 'Atlético Madrid', 'Girona',
+  // 독일
+  'Bayern Munich', 'Borussia Dortmund', 'RB Leipzig', 'Bayer Leverkusen', 'VfB Stuttgart',
+  // 이탈리아
+  'Inter Milan', 'AC Milan', 'Juventus', 'Bologna', 'Atalanta',
+  // 프랑스
+  'Paris Saint Germain', 'AS Monaco', 'Lille', 'Brest',
+  // 네덜란드
+  'PSV Eindhoven', 'Feyenoord',
+  // 포르투갈
+  'Sporting Lisbon', 'Benfica', 'Sporting CP', 'FC Porto',
+  // 벨기에
+  'Club Brugge',
+  // 스코틀랜드
+  'Celtic',
+  // 오스트리아
+  'Red Bull Salzburg', 'Sturm Graz',
+  // 스위스
+  'Young Boys',
+  // 체코
+  'Sparta Praha', 'Slavia Prague',
+  // 크로아티아
+  'Dinamo Zagreb',
+  // 세르비아
+  'Red Star Belgrade', 'Crvena Zvezda',
+  // 덴마크
+  'FC Copenhagen',
+  // 노르웨이
+  'Bodø/Glimt', 'Bodo/Glimt',
+  // 그리스
+  'Olympiakos', 'Olympiacos', 'Olympiakos Piraeus',
+  // 슬로바키아
+  'Slovan Bratislava',
+  // 우크라이나
+  'Shakhtar Donetsk',
+  // 터키 (Champions League만)
+  'Galatasaray', // 없음 - 2024-25는 Champions League 불참
+]);
+
+// 팀명 정규화 (다양한 표기법 통일)
+function normalizeTeamName(teamName: string): string {
+  const normalizations: { [key: string]: string } = {
+    'PSG': 'Paris Saint Germain',
+    'Paris SG': 'Paris Saint Germain',
+    'Inter': 'Inter Milan',
+    'Internazionale': 'Inter Milan',
+    'AC Milan': 'AC Milan',
+    'Milan': 'AC Milan',
+    'Man City': 'Manchester City',
+    'Bayern': 'Bayern Munich',
+    'Bayern München': 'Bayern Munich',
+    'BVB': 'Borussia Dortmund',
+    'Dortmund': 'Borussia Dortmund',
+    'Atleti': 'Atlético Madrid',
+    'Atletico Madrid': 'Atlético Madrid',
+    'Sporting': 'Sporting Lisbon',
+    'Sporting Portugal': 'Sporting Lisbon',
+    'FCB': 'Barcelona',
+    'Barça': 'Barcelona',
+    'RB Leipzig': 'RB Leipzig',
+    'Leverkusen': 'Bayer Leverkusen',
+  }
+  
+  return normalizations[teamName] || teamName
+}
+
+// Champions League 경기인지 확인
+function isChampionsLeagueMatch(homeTeam: string, awayTeam: string): boolean {
+  const normalizedHome = normalizeTeamName(homeTeam)
+  const normalizedAway = normalizeTeamName(awayTeam)
+  
+  const homeInCL = CHAMPIONS_LEAGUE_TEAMS.has(normalizedHome)
+  const awayInCL = CHAMPIONS_LEAGUE_TEAMS.has(normalizedAway)
+  
+  // 양쪽 팀 모두 Champions League 팀이어야 함
+  return homeInCL && awayInCL
 }
 
 // Supabase에 오즈 저장
@@ -113,6 +196,7 @@ export async function GET(request: Request) {
     ]
     
     let totalSaved = 0
+    let totalSkipped = 0
     let errors = 0
     
     // 각 리그별로 오즈 수집
@@ -143,62 +227,73 @@ export async function GET(request: Request) {
         console.log(`✅ Got ${data.length} matches for ${league.code}`)
         
         // 각 경기 오즈 저장
-for (const match of data) {
-  try {
-    // 🔥 경기 3일 전부터 경기 종료 후 1시간까지 수집
-    const commenceTime = new Date(match.commence_time).getTime()
-    const now = Date.now()
-    const hoursUntilMatch = (commenceTime - now) / (1000 * 60 * 60)
-    
-    // 경기 종료 후 1시간 지났거나 3일(72시간) 이상 남았으면 스킵
-    if (hoursUntilMatch < -1 || hoursUntilMatch > 72) {
-      continue
-    }
-    
-    const bookmaker = match.bookmakers?.[0]
-    if (!bookmaker) continue
-    
-    const h2hMarket = bookmaker.markets.find((m: any) => m.key === 'h2h')
-    if (!h2hMarket || h2hMarket.outcomes.length < 2) continue
-    
-    const outcomes = h2hMarket.outcomes
-    const homeOutcome = outcomes.find((o: any) => o.name === match.home_team)
-    const awayOutcome = outcomes.find((o: any) => o.name === match.away_team)
-    const drawOutcome = outcomes.find((o: any) => o.name === 'Draw')
-    
-    const homeOdds = homeOutcome?.price || 2.5
-    const drawOdds = drawOutcome?.price || 3.0
-    const awayOdds = awayOutcome?.price || 2.5
-    
-    const homeProbability = (1 / homeOdds) * 100
-    const drawProbability = (1 / drawOdds) * 100
-    const awayProbability = (1 / awayOdds) * 100
-    
-    // 정규화
-    const total = homeProbability + drawProbability + awayProbability
-    
-    const oddsData: OddsData = {
-      matchId: match.id,
-      homeTeam: match.home_team,
-      awayTeam: match.away_team,
-      homeOdds: Number(homeOdds.toFixed(2)),
-      drawOdds: Number(drawOdds.toFixed(2)),
-      awayOdds: Number(awayOdds.toFixed(2)),
-      homeProbability: Number(((homeProbability / total) * 100).toFixed(2)),
-      drawProbability: Number(((drawProbability / total) * 100).toFixed(2)),
-      awayProbability: Number(((awayProbability / total) * 100).toFixed(2)),
-      timestamp: new Date().toISOString(),
-      commenceTime: match.commence_time
-    }
-    
-    await saveOddsToDatabase(oddsData, league.code)
-    totalSaved++
-    
-  } catch (matchError) {
-    console.error('Error saving match:', matchError)
-    errors++
-  }
-}
+        for (const match of data) {
+          try {
+            // 🔥 Champions League인 경우에만 팀 필터링 적용
+            if (league.code === 'CL') {
+              const isCLMatch = isChampionsLeagueMatch(match.home_team, match.away_team)
+              if (!isCLMatch) {
+                console.log(`⏭️ Skipping non-CL match: ${match.home_team} vs ${match.away_team}`)
+                totalSkipped++
+                continue
+              }
+            }
+            
+            // 경기 3일 전부터 경기 종료 후 1시간까지 수집
+            const commenceTime = new Date(match.commence_time).getTime()
+            const now = Date.now()
+            const hoursUntilMatch = (commenceTime - now) / (1000 * 60 * 60)
+            
+            // 경기 종료 후 1시간 지났거나 3일(72시간) 이상 남았으면 스킵
+            if (hoursUntilMatch < -1 || hoursUntilMatch > 72) {
+              continue
+            }
+            
+            const bookmaker = match.bookmakers?.[0]
+            if (!bookmaker) continue
+            
+            const h2hMarket = bookmaker.markets.find((m: any) => m.key === 'h2h')
+            if (!h2hMarket || h2hMarket.outcomes.length < 2) continue
+            
+            const outcomes = h2hMarket.outcomes
+            const homeOutcome = outcomes.find((o: any) => o.name === match.home_team)
+            const awayOutcome = outcomes.find((o: any) => o.name === match.away_team)
+            const drawOutcome = outcomes.find((o: any) => o.name === 'Draw')
+            
+            const homeOdds = homeOutcome?.price || 2.5
+            const drawOdds = drawOutcome?.price || 3.0
+            const awayOdds = awayOutcome?.price || 2.5
+            
+            const homeProbability = (1 / homeOdds) * 100
+            const drawProbability = (1 / drawOdds) * 100
+            const awayProbability = (1 / awayOdds) * 100
+            
+            // 정규화
+            const total = homeProbability + drawProbability + awayProbability
+            
+            const oddsData: OddsData = {
+              matchId: match.id,
+              homeTeam: match.home_team,
+              awayTeam: match.away_team,
+              homeOdds: Number(homeOdds.toFixed(2)),
+              drawOdds: Number(drawOdds.toFixed(2)),
+              awayOdds: Number(awayOdds.toFixed(2)),
+              homeProbability: Number(((homeProbability / total) * 100).toFixed(2)),
+              drawProbability: Number(((drawProbability / total) * 100).toFixed(2)),
+              awayProbability: Number(((awayProbability / total) * 100).toFixed(2)),
+              timestamp: new Date().toISOString(),
+              commenceTime: match.commence_time
+            }
+            
+            await saveOddsToDatabase(oddsData, league.code)
+            console.log(`✅ Saved: ${match.home_team} vs ${match.away_team}`)
+            totalSaved++
+            
+          } catch (matchError) {
+            console.error('Error saving match:', matchError)
+            errors++
+          }
+        }
         
         // API 제한 방지 (리그 간 1초 대기)
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -210,11 +305,12 @@ for (const match of data) {
     }
     
     console.log('✅ Cron Job Completed!')
-    console.log(`📊 Saved: ${totalSaved}, Errors: ${errors}`)
+    console.log(`📊 Saved: ${totalSaved}, Skipped: ${totalSkipped}, Errors: ${errors}`)
     
     return Response.json({
       success: true,
       saved: totalSaved,
+      skipped: totalSkipped,
       errors: errors,
       timestamp: new Date().toISOString()
     })
@@ -230,7 +326,6 @@ for (const match of data) {
     )
   }
 }
-
 
 export async function POST(request: Request) {
   return GET(request)
