@@ -6,6 +6,8 @@ export interface Match {
   id: number
   homeTeamKR: string
   awayTeamKR: string
+  homeCrest: string          // ✅ 추가: 홈팀 로고
+  awayCrest: string          // ✅ 추가: 원정팀 로고
   homeWinRate: number
   drawRate: number
   awayWinRate: number
