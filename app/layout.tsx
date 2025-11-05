@@ -1,15 +1,17 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import Link from 'next/link'
 import GoogleTagManager from './GoogleTagManager'
+import Navigation from './components/Navigation'
 
 export const metadata: Metadata = {
-  title: 'Trend soccer - Real Time Prediction',
+  title: 'Trend Soccer - Real Time Prediction',
   description: '실시간 확률 기반 축구 경기 예측 분석. 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그 승률 및 트렌드 분석 제공',
   keywords: '축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그',
-  authors: [{ name: 'Trend soccer - Real Time Prediction' }],
+  authors: [{ name: 'Trend Soccer - Real Time Prediction' }],
   openGraph: {
-    title: ' Trend soccer - Real Time Prediction',
+    title: 'Trend Soccer - Real Time Prediction',
     description: '실시간 확률 기반 축구 경기 예측 분석 플랫폼',
     type: 'website',
     locale: 'ko_KR',
@@ -31,7 +33,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body>
+      <body className="bg-[#0f0f0f] text-white">
         {/* Google Tag Manager */}
         <GoogleTagManager />
 
@@ -43,7 +45,37 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         
-        {children}
+        {/* Global Navigation - 메인 페이지 스타일 */}
+        <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              {/* Logo - 메인과 동일 */}
+              <Link href="/" className="flex items-center gap-3 cursor-pointer">
+                <img 
+                  src="/logo.svg" 
+                  alt="Trend Soccer" 
+                  className="h-14 w-auto"
+                />
+              </Link>
+              
+              {/* Navigation */}
+              <Navigation />
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main>
+          {children}
+        </main>
+
+        {/* Footer */}
+        <footer className="mt-20 py-8 border-t border-gray-800 bg-[#1a1a1a]">
+          <div className="container mx-auto px-4 text-center text-gray-400 text-sm">
+            <p>© 2025 Soccer Trend. All rights reserved.</p>
+            <p className="mt-2">실시간 배당 기반 축구 예측 분석 플랫폼</p>
+          </div>
+        </footer>
       </body>
     </html>
   )

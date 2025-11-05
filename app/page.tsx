@@ -964,21 +964,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
       {/* 헤더 */}
-      <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-<div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.reload()}>
-  <img 
-    src="/logo.svg" 
-    alt="Trend Soccer" 
-    className="h-14 w-auto"
-  />
-</div>
-            
-
-          </div>
-        </div>
-      </header>
+    
 
       {/* 승률 배너 (자동 스크롤) */}
       <div className="bg-[#0f0f0f] border-b border-gray-900">
