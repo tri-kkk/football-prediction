@@ -72,8 +72,8 @@ export default function RootLayout({
         {/* Footer */}
         <footer className="mt-20 py-8 border-t border-gray-800 bg-[#1a1a1a]">
           <div className="container mx-auto px-4 text-center text-gray-400 text-sm">
-            <p>© 2025 Soccer Trend. All rights reserved.</p>
-            <p className="mt-2">실시간 배당 기반 축구 예측 분석 플랫폼</p>
+            <p>© 2025 Trend Soccer. All rights reserved.</p>
+
           </div>
         </footer>
       </body>
