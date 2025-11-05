@@ -97,10 +97,8 @@ interface Match {
   leagueLogo: string
   date: string
   time: string
-  homeTeam: string      // 영문 팀명 (API에서 받은 원본)
-  awayTeam: string      // 영문 팀명 (API에서 받은 원본)
-  homeTeamKR: string    // 한글 팀명 (화면 표시용)
-  awayTeamKR: string    // 한글 팀명 (화면 표시용)
+  homeTeam: string      // 팀명 (영문 - 화면 표시용)
+  awayTeam: string      // 팀명 (영문 - 화면 표시용)
   homeCrest: string
   awayCrest: string
   homeScore: number | null
@@ -418,10 +416,6 @@ export default function Home() {
             console.warn('⚠️ 리그 코드 누락:', odds)
           }
           
-          // 영문 팀명 → 한글 팀명 번역
-          const homeTeamKR = translateTeamName(homeTeamEng)
-          const awayTeamKR = translateTeamName(awayTeamEng)
-          
           return {
             id: odds.match_id || Math.random(),
             league: getLeagueName(leagueCode),  // 리그 코드를 한글 이름으로 변환
@@ -429,12 +423,10 @@ export default function Home() {
             leagueLogo: getLeagueLogo(leagueCode),
             date: formatDate(odds.commence_time),
             time: formatTime(odds.commence_time),
-            homeTeam: homeTeamEng,           // 영문 원본 (API 데이터)
-            awayTeam: awayTeamEng,           // 영문 원본 (API 데이터)
-            homeTeamKR: homeTeamKR,          // 한글 번역 (화면 표시용)
-            awayTeamKR: awayTeamKR,          // 한글 번역 (화면 표시용)
-            homeCrest: getTeamLogo(homeTeamKR),  // 한글명으로 로고 매칭
-            awayCrest: getTeamLogo(awayTeamKR),  // 한글명으로 로고 매칭
+            homeTeam: homeTeamEng,           // 영문 팀명 사용
+            awayTeam: awayTeamEng,           // 영문 팀명 사용
+            homeCrest: getTeamLogo(homeTeamEng),  // 영문으로 로고 매칭
+            awayCrest: getTeamLogo(awayTeamEng),  // 영문으로 로고 매칭
             homeScore: null,
             awayScore: null,
             status: 'SCHEDULED',
@@ -714,12 +706,12 @@ export default function Home() {
                 ? Math.round(latestTrend.awayWinProbability)
                 : match.awayWinRate
               
-              const homeTeam = match.homeTeamKR.length > 15 
-                ? match.homeTeamKR.substring(0, 15) + '...' 
-                : match.homeTeamKR
-              const awayTeam = match.awayTeamKR.length > 15 
-                ? match.awayTeamKR.substring(0, 15) + '...' 
-                : match.awayTeamKR
+              const homeTeam = match.homeTeam.length > 15 
+                ? match.homeTeam.substring(0, 15) + '...' 
+                : match.homeTeam
+              const awayTeam = match.awayTeam.length > 15 
+                ? match.awayTeam.substring(0, 15) + '...' 
+                : match.awayTeam
               
               const isHomeWinning = homeWin > awayWin
               const winningTeam = isHomeWinning ? homeTeam : awayTeam
@@ -773,7 +765,7 @@ export default function Home() {
                   <div className={`text-xs font-medium mt-2 pt-2 border-t ${
                     darkMode ? 'border-gray-800 text-gray-400' : 'border-gray-200 text-gray-600'
                   }`}>
-                    {match.homeTeamKR} - {match.awayTeamKR}
+                    {match.homeTeam} - {match.awayTeam}
                   </div>
                   <div className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
                     {match.time}
@@ -925,9 +917,9 @@ export default function Home() {
                       <div className="flex items-center justify-center gap-3 mb-6">
                         {/* 홈팀 */}
                         <div className="flex items-center gap-2">
-                          <img src={match.homeCrest} alt={match.homeTeamKR} className="w-12 h-12" />
+                          <img src={match.homeCrest} alt={match.homeTeam} className="w-12 h-12" />
                           <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {match.homeTeamKR}
+                            {match.homeTeam}
                           </span>
                         </div>
                         
@@ -941,9 +933,9 @@ export default function Home() {
                         {/* 원정팀 */}
                         <div className="flex items-center gap-2">
                           <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {match.awayTeamKR}
+                            {match.awayTeam}
                           </span>
-                          <img src={match.awayCrest} alt={match.awayTeamKR} className="w-12 h-12" />
+                          <img src={match.awayCrest} alt={match.awayTeam} className="w-12 h-12" />
                         </div>
                       </div>
 
