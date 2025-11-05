@@ -185,7 +185,7 @@ export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywor
 
   if (loading) {
     return (
-      <div className="bg-gray-800/50 rounded-lg p-4 animate-pulse">
+      <div className="rounded-lg p-4 animate-pulse">
         <div className="h-4 bg-gray-700 rounded w-24 mb-3"></div>
         <div className="flex flex-wrap gap-2">
           {[1, 2, 3, 4, 5].map(i => (
@@ -204,7 +204,7 @@ export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywor
   const limitedHeadlines = newsData.headlines?.slice(0, 5) || []
 
   return (
-    <div className="bg-gray-800/50 rounded-lg p-4 space-y-4">
+    <div className="rounded-lg p-4 space-y-4">
       {/* 헤드라인 섹션 */}
       {limitedHeadlines.length > 0 && (
         <div>
