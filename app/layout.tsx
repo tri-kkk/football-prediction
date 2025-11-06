@@ -70,10 +70,46 @@ export default function RootLayout({
         </main>
 
         {/* Footer */}
-        <footer className="mt-20 py-8 border-t border-gray-800 bg-[#1a1a1a]">
-          <div className="container mx-auto px-4 text-center text-gray-400 text-sm">
-            <p>© 2025 Trend Soccer. All rights reserved.</p>
-
+        <footer className="mt-20 py-12 border-t border-gray-800 bg-[#1a1a1a]">
+          <div className="container mx-auto px-4">
+            {/* Footer Links */}
+            <div className="flex flex-wrap justify-center items-center gap-6 mb-6">
+              <Link 
+                href="/about" 
+                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+              >
+                About
+              </Link>
+              <span className="text-gray-600">•</span>
+              <Link 
+                href="/contact" 
+                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+              >
+                Contact
+              </Link>
+              <span className="text-gray-600">•</span>
+              <Link 
+                href="/privacy" 
+                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+              >
+                Privacy Policy
+              </Link>
+              <span className="text-gray-600">•</span>
+              <Link 
+                href="/terms" 
+                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+              >
+                Terms of Service
+              </Link>
+            </div>
+            
+            {/* Copyright */}
+            <div className="text-center text-gray-500 text-sm">
+              <p>© 2025 Trend Soccer. All rights reserved.</p>
+              <p className="mt-2 text-xs text-gray-600">
+                Real-time soccer match prediction and analysis platform
+              </p>
+            </div>
           </div>
         </footer>
       </body>
