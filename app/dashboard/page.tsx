@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { getTeamLogo } from '../teamLogos'
 import { smartFilters, useSmartFilters, getMatchBadges, type Match } from '../utils/smartFilters'
+import AdsterraNativeBanner from '../components/AdsterraNativeBanner'
 
 // 리그 정보 (메인 페이지와 동일)
 const LEAGUES = [
@@ -244,6 +245,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* 광고 배너 #1 - 필터 아래 */}
+        <AdsterraNativeBanner />
+
         {/* 리그 필터 */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-200 px-4 md:px-0">
@@ -339,16 +343,16 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredMatches.map(match => {
+            {filteredMatches.map((match, index) => {
               const badges = getMatchBadges(match)
               const flag = getLeagueFlag(match.leagueCode)
               const leagueName = getLeagueName(match.leagueCode)
               
               return (
-                <div
-                  key={match.id}
-                  className="relative rounded-2xl transition-all duration-200 cursor-pointer group bg-[#1a1a1a] border border-gray-800 hover:border-blue-500 hover:shadow-xl hover:scale-[1.02]"
-                >
+                <React.Fragment key={match.id}>
+                  <div
+                    className="relative rounded-2xl transition-all duration-200 cursor-pointer group bg-[#1a1a1a] border border-gray-800 hover:border-blue-500 hover:shadow-xl hover:scale-[1.02]"
+                  >
                   {/* 상단: 리그 정보 + 날짜/시간 */}
                   <div className="flex items-center justify-center gap-3 px-4 pt-4 pb-3 border-b border-gray-800">
                     {/* 리그 국기 */}
@@ -492,6 +496,14 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
+                
+                {/* 광고 배너 - 5번째와 10번째 경기 후 (2열 그리드이므로 전체 너비로) */}
+                {(index === 4 || index === 9) && (
+                  <div className="lg:col-span-2">
+                    <AdsterraNativeBanner />
+                  </div>
+                )}
+              </React.Fragment>
               )
             })}
           </div>
