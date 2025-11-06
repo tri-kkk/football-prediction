@@ -1,6 +1,7 @@
 'use client'
 import NewsKeywords from './components/NewsKeywords'
-import { useState, useEffect, useRef } from 'react'
+import AdsterraNativeBanner from './AdsterraNativeBanner'
+import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
 
@@ -1257,6 +1258,9 @@ export default function Home() {
           </div>
         </div>
 
+        {/* 상단 광고 배너 */}
+        <AdsterraNativeBanner />
+
         {/* 로딩 */}
         {loading && (
           <div className="text-center py-20">
@@ -1318,7 +1322,7 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      {paginatedMatches.map((match) => {
+                      {paginatedMatches.map((match, index) => {
               const currentTrend = trendData[match.id]
               const latestTrend = currentTrend?.[currentTrend.length - 1]
               const previousTrend = currentTrend?.[currentTrend.length - 2]
@@ -1331,7 +1335,8 @@ export default function Home() {
                 : 0
               
               return (
-                <div key={match.id} id={`match-card-${match.id}`}>
+                <React.Fragment key={match.id}>
+                  <div id={`match-card-${match.id}`}>
                   {/* 경기 카드 - 가로 배치 */}
                   <div
                     onClick={() => handleMatchClick(match)}
@@ -1701,6 +1706,12 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+                
+                {/* 광고 배너 - 5번째와 10번째 경기 후 */}
+                {(index === 4 || index === 9) && (
+                  <AdsterraNativeBanner />
+                )}
+              </React.Fragment>
               )
             })}
             
