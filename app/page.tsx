@@ -254,6 +254,13 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(true)
   const [language, setLanguage] = useState<'ko' | 'en'>('ko')
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  // AI 논평 상태
+  const [aiCommentaries, setAiCommentaries] = useState<{ [key: number]: string }>({})
+  const [commentaryLoading, setCommentaryLoading] = useState<{ [key: number]: boolean }>({})
+  // 날짜 필터와 페이지네이션
+  const [selectedDate, setSelectedDate] = useState<string>('week')  // 기본값 'week'로 변경
+  const [currentPage, setCurrentPage] = useState(1)
+  const MATCHES_PER_PAGE = 15
   const [standings, setStandings] = useState<any[]>([])
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [currentLeagueIndex, setCurrentLeagueIndex] = useState(0)
@@ -725,6 +732,18 @@ export default function Home() {
     fetchStandings(selectedLeague)
   }, [selectedLeague])
 
+  // AI 논평 기능 일시 비활성화 (Rate Limit 때문)
+  // TODO: 나중에 큐잉 시스템으로 개선
+  // useEffect(() => {
+  //   if (matches.length > 0) {
+  //     matches.forEach(match => {
+  //       if (!aiCommentaries[match.id]) {
+  //         fetchAICommentary(match)
+  //       }
+  //     })
+  //   }
+  // }, [matches])
+
   // 트렌드 데이터 변경 시 차트 렌더링
   useEffect(() => {
     if (expandedMatchId) {
@@ -777,6 +796,55 @@ export default function Home() {
       console.error('❌ 뉴스 키워드 로드 에러:', error)
       // 에러 시 더미 데이터 사용
       setNewsKeywords(generateNewsKeywords())
+    }
+  }
+
+  // AI 논평 가져오기 (Claude API 사용)
+  const fetchAICommentary = async (match: Match) => {
+    try {
+      console.log(`🤖 AI 논평 요청: ${match.homeTeam} vs ${match.awayTeam}`)
+      
+      // 로딩 상태 설정
+      setCommentaryLoading(prev => ({ ...prev, [match.id]: true }))
+      
+      const response = await fetch('/api/ai-commentary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ match })
+      })
+      
+      if (!response.ok) {
+        throw new Error('AI 논평 생성 실패')
+      }
+      
+      const data = await response.json()
+      console.log('✅ AI 논평 응답:', data.commentary)
+      
+      // 논평 저장
+      setAiCommentaries(prev => ({ ...prev, [match.id]: data.commentary }))
+      
+    } catch (error) {
+      console.error('❌ AI 논평 로드 에러:', error)
+      
+      // 폴백: 기본 논평
+      const homeWin = parseFloat(match.homeWinRate)
+      const awayWin = parseFloat(match.awayWinRate)
+      const homeAwayDiff = Math.abs(homeWin - awayWin)
+      
+      let fallback = ''
+      if (homeAwayDiff < 10) {
+        fallback = `${match.homeTeam}와 ${match.awayTeam}의 팽팽한 승부가 예상됩니다.`
+      } else if (homeWin > awayWin) {
+        fallback = `${match.homeTeam}이 홈에서 유리한 경기를 펼칠 것으로 보입니다.`
+      } else {
+        fallback = `${match.awayTeam}의 강력한 원정 경기력이 기대됩니다.`
+      }
+      
+      setAiCommentaries(prev => ({ ...prev, [match.id]: fallback }))
+    } finally {
+      setCommentaryLoading(prev => ({ ...prev, [match.id]: false }))
     }
   }
 
@@ -974,7 +1042,11 @@ export default function Home() {
             className="flex gap-4 px-4 overflow-x-auto scrollbar-hide"
             style={{ scrollBehavior: 'auto' }}
           >
-            {[...matches.slice(0, 10), ...matches.slice(0, 10)].map((match, index) => {
+            {(() => {
+              // 필터링된 경기에서 20개 추출 (중복 제거)
+              const uniqueMatches = matches.slice(0, 20)
+              // 무한 스크롤을 위해 2번 반복
+              return [...uniqueMatches, ...uniqueMatches].map((match, index) => {
               const currentTrend = trendData[match.id]
               const latestTrend = currentTrend?.[currentTrend.length - 1]
               
@@ -1051,7 +1123,8 @@ export default function Home() {
                   </div>
                 </div>
               )
-            })}
+            })
+          })()}
           </div>
         </div>
       </div>
@@ -1115,7 +1188,10 @@ export default function Home() {
                 {LEAGUES.map((league) => (
                   <button
                     key={league.code}
-                    onClick={() => setSelectedLeague(league.code)}
+                    onClick={() => {
+                      setSelectedLeague(league.code)
+                      setCurrentPage(1) // 리그 변경 시 1페이지로 리셋
+                    }}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap flex-shrink-0 ${
                       selectedLeague === league.code
                         ? darkMode 
@@ -1147,6 +1223,36 @@ export default function Home() {
               </div>
             </div>
 
+        {/* 날짜 필터 */}
+        <div className="mb-6">
+          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
+            {[
+              { value: 'today', label: '오늘' },
+              { value: 'tomorrow', label: '내일' },
+              { value: 'week', label: '이번 주' }
+            ].map((date) => (
+              <button
+                key={date.value}
+                onClick={() => {
+                  setSelectedDate(date.value)
+                  setCurrentPage(1) // 날짜 변경 시 1페이지로 리셋
+                }}
+                className={`px-6 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  selectedDate === date.value
+                    ? darkMode 
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'bg-blue-500 text-white shadow-lg'
+                    : darkMode
+                      ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                }`}
+              >
+                {date.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* 로딩 */}
         {loading && (
           <div className="text-center py-20">
@@ -1167,7 +1273,48 @@ export default function Home() {
         {/* 경기 목록 - 1열 레이아웃 */}
         {!loading && !error && (
           <div className="grid gap-6 grid-cols-1">
-            {matches.map((match) => {
+            {(() => {
+              // 날짜 필터링
+              const now = new Date()
+              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+              const tomorrow = new Date(today)
+              tomorrow.setDate(tomorrow.getDate() + 1)
+              const weekEnd = new Date(today)
+              weekEnd.setDate(weekEnd.getDate() + 7)
+              
+              let filteredMatches = matches.filter(match => {
+                const matchDate = new Date(match.utcDate)
+                
+                if (selectedDate === 'today') {
+                  return matchDate >= today && matchDate < tomorrow
+                } else if (selectedDate === 'tomorrow') {
+                  const dayAfter = new Date(tomorrow)
+                  dayAfter.setDate(dayAfter.getDate() + 1)
+                  return matchDate >= tomorrow && matchDate < dayAfter
+                } else if (selectedDate === 'week') {
+                  return matchDate >= today && matchDate < weekEnd
+                }
+                return true
+              })
+              
+              // 페이지네이션
+              const totalMatches = filteredMatches.length
+              const totalPages = Math.ceil(totalMatches / MATCHES_PER_PAGE)
+              const startIndex = (currentPage - 1) * MATCHES_PER_PAGE
+              const endIndex = startIndex + MATCHES_PER_PAGE
+              const paginatedMatches = filteredMatches.slice(startIndex, endIndex)
+              
+              return (
+                <>
+                  {paginatedMatches.length === 0 ? (
+                    <div className={`text-center py-20 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <div className="text-6xl mb-4">📅</div>
+                      <p className="text-xl mb-2">선택한 날짜에 예정된 경기가 없습니다.</p>
+                      <p className="text-sm">다른 날짜를 선택해보세요!</p>
+                    </div>
+                  ) : (
+                    <>
+                      {paginatedMatches.map((match) => {
               const currentTrend = trendData[match.id]
               const latestTrend = currentTrend?.[currentTrend.length - 1]
               const previousTrend = currentTrend?.[currentTrend.length - 2]
@@ -1307,7 +1454,7 @@ export default function Home() {
                                 <div className={`text-xs font-bold ${
                                   homeChange > 0 ? 'text-green-500' : 'text-red-500'
                                 }`}>
-                                  {homeChange > 0 ? '↑' : '↓'} {Math.abs(homeChange).toFixed(1)}%
+                                  {homeChange > 0 ? '↑' : '↓'} {Math.abs(Math.round(homeChange))}%
                                 </div>
                               )}
                             </div>
@@ -1359,10 +1506,140 @@ export default function Home() {
                                 <div className={`text-xs font-bold ${
                                   awayChange > 0 ? 'text-green-500' : 'text-red-500'
                                 }`}>
-                                  {awayChange > 0 ? '↑' : '↓'} {Math.abs(awayChange).toFixed(1)}%
+                                  {awayChange > 0 ? '↑' : '↓'} {Math.abs(Math.round(awayChange))}%
                                 </div>
                               )}
                             </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* AI 한줄 논평 */}
+                      <div className={`mt-4 px-4 py-3 rounded-xl ${
+                        darkMode ? 'bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-500/30' : 'bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200'
+                      }`}>
+                        <div className="flex items-start gap-2">
+                          <div className="text-lg mt-0.5">🤖</div>
+                          <div className="flex-1">
+                            <div className={`text-xs font-semibold mb-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                              AI 경기 분석
+                            </div>
+                            <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {(() => {
+                                try {
+                                  const homeWin = parseFloat(match.homeWinRate) || 0
+                                  const draw = parseFloat(match.drawRate) || 0
+                                  const awayWin = parseFloat(match.awayWinRate) || 0
+                                  const homeAwayDiff = Math.abs(homeWin - awayWin)
+                                  
+                                  // 디버깅
+                                  console.log('Match:', match.homeTeam, 'vs', match.awayTeam)
+                                  console.log('Rates:', homeWin, draw, awayWin, 'Diff:', homeAwayDiff)
+                                
+                                // 논평 패턴 라이브러리
+                                const patterns = {
+                                  // 압도적 우세 (20% 이상 차이)
+                                  dominant_home: [
+                                    `${match.homeTeam}의 압도적인 우세가 예상됩니다. 홈 어드밴티지를 최대한 활용할 것으로 보입니다.`,
+                                    `${match.homeTeam}이 경기를 장악할 것으로 전망됩니다. 공격적인 경기 운영이 기대됩니다.`,
+                                    `${match.homeTeam}의 강력한 전력이 돋보입니다. 안정적인 승리가 예상됩니다.`,
+                                    `홈팀 ${match.homeTeam}의 기세가 등등합니다. 원정팀을 압도할 가능성이 높습니다.`,
+                                    `${match.homeTeam}이 주도권을 쥐고 경기를 풀어갈 것으로 보입니다.`
+                                  ],
+                                  dominant_away: [
+                                    `${match.awayTeam}의 강력한 원정 경기력이 돋보입니다. 승리 가능성이 매우 높습니다.`,
+                                    `원정팀 ${match.awayTeam}이 경기를 지배할 것으로 예상됩니다. 공격 화력이 인상적입니다.`,
+                                    `${match.awayTeam}의 뛰어난 전술이 빛을 발할 전망입니다. 안정적인 승리가 기대됩니다.`,
+                                    `${match.awayTeam}이 원정에서도 강력한 모습을 보여줄 것으로 전망됩니다.`,
+                                    `원정 경기지만 ${match.awayTeam}의 우세가 뚜렷합니다. 승점 3점 확보가 유력합니다.`
+                                  ],
+                                  
+                                  // 일반 우세 (10-20% 차이)
+                                  advantage_home: [
+                                    `${match.homeTeam}이 홈에서 유리한 경기를 펼칠 것으로 예상됩니다.`,
+                                    `${match.homeTeam}의 홈 경기력이 승부의 열쇠가 될 전망입니다.`,
+                                    `홈팀 ${match.homeTeam}이 다소 우위를 점하고 있습니다. 홈 관중의 응원이 힘이 될 것입니다.`,
+                                    `${match.homeTeam}이 경기 흐름을 주도할 가능성이 높습니다.`,
+                                    `홈 어드밴티지를 앞세운 ${match.homeTeam}이 승리에 근접해 있습니다.`
+                                  ],
+                                  advantage_away: [
+                                    `${match.awayTeam}이 원정에서도 좋은 경기력을 보여줄 것으로 전망됩니다.`,
+                                    `${match.awayTeam}의 탄탄한 조직력이 승부를 가를 것으로 보입니다.`,
+                                    `원정팀 ${match.awayTeam}이 다소 유리한 고지를 선점하고 있습니다.`,
+                                    `${match.awayTeam}의 최근 상승세가 경기 결과에 영향을 미칠 전망입니다.`,
+                                    `${match.awayTeam}이 원정 경기에서 강점을 발휘할 것으로 기대됩니다.`
+                                  ],
+                                  
+                                  // 박빙 승부 (10% 미만 차이)
+                                  close_match: [
+                                    `${match.homeTeam}와 ${match.awayTeam}의 팽팽한 승부가 예상됩니다. 양 팀 모두 승점 3점을 노립니다.`,
+                                    `접전이 예상됩니다. ${match.homeTeam}과 ${match.awayTeam} 모두 승리 가능성이 열려있습니다.`,
+                                    `박빙의 경기가 펼쳐질 전망입니다. 작은 실수가 승부를 가를 수 있습니다.`,
+                                    `양 팀의 전력이 균형을 이루고 있습니다. 세트피스가 승부처가 될 수 있습니다.`,
+                                    `한 골 차이로 승부가 갈릴 수 있는 경기입니다. 긴장감 넘치는 90분이 예상됩니다.`,
+                                    `${match.homeTeam}과 ${match.awayTeam} 모두 기회가 있는 접전입니다.`,
+                                    `예측하기 어려운 경기입니다. 선수들의 컨디션이 변수가 될 것입니다.`
+                                  ],
+                                  
+                                  // 무승부 가능성 높음
+                                  draw_likely: [
+                                    `팽팽한 승부가 예상됩니다. 무승부 가능성도 ${Math.round(draw)}%로 높은 편입니다.`,
+                                    `양 팀 모두 신중한 경기 운영이 예상됩니다. 무승부로 끝날 가능성이 높습니다.`,
+                                    `수비적인 경기가 펼쳐질 전망입니다. 스코어리스 무승부 가능성도 있습니다.`,
+                                    `두 팀의 전력이 비슷해 무승부 가능성이 ${Math.round(draw)}%로 높습니다.`,
+                                    `득점 기회가 많지 않을 것으로 보입니다. 1-1 무승부도 충분히 가능합니다.`,
+                                    `전술 싸움이 치열할 전망입니다. 승부를 가르기 어려운 경기가 될 것입니다.`
+                                  ]
+                                }
+                                
+                                // 패턴 선택 로직
+                                let selectedPattern: string[] = []
+                                
+                                if (homeAwayDiff > 20) {
+                                  // 압도적 우세
+                                  selectedPattern = homeWin > awayWin ? patterns.dominant_home : patterns.dominant_away
+                                  console.log('Pattern: dominant', homeWin > awayWin ? 'home' : 'away')
+                                } else if (homeAwayDiff > 10) {
+                                  // 일반 우세
+                                  selectedPattern = homeWin > awayWin ? patterns.advantage_home : patterns.advantage_away
+                                  console.log('Pattern: advantage', homeWin > awayWin ? 'home' : 'away')
+                                } else {
+                                  // 박빙의 승부
+                                  if (draw > 28) {
+                                    selectedPattern = patterns.draw_likely
+                                    console.log('Pattern: draw_likely')
+                                  } else {
+                                    selectedPattern = patterns.close_match
+                                    console.log('Pattern: close_match')
+                                  }
+                                }
+                                
+                                console.log('Selected pattern length:', selectedPattern.length)
+                                
+                                // 폴백
+                                if (!selectedPattern || selectedPattern.length === 0) {
+                                  console.error('No pattern selected!')
+                                  return '경기 분석을 준비 중입니다.'
+                                }
+                                
+                                // 랜덤으로 논평 선택 (경기 ID 기반 시드로 일관성 유지)
+                                const matchId = typeof match.id === 'number' ? match.id : parseInt(String(match.id)) || 0
+                                const seed = matchId % selectedPattern.length
+                                const commentary = selectedPattern[seed]
+                                console.log('Match ID:', matchId, 'Seed:', seed, 'Commentary:', commentary)
+                                
+                                // 최종 폴백
+                                if (!commentary) {
+                                  return selectedPattern[0] || '경기 분석을 준비 중입니다.'
+                                }
+                                
+                                return commentary
+                              } catch (error) {
+                                console.error('논평 생성 오류:', error)
+                                return '경기 분석을 준비 중입니다.'
+                              }
+                              })()}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1416,6 +1693,87 @@ export default function Home() {
                 </div>
               )
             })}
+            
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    currentPage === 1
+                      ? darkMode 
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : darkMode
+                        ? 'bg-gray-800 text-white hover:bg-gray-700'
+                        : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                  }`}
+                >
+                  이전
+                </button>
+                
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                    // 현재 페이지 근처만 표시
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                            currentPage === page
+                              ? darkMode
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-blue-500 text-white'
+                              : darkMode
+                                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    } else if (
+                      page === currentPage - 2 ||
+                      page === currentPage + 2
+                    ) {
+                      return <span key={page} className="text-gray-500">...</span>
+                    }
+                    return null
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    currentPage === totalPages
+                      ? darkMode 
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : darkMode
+                        ? 'bg-gray-800 text-white hover:bg-gray-700'
+                        : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                  }`}
+                >
+                  다음
+                </button>
+                
+                <span className={`ml-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {currentPage} / {totalPages} 페이지 (총 {totalMatches}경기)
+                </span>
+              </div>
+            )}
+            </>
+          )}
+        </>
+      )
+    })()}
           </div>
         )}
 
