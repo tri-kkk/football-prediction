@@ -1,6 +1,6 @@
 'use client'
 import NewsKeywords from './components/NewsKeywords'
-import AdsterraNativeBanner from './AdsterraNativeBanner'
+import AdsterraNativeBanner from './components/AdsterraNativeBanner'
 import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
@@ -1707,10 +1707,7 @@ export default function Home() {
                   )}
                 </div>
                 
-                {/* 광고 배너 - 5번째와 10번째 경기 후 */}
-                {(index === 4 || index === 9) && (
-                  <AdsterraNativeBanner />
-                )}
+                
               </React.Fragment>
               )
             })}
