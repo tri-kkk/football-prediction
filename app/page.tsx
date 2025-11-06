@@ -829,8 +829,12 @@ export default function Home() {
       console.error('❌ AI 논평 로드 에러:', error)
       
       // 폴백: 기본 논평
-      const homeWin = parseFloat(match.homeWinRate)
-      const awayWin = parseFloat(match.awayWinRate)
+      const homeWin = typeof match.homeWinRate === 'number' 
+        ? match.homeWinRate 
+        : parseFloat(String(match.homeWinRate))
+      const awayWin = typeof match.awayWinRate === 'number'
+        ? match.awayWinRate
+        : parseFloat(String(match.awayWinRate))
       const homeAwayDiff = Math.abs(homeWin - awayWin)
       
       let fallback = ''
@@ -1527,9 +1531,15 @@ export default function Home() {
                             <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                               {(() => {
                                 try {
-                                  const homeWin = parseFloat(match.homeWinRate) || 0
-                                  const draw = parseFloat(match.drawRate) || 0
-                                  const awayWin = parseFloat(match.awayWinRate) || 0
+                                  const homeWin = typeof match.homeWinRate === 'number'
+                                    ? match.homeWinRate
+                                    : parseFloat(String(match.homeWinRate)) || 0
+                                  const draw = typeof match.drawRate === 'number'
+                                    ? match.drawRate
+                                    : parseFloat(String(match.drawRate)) || 0
+                                  const awayWin = typeof match.awayWinRate === 'number'
+                                    ? match.awayWinRate
+                                    : parseFloat(String(match.awayWinRate)) || 0
                                   const homeAwayDiff = Math.abs(homeWin - awayWin)
                                   
                                   // 디버깅
