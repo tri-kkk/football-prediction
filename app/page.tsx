@@ -1,6 +1,6 @@
 'use client'
 import NewsKeywords from './components/NewsKeywords'
-import AdsterraNativeBanner from './components/AdsterraNativeBanner'
+//import AdsterraNativeBanner from './components/AdsterraNativeBanner'
 import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
