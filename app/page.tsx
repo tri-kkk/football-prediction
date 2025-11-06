@@ -1259,7 +1259,7 @@ export default function Home() {
         </div>
 
         {/* 상단 광고 배너 */}
-        <AdsterraNativeBanner />
+        
 
         {/* 로딩 */}
         {loading && (
