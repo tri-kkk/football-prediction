@@ -45,13 +45,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
 
-        {/* Adsterra Ads */}
-        <Script
-          type="text/javascript"
-          src="//pl27997774.effectivegatecpm.com/45/89/7c/45897ce1db9038722fb5f52911f35eda.js"
-          strategy="afterInteractive"
-        />
-        
+
         {/* Global Navigation - 메인 페이지 스타일 */}
         <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
           <div className="container mx-auto px-4 py-4">
