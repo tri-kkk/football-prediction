@@ -1247,28 +1247,37 @@ export default function Home() {
                     {/* 메인 콘텐츠 영역 */}
                     <div className="p-4">
                       {/* 팀 대결 - 중앙 집중 */}
-                      <div className="flex items-center justify-center gap-3 mb-6">
-                        {/* 홈팀 */}
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-center gap-3 mb-6">
+                        {/* 엠블럼과 VS */}
+                        <div className="flex items-center justify-center gap-4">
+                          {/* 홈팀 엠블럼 */}
                           <img src={match.homeCrest} alt={match.homeTeam} className="w-12 h-12" />
-                          <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          
+                          {/* VS 배지 */}
+                          <div className={`px-3 py-1 rounded-lg text-xs font-black ${
+                            darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'
+                          }`}>
+                            VS
+                          </div>
+                          
+                          {/* 원정팀 엠블럼 */}
+                          <img src={match.awayCrest} alt={match.awayTeam} className="w-12 h-12" />
+                        </div>
+                        
+                        {/* 팀 이름 - VS 중심 */}
+                        <div className="w-full flex items-center justify-center gap-4">
+                          {/* 홈팀 이름 - 오른쪽 정렬 */}
+                          <span className={`font-bold text-sm text-right flex-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {match.homeTeam}
                           </span>
-                        </div>
-                        
-                        {/* VS 배지 */}
-                        <div className={`px-3 py-1 rounded-lg text-xs font-black ${
-                          darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'
-                        }`}>
-                          VS
-                        </div>
-                        
-                        {/* 원정팀 */}
-                        <div className="flex items-center gap-2">
-                          <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          
+                          {/* VS 공간 유지 */}
+                          <div className="w-12"></div>
+                          
+                          {/* 원정팀 이름 - 왼쪽 정렬 */}
+                          <span className={`font-bold text-sm text-left flex-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {match.awayTeam}
                           </span>
-                          <img src={match.awayCrest} alt={match.awayTeam} className="w-12 h-12" />
                         </div>
                       </div>
 
