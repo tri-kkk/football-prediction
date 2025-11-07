@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { getTeamLogo } from '../teamLogos'
 import { smartFilters, useSmartFilters, getMatchBadges, type Match } from '../utils/smartFilters'
-import AdsterraNativeBanner from '../components/AdsterraNativeBanner'
 
 // 리그 정보 (메인 페이지와 동일)
 const LEAGUES = [
@@ -245,8 +244,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 광고 배너 #1 - 필터 아래 */}
-        <AdsterraNativeBanner />
 
         {/* 리그 필터 */}
         <div className="mb-6">
@@ -498,10 +495,6 @@ export default function DashboardPage() {
                 </div>
                 
                 {/* 광고 배너 - 5번째와 10번째 경기 후 (2열 그리드이므로 전체 너비로) */}
-                {(index === 4 || index === 9) && (
-                  <div className="lg:col-span-2">
-                    <AdsterraNativeBanner />
-                  </div>
                 )}
               </React.Fragment>
               )
