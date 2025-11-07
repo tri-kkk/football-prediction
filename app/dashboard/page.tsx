@@ -494,8 +494,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 
-                {/* 광고 배너 - 5번째와 10번째 경기 후 (2열 그리드이므로 전체 너비로) */}
-                )}
               </React.Fragment>
               )
             })}
