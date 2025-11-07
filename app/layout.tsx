@@ -33,24 +33,50 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
+      <head>
+        {/* Content Security Policy - 광고 도메인 허용 */}
+        <meta
+          httpEquiv="Content-Security-Policy"
+          content={`
+            default-src 'self';
+            script-src 'self' 'unsafe-eval' 'unsafe-inline' 
+              https://www.googletagmanager.com 
+              https://pagead2.googlesyndication.com
+              https://pl27997789.effectivegatecpm.com
+              https://*.adsterra.com
+              https://*.effectivegatecpm.com;
+            style-src 'self' 'unsafe-inline';
+            img-src 'self' data: https: http:;
+            font-src 'self' data:;
+            connect-src 'self' 
+              https://www.google-analytics.com
+              https://pagead2.googlesyndication.com
+              https://*.adsterra.com
+              https://*.effectivegatecpm.com;
+            frame-src 'self' 
+              https://www.google.com
+              https://*.adsterra.com;
+          `.replace(/\s+/g, ' ').trim()}
+        />
+      </head>
       <body className="bg-[#0f0f0f] text-white">
         {/* Google Tag Manager */}
         <GoogleTagManager />
 
         {/* Google AdSense */}
         <Script
+          id="google-adsense"
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7858814871438044"
           crossOrigin="anonymous"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
 
-
-        {/* Global Navigation - 메인 페이지 스타일 */}
+        {/* Global Navigation */}
         <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
-              {/* Logo - 메인과 동일 */}
+              {/* Logo */}
               <Link href="/" className="flex items-center gap-3 cursor-pointer">
                 <img 
                   src="/logo.svg" 

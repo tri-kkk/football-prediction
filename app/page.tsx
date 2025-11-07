@@ -1706,8 +1706,9 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-                
-                
+                {(index + 1) % 3 === 0 && index < paginatedMatches.length - 1 && (
+                  <div className="my-8"><AdsterraNativeBanner /></div>
+                )}
               </React.Fragment>
               )
             })}
@@ -2100,6 +2101,7 @@ export default function Home() {
             )}
           </aside>
         </div>
+        <div className="mt-12 mb-8"><AdsterraNativeBanner /></div>
       </div>
 
       <style jsx global>{`
