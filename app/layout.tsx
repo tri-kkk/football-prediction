@@ -50,6 +50,26 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
 
+        {/* HilltopAds In-page Push */}
+        <Script
+          id="hilltopads-inpage-push"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(mvvkk){
+                var d = document,
+                    s = d.createElement('script'),
+                    l = d.scripts[d.scripts.length - 1];
+                s.settings = mvvkk || {};
+                s.src = "//aggressivestruggle.com/bRXUV/sZd.G/lS0YY/WPcE/ve/m/9nufZHU/l/kePrTrYY2_OYToYY0jNljigktvNvjnYb5TNejpQm2tO-Ql";
+                s.async = true;
+                s.referrerPolicy = 'no-referrer-when-downgrade';
+                l.parentNode.insertBefore(s, l);
+              })({})
+            `
+          }}
+        />
+
         {/* Global Navigation */}
         <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
           <div className="container mx-auto px-4 py-4">

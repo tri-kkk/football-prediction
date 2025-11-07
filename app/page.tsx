@@ -278,6 +278,35 @@ export default function Home() {
     }
   }, [darkMode])
 
+  // HilltopAds 광고 로드
+  useEffect(() => {
+    const container = document.getElementById('hilltop-ad-container')
+    if (!container) return
+
+    const script = document.createElement('script')
+    script.type = 'text/javascript'
+    script.async = true
+    script.innerHTML = `
+      (function(ttf){
+        var d = document,
+            s = d.createElement('script'),
+            l = d.scripts[d.scripts.length - 1];
+        s.settings = ttf || {};
+        s.src = "//aggressivestruggle.com/b/XtV.sjd/GOlv0kYAWjcW/vezm_9euJZKUJlakZP/TGYC2OOUTvYq0jMCz_QZtRNljGYg5/NSjTQ/zjNaQN";
+        s.async = true;
+        s.referrerPolicy = 'no-referrer-when-downgrade';
+        l.parentNode.insertBefore(s, l);
+      })({})
+    `
+    container.appendChild(script)
+
+    return () => {
+      if (container && script.parentNode) {
+        container.removeChild(script)
+      }
+    }
+  }, [])
+
   // 자동 스크롤 효과 + 터치/마우스 드래그 지원
   useEffect(() => {
     const container = scrollContainerRef.current
@@ -1805,6 +1834,15 @@ export default function Home() {
 
           {/* 우측 순위표 사이드바 */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
+            {/* HilltopAds - 순위표 위 배너 */}
+            <div className={`mb-6 rounded-xl overflow-hidden ${
+              darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
+            }`}>
+              <div className="p-4">
+                <div id="hilltop-ad-container"></div>
+              </div>
+            </div>
+            
             {/* 전체 리그 선택 시 - 캐러셀 */}
             {selectedLeague === 'ALL' && (
               <div className={`sticky top-24 rounded-xl overflow-hidden ${
