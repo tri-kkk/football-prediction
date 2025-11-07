@@ -34,6 +34,8 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* HilltopAds 사이트 소유권 확인 */}
+        <meta name="c982cca4dc6a1656193e00065dfdc54ab48699769" content="c982cca4dc6a1656193e00065dfdc54ab48699769" />
       </head>
       <body className="bg-[#0f0f0f] text-white">
         {/* Google Tag Manager */}
@@ -110,7 +112,7 @@ export default function RootLayout({
             <div className="text-center text-gray-500 text-sm">
               <p>© 2025 Trend Soccer. All rights reserved.</p>
               <p className="mt-2 text-xs text-gray-600">
-                Real-time soccer match and analysis platform
+                Real-time soccer match prediction and analysis platform
               </p>
             </div>
           </div>
