@@ -1,6 +1,5 @@
 'use client'
 import NewsKeywords from './components/NewsKeywords'
-import AdsterraNativeBanner from './components/AdsterraNativeBanner'
 import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
@@ -1706,9 +1705,6 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-                {(index + 1) % 3 === 0 && index < paginatedMatches.length - 1 && (
-                  <div className="my-8"><AdsterraNativeBanner /></div>
-                )}
               </React.Fragment>
               )
             })}
@@ -2101,7 +2097,6 @@ export default function Home() {
             )}
           </aside>
         </div>
-        <div className="mt-12 mb-8"><AdsterraNativeBanner /></div>
       </div>
 
       <style jsx global>{`
