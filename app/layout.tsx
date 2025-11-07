@@ -34,30 +34,6 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* Content Security Policy - 광고 도메인 허용 */}
-        <meta
-          httpEquiv="Content-Security-Policy"
-          content={`
-            default-src 'self';
-            script-src 'self' 'unsafe-eval' 'unsafe-inline' 
-              https://www.googletagmanager.com 
-              https://pagead2.googlesyndication.com
-              https://pl27997789.effectivegatecpm.com
-              https://*.adsterra.com
-              https://*.effectivegatecpm.com;
-            style-src 'self' 'unsafe-inline';
-            img-src 'self' data: https: http:;
-            font-src 'self' data:;
-            connect-src 'self' 
-              https://www.google-analytics.com
-              https://pagead2.googlesyndication.com
-              https://*.adsterra.com
-              https://*.effectivegatecpm.com;
-            frame-src 'self' 
-              https://www.google.com
-              https://*.adsterra.com;
-          `.replace(/\s+/g, ' ').trim()}
-        />
       </head>
       <body className="bg-[#0f0f0f] text-white">
         {/* Google Tag Manager */}
@@ -134,7 +110,7 @@ export default function RootLayout({
             <div className="text-center text-gray-500 text-sm">
               <p>© 2025 Trend Soccer. All rights reserved.</p>
               <p className="mt-2 text-xs text-gray-600">
-                Real-time soccer match prediction and analysis platform
+                Real-time soccer match and analysis platform
               </p>
             </div>
           </div>
