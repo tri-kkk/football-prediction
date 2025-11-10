@@ -62,6 +62,54 @@ const CHAMPIONS_LEAGUE_TEAMS = new Set([
   'Galatasaray', // 없음 - 2024-25는 Champions League 불참
 ]);
 
+// 🔥 실제 Europa League 진출 팀 목록 (2024-25 시즌)
+const EUROPA_LEAGUE_TEAMS = new Set([
+  // 영국
+  'Manchester United', 'Tottenham', 'Rangers',
+  // 스페인
+  'Athletic Bilbao', 'Real Sociedad',
+  // 독일
+  'Eintracht Frankfurt', 'TSG Hoffenheim',
+  // 이탈리아
+  'Roma', 'Lazio',
+  // 프랑스
+  'Lyon', 'Nice', 'Olympique Lyonnais', 'OGC Nice',
+  // 네덜란드
+  'Ajax', 'AZ Alkmaar', 'Twente',
+  // 포르투갈
+  'Braga', 'Vitória Guimarães', 'Vitoria Guimaraes',
+  // 벨기에
+  'Anderlecht', 'Union SG', 'Union Saint-Gilloise',
+  // 스코틀랜드
+  'Rangers',
+  // 터키
+  'Galatasaray', 'Fenerbahce', 'Besiktas',
+  // 그리스
+  'PAOK', 'Panathinaikos',
+  // 체코
+  'Viktoria Plzen',
+  // 스웨덴
+  'Malmö', 'Malmo FF',
+  // 스페인
+  'Athletic Club', 'Real Sociedad',
+  // 이스라엘
+  'Maccabi Tel Aviv',
+  // 노르웨이
+  'Molde'
+]);
+
+// 🔥 영국 Championship 팀 목록
+const CHAMPIONSHIP_TEAMS = new Set([
+  'Sheffield United', 'Burnley', 'Luton Town',
+  'Leeds United', 'Middlesbrough', 'West Bromwich Albion', 'West Brom',
+  'Norwich City', 'Coventry City', 'Bristol City',
+  'Hull City', 'Preston North End', 'Cardiff City',
+  'Millwall', 'Blackburn Rovers', 'Queens Park Rangers', 'QPR',
+  'Stoke City', 'Swansea City', 'Watford',
+  'Plymouth Argyle', 'Sheffield Wednesday', 'Oxford United',
+  'Portsmouth', 'Derby County'
+]);
+
 // 팀명 정규화 (다양한 표기법 통일)
 function normalizeTeamName(teamName: string): string {
   const normalizations: { [key: string]: string } = {
@@ -99,6 +147,25 @@ function isChampionsLeagueMatch(homeTeam: string, awayTeam: string): boolean {
   
   // 양쪽 팀 모두 Champions League 팀이어야 함
   return homeInCL && awayInCL
+}
+
+// Europa League 경기인지 확인
+function isEuropaLeagueMatch(homeTeam: string, awayTeam: string): boolean {
+  const normalizedHome = normalizeTeamName(homeTeam)
+  const normalizedAway = normalizeTeamName(awayTeam)
+  
+  const homeInEL = EUROPA_LEAGUE_TEAMS.has(normalizedHome)
+  const awayInEL = EUROPA_LEAGUE_TEAMS.has(normalizedAway)
+  
+  return homeInEL && awayInEL
+}
+
+// Championship 경기인지 확인
+function isChampionshipMatch(homeTeam: string, awayTeam: string): boolean {
+  const homeInChamp = CHAMPIONSHIP_TEAMS.has(homeTeam)
+  const awayInChamp = CHAMPIONSHIP_TEAMS.has(awayTeam)
+  
+  return homeInChamp && awayInChamp
 }
 
 // Supabase에 오즈 저장
@@ -185,14 +252,18 @@ export async function GET(request: Request) {
     
     console.log('🕐 Cron Job Started:', new Date().toISOString())
     
-    // 주요 리그 목록
+    // 주요 리그 목록 (11개)
     const leagues = [
-      { code: 'PL', sport: 'soccer_epl' },
-      { code: 'PD', sport: 'soccer_spain_la_liga' },
-      { code: 'BL1', sport: 'soccer_germany_bundesliga' },
-      { code: 'SA', sport: 'soccer_italy_serie_a' },
-      { code: 'FL1', sport: 'soccer_france_ligue_one' },
-      { code: 'CL', sport: 'soccer_uefa_champs_league' }
+      { code: 'PL', sport: 'soccer_epl' },                      // 프리미어리그
+      { code: 'PD', sport: 'soccer_spain_la_liga' },            // 라리가
+      { code: 'BL1', sport: 'soccer_germany_bundesliga' },      // 분데스리가
+      { code: 'SA', sport: 'soccer_italy_serie_a' },            // 세리에A
+      { code: 'FL1', sport: 'soccer_france_ligue_one' },        // 리그1
+      { code: 'CL', sport: 'soccer_uefa_champs_league' },       // 챔피언스리그
+      { code: 'PPL', sport: 'soccer_portugal_primeira_liga' },  // 프리메이라리가
+      { code: 'DED', sport: 'soccer_netherlands_eredivisie' },  // 에레디비시
+      { code: 'EL', sport: 'soccer_uefa_europa_league' },       // 유로파리그
+      { code: 'ELC', sport: 'soccer_england_league_championship' } // 챔피언십
     ]
     
     let totalSaved = 0
@@ -229,7 +300,7 @@ export async function GET(request: Request) {
         // 각 경기 오즈 저장
         for (const match of data) {
           try {
-            // 🔥 Champions League인 경우에만 팀 필터링 적용
+            // 🔥 특정 리그는 팀 필터링 적용
             if (league.code === 'CL') {
               const isCLMatch = isChampionsLeagueMatch(match.home_team, match.away_team)
               if (!isCLMatch) {
@@ -237,7 +308,22 @@ export async function GET(request: Request) {
                 totalSkipped++
                 continue
               }
+            } else if (league.code === 'EL') {
+              const isELMatch = isEuropaLeagueMatch(match.home_team, match.away_team)
+              if (!isELMatch) {
+                console.log(`⏭️ Skipping non-EL match: ${match.home_team} vs ${match.away_team}`)
+                totalSkipped++
+                continue
+              }
+            } else if (league.code === 'ELC') {
+              const isChampMatch = isChampionshipMatch(match.home_team, match.away_team)
+              if (!isChampMatch) {
+                console.log(`⏭️ Skipping non-Championship match: ${match.home_team} vs ${match.away_team}`)
+                totalSkipped++
+                continue
+              }
             }
+            // PPL, DED는 필터링 없음 (모든 경기 수집)
             
             // 경기 3일 전부터 경기 종료 후 1시간까지 수집
             const commenceTime = new Date(match.commence_time).getTime()

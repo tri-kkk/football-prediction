@@ -10,6 +10,10 @@ const LEAGUES: { [key: string]: number } = {
   'BL1': 2002,
   'FL1': 2015,
   'CL': 2001,
+  'PPL': 2017,  // 🆕 프리메이라리가 (Primeira Liga)
+  'DED': 2003,  // 🆕 에레디비시 (Eredivisie)
+  'EL': 2146,   // 🆕 유로파리그 (UEFA Europa League)
+  'ELC': 2016,  // 🆕 챔피언십 (Championship)
 }
 
 export async function GET(request: Request) {
@@ -108,7 +112,11 @@ function getDummyStandings(league: string) {
     'SA': 'Serie A',
     'BL1': 'Bundesliga',
     'FL1': 'Ligue 1',
-    'CL': 'Champions League'
+    'CL': 'Champions League',
+    'PPL': 'Primeira Liga',
+    'DED': 'Eredivisie',
+    'EL': 'Europa League',
+    'ELC': 'Championship'
   }
   
   const leagueLogos: { [key: string]: string } = {
@@ -117,7 +125,11 @@ function getDummyStandings(league: string) {
     'SA': 'https://crests.football-data.org/SA.png',
     'BL1': 'https://crests.football-data.org/BL1.png',
     'FL1': 'https://crests.football-data.org/FL1.png',
-    'CL': 'https://crests.football-data.org/CL.png'
+    'CL': 'https://crests.football-data.org/CL.png',
+    'PPL': 'https://crests.football-data.org/PPL.png',
+    'DED': 'https://crests.football-data.org/DED.png',
+    'EL': 'https://crests.football-data.org/EL.png',
+    'ELC': 'https://crests.football-data.org/ELC.png'
   }
   
   return {

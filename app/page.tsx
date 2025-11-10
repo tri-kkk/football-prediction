@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
 
+
 // 리그 정보 (국기 이미지 포함)
 const LEAGUES = [
   { 
@@ -49,10 +50,38 @@ const LEAGUES = [
     isEmoji: false
   },
   { 
+    code: 'PPL', 
+    name: '프리메이라리가', 
+    flag: 'https://flagcdn.com/w40/pt.png',
+    logo: 'https://crests.football-data.org/PPL.png',
+    isEmoji: false
+  },
+  { 
+    code: 'DED', 
+    name: '에레디비시', 
+    flag: 'https://flagcdn.com/w40/nl.png',
+    logo: 'https://crests.football-data.org/DED.png',
+    isEmoji: false
+  },
+  { 
     code: 'CL', 
     name: '챔피언스리그', 
     flag: '⭐',
     logo: 'https://crests.football-data.org/CL.png',
+    isEmoji: false
+  },
+  { 
+    code: 'EL', 
+    name: '유로파리그', 
+    flag: '⭐',
+    logo: 'https://crests.football-data.org/EL.png',
+    isEmoji: false
+  },
+  { 
+    code: 'ELC', 
+    name: '챔피언십', 
+    flag: 'https://flagcdn.com/w40/gb-eng.png',
+    logo: 'https://crests.football-data.org/ELC.png',
     isEmoji: false
   },
 ]
@@ -66,6 +95,10 @@ function getLeagueLogo(league: string): string {
     'SA': 'https://logoapi.dev/seriea/512.png',
     'FL1': 'https://logoapi.dev/ligue1/512.png',
     'CL': 'https://logoapi.dev/ucl/512.png',
+    'PPL': 'https://crests.football-data.org/PPL.png',
+    'DED': 'https://crests.football-data.org/DED.png',
+    'EL': 'https://crests.football-data.org/EL.png',
+    'ELC': 'https://crests.football-data.org/ELC.png',
   }
   return leagueMap[league] || ''
 }
@@ -78,7 +111,11 @@ function getLeagueFlag(leagueCode: string): { url: string; isEmoji: boolean } {
     'BL1': { url: 'https://flagcdn.com/w40/de.png', isEmoji: false },
     'SA': { url: 'https://flagcdn.com/w40/it.png', isEmoji: false },
     'FL1': { url: 'https://flagcdn.com/w40/fr.png', isEmoji: false },
+    'PPL': { url: 'https://flagcdn.com/w40/pt.png', isEmoji: false },
+    'DED': { url: 'https://flagcdn.com/w40/nl.png', isEmoji: false },
     'CL': { url: '⭐', isEmoji: true },
+    'EL': { url: '⭐', isEmoji: true },
+    'ELC': { url: 'https://flagcdn.com/w40/gb-eng.png', isEmoji: false },
   }
   return flagMap[leagueCode] || { url: '🌍', isEmoji: true }
 }
@@ -92,6 +129,10 @@ function getLeagueName(leagueCode: string): string {
     'SA': '세리에A',
     'FL1': '리그1',
     'CL': '챔피언스리그',
+    'PPL': '프리메이라리가',
+    'DED': '에레디비시',
+    'EL': '유로파리그',
+    'ELC': '챔피언십',
   }
   return leagueNames[leagueCode] || leagueCode
 }
@@ -307,6 +348,17 @@ export default function Home() {
       }
     }
   }, [])
+
+  // selectedLeague 변경 시 순위표 인덱스 동기화
+  useEffect(() => {
+    if (selectedLeague === 'ALL') return
+    
+    const leagueIndex = availableLeagues.findIndex(l => l.code === selectedLeague)
+    if (leagueIndex !== -1 && leagueIndex !== currentLeagueIndex) {
+      setCurrentLeagueIndex(leagueIndex)
+      setStandings(allLeagueStandings[selectedLeague] || [])
+    }
+  }, [selectedLeague, availableLeagues, allLeagueStandings, currentLeagueIndex])
 
   // 자동 스크롤 효과 + 터치/마우스 드래그 지원
   useEffect(() => {
@@ -1890,15 +1942,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* 경기 없음 */}
-        {!loading && !error && matches.length === 0 && (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">⚽</div>
-            <p className={`text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              예정된 경기가 없습니다
-            </p>
-          </div>
-        )}
           </main>
 
           {/* 우측 순위표 사이드바 */}
