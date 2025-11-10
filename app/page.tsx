@@ -261,6 +261,7 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState<string>('week')  // 기본값 'week'로 변경
   const [currentPage, setCurrentPage] = useState(1)
   const MATCHES_PER_PAGE = 15
+  const [showFallbackBanner, setShowFallbackBanner] = useState(false)
   const [standings, setStandings] = useState<any[]>([])
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [currentLeagueIndex, setCurrentLeagueIndex] = useState(0)
@@ -760,6 +761,33 @@ export default function Home() {
   useEffect(() => {
     fetchStandings(selectedLeague)
   }, [selectedLeague])
+
+  // 🎯 폴백 배너 상태 관리
+  useEffect(() => {
+    // 날짜 필터링 계산
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const weekEnd = new Date(today)
+    weekEnd.setDate(weekEnd.getDate() + 7)
+    
+    if (selectedDate === 'week') {
+      // 이번 주 경기 확인
+      const weekMatches = matches.filter(match => {
+        const matchDate = new Date(match.utcDate)
+        return matchDate >= today && matchDate < weekEnd
+      })
+      
+      // 이번 주에 경기가 없으면 배너 표시
+      if (weekMatches.length === 0 && matches.length > 0) {
+        setShowFallbackBanner(true)
+      } else {
+        setShowFallbackBanner(false)
+      }
+    } else {
+      // 다른 탭 선택 시 배너 숨김
+      setShowFallbackBanner(false)
+    }
+  }, [selectedDate, matches])
 
   // AI 논평 기능 일시 비활성화 (Rate Limit 때문)
   // TODO: 나중에 큐잉 시스템으로 개선
@@ -1262,13 +1290,15 @@ export default function Home() {
             {[
               { value: 'today', label: '오늘' },
               { value: 'tomorrow', label: '내일' },
-              { value: 'week', label: '이번 주' }
+              { value: 'week', label: '이번 주' },
+              { value: 'upcoming', label: '다가오는 경기' }
             ].map((date) => (
               <button
                 key={date.value}
                 onClick={() => {
                   setSelectedDate(date.value)
                   setCurrentPage(1) // 날짜 변경 시 1페이지로 리셋
+                  setShowFallbackBanner(false) // 배너 숨김
                 }}
                 className={`px-6 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                   selectedDate === date.value
@@ -1329,9 +1359,18 @@ export default function Home() {
                   return matchDate >= tomorrow && matchDate < dayAfter
                 } else if (selectedDate === 'week') {
                   return matchDate >= today && matchDate < weekEnd
+                } else if (selectedDate === 'upcoming') {
+                  // 다가오는 경기: 모든 미래 경기 (이미 fetchMatches에서 필터링됨)
+                  return true
                 }
                 return true
               })
+              
+              // 🎯 폴백 체크: 이번 주에 경기가 없으면 모든 경기 표시
+              const shouldShowFallback = selectedDate === 'week' && filteredMatches.length === 0 && matches.length > 0
+              if (shouldShowFallback) {
+                filteredMatches = matches // 모든 미래 경기 표시
+              }
               
               // 페이지네이션
               const totalMatches = filteredMatches.length
@@ -1342,6 +1381,36 @@ export default function Home() {
               
               return (
                 <>
+                  {/* 폴백 배너 */}
+                  {showFallbackBanner && (
+                    <div className="mb-6 bg-blue-900/20 border border-blue-700/50 rounded-xl p-4 backdrop-blur-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div>
+                            <p className="text-sm font-medium text-blue-300">
+                              이번 주 예정된 경기가 없습니다
+                            </p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              가장 가까운 경기를 보여드립니다
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowFallbackBanner(false)}
+                          className="text-gray-400 hover:text-white transition-colors ml-4"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {paginatedMatches.length === 0 ? (
                     <div className={`text-center py-20 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       <div className="text-6xl mb-4">📅</div>

@@ -50,22 +50,33 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
 
-        {/* HilltopAds In-page Push */}
+        {/* HilltopAds In-page Push - Desktop Only (간단한 방법) */}
         <Script
           id="hilltopads-inpage-push"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              (function(mvvkk){
-                var d = document,
-                    s = d.createElement('script'),
-                    l = d.scripts[d.scripts.length - 1];
-                s.settings = mvvkk || {};
-                s.src = "//aggressivestruggle.com/bRXUV/sZd.G/lS0YY/WPcE/ve/m/9nufZHU/l/kePrTrYY2_OYToYY0jNljigktvNvjnYb5TNejpQm2tO-Ql";
-                s.async = true;
-                s.referrerPolicy = 'no-referrer-when-downgrade';
-                l.parentNode.insertBefore(s, l);
-              })({})
+              // 모바일 체크 함수
+              function isMobile() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                  || window.innerWidth < 768;
+              }
+              
+              // PC일 때만 광고 로드
+              if (!isMobile()) {
+                (function(mvvkk){
+                  var d = document,
+                      s = d.createElement('script'),
+                      l = d.scripts[d.scripts.length - 1];
+                  s.settings = mvvkk || {};
+                  s.src = "//aggressivestruggle.com/bRXUV/sZd.G/lS0YY/WPcE/ve/m/9nufZHU/l/kePrTrYY2_OYToYY0jNljigktvNvjnYb5TNejpQm2tO-Ql";
+                  s.async = true;
+                  s.referrerPolicy = 'no-referrer-when-downgrade';
+                  l.parentNode.insertBefore(s, l);
+                })({})
+              } else {
+                console.log('📱 모바일 감지: HilltopAds 비활성화');
+              }
             `
           }}
         />
