@@ -8,6 +8,10 @@ const LEAGUE_CODES: { [key: string]: string } = {
   'SA': 'Serie A',
   'FL1': 'Ligue 1',
   'CL': 'UEFA Champions League',
+  'PPL': 'Primeira Liga',
+  'DED': 'Eredivisie',
+  'EL': 'UEFA Europa League',
+  'ELC': 'Championship',
   'ALL': 'ALL'
 }
 
@@ -24,6 +28,7 @@ const MAJOR_LEAGUES = [
   'Ligue 2',
   'Eredivisie',
   'Eerste Divisie',
+  'Primeira Liga',
   'UEFA Champions League',
   'UEFA Europa League',
   'UEFA Europa Conference League'
