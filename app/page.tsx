@@ -86,6 +86,11 @@ const LEAGUES = [
   },
 ]
 
+// 오즈 데이터가 있는 리그만 (경기 목록 필터용)
+const LEAGUES_WITH_ODDS = [
+  'ALL', 'PL', 'PD', 'BL1', 'SA', 'FL1', 'CL'
+]
+
 // 헬퍼 함수들
 function getLeagueLogo(league: string): string {
   const leagueMap: Record<string, string> = {
@@ -1256,7 +1261,9 @@ export default function Home() {
                 Popular Leagues
               </h2>
               <nav className="space-y-2">
-                {LEAGUES.map((league) => (
+                {LEAGUES
+                  .filter(league => LEAGUES_WITH_ODDS.includes(league.code))
+                  .map((league) => (
                   <button
                     key={league.code}
                     onClick={() => setSelectedLeague(league.code)}
@@ -1298,7 +1305,9 @@ export default function Home() {
               darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
             }`}>
               <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                {LEAGUES.map((league) => (
+                {LEAGUES
+                  .filter(league => LEAGUES_WITH_ODDS.includes(league.code))
+                  .map((league) => (
                   <button
                     key={league.code}
                     onClick={() => {
