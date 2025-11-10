@@ -6,12 +6,12 @@ import GoogleTagManager from './GoogleTagManager'
 import Navigation from './components/Navigation'
 
 export const metadata: Metadata = {
-  title: 'Trend Soccer - Real Time Prediction',
+  title: 'Trend Soccer',
   description: '실시간 확률 기반 축구 경기 예측 분석. 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그 승률 및 트렌드 분석 제공',
   keywords: '축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그',
-  authors: [{ name: 'Trend Soccer - Real Time Prediction' }],
+  authors: [{ name: 'Trend Soccer' }],
   openGraph: {
-    title: 'Trend Soccer - Real Time Prediction',
+    title: 'Trend Soccer',
     description: '실시간 확률 기반 축구 경기 예측 분석 플랫폼',
     type: 'website',
     locale: 'ko_KR',
