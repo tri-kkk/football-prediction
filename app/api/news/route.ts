@@ -1,6 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 
+// 🔥 캐싱 시스템 추가
+interface CacheEntry {
+  data: any
+  timestamp: number
+}
+
+const newsCache = new Map<string, CacheEntry>()
+const CACHE_DURATION = 30 * 60 * 1000 // 30분
+
+function getCachedNews(key: string): any | null {
+  const cached = newsCache.get(key)
+  if (!cached) return null
+  
+  const now = Date.now()
+  if (now - cached.timestamp < CACHE_DURATION) {
+    console.log(`📦 캐시 히트: ${key}`)
+    return cached.data
+  }
+  
+  // 만료된 캐시 삭제
+  newsCache.delete(key)
+  return null
+}
+
+function setCachedNews(key: string, data: any): void {
+  newsCache.set(key, {
+    data,
+    timestamp: Date.now()
+  })
+  console.log(`💾 캐시 저장: ${key}`)
+}
+
 interface NewsSource {
   title: string
   content: string
@@ -83,7 +115,12 @@ async function fetchNaverNews(teamA: string, teamB: string): Promise<NewsSource[
       signal: AbortSignal.timeout(5000)
     })
     
+    // 🔥 429 에러는 조용히 처리
     if (!response.ok) {
+      if (response.status === 429) {
+        console.warn('⚠️ Naver News Rate Limited (429)')
+        return []
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     
@@ -149,7 +186,12 @@ async function fetchNaverBlog(teamA: string, teamB: string): Promise<NewsSource[
       signal: AbortSignal.timeout(5000)
     })
     
+    // 🔥 429 에러는 조용히 처리
     if (!response.ok) {
+      if (response.status === 429) {
+        console.warn('⚠️ Naver Blog Rate Limited (429)')
+        return []
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     
@@ -517,6 +559,15 @@ export async function GET(request: NextRequest) {
       )
     }
     
+    // 🔥 캐시 키 생성
+    const cacheKey = `${homeTeam}-${awayTeam}`
+    
+    // 🔥 캐시 확인
+    const cachedData = getCachedNews(cacheKey)
+    if (cachedData) {
+      return NextResponse.json(cachedData)
+    }
+    
     console.log(`🔍 뉴스 수집 시작: ${homeTeam} vs ${awayTeam}`)
     
     // 병렬로 여러 소스에서 뉴스 수집 (네이버 우선 순위)
@@ -602,7 +653,8 @@ export async function GET(request: NextRequest) {
       date: formatPublishDate(article.publishedAt)
     }))
     
-    return NextResponse.json({
+    // 🔥 응답 데이터 생성
+    const responseData = {
       keywords: keywords.slice(0, 8), // 상위 8개 키워드
       headlines: headlines,
       totalArticles: recentArticles.length,  // 최신 기사 개수
@@ -613,7 +665,12 @@ export async function GET(request: NextRequest) {
         espn: espnCount,
         bbc: bbcCount
       }
-    })
+    }
+    
+    // 🔥 캐시에 저장
+    setCachedNews(cacheKey, responseData)
+    
+    return NextResponse.json(responseData)
     
   } catch (error) {
     console.error('뉴스 키워드 수집 에러:', error)
