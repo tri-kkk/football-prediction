@@ -28,7 +28,6 @@ const menuItems: MenuItem[] = [
     href: '/movement', 
     icon: '🌊', 
     badge: 'Phase 2',
-    disabled: true 
   },
   { 
     label: '마켓 웨이브', 
