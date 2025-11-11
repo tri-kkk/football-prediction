@@ -1250,9 +1250,9 @@ export default function Home() {
       {/* 트렌드 컨텐츠 영역 */}
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8 relative">
-          {/* 광고 배너 - Popular Leagues 왼쪽에 absolute 배치 (PC 전용) */}
-          <aside className={`hidden xl:block absolute right-full mr-8 w-[300px]`} style={{ left: 'auto' }}>
-            <div className="sticky top-24">
+          {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
+          <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
+            <div className="sticky top-20">
               <div className="overflow-hidden">
                 <a 
                   href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
@@ -1271,8 +1271,13 @@ export default function Home() {
                     alt="Advertisement"
                     className="w-[300px] h-[600px] object-cover"
                     onError={(e) => {
-                      // 이미지 로드 실패 시 플레이스홀더 표시
-                      e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="600"><rect width="300" height="600" fill="%231a1a1a"/><text x="150" y="300" text-anchor="middle" fill="%23666" font-size="20">Advertisement</text><text x="150" y="330" text-anchor="middle" fill="%23444" font-size="14">300 x 600</text></svg>'
+                      // GIF 로드 실패 시 JPG로 폴백
+                      if (e.currentTarget.src.endsWith('.gif')) {
+                        e.currentTarget.src = '/ad-banner-300x600.jpg'
+                      } else {
+                        // JPG도 실패하면 플레이스홀더
+                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="600"><rect width="300" height="600" fill="%231a1a1a"/><text x="150" y="300" text-anchor="middle" fill="%23666" font-size="20">Advertisement</text><text x="150" y="330" text-anchor="middle" fill="%23444" font-size="14">300 x 600</text></svg>'
+                      }
                     }}
                   />
                 </a>
@@ -1282,7 +1287,7 @@ export default function Home() {
 
           {/* 왼쪽 사이드바: Popular Leagues (PC 전용) */}
           <aside className={`hidden lg:block w-64 flex-shrink-0`}>
-            <div className={`sticky top-24 rounded-2xl p-4 ${
+            <div className={`sticky top-20 rounded-2xl p-4 ${
               darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
             }`}>
               <h2 className={`text-lg font-bold mb-4 ${
