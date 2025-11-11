@@ -107,48 +107,78 @@ export default function DashboardPage() {
         setLoading(true)
         setError(null)
         
-        const league = selectedLeague === 'ALL' ? 'PL' : selectedLeague
-        const response = await fetch(`/api/odds-from-db?league=${league}`)
+        let allMatches = []
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        
-        const data = await response.json()
-        
-        if (data && data.success && Array.isArray(data.data)) {
-          const convertedMatches = data.data.map((item: any) => {
-            const homeTeamKR = item.home_team
-            const awayTeamKR = item.away_team
-            
-            return {
-              id: item.id,
-              homeTeamKR: homeTeamKR,
-              awayTeamKR: awayTeamKR,
-              homeCrest: getTeamLogo(homeTeamKR),
-              awayCrest: getTeamLogo(awayTeamKR),
-              homeWinRate: item.home_probability || 0,
-              drawRate: item.draw_probability || 0,
-              awayWinRate: item.away_probability || 0,
-              utcDate: item.commence_time || new Date().toISOString(),
-              leagueCode: item.league_code || selectedLeague,
-              trendData: []
-            }
-          })
+        if (selectedLeague === 'ALL') {
+          // 모든 리그의 경기 가져오기
+          const leagues = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'CL']
+          const promises = leagues.map(league => 
+            fetch(`/api/api-football?league=${league}&type=fixtures`)
+              .then(r => r.json())
+              .then(result => ({
+                league,
+                data: result.success ? result.data : []
+              }))
+          )
+          const results = await Promise.all(promises)
           
-          // 예정된 경기만 필터링
-          const scheduledMatches = convertedMatches.filter((match: Match) => {
-            return getMatchStatus(match) === 'SCHEDULED'
-          })
-          
-          // 날짜순 정렬
-          scheduledMatches.sort((a: Match, b: Match) => {
-            return new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
-          })
-          
-          setMatches(scheduledMatches)
+          // 모든 결과 합치기
+          allMatches = results.flatMap(result => 
+            result.data.map((match: any) => ({
+              ...match,
+              league: match.league || result.league
+            }))
+          )
         } else {
-          setMatches([])
-          setError('데이터 형식이 올바르지 않습니다.')
+          // 단일 리그 경기 가져오기
+          const response = await fetch(`/api/api-football?league=${selectedLeague}&type=fixtures`)
+          
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+          
+          const data = await response.json()
+          
+          if (data && data.success && Array.isArray(data.data)) {
+            allMatches = data.data.map((match: any) => ({
+              ...match,
+              league: match.league || selectedLeague
+            }))
+          }
         }
+        
+        // 데이터 변환
+        const convertedMatches = allMatches.map((item: any) => {
+          // API-Football 응답 구조에 맞게 수정
+          const homeTeamKR = item.homeTeamKR || item.home_team || item.homeTeam
+          const awayTeamKR = item.awayTeamKR || item.away_team || item.awayTeam
+          const homeTeamEN = item.homeTeam || item.home_team
+          const awayTeamEN = item.awayTeam || item.away_team
+          
+          return {
+            id: item.id,
+            homeTeamKR: homeTeamKR,
+            awayTeamKR: awayTeamKR,
+            homeCrest: getTeamLogo(homeTeamEN || homeTeamKR),
+            awayCrest: getTeamLogo(awayTeamEN || awayTeamKR),
+            homeWinRate: item.homeWinRate || item.home_probability || 0,
+            drawRate: item.drawRate || item.draw_probability || 0,
+            awayWinRate: item.awayWinRate || item.away_probability || 0,
+            utcDate: item.utcDate || item.commence_time || new Date().toISOString(),
+            leagueCode: item.leagueCode || item.league_code || item.league || selectedLeague,
+            trendData: []
+          }
+        })
+        
+        // 예정된 경기만 필터링
+        const scheduledMatches = convertedMatches.filter((match: Match) => {
+          return getMatchStatus(match) === 'SCHEDULED'
+        })
+        
+        // 날짜순 정렬
+        scheduledMatches.sort((a: Match, b: Match) => {
+          return new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
+        })
+        
+        setMatches(scheduledMatches)
       } catch (err) {
         console.error('Error:', err)
         setError('데이터를 불러오는데 실패했습니다.')
