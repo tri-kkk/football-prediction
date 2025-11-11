@@ -83,13 +83,13 @@ export async function POST(request: Request) {
       errors: [] as string[],
     }
 
-    // 날짜 범위 (오늘부터 3일 후까지)
+    // 날짜 범위 (오늘부터 14일 후까지)
     const today = new Date()
-    const threeDaysLater = new Date()
-    threeDaysLater.setDate(today.getDate() + 3)
+    const fourteenDaysLater = new Date()
+    fourteenDaysLater.setDate(today.getDate() + 14)
     
     const from = today.toISOString().split('T')[0]
-    const to = threeDaysLater.toISOString().split('T')[0]
+    const to = fourteenDaysLater.toISOString().split('T')[0]
 
     console.log('📅 Date range:', from, '~', to)
 
@@ -122,11 +122,11 @@ export async function POST(request: Request) {
         // 각 경기마다 오즈 가져오기
         for (const fixture of fixtures) {
           try {
-            // 시간 필터링 (경기 72시간 전 ~ 종료 후 1시간)
+            // 시간 필터링 (경기 336시간(14일) 전 ~ 종료 후 1시간)
             const commenceTime = new Date(fixture.fixture.date).getTime()
             const hoursUntilMatch = (commenceTime - now) / (1000 * 60 * 60)
 
-            if (hoursUntilMatch < -1 || hoursUntilMatch > 72) {
+            if (hoursUntilMatch < -1 || hoursUntilMatch > 336) {
               console.log(`⏭️ Skip: ${fixture.teams.home.name} vs ${fixture.teams.away.name} (${hoursUntilMatch.toFixed(1)}h)`)
               continue
             }
