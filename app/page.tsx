@@ -1380,6 +1380,35 @@ export default function Home() {
               </div>
             </div>
 
+            {/* 상단 배너 728x90 - 날짜 필터 위 */}
+            <div className="mb-6">
+              <div className={`rounded-xl overflow-hidden mx-auto`} style={{ maxWidth: '728px' }}>
+                <a 
+                  href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block hover:opacity-90 transition-opacity"
+                >
+                  <img 
+                    src="/ad-banner-728x90.png" 
+                    alt="Advertisement"
+                    className="w-full h-[90px] object-cover"
+                    onError={(e) => {
+                      // PNG 로드 실패 시 GIF로 폴백
+                      if (e.currentTarget.src.endsWith('.png')) {
+                        e.currentTarget.src = '/ad-banner-728x90.gif'
+                      } else if (e.currentTarget.src.endsWith('.gif')) {
+                        e.currentTarget.src = '/ad-banner-728x90.jpg'
+                      } else {
+                        // 모두 실패하면 숨김
+                        e.currentTarget.style.display = 'none'
+                      }
+                    }}
+                  />
+                </a>
+              </div>
+            </div>
+
         {/* 날짜 필터 */}
         <div className="mb-6">
           <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
