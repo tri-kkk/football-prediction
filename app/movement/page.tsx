@@ -158,90 +158,191 @@ function MovementMap({ matches, selectedLeague }: { matches: Match[], selectedLe
       ctx.stroke()
     }
     
-    // 경기 포인트
+    // 3D 기둥 지형도
     filteredMatches.forEach((match, index) => {
-      const x = (index % 10) * (width / 10) + (width / 20)
-      const y = Math.floor(index / 10) * (height / 6) + (height / 12)
+      const col = index % 10
+      const row = Math.floor(index / 10)
       
-      const hue = 240 - (match.volatility * 1.2)
-      const saturation = 80 + match.volatility * 0.2
-      const lightness = 55 + match.volatility * 0.25
+      // 원근감을 위한 스케일 (아래로 갈수록 크게)
+      const perspectiveScale = 0.7 + (row * 0.1)
+      const baseX = col * (width / 10) + (width / 20)
+      const baseY = row * (height / 6) + (height / 12)
       
-      // 강한 외곽 글로우 (항상 표시)
-      const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, 40 + match.volatility * 0.8)
-      glowGradient.addColorStop(0, `hsla(${hue}, ${saturation}%, ${lightness}%, 0.8)`)
-      glowGradient.addColorStop(0.5, `hsla(${hue}, ${saturation}%, ${lightness}%, 0.4)`)
-      glowGradient.addColorStop(1, `hsla(${hue}, ${saturation}%, ${lightness}%, 0)`)
-      ctx.fillStyle = glowGradient
-      ctx.fillRect(x - 50, y - 50, 100, 100)
+      // 변동성에 따른 높이 (3D 기둥)
+      const barHeight = match.volatility * 1.5 * perspectiveScale
+      const barWidth = 30 * perspectiveScale
       
-      // 메인 원 (더 크게)
-      const radius = 12 + match.volatility * 0.25
-      // 메인 원에 그라디언트 (입체감)
-      const circleGradient = ctx.createRadialGradient(x - radius/3, y - radius/3, 0, x, y, radius)
-      circleGradient.addColorStop(0, `hsl(${hue}, ${saturation}%, ${lightness + 15}%)`)
-      circleGradient.addColorStop(1, `hsl(${hue}, ${saturation}%, ${lightness}%)`)
+      // 색상 계산 (변동성에 따라 파란색 → 노란색 → 빨간색)
+      const hue = 240 - (match.volatility * 1.8)
+      const saturation = 85 + match.volatility * 0.15
+      const lightness = 50 + match.volatility * 0.3
+      
+      // 3D 기둥 그리기
+      // 1. 그림자 (바닥)
+      ctx.save()
+      ctx.shadowColor = `hsla(${hue}, ${saturation}%, ${lightness}%, 0.6)`
+      ctx.shadowBlur = 20 + match.volatility * 0.5
+      ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness - 20}%, 0.3)`
       ctx.beginPath()
-      ctx.arc(x, y, radius, 0, Math.PI * 2)
-      ctx.fillStyle = circleGradient
+      ctx.ellipse(baseX, baseY + 5, barWidth * 0.6, barWidth * 0.3, 0, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+      
+      // 2. 기둥 측면 (왼쪽)
+      const leftGradient = ctx.createLinearGradient(
+        baseX - barWidth * 0.3, baseY - barHeight,
+        baseX - barWidth * 0.3, baseY
+      )
+      leftGradient.addColorStop(0, `hsl(${hue}, ${saturation}%, ${lightness - 15}%)`)
+      leftGradient.addColorStop(1, `hsl(${hue}, ${saturation}%, ${lightness - 25}%)`)
+      
+      ctx.fillStyle = leftGradient
+      ctx.beginPath()
+      ctx.moveTo(baseX - barWidth * 0.3, baseY)
+      ctx.lineTo(baseX - barWidth * 0.3, baseY - barHeight)
+      ctx.lineTo(baseX, baseY - barHeight - barWidth * 0.15)
+      ctx.lineTo(baseX, baseY - barWidth * 0.15)
+      ctx.closePath()
       ctx.fill()
       
-      // 강한 테두리
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'
-      ctx.lineWidth = 3
-      ctx.stroke()
+      // 3. 기둥 측면 (오른쪽)
+      const rightGradient = ctx.createLinearGradient(
+        baseX, baseY - barHeight,
+        baseX + barWidth * 0.3, baseY
+      )
+      rightGradient.addColorStop(0, `hsl(${hue}, ${saturation}%, ${lightness - 20}%)`)
+      rightGradient.addColorStop(1, `hsl(${hue}, ${saturation}%, ${lightness - 30}%)`)
       
-      // 변동성 텍스트 표시 (원 중앙에 큰 포인트만)
-      if (match.volatility > 40) {
+      ctx.fillStyle = rightGradient
+      ctx.beginPath()
+      ctx.moveTo(baseX, baseY - barWidth * 0.15)
+      ctx.lineTo(baseX, baseY - barHeight - barWidth * 0.15)
+      ctx.lineTo(baseX + barWidth * 0.3, baseY - barHeight)
+      ctx.lineTo(baseX + barWidth * 0.3, baseY)
+      ctx.closePath()
+      ctx.fill()
+      
+      // 4. 기둥 상단 (타원형 - 가장 밝게)
+      const topGradient = ctx.createRadialGradient(
+        baseX - barWidth * 0.1, baseY - barHeight - barWidth * 0.2, 0,
+        baseX, baseY - barHeight - barWidth * 0.15, barWidth * 0.4
+      )
+      topGradient.addColorStop(0, `hsl(${hue}, ${saturation}%, ${lightness + 20}%)`)
+      topGradient.addColorStop(0.7, `hsl(${hue}, ${saturation}%, ${lightness}%)`)
+      topGradient.addColorStop(1, `hsl(${hue}, ${saturation}%, ${lightness - 10}%)`)
+      
+      ctx.fillStyle = topGradient
+      ctx.beginPath()
+      ctx.ellipse(
+        baseX, 
+        baseY - barHeight - barWidth * 0.15,
+        barWidth * 0.35,
+        barWidth * 0.2,
+        0, 0, Math.PI * 2
+      )
+      ctx.fill()
+      
+      // 5. 하이라이트 (반짝이는 효과)
+      if (match.volatility > 30) {
         ctx.save()
-        ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 8px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(`${Math.round(match.volatility)}%`, x, y)
+        ctx.globalAlpha = 0.4
+        ctx.fillStyle = 'white'
+        ctx.beginPath()
+        ctx.ellipse(
+          baseX - barWidth * 0.1, 
+          baseY - barHeight - barWidth * 0.15,
+          barWidth * 0.15,
+          barWidth * 0.08,
+          0, 0, Math.PI * 2
+        )
+        ctx.fill()
         ctx.restore()
       }
       
-      // 경기 정보 텍스트 (원 아래에 팀명 약어)
+      // 6. 변동성 수치 표시
+      if (match.volatility > 20) {
+        ctx.save()
+        ctx.fillStyle = '#ffffff'
+        ctx.font = `bold ${8 * perspectiveScale}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
+        ctx.shadowBlur = 4
+        ctx.fillText(
+          `${Math.round(match.volatility)}%`, 
+          baseX, 
+          baseY - barHeight - barWidth * 0.3
+        )
+        ctx.restore()
+      }
+      
+      // 7. 팀명 표시 (바닥)
       ctx.save()
-      ctx.fillStyle = '#9ca3af'
-      ctx.font = '9px sans-serif'
+      ctx.fillStyle = '#6b7280'
+      ctx.font = `${7 * perspectiveScale}px sans-serif`
       ctx.textAlign = 'center'
       const homeShort = match.homeTeam.substring(0, 3).toUpperCase()
       const awayShort = match.awayTeam.substring(0, 3).toUpperCase()
-      ctx.fillText(`${homeShort}-${awayShort}`, x, y + radius + 12)
+      ctx.fillText(`${homeShort}-${awayShort}`, baseX, baseY + barWidth * 0.5)
       ctx.restore()
       
+      // 8. 모멘텀 화살표
       if (Math.abs(match.momentum) > 15) {
+        const arrowY = baseY - barHeight - barWidth * 0.5
         ctx.save()
-        ctx.translate(x, y)
+        ctx.translate(baseX, arrowY)
         const angle = match.momentum > 0 ? -Math.PI / 2 : Math.PI / 2
         ctx.rotate(angle)
+        
+        // 화살표 글로우
+        ctx.shadowColor = match.momentum > 0 ? '#10b981' : '#ef4444'
+        ctx.shadowBlur = 10
+        
         ctx.beginPath()
-        ctx.moveTo(0, -radius - 5)
-        ctx.lineTo(-4, -radius - 10)
-        ctx.lineTo(4, -radius - 10)
+        ctx.moveTo(0, -8)
+        ctx.lineTo(-5, -3)
+        ctx.lineTo(-2, -3)
+        ctx.lineTo(-2, 3)
+        ctx.lineTo(2, 3)
+        ctx.lineTo(2, -3)
+        ctx.lineTo(5, -3)
         ctx.closePath()
         ctx.fillStyle = match.momentum > 0 ? '#10b981' : '#ef4444'
         ctx.fill()
         ctx.restore()
       }
       
+      // 9. 호버 효과
       if (hoveredMatch?.id === match.id) {
-        ctx.beginPath()
-        ctx.arc(x, y, radius + 5, 0, Math.PI * 2)
+        // 호버 시 외곽 글로우
+        ctx.save()
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.9)'
+        ctx.shadowBlur = 30
         ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)'
         ctx.lineWidth = 3
+        ctx.beginPath()
+        ctx.ellipse(
+          baseX, 
+          baseY - barHeight - barWidth * 0.15,
+          barWidth * 0.4,
+          barWidth * 0.25,
+          0, 0, Math.PI * 2
+        )
         ctx.stroke()
+        ctx.restore()
         
-        // 호버 시 풀네임 표시
+        // 풀네임 표시
         ctx.save()
         ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 11px sans-serif'
+        ctx.font = `bold ${10 * perspectiveScale}px sans-serif`
         ctx.textAlign = 'center'
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
-        ctx.shadowBlur = 4
-        ctx.fillText(`${match.homeTeam} vs ${match.awayTeam}`, x, y - radius - 15)
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'
+        ctx.shadowBlur = 6
+        ctx.fillText(
+          `${match.homeTeam} vs ${match.awayTeam}`, 
+          baseX, 
+          baseY - barHeight - barWidth * 0.8
+        )
         ctx.restore()
       }
     })
@@ -267,12 +368,25 @@ function MovementMap({ matches, selectedLeague }: { matches: Match[], selectedLe
     
     let found = false
     filteredMatches.forEach((match, index) => {
-      const px = (index % 10) * (width / 10) + (width / 20)
-      const py = Math.floor(index / 10) * (height / 6) + (height / 12)
-      const radius = 8 + match.volatility * 0.15
+      const col = index % 10
+      const row = Math.floor(index / 10)
+      const perspectiveScale = 0.7 + (row * 0.1)
+      const baseX = col * (width / 10) + (width / 20)
+      const baseY = row * (height / 6) + (height / 12)
+      const barHeight = match.volatility * 1.5 * perspectiveScale
+      const barWidth = 30 * perspectiveScale
       
-      const distance = Math.sqrt((x - px) ** 2 + (y - py) ** 2)
-      if (distance < radius + 5) {
+      // 3D 기둥 전체 영역 체크 (상단 타원형 영역)
+      const dx = x - baseX
+      const dy = y - (baseY - barHeight - barWidth * 0.15)
+      const ellipseCheck = (dx * dx) / (barWidth * barWidth * 0.16) + (dy * dy) / (barWidth * barWidth * 0.04)
+      
+      // 기둥 몸체 영역 체크
+      const bodyCheck = Math.abs(x - baseX) < barWidth * 0.4 && 
+                       y > baseY - barHeight - barWidth * 0.3 && 
+                       y < baseY + barWidth * 0.5
+      
+      if (ellipseCheck < 1 || bodyCheck) {
         setHoveredMatch(match)
         found = true
       }
@@ -626,10 +740,10 @@ export default function MovementPage() {
         {/* 타이틀 */}
         <div className="mb-8">
           <h1 className="text-4xl font-black text-white mb-2">
-            🌊 배당 무브먼트 맵
+            🏔️ 배당 무브먼트 3D 맵
           </h1>
           <p className="text-gray-400">
-            실시간 배당 변화를 3D 지형도로 시각화합니다. 높이는 변동성을, 색상은 리스크를 나타냅니다.
+            실시간 배당 변화를 입체 지형도로 시각화합니다. <span className="text-blue-400 font-semibold">기둥의 높이</span>는 변동성을, <span className="text-yellow-400 font-semibold">색상</span>은 리스크 수준을, <span className="text-green-400 font-semibold">화살표</span>는 상승/하락 추세를 나타냅니다.
           </p>
         </div>
         
