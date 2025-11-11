@@ -1,0 +1,14 @@
+# robots.txt for https://www.trendsoccer.com/
+# Created: 2025-11-11
+# Purpose: Allow full indexing of public pages while guiding crawlers to sitemap
+
+User-agent: *
+Allow: /
+
+# Disallow only unnecessary technical paths (if exist)
+Disallow: /api/
+Disallow: /static/
+Disallow: /assets/
+
+# Sitemap declaration
+Sitemap: https://www.trendsoccer.com/sitemap.xml

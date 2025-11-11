@@ -27,13 +27,13 @@ const menuItems: MenuItem[] = [
     label: '배당 무브먼트', 
     href: '/movement', 
     icon: '🌊', 
-    badge: 'Phase 2',
+    badge: 'NEW',
   },
   { 
     label: '마켓 웨이브', 
     href: '/market-wave', 
     icon: '🎯', 
-    badge: 'Phase 2',
+    badge: 'WAIT',
     disabled: true 
   },
 ]
