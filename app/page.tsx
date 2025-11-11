@@ -217,34 +217,49 @@ function translateTeamName(englishName: string): string {
   return englishName
 }
 
-// 시간 포맷 함수
-function formatTime(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleTimeString('ko-KR', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false
-  })
+// 시간 포맷 함수 (UTC를 KST로 변환)
+function formatTime(utcDateString: string): string {
+  // API에서 UTC ISO 문자열을 받음: "2025-11-22T12:30:00+00:00" 또는 "2025-11-22T12:30:00Z"
+  const utcDate = new Date(utcDateString)
+  
+  // UTC 시간에 9시간(KST 오프셋)을 더함
+  const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000))
+  
+  // UTC 메서드를 사용하여 KST 시간 추출 (로컬 시간대 영향 받지 않음)
+  const hours = String(kstDate.getUTCHours()).padStart(2, '0')
+  const minutes = String(kstDate.getUTCMinutes()).padStart(2, '0')
+  
+  return `${hours}:${minutes}`
 }
 
-// 날짜 포맷
-function formatDate(dateString: string): string {
-  const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
+// 날짜 포맷 (UTC를 KST로 변환)
+function formatDate(utcDateString: string): string {
+  // API에서 UTC ISO 문자열을 받음: "2025-11-22T12:30:00+00:00" 또는 "2025-11-22T12:30:00Z"
+  const utcDate = new Date(utcDateString)
   
-  // ISO 형식이나 다른 형식 모두 처리
-  const matchDate = new Date(dateString)
+  // UTC 시간에 9시간(KST 오프셋)을 더함
+  const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000))
   
-  if (matchDate.toDateString() === today.toDateString()) {
+  // 현재 한국 시간 계산
+  const now = new Date()
+  const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000))
+  
+  // 오늘/내일 비교를 위해 날짜만 추출 (시간 제거)
+  const todayKST = new Date(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate())
+  const tomorrowKST = new Date(todayKST)
+  tomorrowKST.setDate(tomorrowKST.getDate() + 1)
+  
+  const matchDateKST = new Date(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate())
+  
+  if (matchDateKST.getTime() === todayKST.getTime()) {
     return '오늘'
-  } else if (matchDate.toDateString() === tomorrow.toDateString()) {
+  } else if (matchDateKST.getTime() === tomorrowKST.getTime()) {
     return '내일'
   } else {
     // YYYY/MM/DD 형식으로 변환
-    const year = matchDate.getFullYear()
-    const month = String(matchDate.getMonth() + 1).padStart(2, '0')
-    const day = String(matchDate.getDate()).padStart(2, '0')
+    const year = kstDate.getUTCFullYear()
+    const month = String(kstDate.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(kstDate.getUTCDate()).padStart(2, '0')
     return `${year}/${month}/${day}`
   }
 }
@@ -506,9 +521,13 @@ export default function Home() {
       const cachedTrend = getCachedData(cacheKey)
       
       if (cachedTrend) {
-        setTrendData(prev => ({ ...prev, [matchId]: cachedTrend }))
+        // 캐시 데이터도 시간순 정렬 확인
+        const sortedCached = [...cachedTrend].sort((a, b) => 
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        )
+        setTrendData(prev => ({ ...prev, [matchId]: sortedCached }))
         console.log(`📦 캐시에서 트렌드 로드: ${matchId}`)
-        return cachedTrend
+        return sortedCached
       }
       
       // ⏱️ 5초 타임아웃 설정
@@ -523,12 +542,17 @@ export default function Home() {
       const result = await response.json()
       
       if (result.success && result.data.length > 0) {
-        // 💾 캐시에 저장
-        setCachedData(cacheKey, result.data)
+        // ✅ 시간순으로 정렬 (오름차순) - Lightweight Charts 요구사항
+        const sortedData = [...result.data].sort((a, b) => 
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        )
         
-        setTrendData(prev => ({ ...prev, [matchId]: result.data }))
-        console.log(`📈 Loaded trend for match ${matchId}:`, result.data.length, 'points')
-        return result.data
+        // 💾 정렬된 데이터를 캐시에 저장
+        setCachedData(cacheKey, sortedData)
+        
+        setTrendData(prev => ({ ...prev, [matchId]: sortedData }))
+        console.log(`📈 Loaded trend for match ${matchId}:`, sortedData.length, 'points (sorted)')
+        return sortedData
       } else {
         throw new Error('No trend data available')
       }
@@ -569,10 +593,10 @@ export default function Home() {
         let allMatches = []
         
         if (selectedLeague === 'ALL') {
-          // 모든 리그의 오즈 가져오기
+          // 모든 리그의 경기 가져오기 (API-Football)
           const leagues = ['PL', 'PD', 'BL1', 'SA', 'FL1' ,'CL']
           const promises = leagues.map(league => 
-            fetch(`/api/odds-from-db?league=${league}`, {
+            fetch(`/api/api-football?league=${league}&type=fixtures`, {
               headers: {
                 'Cache-Control': 'public, max-age=300' // 5분 캐시
               }
@@ -593,9 +617,9 @@ export default function Home() {
             }))
           )
         } else {
-          // 단일 리그 오즈 가져오기
+          // 단일 리그 경기 가져오기 (API-Football)
           const response = await fetch(
-            `/api/odds-from-db?league=${selectedLeague}`,
+            `/api/api-football?league=${selectedLeague}&type=fixtures`,
             {
               headers: {
                 'Cache-Control': 'public, max-age=300' // 5분 캐시
@@ -604,7 +628,7 @@ export default function Home() {
           )
           
           if (!response.ok) {
-            throw new Error('오즈 데이터를 불러올 수 없습니다')
+            throw new Error('경기 데이터를 불러올 수 없습니다')
           }
           
           const result = await response.json()
@@ -620,40 +644,14 @@ export default function Home() {
           }))
         }
         
-        console.log('🔍 DB에서 가져온 오즈:', allMatches.length)
+        console.log('🏈 API-Football에서 가져온 경기:', allMatches.length)
         
-        // DB 데이터를 Match 형식으로 변환
-        const convertedMatches = allMatches.map((odds: any) => {
-          const homeTeamEng = odds.home_team || 'Unknown'
-          const awayTeamEng = odds.away_team || 'Unknown'
-          const leagueCode = odds.league || odds.league_code || 'XX'
-          
-          // 디버깅: 리그 코드 확인
-          if (leagueCode === 'XX') {
-            console.warn('⚠️ 리그 코드 누락:', odds)
-          }
-          
-          return {
-            id: odds.match_id || Math.random(),
-            league: getLeagueName(leagueCode),  // 리그 코드를 한글 이름으로 변환
-            leagueCode: leagueCode,
-            leagueLogo: getLeagueLogo(leagueCode),
-            date: formatDate(odds.commence_time),
-            time: formatTime(odds.commence_time),
-            homeTeam: homeTeamEng,           // 영문 팀명 사용
-            awayTeam: awayTeamEng,           // 영문 팀명 사용
-            homeCrest: getTeamLogo(homeTeamEng),  // 영문으로 로고 매칭
-            awayCrest: getTeamLogo(awayTeamEng),  // 영문으로 로고 매칭
-            homeScore: null,
-            awayScore: null,
-            status: 'SCHEDULED',
-            utcDate: odds.commence_time,
-            homeWinRate: odds.home_probability || 0,
-            drawRate: odds.draw_probability || 0,
-            awayWinRate: odds.away_probability || 0,
-            oddsSource: 'live' as const
-          }
-        })
+        // API-Football 응답은 이미 Match 형식으로 변환되어 있음
+        // 추가로 oddsSource 필드만 추가
+        const convertedMatches = allMatches.map((match: any) => ({
+          ...match,
+          oddsSource: 'live' as const
+        }))
         
         // 현재 시간 기준으로 미래 경기만 필터링
         const now = new Date()
@@ -703,8 +701,12 @@ export default function Home() {
         const cachedTrend = getCachedData(cacheKey)
         
         if (cachedTrend) {
-          setTrendData(prev => ({ ...prev, [matchId]: cachedTrend }))
-          return cachedTrend
+          // 캐시 데이터도 시간순 정렬 확인
+          const sortedCached = [...cachedTrend].sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          )
+          setTrendData(prev => ({ ...prev, [matchId]: sortedCached }))
+          return sortedCached
         }
         
         // ⏱️ 3초 타임아웃 설정
@@ -719,13 +721,18 @@ export default function Home() {
         const result = await response.json()
         
         if (result.success && result.data.length > 0) {
-          console.log(`📈 Loaded trend for match ${matchId}:`, result.data.length, 'points')
+          // ✅ 시간순으로 정렬 (오름차순) - Lightweight Charts 요구사항
+          const sortedData = [...result.data].sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          )
           
-          // 💾 캐시에 저장
-          setCachedData(cacheKey, result.data)
+          console.log(`📈 Loaded trend for match ${matchId}:`, sortedData.length, 'points (sorted)')
           
-          setTrendData(prev => ({ ...prev, [matchId]: result.data }))
-          return result.data
+          // 💾 정렬된 데이터를 캐시에 저장
+          setCachedData(cacheKey, sortedData)
+          
+          setTrendData(prev => ({ ...prev, [matchId]: sortedData }))
+          return sortedData
         } else {
           // API 응답은 있지만 데이터가 없는 경우
           throw new Error('No trend data available')
@@ -1066,17 +1073,31 @@ export default function Home() {
       lineWidth: 3,
     })
 
-    const homeData = trend.map((point) => ({
+    // 중복 시간 제거 및 데이터 준비
+    const uniqueTrend: TrendData[] = []
+    const seenTimes = new Set<number>()
+    
+    for (const point of trend) {
+      const timeInSeconds = Math.floor(new Date(point.timestamp).getTime() / 1000)
+      if (!seenTimes.has(timeInSeconds)) {
+        seenTimes.add(timeInSeconds)
+        uniqueTrend.push(point)
+      }
+    }
+    
+    console.log(`📊 차트 데이터: 전체 ${trend.length}개, 고유 ${uniqueTrend.length}개`)
+
+    const homeData = uniqueTrend.map((point) => ({
       time: Math.floor(new Date(point.timestamp).getTime() / 1000) as any,
       value: point.homeWinProbability,
     }))
 
-    const drawData = trend.map((point) => ({
+    const drawData = uniqueTrend.map((point) => ({
       time: Math.floor(new Date(point.timestamp).getTime() / 1000) as any,
       value: point.drawProbability,
     }))
 
-    const awayData = trend.map((point) => ({
+    const awayData = uniqueTrend.map((point) => ({
       time: Math.floor(new Date(point.timestamp).getTime() / 1000) as any,
       value: point.awayWinProbability,
     }))
@@ -1086,7 +1107,7 @@ export default function Home() {
     awaySeries.setData(awayData)
 
     // 데이터 포인트 마커 추가 (각 시간대별)
-    const markers = trend.map((point, index) => {
+    const markers = uniqueTrend.map((point, index) => {
       const time = Math.floor(new Date(point.timestamp).getTime() / 1000) as any
       
       // 최고값을 가진 팀에만 마커 표시
@@ -1618,7 +1639,7 @@ export default function Home() {
                       <span className={`text-lg font-bold ${
                         darkMode ? 'text-white' : 'text-gray-900'
                       }`}>
-                        {match.time}
+                        {formatTime(match.utcDate)}
                       </span>
                     </div>
 

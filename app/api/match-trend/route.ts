@@ -1,4 +1,4 @@
-// 24시간 트렌드 차트용 데이터
+// 7일 트렌드 차트용 데이터
 export const dynamic = 'force-dynamic'
 
 interface TrendPoint {
@@ -24,13 +24,14 @@ export async function GET(request: Request) {
       return Response.json({ error: 'Database not configured' }, { status: 500 })
     }
     
-    // 24시간 히스토리 가져오기
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    // 7일(168시간) 전 시간 계산
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
     
+    // Supabase에서 7일치 히스토리 가져오기
     const response = await fetch(
       `${supabaseUrl}/rest/v1/match_odds_history?` +
       `match_id=eq.${matchId}&` +
-      `created_at=gte.${twentyFourHoursAgo}&` +
+      `created_at=gte.${sevenDaysAgo}&` +
       `select=created_at,home_probability,draw_probability,away_probability&` +
       `order=created_at.asc`,
       {
