@@ -561,33 +561,18 @@ export default function Home() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000)
       
-      console.log('🔍 Fetching trend data for:', matchId)
-      
       const response = await fetch(`/api/match-trend?matchId=${matchId}`, {
         signal: controller.signal
       })
       clearTimeout(timeoutId)
       
-      console.log('📡 API Response:', response.status, response.statusText)
-      
       const result = await response.json()
       
-      console.log('📊 API Result:', {
-        success: result.success,
-        hasData: !!result.data,
-        isArray: Array.isArray(result.data),
-        length: result.data?.length,
-        count: result.count
-      })
-      
-      // ✅ 수정: 배열 체크 추가
-      if (result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
+      if (result.success && result.data.length > 0) {
         // ✅ 시간순으로 정렬 (오름차순) - Lightweight Charts 요구사항
         const sortedData = [...result.data].sort((a, b) => 
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         )
-        
-        console.log('✅ Trend data sorted:', sortedData.length, 'points')
         
         // 💾 정렬된 데이터를 캐시에 저장
         setCachedData(cacheKey, sortedData)
@@ -596,19 +581,13 @@ export default function Home() {
         console.log(`📈 Loaded trend for match ${matchId}:`, sortedData.length, 'points (sorted)')
         return sortedData
       } else {
-        console.warn('⚠️ No valid trend data:', result)
-        // 빈 배열 반환 (에러 throw 안 함)
-        setTrendData(prev => ({
-          ...prev,
-          [matchId]: []
-        }))
-        return []
+        throw new Error('No trend data available')
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
         console.warn('⏱️ 트렌드 API 타임아웃')
       } else {
-        console.error('❌ 트렌드 API 호출 실패:', err)
+        console.warn('⚠️ 트렌드 API 호출 실패:', err)
       }
       setTrendData(prev => ({
         ...prev,
@@ -661,7 +640,7 @@ export default function Home() {
           allMatches = results.flatMap(result => 
             result.data.map((match: any) => ({
               // DB 필드명을 프론트엔드 형식으로 변환
-              id: match.match_id || match_id,
+              id: match.match_id || match.id,  // ✅ match_id 우선!
               homeTeam: match.home_team || match.homeTeam,
               awayTeam: match.away_team || match.awayTeam,
               league: match.league || getLeagueName(match.league_code) || result.league,
@@ -705,7 +684,7 @@ export default function Home() {
           // 리그 코드 명시적으로 추가
           allMatches = (result.data || []).map((match: any) => ({
             // DB 필드명을 프론트엔드 형식으로 변환
-            id: match.id || match.match_id,
+            id: match.match_id || match.id,  // ✅ match_id 우선!
             homeTeam: match.home_team || match.homeTeam,
             awayTeam: match.away_team || match.awayTeam,
             league: match.league || getLeagueName(match.league_code) || selectedLeague,
