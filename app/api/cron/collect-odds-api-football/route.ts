@@ -64,13 +64,15 @@ async function fetchFromApiFootball(endpoint: string) {
 
 export async function POST(request: Request) {
   try {
-    // Authorization 체크
+    // ✅ Authorization 체크 제거 (Supabase Cron이 Authorization 없이 호출)
+    /*
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET || 'random_secret_string'
     
     if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    */
 
     console.log('🏈 ========== API-Football Odds Collection Started ==========')
     console.log('⏰ Time:', new Date().toISOString())
