@@ -101,15 +101,15 @@ export default function H2HModal({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4"
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-[#1a1a1a] rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+        className="bg-white dark:bg-[#1a1a1a] rounded-2xl w-full max-w-lg sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 - Sofascore 스타일 그라데이션 */}
-        <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 dark:from-blue-900 dark:via-blue-950 dark:to-purple-950 p-8 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 dark:from-blue-900 dark:via-blue-950 dark:to-purple-950 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
           {/* 배경 패턴 */}
           <div className="absolute inset-0 opacity-5">
             <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -133,18 +133,18 @@ export default function H2HModal({
           </button>
 
           {/* 타이틀 */}
-          <div className="relative text-center mb-6">
-            <div className="inline-block bg-white/10 backdrop-blur-xl rounded-full px-6 py-2 border border-white/20">
-              <span className="text-white text-sm font-bold tracking-wide">HEAD TO HEAD</span>
+          <div className="relative text-center mb-4 sm:mb-6">
+            <div className="inline-block bg-white/10 backdrop-blur-xl rounded-full px-4 py-1.5 sm:px-6 sm:py-2 border border-white/20">
+              <span className="text-white text-xs sm:text-sm font-bold tracking-wide">HEAD TO HEAD</span>
             </div>
           </div>
 
           {/* 팀 정보 - Bet365 스타일 */}
-          <div className="relative flex items-center justify-between gap-8 max-w-4xl mx-auto">
+          <div className="relative flex items-center justify-between gap-2 sm:gap-4 lg:gap-8 max-w-4xl mx-auto">
             {/* 홈팀 */}
-            <div className="flex flex-col items-center gap-4 flex-1">
-              <div className="relative">
-                <div className="w-24 h-24 bg-white rounded-full p-4 shadow-2xl ring-4 ring-white/20">
+            <div className="flex flex-col items-center gap-2 sm:gap-3 lg:gap-4 flex-1 min-w-0">
+              <div className="relative flex-shrink-0">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-white rounded-full p-2 sm:p-3 lg:p-4 shadow-2xl ring-2 sm:ring-4 ring-white/20">
                   <img 
                     src={finalHomeTeamLogo} 
                     alt={homeTeam}
@@ -155,25 +155,25 @@ export default function H2HModal({
                   />
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-white font-black text-xl mb-1">{homeTeam}</div>
-                <div className="inline-block bg-white/10 backdrop-blur-md rounded-full px-3 py-1">
-                  <span className="text-white/80 text-xs font-medium">홈</span>
+              <div className="text-center w-full">
+                <div className="text-white font-black text-sm sm:text-base lg:text-xl mb-1 truncate px-1">{homeTeam}</div>
+                <div className="inline-block bg-white/10 backdrop-blur-md rounded-full px-2 sm:px-3 py-0.5 sm:py-1">
+                  <span className="text-white/80 text-[10px] sm:text-xs font-medium">홈</span>
                 </div>
               </div>
             </div>
 
             {/* VS - Flashscore 스타일 */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="bg-white/10 backdrop-blur-xl border-2 border-white/30 rounded-2xl w-20 h-20 flex items-center justify-center shadow-2xl">
-                <span className="text-white font-black text-2xl tracking-tight">VS</span>
+            <div className="flex flex-col items-center gap-2 flex-shrink-0">
+              <div className="bg-white/10 backdrop-blur-xl border-2 border-white/30 rounded-xl sm:rounded-2xl w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center shadow-2xl">
+                <span className="text-white font-black text-lg sm:text-xl lg:text-2xl tracking-tight">VS</span>
               </div>
             </div>
 
             {/* 원정팀 */}
-            <div className="flex flex-col items-center gap-4 flex-1">
-              <div className="relative">
-                <div className="w-24 h-24 bg-white rounded-full p-4 shadow-2xl ring-4 ring-white/20">
+            <div className="flex flex-col items-center gap-2 sm:gap-3 lg:gap-4 flex-1 min-w-0">
+              <div className="relative flex-shrink-0">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-white rounded-full p-2 sm:p-3 lg:p-4 shadow-2xl ring-2 sm:ring-4 ring-white/20">
                   <img 
                     src={finalAwayTeamLogo} 
                     alt={awayTeam}
@@ -184,10 +184,10 @@ export default function H2HModal({
                   />
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-white font-black text-xl mb-1">{awayTeam}</div>
-                <div className="inline-block bg-white/10 backdrop-blur-md rounded-full px-3 py-1">
-                  <span className="text-white/80 text-xs font-medium">원정</span>
+              <div className="text-center w-full">
+                <div className="text-white font-black text-sm sm:text-base lg:text-xl mb-1 truncate px-1">{awayTeam}</div>
+                <div className="inline-block bg-white/10 backdrop-blur-md rounded-full px-2 sm:px-3 py-0.5 sm:py-1">
+                  <span className="text-white/80 text-[10px] sm:text-xs font-medium">원정</span>
                 </div>
               </div>
             </div>
@@ -199,7 +199,7 @@ export default function H2HModal({
           <div className="flex max-w-md mx-auto">
             <button
               onClick={() => setActiveTab('h2h')}
-              className={`flex-1 py-4 text-sm font-bold transition-all relative ${
+              className={`flex-1 py-3 sm:py-4 text-xs sm:text-sm font-bold transition-all relative ${
                 activeTab === 'h2h'
                   ? 'text-blue-600 dark:text-blue-400'
                   : 'text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -212,7 +212,7 @@ export default function H2HModal({
             </button>
             <button
               onClick={() => setActiveTab('form')}
-              className={`flex-1 py-4 text-sm font-bold transition-all relative ${
+              className={`flex-1 py-3 sm:py-4 text-xs sm:text-sm font-bold transition-all relative ${
                 activeTab === 'form'
                   ? 'text-blue-600 dark:text-blue-400'
                   : 'text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -251,34 +251,34 @@ export default function H2HModal({
             <>
               {/* H2H 탭 */}
               {activeTab === 'h2h' && (
-                <div className="p-6 space-y-6">
+                <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
                   {/* 통계 카드 - Sofascore 스타일 */}
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
-                    <div className="text-center mb-6">
-                      <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-gray-800">
+                    <div className="text-center mb-4 sm:mb-6">
+                      <h3 className="text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                         최근 10경기 통계
                       </h3>
                     </div>
 
                     {/* 원형 통계 - Bet365 스타일 */}
-                    <div className="flex justify-center items-center gap-4 mb-8">
+                    <div className="flex justify-center items-center gap-2 sm:gap-3 lg:gap-4 mb-6 sm:mb-8">
                       {/* 홈 승 */}
-                      <div className="flex flex-col items-center">
-                        <div className="relative w-24 h-24 mb-3">
+                      <div className="flex flex-col items-center flex-1">
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mb-2 sm:mb-3">
                           <svg className="w-full h-full transform -rotate-90">
                             <circle
-                              cx="48"
-                              cy="48"
-                              r="42"
+                              cx="50%"
+                              cy="50%"
+                              r="42%"
                               stroke="currentColor"
                               strokeWidth="8"
                               fill="none"
                               className="text-gray-200 dark:text-gray-800"
                             />
                             <circle
-                              cx="48"
-                              cy="48"
-                              r="42"
+                              cx="50%"
+                              cy="50%"
+                              r="42%"
                               stroke="currentColor"
                               strokeWidth="8"
                               fill="none"
@@ -289,32 +289,32 @@ export default function H2HModal({
                             />
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-3xl font-black text-blue-600 dark:text-blue-400">{data.statistics.homeWins}</span>
+                            <span className="text-xl sm:text-2xl lg:text-3xl font-black text-blue-600 dark:text-blue-400">{data.statistics.homeWins}</span>
                           </div>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs font-bold text-gray-900 dark:text-white mb-1">{homeTeam}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{data.statistics.homeWinPercentage}%</p>
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-900 dark:text-white mb-1 truncate max-w-[80px]">{homeTeam}</p>
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">{data.statistics.homeWinPercentage}%</p>
                         </div>
                       </div>
 
                       {/* 무승부 */}
-                      <div className="flex flex-col items-center">
-                        <div className="relative w-24 h-24 mb-3">
+                      <div className="flex flex-col items-center flex-1">
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mb-2 sm:mb-3">
                           <svg className="w-full h-full transform -rotate-90">
                             <circle
-                              cx="48"
-                              cy="48"
-                              r="42"
+                              cx="50%"
+                              cy="50%"
+                              r="42%"
                               stroke="currentColor"
                               strokeWidth="8"
                               fill="none"
                               className="text-gray-200 dark:text-gray-800"
                             />
                             <circle
-                              cx="48"
-                              cy="48"
-                              r="42"
+                              cx="50%"
+                              cy="50%"
+                              r="42%"
                               stroke="currentColor"
                               strokeWidth="8"
                               fill="none"
@@ -325,32 +325,32 @@ export default function H2HModal({
                             />
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-3xl font-black text-gray-600 dark:text-gray-400">{data.statistics.draws}</span>
+                            <span className="text-xl sm:text-2xl lg:text-3xl font-black text-gray-600 dark:text-gray-400">{data.statistics.draws}</span>
                           </div>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs font-bold text-gray-900 dark:text-white mb-1">무승부</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{data.statistics.drawPercentage}%</p>
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-900 dark:text-white mb-1">무승부</p>
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">{data.statistics.drawPercentage}%</p>
                         </div>
                       </div>
 
                       {/* 원정 승 */}
-                      <div className="flex flex-col items-center">
-                        <div className="relative w-24 h-24 mb-3">
+                      <div className="flex flex-col items-center flex-1">
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mb-2 sm:mb-3">
                           <svg className="w-full h-full transform -rotate-90">
                             <circle
-                              cx="48"
-                              cy="48"
-                              r="42"
+                              cx="50%"
+                              cy="50%"
+                              r="42%"
                               stroke="currentColor"
                               strokeWidth="8"
                               fill="none"
                               className="text-gray-200 dark:text-gray-800"
                             />
                             <circle
-                              cx="48"
-                              cy="48"
-                              r="42"
+                              cx="50%"
+                              cy="50%"
+                              r="42%"
                               stroke="currentColor"
                               strokeWidth="8"
                               fill="none"
@@ -361,19 +361,19 @@ export default function H2HModal({
                             />
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-3xl font-black text-red-600 dark:text-red-400">{data.statistics.awayWins}</span>
+                            <span className="text-xl sm:text-2xl lg:text-3xl font-black text-red-600 dark:text-red-400">{data.statistics.awayWins}</span>
                           </div>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs font-bold text-gray-900 dark:text-white mb-1">{awayTeam}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{data.statistics.awayWinPercentage}%</p>
+                          <p className="text-[10px] sm:text-xs font-bold text-gray-900 dark:text-white mb-1 truncate max-w-[80px]">{awayTeam}</p>
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">{data.statistics.awayWinPercentage}%</p>
                         </div>
                       </div>
                     </div>
 
                     {/* 평균 골 비교 - Flashscore 스타일 바 차트 */}
-                    <div className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-200 dark:border-gray-800">
-                      <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 text-center">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl p-3 sm:p-4 lg:p-5 border border-gray-200 dark:border-gray-800">
+                      <h4 className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 sm:mb-4 text-center">
                         평균 득점
                       </h4>
                       <div className="space-y-4">
@@ -410,41 +410,41 @@ export default function H2HModal({
 
                   {/* 경기 기록 리스트 */}
                   <div>
-                    <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 px-1">
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 sm:mb-4 px-1">
                       경기 기록
                     </h3>
                     <div className="space-y-2">
                       {data.h2hMatches.map((match, index) => (
                         <div 
                           key={index}
-                          className="bg-white dark:bg-[#1e1e1e] rounded-xl p-4 border border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 transition-all hover:shadow-lg"
+                          className="bg-white dark:bg-[#1e1e1e] rounded-xl p-2 sm:p-3 lg:p-4 border border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 transition-all hover:shadow-lg"
                         >
-                          <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center justify-between gap-2 sm:gap-3 lg:gap-4">
                             {/* 날짜 & 리그 */}
-                            <div className="flex-shrink-0 w-24">
-                              <div className="text-xs font-medium text-gray-500 dark:text-gray-500">
+                            <div className="flex-shrink-0 w-16 sm:w-20 lg:w-24">
+                              <div className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-500">
                                 {new Date(match.date).toLocaleDateString('ko-KR', { 
                                   month: 'short', 
                                   day: 'numeric' 
                                 })}
                               </div>
-                              <div className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+                              <div className="text-[9px] sm:text-xs text-gray-400 dark:text-gray-600 mt-0.5 truncate">
                                 {match.league}
                               </div>
                             </div>
 
                             {/* 경기 정보 */}
-                            <div className="flex items-center gap-3 flex-1">
+                            <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 flex-1 min-w-0">
                               {/* 홈팀 */}
-                              <div className="flex items-center gap-2 flex-1 justify-end">
-                                <span className={`text-sm font-bold ${
+                              <div className="flex items-center gap-1 sm:gap-2 flex-1 justify-end min-w-0">
+                                <span className={`text-[10px] sm:text-xs lg:text-sm font-bold truncate ${
                                   match.isHomeTeamHome 
                                     ? 'text-gray-900 dark:text-white' 
                                     : 'text-gray-500 dark:text-gray-500'
                                 }`}>
                                   {match.homeTeam}
                                 </span>
-                                <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-1">
+                                <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-0.5 sm:p-1 flex-shrink-0">
                                   <img 
                                     src={getTeamLogo(match.homeTeam)} 
                                     alt={match.homeTeam}
@@ -457,19 +457,19 @@ export default function H2HModal({
                               </div>
 
                               {/* 스코어 */}
-                              <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 rounded-lg px-4 py-2 shadow-sm border border-gray-200 dark:border-gray-800">
-                                <span className="text-xl font-black text-gray-900 dark:text-white">
+                              <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 rounded-lg px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5 lg:py-2 shadow-sm border border-gray-200 dark:border-gray-800 flex-shrink-0">
+                                <span className="text-sm sm:text-lg lg:text-xl font-black text-gray-900 dark:text-white">
                                   {match.homeScore}
                                 </span>
-                                <span className="text-gray-400 dark:text-gray-600 mx-2 font-bold">-</span>
-                                <span className="text-xl font-black text-gray-900 dark:text-white">
+                                <span className="text-gray-400 dark:text-gray-600 mx-1 sm:mx-1.5 lg:mx-2 font-bold text-xs sm:text-sm">-</span>
+                                <span className="text-sm sm:text-lg lg:text-xl font-black text-gray-900 dark:text-white">
                                   {match.awayScore}
                                 </span>
                               </div>
 
                               {/* 원정팀 */}
-                              <div className="flex items-center gap-2 flex-1">
-                                <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-1">
+                              <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                                <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-0.5 sm:p-1 flex-shrink-0">
                                   <img 
                                     src={getTeamLogo(match.awayTeam)} 
                                     alt={match.awayTeam}
@@ -479,7 +479,7 @@ export default function H2HModal({
                                     }}
                                   />
                                 </div>
-                                <span className={`text-sm font-bold ${
+                                <span className={`text-[10px] sm:text-xs lg:text-sm font-bold truncate ${
                                   !match.isHomeTeamHome 
                                     ? 'text-gray-900 dark:text-white' 
                                     : 'text-gray-500 dark:text-gray-500'
@@ -490,7 +490,7 @@ export default function H2HModal({
                             </div>
 
                             {/* 결과 배지 */}
-                            <div className="flex-shrink-0 w-12">
+                            <div className="flex-shrink-0 w-8 sm:w-10 lg:w-12">
                               {match.winner !== 'draw' && (
                                 <span className={`inline-flex items-center justify-center w-full px-2 py-1 rounded-full text-xs font-black ${
                                   (match.winner === 'home' && match.isHomeTeamHome) || 
