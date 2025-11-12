@@ -637,7 +637,7 @@ export default function MovementPage() {
           : [selectedLeague]
         
         const promises = leagues.map(league => 
-          fetch(`/api/odds-from-db?league=${league}`).then(r => r.json())
+          fetch(`/api/api-football?league=${league}&type=fixtures`).then(r => r.json())
         )
         
         const results = await Promise.all(promises)
