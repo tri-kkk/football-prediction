@@ -78,7 +78,6 @@ export default function MatchPrediction({
         const response = await fetch(`/api/predictions?fixture=${fixtureId}`)
         
         if (!response.ok) {
-          // 404나 다른 에러는 조용히 처리
           throw new Error('No prediction data available')
         }
 
@@ -118,6 +117,14 @@ export default function MatchPrediction({
 
   const { predictions: pred, comparison } = prediction
 
+  // 퍼센트를 숫자로 변환
+  const homePercent = parseFloat(pred.percent.home.replace('%', ''))
+  const drawPercent = parseFloat(pred.percent.draw.replace('%', ''))
+  const awayPercent = parseFloat(pred.percent.away.replace('%', ''))
+
+  // 최고 승률 찾기
+  const maxPercent = Math.max(homePercent, drawPercent, awayPercent)
+
   return (
     <div className={`mt-4 rounded-xl overflow-hidden ${
       darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
@@ -127,9 +134,22 @@ export default function MatchPrediction({
         darkMode ? 'bg-gradient-to-r from-purple-900/20 to-blue-900/20 border-gray-800' : 'bg-gradient-to-r from-purple-50 to-blue-50 border-gray-200'
       }`}>
         <div className="flex items-center gap-2">
-          <span className="text-xl">🤖</span>
+          {/* 파비콘 이미지 사용 */}
+          <img 
+            src="/favicon.ico" 
+            alt="AI" 
+            className="w-5 h-5"
+            onError={(e) => {
+              // 이미지 로드 실패시 이모지로 폴백
+              e.currentTarget.style.display = 'none'
+              const emoji = document.createElement('span')
+              emoji.textContent = '🤖'
+              emoji.className = 'text-xl'
+              e.currentTarget.parentNode?.insertBefore(emoji, e.currentTarget)
+            }}
+          />
           <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            AI 경기 예측 분석
+            경기 예측 분석
           </h3>
           <span className={`ml-auto text-xs px-2 py-1 rounded-full ${
             darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700'
@@ -140,7 +160,7 @@ export default function MatchPrediction({
       </div>
 
       <div className="p-4 space-y-4">
-        {/* 승부 예측 */}
+        {/* 승부 예측 - 다이나믹한 바 차트 */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <span className="text-sm">🎯</span>
@@ -151,41 +171,144 @@ export default function MatchPrediction({
             </h4>
           </div>
           
-          <div className="grid grid-cols-3 gap-2">
-            {/* 홈 승률 */}
-            <div className={`p-3 rounded-lg text-center ${
-              darkMode ? 'bg-blue-900/20' : 'bg-blue-50'
-            }`}>
-              <div className={`text-xs mb-1 font-medium truncate ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {homeTeam}
+          {/* 수평 바 차트 */}
+          <div className="space-y-3 mb-4">
+            {/* 홈 승률 바 */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className={`text-xs font-medium truncate max-w-[120px] ${
+                  darkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  {homeTeam}
+                </span>
+                <span className={`text-sm font-black ${
+                  homePercent === maxPercent 
+                    ? (darkMode ? 'text-blue-400' : 'text-blue-600')
+                    : (darkMode ? 'text-gray-500' : 'text-gray-500')
+                }`}>
+                  {pred.percent.home}
+                </span>
               </div>
-              <div className={`text-2xl font-black ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                {pred.percent.home}
+              <div className="relative h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                    homePercent === maxPercent
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/50'
+                      : 'bg-gradient-to-r from-blue-400 to-blue-500'
+                  }`}
+                  style={{ 
+                    width: `${homePercent}%`,
+                    animation: 'expandBar 1s ease-out'
+                  }}
+                >
+                  {homePercent === maxPercent && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* 무승부 */}
-            <div className={`p-3 rounded-lg text-center ${
-              darkMode ? 'bg-gray-800' : 'bg-gray-100'
-            }`}>
-              <div className={`text-xs mb-1 font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                무승부
+            {/* 무승부 바 */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className={`text-xs font-medium ${
+                  darkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  무승부
+                </span>
+                <span className={`text-sm font-black ${
+                  drawPercent === maxPercent 
+                    ? (darkMode ? 'text-gray-300' : 'text-gray-700')
+                    : (darkMode ? 'text-gray-500' : 'text-gray-500')
+                }`}>
+                  {pred.percent.draw}
+                </span>
               </div>
-              <div className={`text-2xl font-black ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {pred.percent.draw}
+              <div className="relative h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                    drawPercent === maxPercent
+                      ? 'bg-gradient-to-r from-gray-500 to-gray-600 shadow-lg shadow-gray-500/50'
+                      : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                  }`}
+                  style={{ 
+                    width: `${drawPercent}%`,
+                    animation: 'expandBar 1s ease-out 0.1s backwards'
+                  }}
+                >
+                  {drawPercent === maxPercent && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* 원정 승률 */}
-            <div className={`p-3 rounded-lg text-center ${
-              darkMode ? 'bg-red-900/20' : 'bg-red-50'
+            {/* 원정 승률 바 */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className={`text-xs font-medium truncate max-w-[120px] ${
+                  darkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  {awayTeam}
+                </span>
+                <span className={`text-sm font-black ${
+                  awayPercent === maxPercent 
+                    ? (darkMode ? 'text-red-400' : 'text-red-600')
+                    : (darkMode ? 'text-gray-500' : 'text-gray-500')
+                }`}>
+                  {pred.percent.away}
+                </span>
+              </div>
+              <div className="relative h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                    awayPercent === maxPercent
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-500/50'
+                      : 'bg-gradient-to-r from-red-400 to-red-500'
+                  }`}
+                  style={{ 
+                    width: `${awayPercent}%`,
+                    animation: 'expandBar 1s ease-out 0.2s backwards'
+                  }}
+                >
+                  {awayPercent === maxPercent && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 승자 하이라이트 카드 */}
+          <div className={`p-3 rounded-lg text-center ${
+            homePercent === maxPercent
+              ? (darkMode ? 'bg-blue-900/30 border-2 border-blue-600' : 'bg-blue-50 border-2 border-blue-300')
+              : drawPercent === maxPercent
+              ? (darkMode ? 'bg-gray-800 border-2 border-gray-600' : 'bg-gray-100 border-2 border-gray-300')
+              : (darkMode ? 'bg-red-900/30 border-2 border-red-600' : 'bg-red-50 border-2 border-red-300')
+          }`}>
+            <div className={`text-xs font-bold mb-1 ${
+              homePercent === maxPercent
+                ? (darkMode ? 'text-blue-400' : 'text-blue-600')
+                : drawPercent === maxPercent
+                ? (darkMode ? 'text-gray-300' : 'text-gray-700')
+                : (darkMode ? 'text-red-400' : 'text-red-600')
             }`}>
-              <div className={`text-xs mb-1 font-medium truncate ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {awayTeam}
-              </div>
-              <div className={`text-2xl font-black ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
-                {pred.percent.away}
-              </div>
+              예상 결과
+            </div>
+            <div className={`text-lg font-black ${
+              homePercent === maxPercent
+                ? (darkMode ? 'text-blue-400' : 'text-blue-600')
+                : drawPercent === maxPercent
+                ? (darkMode ? 'text-gray-300' : 'text-gray-700')
+                : (darkMode ? 'text-red-400' : 'text-red-600')
+            }`}>
+              {homePercent === maxPercent
+                ? `${homeTeam} 승리`
+                : drawPercent === maxPercent
+                ? '무승부'
+                : `${awayTeam} 승리`
+              } ({maxPercent.toFixed(0)}%)
             </div>
           </div>
         </div>
@@ -218,13 +341,13 @@ export default function MatchPrediction({
                   </span>
                 </div>
               </div>
-              <div className="flex gap-1 h-2">
+              <div className="flex gap-1 h-2 rounded-full overflow-hidden">
                 <div 
-                  className="bg-blue-500 rounded-l transition-all"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700"
                   style={{ width: comparison.form.home }}
                 ></div>
                 <div 
-                  className="bg-red-500 rounded-r transition-all"
+                  className="bg-gradient-to-r from-red-500 to-red-600 transition-all duration-700"
                   style={{ width: comparison.form.away }}
                 ></div>
               </div>
@@ -246,13 +369,13 @@ export default function MatchPrediction({
                   </span>
                 </div>
               </div>
-              <div className="flex gap-1 h-2">
+              <div className="flex gap-1 h-2 rounded-full overflow-hidden">
                 <div 
-                  className="bg-blue-500 rounded-l transition-all"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700"
                   style={{ width: comparison.att.home }}
                 ></div>
                 <div 
-                  className="bg-red-500 rounded-r transition-all"
+                  className="bg-gradient-to-r from-red-500 to-red-600 transition-all duration-700"
                   style={{ width: comparison.att.away }}
                 ></div>
               </div>
@@ -274,13 +397,13 @@ export default function MatchPrediction({
                   </span>
                 </div>
               </div>
-              <div className="flex gap-1 h-2">
+              <div className="flex gap-1 h-2 rounded-full overflow-hidden">
                 <div 
-                  className="bg-blue-500 rounded-l transition-all"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700"
                   style={{ width: comparison.def.home }}
                 ></div>
                 <div 
-                  className="bg-red-500 rounded-r transition-all"
+                  className="bg-gradient-to-r from-red-500 to-red-600 transition-all duration-700"
                   style={{ width: comparison.def.away }}
                 ></div>
               </div>
@@ -290,7 +413,7 @@ export default function MatchPrediction({
             <div>
               <div className="flex justify-between items-center mb-1">
                 <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                  포아송 분포
+                  Poisson distribution
                 </span>
                 <div className="flex items-center gap-2 text-xs font-bold">
                   <span className={darkMode ? 'text-blue-400' : 'text-blue-600'}>
@@ -302,13 +425,13 @@ export default function MatchPrediction({
                   </span>
                 </div>
               </div>
-              <div className="flex gap-1 h-2">
+              <div className="flex gap-1 h-2 rounded-full overflow-hidden">
                 <div 
-                  className="bg-blue-500 rounded-l transition-all"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700"
                   style={{ width: comparison.poisson_distribution.home }}
                 ></div>
                 <div 
-                  className="bg-red-500 rounded-r transition-all"
+                  className="bg-gradient-to-r from-red-500 to-red-600 transition-all duration-700"
                   style={{ width: comparison.poisson_distribution.away }}
                 ></div>
               </div>
@@ -326,7 +449,7 @@ export default function MatchPrediction({
               <div className={`text-xs font-bold mb-1 ${
                 darkMode ? 'text-purple-400' : 'text-purple-600'
               }`}>
-                AI 추천
+                Trend Soccer 추천
               </div>
               <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 {pred.advice}
@@ -342,6 +465,28 @@ export default function MatchPrediction({
           ⚠️ 이 분석은 통계적 참고 자료이며, 베팅을 권유하지 않습니다
         </div>
       </div>
+
+      {/* 애니메이션 스타일 */}
+      <style jsx>{`
+        @keyframes expandBar {
+          from {
+            width: 0%;
+          }
+        }
+
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+      `}</style>
     </div>
   )
 }
