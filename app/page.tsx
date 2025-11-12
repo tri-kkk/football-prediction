@@ -18,92 +18,92 @@ const LEAGUES = [
     code: 'PL', 
     name: '프리미어리그', 
     flag: 'https://flagcdn.com/w40/gb-eng.png',
-    logo: 'https://crests.football-data.org/PL.png',
+    logo: 'https://media.api-sports.io/football/leagues/39.png',
     isEmoji: false
   },
   { 
     code: 'PD', 
     name: '라리가', 
     flag: 'https://flagcdn.com/w40/es.png',
-    logo: 'https://crests.football-data.org/PD.png',
+    logo: 'https://media.api-sports.io/football/leagues/140.png',
     isEmoji: false
   },
   { 
     code: 'BL1', 
     name: '분데스리가', 
     flag: 'https://flagcdn.com/w40/de.png',
-    logo: 'https://crests.football-data.org/BL1.png',
+    logo: 'https://media.api-sports.io/football/leagues/78.png',
     isEmoji: false
   },
   { 
     code: 'SA', 
     name: '세리에A', 
     flag: 'https://flagcdn.com/w40/it.png',
-    logo: 'https://crests.football-data.org/SA.png',
+    logo: 'https://media.api-sports.io/football/leagues/135.png',
     isEmoji: false
   },
   { 
     code: 'FL1', 
     name: '리그1', 
     flag: 'https://flagcdn.com/w40/fr.png',
-    logo: 'https://crests.football-data.org/FL1.png',
+    logo: 'https://media.api-sports.io/football/leagues/61.png',
     isEmoji: false
   },
   { 
     code: 'PPL', 
     name: '프리메이라리가', 
     flag: 'https://flagcdn.com/w40/pt.png',
-    logo: 'https://crests.football-data.org/PPL.png',
+    logo: 'https://media.api-sports.io/football/leagues/94.png',
     isEmoji: false
   },
   { 
     code: 'DED', 
     name: '에레디비시', 
     flag: 'https://flagcdn.com/w40/nl.png',
-    logo: 'https://crests.football-data.org/DED.png',
+    logo: 'https://media.api-sports.io/football/leagues/88.png',
     isEmoji: false
   },
   { 
     code: 'CL', 
     name: '챔피언스리그', 
     flag: '⭐',
-    logo: 'https://crests.football-data.org/CL.png',
+    logo: 'https://media.api-sports.io/football/leagues/2.png',
     isEmoji: false
   },
   { 
     code: 'EL', 
     name: '유로파리그', 
     flag: '⭐',
-    logo: 'https://crests.football-data.org/EL.png',
+    logo: 'https://media.api-sports.io/football/leagues/3.png',
     isEmoji: false
   },
   { 
     code: 'ELC', 
     name: '챔피언십', 
     flag: 'https://flagcdn.com/w40/gb-eng.png',
-    logo: 'https://crests.football-data.org/ELC.png',
+    logo: 'https://media.api-sports.io/football/leagues/40.png',
     isEmoji: false
   },
 ]
 
 // 오즈 데이터가 있는 리그만 (경기 목록 필터용)
 const LEAGUES_WITH_ODDS = [
-  'ALL', 'PL', 'PD', 'BL1', 'SA', 'FL1', 'CL'
+  'ALL', 'PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'DED', 'CL', 'EL', 'ELC'
 ]
 
 // 헬퍼 함수들
 function getLeagueLogo(league: string): string {
   const leagueMap: Record<string, string> = {
-    'PL': 'https://logoapi.dev/epl/512.png',
-    'PD': 'https://logoapi.dev/laliga/512.png',
-    'BL1': 'https://logoapi.dev/bundesliga/512.png',
-    'SA': 'https://logoapi.dev/seriea/512.png',
-    'FL1': 'https://logoapi.dev/ligue1/512.png',
-    'CL': 'https://logoapi.dev/ucl/512.png',
-    'PPL': 'https://crests.football-data.org/PPL.png',
-    'DED': 'https://crests.football-data.org/DED.png',
-    'EL': 'https://crests.football-data.org/EL.png',
-    'ELC': 'https://crests.football-data.org/ELC.png',
+    'PL': 'https://media.api-sports.io/football/leagues/39.png',
+    'PD': 'https://media.api-sports.io/football/leagues/140.png',
+    'BL1': 'https://media.api-sports.io/football/leagues/78.png',
+    'SA': 'https://media.api-sports.io/football/leagues/135.png',
+    'FL1': 'https://media.api-sports.io/football/leagues/61.png',
+    'CL': 'https://media.api-sports.io/football/leagues/2.png',
+    'PPL': 'https://media.api-sports.io/football/leagues/94.png',
+    'DED': 'https://media.api-sports.io/football/leagues/88.png',
+    'EL': 'https://media.api-sports.io/football/leagues/3.png',
+    'ELC': 'https://media.api-sports.io/football/leagues/40.png',
   }
   return leagueMap[league] || ''
 }
@@ -593,10 +593,10 @@ export default function Home() {
         let allMatches = []
         
         if (selectedLeague === 'ALL') {
-          // 모든 리그의 경기 가져오기 (API-Football)
+          // 모든 리그의 경기 가져오기 (DB에서 오즈 포함)
           const leagues = ['PL', 'PD', 'BL1', 'SA', 'FL1' ,'CL']
           const promises = leagues.map(league => 
-            fetch(`/api/api-football?league=${league}&type=fixtures`, {
+            fetch(`/api/odds-from-db?league=${league}`, {
               headers: {
                 'Cache-Control': 'public, max-age=300' // 5분 캐시
               }
@@ -609,17 +609,34 @@ export default function Home() {
           )
           const results = await Promise.all(promises)
           
-          // 모든 결과 합치기 - 리그 코드 명시적으로 추가
+          // 모든 결과 합치기 - 리그 코드 명시적으로 추가 및 필드 변환
           allMatches = results.flatMap(result => 
             result.data.map((match: any) => ({
-              ...match,
-              league: match.league || result.league  // API에서 누락 시 URL 파라미터 사용
+              // DB 필드명을 프론트엔드 형식으로 변환
+              id: match.id || match.match_id,
+              homeTeam: match.home_team || match.homeTeam,
+              awayTeam: match.away_team || match.awayTeam,
+              league: match.league || getLeagueName(match.league_code) || result.league,
+              leagueCode: match.league_code || match.leagueCode || result.league,
+              utcDate: match.commence_time || match.utcDate,
+              homeCrest: getTeamLogo(match.home_team || match.homeTeam),
+              awayCrest: getTeamLogo(match.away_team || match.awayTeam),
+              // 확률 필드 변환
+              homeWinRate: match.home_probability || match.homeWinRate || 33,
+              drawRate: match.draw_probability || match.drawRate || 34,
+              awayWinRate: match.away_probability || match.awayWinRate || 33,
+              // 오즈 필드
+              homeWinOdds: match.home_odds || match.homeWinOdds,
+              drawOdds: match.draw_odds || match.drawOdds,
+              awayWinOdds: match.away_odds || match.awayWinOdds,
+              // 기타
+              oddsSource: match.odds_source || match.oddsSource || 'db'
             }))
           )
         } else {
-          // 단일 리그 경기 가져오기 (API-Football)
+          // 단일 리그 경기 가져오기 (DB에서 오즈 포함)
           const response = await fetch(
-            `/api/api-football?league=${selectedLeague}&type=fixtures`,
+            `/api/odds-from-db?league=${selectedLeague}`,
             {
               headers: {
                 'Cache-Control': 'public, max-age=300' // 5분 캐시
@@ -639,19 +656,72 @@ export default function Home() {
           
           // 리그 코드 명시적으로 추가
           allMatches = (result.data || []).map((match: any) => ({
-            ...match,
-            league: match.league || selectedLeague  // API에서 누락 시 선택된 리그 사용
+            // DB 필드명을 프론트엔드 형식으로 변환
+            id: match.id || match.match_id,
+            homeTeam: match.home_team || match.homeTeam,
+            awayTeam: match.away_team || match.awayTeam,
+            league: match.league || getLeagueName(match.league_code) || selectedLeague,
+            leagueCode: match.league_code || match.leagueCode,
+            utcDate: match.commence_time || match.utcDate,
+            homeCrest: getTeamLogo(match.home_team || match.homeTeam),
+            awayCrest: getTeamLogo(match.away_team || match.awayTeam),
+            // 확률 필드 변환 (probability → rate)
+            homeWinRate: match.home_probability || match.homeWinRate || 33,
+            drawRate: match.draw_probability || match.drawRate || 34,
+            awayWinRate: match.away_probability || match.awayWinRate || 33,
+            // 오즈 필드
+            homeWinOdds: match.home_odds || match.homeWinOdds,
+            drawOdds: match.draw_odds || match.drawOdds,
+            awayWinOdds: match.away_odds || match.awayWinOdds,
+            // 기타 필드
+            oddsSource: match.odds_source || match.oddsSource || 'db'
           }))
         }
         
-        console.log('🏈 API-Football에서 가져온 경기:', allMatches.length)
+        console.log('🏈 DB에서 가져온 경기 (오즈 포함):', allMatches.length)
+        if (allMatches.length > 0) {
+          console.log('📋 첫 번째 경기 샘플:', {
+            id: allMatches[0].id,
+            homeTeam: allMatches[0].homeTeam,
+            awayTeam: allMatches[0].awayTeam,
+            homeWinRate: allMatches[0].homeWinRate,
+            drawRate: allMatches[0].drawRate,
+            awayWinRate: allMatches[0].awayWinRate
+          })
+        }
         
-        // API-Football 응답은 이미 Match 형식으로 변환되어 있음
-        // 추가로 oddsSource 필드만 추가
-        const convertedMatches = allMatches.map((match: any) => ({
-          ...match,
-          oddsSource: 'live' as const
-        }))
+        // ✅ 중복 제거 (id + 팀 이름 조합 기준)
+        const seenIds = new Set()
+        const seenMatches = new Set()
+        const uniqueMatches = allMatches.filter((match) => {
+          const matchId = match.id || match.match_id
+          
+          // ID로 중복 체크
+          if (matchId && seenIds.has(matchId)) {
+            console.log('🔍 ID 중복 발견:', matchId, match.homeTeam, 'vs', match.awayTeam)
+            return false
+          }
+          
+          // 팀 이름 조합으로 중복 체크 (대소문자 무시, 공백 제거)
+          const homeTeam = (match.homeTeam || '').toLowerCase().replace(/\s+/g, '')
+          const awayTeam = (match.awayTeam || '').toLowerCase().replace(/\s+/g, '')
+          const matchKey = `${homeTeam}-vs-${awayTeam}`
+          
+          if (seenMatches.has(matchKey)) {
+            console.log('🔍 팀 조합 중복 발견:', match.homeTeam, 'vs', match.awayTeam)
+            return false
+          }
+          
+          // 중복이 아니면 추가
+          if (matchId) seenIds.add(matchId)
+          seenMatches.add(matchKey)
+          return true
+        })
+        
+        console.log('📊 중복 제거 결과:', allMatches.length, '→', uniqueMatches.length)
+        
+        // DB API는 이미 Match 형식으로 반환되며 실제 오즈 포함
+        const convertedMatches = uniqueMatches
         
         // 현재 시간 기준으로 미래 경기만 필터링
         const now = new Date()
@@ -983,11 +1053,9 @@ export default function Home() {
       // 실제 뉴스 API 호출 (영문 팀명 사용)
       fetchNewsKeywords(match.homeTeam, match.awayTeam)
       
-      // 🔥 트렌드 데이터가 없으면 로드
-      if (!trendData[match.id] || trendData[match.id].length === 0) {
-        console.log('📊 트렌드 데이터 로딩 시작:', match.id)
-        await fetchTrendData(match.id.toString(), match)
-      }
+      // 🔥 카드 클릭 시 항상 트렌드 데이터 새로고침
+      console.log('📊 트렌드 데이터 강제 새로고침:', match.id)
+      await fetchTrendData(match.id.toString(), match)
                   
       setTimeout(() => {
         const chartContainer = document.getElementById(`trend-chart-${match.id}`)
@@ -1570,6 +1638,11 @@ export default function Home() {
               const latestTrend = currentTrend?.[currentTrend.length - 1]
               const previousTrend = currentTrend?.[currentTrend.length - 2]
               
+              // 표시할 확률 (트렌드 최신값 또는 DB의 초기값)
+              const displayHomeProb = latestTrend ? latestTrend.homeWinProbability : (match.homeWinRate || 33.3)
+              const displayDrawProb = latestTrend ? latestTrend.drawProbability : (match.drawRate || 33.3)
+              const displayAwayProb = latestTrend ? latestTrend.awayWinProbability : (match.awayWinRate || 33.3)
+              
               const homeChange = latestTrend && previousTrend 
                 ? latestTrend.homeWinProbability - previousTrend.homeWinProbability
                 : 0
@@ -1688,7 +1761,7 @@ export default function Home() {
                           <div 
                             className="absolute bottom-0 left-0 h-1 transition-all duration-500 bg-blue-500"
                             style={{ 
-                              width: `${latestTrend ? latestTrend.homeWinProbability : match.homeWinRate}%` 
+                              width: `${displayHomeProb}%` 
                             }}
                           ></div>
                           
@@ -1699,7 +1772,7 @@ export default function Home() {
                             <div className={`text-2xl md:text-4xl font-black transition-all duration-500 ${
                               darkMode ? 'text-white' : 'text-black'
                             } ${homeChange > 0 ? 'animate-pulse' : ''}`}>
-                              {latestTrend ? Math.round(latestTrend.homeWinProbability) : match.homeWinRate}%
+                              {Math.round(displayHomeProb)}%
                             </div>
                             <div className="h-4 mt-1">
                               {homeChange !== 0 && (
@@ -1719,7 +1792,7 @@ export default function Home() {
                           <div 
                             className="absolute bottom-0 left-0 h-1 transition-all duration-500 bg-gray-600"
                             style={{ 
-                              width: `${latestTrend ? latestTrend.drawProbability : match.drawRate}%` 
+                              width: `${displayDrawProb}%` 
                             }}
                           ></div>
                           
@@ -1728,7 +1801,7 @@ export default function Home() {
                               무승부
                             </div>
                             <div className="text-2xl md:text-4xl font-black text-gray-400">
-                              {latestTrend ? Math.round(latestTrend.drawProbability) : match.drawRate}%
+                              {Math.round(displayDrawProb)}%
                             </div>
                             <div className="h-4 mt-1"></div>
                           </div>
@@ -1740,7 +1813,7 @@ export default function Home() {
                           <div 
                             className="absolute bottom-0 left-0 h-1 transition-all duration-500 bg-red-500"
                             style={{ 
-                              width: `${latestTrend ? latestTrend.awayWinProbability : match.awayWinRate}%` 
+                              width: `${displayAwayProb}%` 
                             }}
                           ></div>
                           
@@ -1751,7 +1824,7 @@ export default function Home() {
                             <div className={`text-2xl md:text-4xl font-black transition-all duration-500 text-white ${
                               awayChange > 0 ? 'animate-pulse' : ''
                             }`}>
-                              {latestTrend ? Math.round(latestTrend.awayWinProbability) : match.awayWinRate}%
+                              {Math.round(displayAwayProb)}%
                             </div>
                             <div className="h-4 mt-1">
                               {awayChange !== 0 && (
