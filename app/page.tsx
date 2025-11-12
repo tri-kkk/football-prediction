@@ -619,8 +619,8 @@ export default function Home() {
               league: match.league || getLeagueName(match.league_code) || result.league,
               leagueCode: match.league_code || match.leagueCode || result.league,
               utcDate: match.commence_time || match.utcDate,
-              homeCrest: getTeamLogo(match.home_team || match.homeTeam),
-              awayCrest: getTeamLogo(match.away_team || match.awayTeam),
+              homeCrest: match.home_team_logo || getTeamLogo(match.home_team || match.homeTeam),  // 🆕 DB 로고 우선
+              awayCrest: match.away_team_logo || getTeamLogo(match.away_team || match.awayTeam),  // 🆕 DB 로고 우선
               // 확률 필드 변환
               homeWinRate: match.home_probability || match.homeWinRate || 33,
               drawRate: match.draw_probability || match.drawRate || 34,
@@ -663,8 +663,8 @@ export default function Home() {
             league: match.league || getLeagueName(match.league_code) || selectedLeague,
             leagueCode: match.league_code || match.leagueCode,
             utcDate: match.commence_time || match.utcDate,
-            homeCrest: getTeamLogo(match.home_team || match.homeTeam),
-            awayCrest: getTeamLogo(match.away_team || match.awayTeam),
+            homeCrest: match.home_team_logo || getTeamLogo(match.home_team || match.homeTeam),  // 🆕 DB 로고 우선
+            awayCrest: match.away_team_logo || getTeamLogo(match.away_team || match.awayTeam),  // 🆕 DB 로고 우선
             // 확률 필드 변환 (probability → rate)
             homeWinRate: match.home_probability || match.homeWinRate || 33,
             drawRate: match.draw_probability || match.drawRate || 34,
