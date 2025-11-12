@@ -637,7 +637,7 @@ export default function MovementPage() {
           : [selectedLeague]
         
         const promises = leagues.map(league => 
-          fetch(`/api/api-football?league=${league}&type=fixtures`).then(r => r.json())
+          fetch(`/api/odds-from-db?league=${league}`).then(r => r.json())
         )
         
         const results = await Promise.all(promises)
@@ -656,10 +656,19 @@ export default function MovementPage() {
         
         console.log('📊 활성 경기 수:', activeMatches.length, '/ 전체:', allMatches.length)
         
+        if (activeMatches.length > 0) {
+          console.log('📋 첫 번째 활성 경기:', {
+            id: activeMatches[0].match_id || activeMatches[0].id,
+            home_team: activeMatches[0].home_team,
+            away_team: activeMatches[0].away_team,
+            home_probability: activeMatches[0].home_probability
+          })
+        }
+        
         const matchesWithAnalysis = await Promise.all(
           activeMatches.slice(0, 40).map(async (match: any) => {
             try {
-              const trendResponse = await fetch(`/api/match-trend?matchId=${match.match_id}`)
+              const trendResponse = await fetch(`/api/match-trend?matchId=${match.match_id || match.id}`)
               const trendResult = await trendResponse.json()
               
               let volatility = 0
@@ -691,22 +700,27 @@ export default function MovementPage() {
                 minute: '2-digit' 
               })
               
-              const homeTeamEng = match.home_team || 'Unknown'
-              const awayTeamEng = match.away_team || 'Unknown'
+              // DB 필드명 매핑
+              const homeTeamEng = match.home_team || match.homeTeam || 'Unknown'
+              const awayTeamEng = match.away_team || match.awayTeam || 'Unknown'
+              
+              // 한글 팀명 변환
+              const homeTeamKR = translateTeamName(homeTeamEng)
+              const awayTeamKR = translateTeamName(awayTeamEng)
               
               return {
-                id: match.match_id,
-                league: match.league_code,
-                leagueLogo: LEAGUES.find(l => l.code === match.league_code)?.logo,
-                homeTeam: homeTeamEng,  // 영문 그대로 사용
-                homeTeamKR: translateTeamName(homeTeamEng),  // 한글은 보관만
-                awayTeam: awayTeamEng,  // 영문 그대로 사용
-                awayTeamKR: translateTeamName(awayTeamEng),  // 한글은 보관만
-                homeCrest: getTeamLogo(translateTeamName(homeTeamEng)),
-                awayCrest: getTeamLogo(translateTeamName(awayTeamEng)),
-                homeWinRate: match.home_probability || 0,
-                drawRate: match.draw_probability || 0,
-                awayWinRate: match.away_probability || 0,
+                id: match.match_id || match.id,
+                league: match.league_code || match.leagueCode,
+                leagueLogo: LEAGUES.find(l => l.code === (match.league_code || match.leagueCode))?.logo,
+                homeTeam: homeTeamEng,
+                homeTeamKR: homeTeamKR,
+                awayTeam: awayTeamEng,
+                awayTeamKR: awayTeamKR,
+                homeCrest: match.home_team_logo || getTeamLogo(homeTeamKR),  // DB 로고 우선
+                awayCrest: match.away_team_logo || getTeamLogo(awayTeamKR),  // DB 로고 우선
+                homeWinRate: match.home_probability || match.homeWinRate || 0,
+                drawRate: match.draw_probability || match.drawRate || 0,
+                awayWinRate: match.away_probability || match.awayWinRate || 0,
                 volatility,
                 momentum,
                 trend: momentum > 10 ? 'up' as const : momentum < -10 ? 'down' as const : 'stable' as const,

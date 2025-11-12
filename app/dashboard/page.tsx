@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { getTeamLogo } from '../teamLogos'
+import { getTeamLogo, TEAM_NAME_KR } from '../teamLogos'
 import { smartFilters, useSmartFilters, getMatchBadges, type Match } from '../utils/smartFilters'
 
 // 리그 정보 (메인 페이지와 동일)
@@ -91,6 +91,15 @@ function getLeagueName(leagueCode: string): string {
   return leagueNames[leagueCode] || leagueCode
 }
 
+// 영문 팀명 → 한글 팀명 변환 함수
+function translateTeamName(englishName: string): string {
+  // TEAM_NAME_KR 객체에서 찾기
+  const koreanName = TEAM_NAME_KR[englishName]
+  
+  // 매칭되면 한글명 반환, 없으면 영문 그대로 반환
+  return koreanName || englishName
+}
+
 export default function DashboardPage() {
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
@@ -113,65 +122,125 @@ export default function DashboardPage() {
           // 모든 리그의 경기 가져오기
           const leagues = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'CL']
           const promises = leagues.map(league => 
-            fetch(`/api/api-football?league=${league}&type=fixtures`)
-              .then(r => r.json())
-              .then(result => ({
-                league,
-                data: result.success ? result.data : []
-              }))
+            fetch(`/api/odds-from-db?league=${league}`).then(r => r.json())
           )
           const results = await Promise.all(promises)
           
           // 모든 결과 합치기
           allMatches = results.flatMap(result => 
-            result.data.map((match: any) => ({
-              ...match,
-              league: match.league || result.league
-            }))
+            result.success ? result.data : []
           )
         } else {
-          // 단일 리그 경기 가져오기
-          const response = await fetch(`/api/api-football?league=${selectedLeague}&type=fixtures`)
+          // 단일 리그 오즈 가져오기
+          const response = await fetch(`/api/odds-from-db?league=${selectedLeague}`)
           
-          if (!response.ok) throw new Error(`HTTP ${response.status}`)
-          
-          const data = await response.json()
-          
-          if (data && data.success && Array.isArray(data.data)) {
-            allMatches = data.data.map((match: any) => ({
-              ...match,
-              league: match.league || selectedLeague
-            }))
+          if (!response.ok) {
+            throw new Error('오즈 데이터를 불러올 수 없습니다')
           }
+          
+          const result = await response.json()
+          
+          if (!result.success) {
+            throw new Error(result.error || '데이터 로드 실패')
+          }
+          
+          allMatches = result.data || []
         }
         
-        // 데이터 변환
-        const convertedMatches = allMatches.map((item: any) => {
-          // API-Football 응답 구조에 맞게 수정
-          const homeTeamKR = item.homeTeamKR || item.home_team || item.homeTeam
-          const awayTeamKR = item.awayTeamKR || item.away_team || item.awayTeam
-          const homeTeamEN = item.homeTeam || item.home_team
-          const awayTeamEN = item.awayTeam || item.away_team
+        console.log('📋 DB에서 가져온 오즈:', allMatches.length)
+        
+        // DB 데이터를 Match 형식으로 변환 (메인 page.tsx와 동일한 구조)
+        const convertedMatches = allMatches.map((match: any) => {
+          const homeTeamEng = match.home_team || match.homeTeam || 'Unknown'
+          const awayTeamEng = match.away_team || match.awayTeam || 'Unknown'
+          
+          // 영문 팀명 → 한글 팀명 변환
+          const homeTeamKR = translateTeamName(homeTeamEng)
+          const awayTeamKR = translateTeamName(awayTeamEng)
           
           return {
-            id: item.id,
-            homeTeamKR: homeTeamKR,
-            awayTeamKR: awayTeamKR,
-            homeCrest: getTeamLogo(homeTeamEN || homeTeamKR),
-            awayCrest: getTeamLogo(awayTeamEN || awayTeamKR),
-            homeWinRate: item.homeWinRate || item.home_probability || 0,
-            drawRate: item.drawRate || item.draw_probability || 0,
-            awayWinRate: item.awayWinRate || item.away_probability || 0,
-            utcDate: item.utcDate || item.commence_time || new Date().toISOString(),
-            leagueCode: item.leagueCode || item.league_code || item.league || selectedLeague,
+            // DB 필드명을 프론트엔드 형식으로 변환
+            id: match.id || match.match_id,
+            homeTeamKR: homeTeamKR,           // 한글 팀명
+            awayTeamKR: awayTeamKR,           // 한글 팀명
+            homeCrest: match.home_team_logo || getTeamLogo(homeTeamKR),  // DB 로고 우선, 없으면 매핑
+            awayCrest: match.away_team_logo || getTeamLogo(awayTeamKR),  // DB 로고 우선, 없으면 매핑
+            // 확률 필드 변환
+            homeWinRate: match.home_probability || match.homeWinRate || 33,
+            drawRate: match.draw_probability || match.drawRate || 34,
+            awayWinRate: match.away_probability || match.awayWinRate || 33,
+            // 오즈 필드
+            homeWinOdds: match.home_odds || match.homeWinOdds,
+            drawOdds: match.draw_odds || match.drawOdds,
+            awayWinOdds: match.away_odds || match.awayWinOdds,
+            // 기타 필드
+            utcDate: match.commence_time || match.utcDate,
+            leagueCode: match.league_code || match.leagueCode || selectedLeague,
+            oddsSource: match.odds_source || match.oddsSource || 'db',
             trendData: []
           }
         })
         
-        // 예정된 경기만 필터링
-        const scheduledMatches = convertedMatches.filter((match: Match) => {
-          return getMatchStatus(match) === 'SCHEDULED'
+        console.log('🔄 변환된 경기:', convertedMatches.length)
+        if (convertedMatches.length > 0) {
+          console.log('📋 첫 번째 경기 샘플:', {
+            id: convertedMatches[0].id,
+            homeTeamKR: convertedMatches[0].homeTeamKR,
+            awayTeamKR: convertedMatches[0].awayTeamKR,
+            homeWinRate: convertedMatches[0].homeWinRate,
+            drawRate: convertedMatches[0].drawRate,
+            awayWinRate: convertedMatches[0].awayWinRate
+          })
+        }
+        
+        // ✅ 중복 제거 (id + 팀 이름 조합 기준)
+        const seenIds = new Set()
+        const seenMatches = new Set()
+        const uniqueMatches = convertedMatches.filter((match: Match) => {
+          const matchId = match.id
+          
+          // ID로 중복 체크
+          if (matchId && seenIds.has(matchId)) {
+            console.log('🔍 ID 중복 발견:', matchId, match.homeTeamKR, 'vs', match.awayTeamKR)
+            return false
+          }
+          
+          // 팀 이름 조합으로 중복 체크 (대소문자 무시, 공백 제거)
+          const homeTeam = (match.homeTeamKR || '').toLowerCase().replace(/\s+/g, '')
+          const awayTeam = (match.awayTeamKR || '').toLowerCase().replace(/\s+/g, '')
+          const matchKey = `${homeTeam}-vs-${awayTeam}`
+          
+          if (seenMatches.has(matchKey)) {
+            console.log('🔍 팀 조합 중복 발견:', match.homeTeamKR, 'vs', match.awayTeamKR)
+            return false
+          }
+          
+          // 중복이 아니면 추가
+          if (matchId) seenIds.add(matchId)
+          seenMatches.add(matchKey)
+          return true
         })
+        
+        console.log('📊 중복 제거 결과:', convertedMatches.length, '→', uniqueMatches.length)
+        
+        // 예정된 경기만 필터링
+        const scheduledMatches = uniqueMatches.filter((match: Match) => {
+          const status = getMatchStatus(match)
+          const matchTime = new Date(match.utcDate).getTime()
+          const now = Date.now()
+          const hoursDiff = (now - matchTime) / (1000 * 60 * 60)
+          
+          console.log(`🏟️ ${match.homeTeamKR} vs ${match.awayTeamKR}:`, {
+            matchDate: match.utcDate,
+            hoursDiff: hoursDiff.toFixed(2) + 'h',
+            status: status,
+            isFiltered: status !== 'SCHEDULED'
+          })
+          
+          return status === 'SCHEDULED'
+        })
+        
+        console.log(`✅ 예정된 경기: ${scheduledMatches.length}개`)
         
         // 날짜순 정렬
         scheduledMatches.sort((a: Match, b: Match) => {
@@ -180,8 +249,8 @@ export default function DashboardPage() {
         
         setMatches(scheduledMatches)
       } catch (err) {
-        console.error('Error:', err)
-        setError('데이터를 불러오는데 실패했습니다.')
+        console.error('❌ 경기 데이터 로드 실패:', err)
+        setError('경기 데이터를 불러오는데 실패했습니다')
         setMatches([])
       } finally {
         setLoading(false)
