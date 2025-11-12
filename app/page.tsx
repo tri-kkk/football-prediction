@@ -345,7 +345,8 @@ export default function Home() {
     }
   }, [darkMode])
 
-  // HilltopAds 광고 로드 (데스크톱 전용)
+  // HilltopAds 광고 로드 (임시 비활성화)
+  /*
   useEffect(() => {
     // 모바일 체크 (lg 브레이크포인트: 1024px)
     const isMobile = window.innerWidth < 1024
@@ -377,6 +378,8 @@ export default function Home() {
       }
     }
   }, [])
+  */
+
 
   // 🔴 라이브 경기 수 확인
   useEffect(() => {
@@ -2110,7 +2113,8 @@ export default function Home() {
 
           {/* 우측 순위표 사이드바 */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            {/* HilltopAds - 순위표 위 배너 (데스크톱 전용) */}
+            {/* HilltopAds - 순위표 위 배너 (데스크톱 전용) - 임시 비활성화 */}
+            {/* 
             <div className={`hidden lg:block mb-6 rounded-xl overflow-hidden ${
               darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
             }`}>
@@ -2118,6 +2122,7 @@ export default function Home() {
                 <div id="hilltop-ad-container"></div>
               </div>
             </div>
+            */}
             
             {/* 전체 리그 선택 시 - 캐러셀 */}
             {selectedLeague === 'ALL' && (
