@@ -661,7 +661,7 @@ export default function Home() {
           allMatches = results.flatMap(result => 
             result.data.map((match: any) => ({
               // DB 필드명을 프론트엔드 형식으로 변환
-              id: match.id || match.match_id,
+              id: match.match_id || match_id,
               homeTeam: match.home_team || match.homeTeam,
               awayTeam: match.away_team || match.awayTeam,
               league: match.league || getLeagueName(match.league_code) || result.league,

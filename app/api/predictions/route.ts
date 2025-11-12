@@ -12,7 +12,7 @@ export async function GET(request: Request) {
       )
     }
 
-    const API_KEY = process.env.FOOTBALL_API_KEY
+    const API_KEY = process.env.API_FOOTBALL_KEY
     const API_HOST = 'v3.football.api-sports.io'
 
     if (!API_KEY) {
