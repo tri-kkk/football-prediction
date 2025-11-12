@@ -10,14 +10,18 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-// 리그 설정
+// 리그 설정 (10개)
 const LEAGUES = [
   { code: 'PL', id: 39, name: 'Premier League' },
   { code: 'PD', id: 140, name: 'La Liga' },
   { code: 'BL1', id: 78, name: 'Bundesliga' },
   { code: 'SA', id: 135, name: 'Serie A' },
   { code: 'FL1', id: 61, name: 'Ligue 1' },
+  { code: 'PPL', id: 94, name: 'Primeira Liga' },
+  { code: 'DED', id: 88, name: 'Eredivisie' },
   { code: 'CL', id: 2, name: 'Champions League' },
+  { code: 'EL', id: 3, name: 'Europa League' },
+  { code: 'ELC', id: 40, name: 'Championship' },
 ]
 
 const LEAGUE_ID_TO_CODE: Record<number, string> = {
@@ -26,7 +30,11 @@ const LEAGUE_ID_TO_CODE: Record<number, string> = {
   78: 'BL1',
   135: 'SA',
   61: 'FL1',
+  94: 'PPL',
+  88: 'DED',
   2: 'CL',
+  3: 'EL',
+  40: 'ELC',
 }
 
 // 오즈를 확률로 변환
