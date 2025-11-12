@@ -330,6 +330,8 @@ export default function Home() {
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [currentLeagueIndex, setCurrentLeagueIndex] = useState(0)
   const [allLeagueStandings, setAllLeagueStandings] = useState<{ [key: string]: any[] }>({})
+  // 🔴 라이브 경기 수
+  const [liveCount, setLiveCount] = useState(0)
 
   // 전체 리그 목록 (전체 제외)
   const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
@@ -370,6 +372,28 @@ export default function Home() {
         container.removeChild(script)
       }
     }
+  }, [])
+
+  // 🔴 라이브 경기 수 확인
+  useEffect(() => {
+    async function checkLive() {
+      try {
+        const response = await fetch('/api/live-matches')
+        const data = await response.json()
+        if (data.success) {
+          setLiveCount(data.count)
+          console.log('🔴 라이브 경기:', data.count, '개')
+        }
+      } catch (error) {
+        console.error('❌ 라이브 경기 수 확인 실패:', error)
+      }
+    }
+
+    checkLive()
+    
+    // 30초마다 확인
+    const interval = setInterval(checkLive, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // selectedLeague 변경 시 순위표 인덱스 동기화
@@ -1466,6 +1490,36 @@ export default function Home() {
 
           {/* 메인 콘텐츠 */}
           <main className="flex-1 min-w-0">
+            
+            {/* 🔴 라이브 중계 배너 */}
+            {liveCount > 0 && (
+              <a 
+                href="/live"
+                className={`block mb-6 rounded-2xl p-6 cursor-pointer transition-all hover:scale-[1.02] ${
+                  darkMode 
+                    ? 'bg-gradient-to-r from-red-600 via-pink-600 to-purple-600' 
+                    : 'bg-gradient-to-r from-red-500 via-pink-500 to-purple-500'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-4 h-4 bg-white rounded-full animate-pulse" />
+                    <div>
+                      <h2 className="text-2xl font-bold text-white mb-1">
+                        🔴 지금 {liveCount}개 경기 진행 중!
+                      </h2>
+                      <p className="text-white/90 text-sm">
+                        실시간 점수와 배당 변화를 확인하세요 • 15초마다 자동 업데이트
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-white text-5xl font-bold hidden sm:block">
+                    →
+                  </div>
+                </div>
+              </a>
+            )}
+            
             {/* 리그 필터 (모바일만) */}
             <div className={`lg:hidden mb-6 p-3 rounded-2xl ${
               darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'

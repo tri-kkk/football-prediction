@@ -1,4 +1,4 @@
-// 7일 트렌드 차트용 데이터 (API-Football 버전)
+// 트렌드 차트용 데이터
 export const dynamic = 'force-dynamic'
 
 interface TrendPoint {
@@ -14,40 +14,48 @@ export async function GET(request: Request) {
     const matchId = searchParams.get('matchId')
     
     if (!matchId) {
-      return Response.json({ error: 'matchId required' }, { status: 400 })
+      console.error('❌ matchId 누락')
+      return Response.json({ 
+        success: false,
+        error: 'matchId required' 
+      }, { status: 400 })
     }
     
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
     if (!supabaseUrl || !supabaseKey) {
-      return Response.json({ error: 'Database not configured' }, { status: 500 })
+      console.error('❌ Supabase 환경변수 누락')
+      return Response.json({ 
+        success: false,
+        error: 'Database not configured' 
+      }, { status: 500 })
     }
     
-    // 7일(168시간) 전 시간 계산
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    // 24시간 전 시간 계산
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     
     console.log('📊 Fetching trend data:', {
       matchId,
-      from: sevenDaysAgo,
+      from: twentyFourHoursAgo,
       to: new Date().toISOString()
     })
     
-    // Supabase에서 7일치 히스토리 가져오기
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/match_odds_history?` +
+    // Supabase REST API 호출
+    const apiUrl = `${supabaseUrl}/rest/v1/match_odds_history?` +
       `match_id=eq.${matchId}&` +
-      `created_at=gte.${sevenDaysAgo}&` +
+      `created_at=gte.${twentyFourHoursAgo}&` +
       `select=created_at,home_probability,draw_probability,away_probability&` +
-      `order=created_at.asc`,
-      {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        },
-        next: { revalidate: 300 } // 5분 캐싱
-      }
-    )
+      `order=created_at.asc`
+    
+    const response = await fetch(apiUrl, {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      next: { revalidate: 300 } // 5분 캐싱
+    })
     
     if (!response.ok) {
       const errorText = await response.text()
@@ -56,7 +64,14 @@ export async function GET(request: Request) {
         statusText: response.statusText,
         error: errorText
       })
-      throw new Error(`Supabase error: ${response.status} ${response.statusText}`)
+      
+      // 빈 데이터 반환 (에러 대신)
+      return Response.json({
+        success: true,
+        data: [],
+        count: 0,
+        message: 'No trend data available yet'
+      })
     }
     
     const data: TrendPoint[] = await response.json()
@@ -64,15 +79,27 @@ export async function GET(request: Request) {
     console.log('✅ Trend data fetched:', {
       dataPoints: data.length,
       firstPoint: data[0]?.created_at,
-      lastPoint: data[data.length - 1]?.created_at
+      lastPoint: data[data.length - 1]?.created_at,
+      matchId
     })
+    
+    // 데이터가 없는 경우
+    if (!data || data.length === 0) {
+      console.log('⚠️ Empty data for match:', matchId)
+      return Response.json({
+        success: true,
+        data: [],
+        count: 0,
+        message: 'Data collection in progress'
+      })
+    }
     
     // lightweight-charts 포맷으로 변환
     const formatted = data.map(point => ({
       timestamp: point.created_at,
-      homeWinProbability: point.home_probability,
-      drawProbability: point.draw_probability,
-      awayWinProbability: point.away_probability
+      homeWinProbability: Number(point.home_probability),
+      drawProbability: Number(point.draw_probability),
+      awayWinProbability: Number(point.away_probability)
     }))
     
     return Response.json({
@@ -80,11 +107,7 @@ export async function GET(request: Request) {
       data: formatted,
       count: formatted.length,
       source: 'database',
-      query: {
-        matchId,
-        from: sevenDaysAgo,
-        to: new Date().toISOString()
-      }
+      period: '24h'
     })
     
   } catch (error) {
@@ -92,8 +115,7 @@ export async function GET(request: Request) {
     return Response.json(
       { 
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch trend data',
-        details: error instanceof Error ? error.stack : undefined
+        error: error instanceof Error ? error.message : 'Failed to fetch trend data'
       }, 
       { status: 500 }
     )
