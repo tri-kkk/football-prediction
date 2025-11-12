@@ -345,8 +345,12 @@ export default function Home() {
     }
   }, [darkMode])
 
-  // HilltopAds 광고 로드
+  // HilltopAds 광고 로드 (데스크톱 전용)
   useEffect(() => {
+    // 모바일 체크 (lg 브레이크포인트: 1024px)
+    const isMobile = window.innerWidth < 1024
+    if (isMobile) return
+
     const container = document.getElementById('hilltop-ad-container')
     if (!container) return
 
@@ -1565,8 +1569,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 상단 배너 728x90 - 날짜 필터 위 */}
-            <div className="mb-6">
+            {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) */}
+            <div className="hidden lg:block mb-6">
               <div className={`rounded-xl overflow-hidden mx-auto`} style={{ maxWidth: '728px' }}>
                 <a 
                   href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
@@ -2106,8 +2110,8 @@ export default function Home() {
 
           {/* 우측 순위표 사이드바 */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            {/* HilltopAds - 순위표 위 배너 */}
-            <div className={`mb-6 rounded-xl overflow-hidden ${
+            {/* HilltopAds - 순위표 위 배너 (데스크톱 전용) */}
+            <div className={`hidden lg:block mb-6 rounded-xl overflow-hidden ${
               darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
             }`}>
               <div className="p-4">
