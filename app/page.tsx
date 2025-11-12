@@ -3,7 +3,7 @@ import NewsKeywords from './components/NewsKeywords'
 import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
-
+import H2HModal from './components/H2HModal'
 
 // 리그 정보 (국기 이미지 포함)
 const LEAGUES = [
@@ -307,6 +307,8 @@ function setCachedData(key: string, data: any) {
 export default function Home() {
   const [selectedLeague, setSelectedLeague] = useState('ALL')
   const [matches, setMatches] = useState<Match[]>([])
+    const [h2hModalOpen, setH2hModalOpen] = useState(false)
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null)
@@ -1707,52 +1709,76 @@ export default function Home() {
                       }
                     `}
                   >
-                    {/* 상단: 리그 정보 + 날짜/시간 - 한 줄 중앙 배치 */}
-                    <div className={`flex items-center justify-center gap-3 px-4 pt-4 pb-3 border-b ${
+                    {/* 상단: 리그 정보 + 날짜/시간 + H2H 버튼 */}
+                    <div className={`flex items-center justify-between gap-3 px-4 pt-4 pb-3 border-b ${
                       darkMode ? 'border-gray-800' : 'border-gray-200'
                     }`}>
-                      {/* 리그 국기 이미지 */}
-                      {(() => {
-                        const flag = getLeagueFlag(match.leagueCode)
-                        if (flag.isEmoji) {
-                          return <span className="text-xl">{flag.url}</span>
-                        } else {
-                          return (
-                            <img 
-                              src={flag.url} 
-                              alt={match.league}
-                              className="w-6 h-6 object-contain"
-                            />
-                          )
-                        }
-                      })()}
-                      
-                      {/* 리그명 */}
-                      <span className={`text-base font-bold ${
-                        darkMode ? 'text-white' : 'text-black'
-                      }`}>
-                        {match.league}
-                      </span>
-                      
-                      {/* 구분선 */}
-                      <span className={`text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
-                      
-                      {/* 날짜 */}
-                      <span className={`text-sm font-semibold ${
-                        darkMode ? 'text-gray-300' : 'text-gray-700'
-                      }`}>
-                        {formatDate(match.utcDate)}
-                      </span>
-                      
-                      {/* 구분선 */}
-                      <span className={`text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
-                      
-                      {/* 시간 */}
-                      <span className={`text-lg font-bold ${
-                        darkMode ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {formatTime(match.utcDate)}
-                      </span>
+                      {/* 왼쪽: 리그 정보 + 날짜/시간 */}
+                      <div className="flex items-center gap-3">
+                        {/* 리그 국기 이미지 */}
+                        {(() => {
+                          const flag = getLeagueFlag(match.leagueCode)
+                          if (flag.isEmoji) {
+                            return <span className="text-xl">{flag.url}</span>
+                          } else {
+                            return (
+                              <img 
+                                src={flag.url} 
+                                alt={match.league}
+                                className="w-6 h-6 object-contain"
+                              />
+                            )
+                          }
+                        })()}
+                        
+                        {/* 리그명 */}
+                        <span className={`text-base font-bold ${
+                          darkMode ? 'text-white' : 'text-black'
+                        }`}>
+                          {match.league}
+                        </span>
+                        
+                        {/* 구분선 */}
+                        <span className={`text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
+                        
+                        {/* 날짜 */}
+                        <span className={`text-sm font-semibold ${
+                          darkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>
+                          {formatDate(match.utcDate)}
+                        </span>
+                        
+                        {/* 구분선 */}
+                        <span className={`text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
+                        
+                        {/* 시간 */}
+                        <span className={`text-lg font-bold ${
+                          darkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {formatTime(match.utcDate)}
+                        </span>
+                      </div>
+
+                      {/* 오른쪽: 상대전적 버튼 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedMatch(match)
+                          setH2hModalOpen(true)
+                        }}
+                        className={`
+                          flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm
+                          transition-all hover:scale-105 active:scale-95 shadow-sm
+                          ${darkMode 
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white border border-blue-500' 
+                            : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500'
+                          }
+                        `}
+                        title="상대전적 보기"
+                      >
+                        <span>📊</span>
+                        <span className="hidden sm:inline">상대전적</span>
+                      </button>
                     </div>
 
                     {/* 메인 콘텐츠 영역 */}
@@ -2479,6 +2505,22 @@ export default function Home() {
           animation: fadeIn 0.5s ease-out forwards;
         }
       `}</style>
+
+      {/* H2H 모달 */}
+      {selectedMatch && (
+        <H2HModal
+          isOpen={h2hModalOpen}
+          onClose={() => {
+            setH2hModalOpen(false)
+            setSelectedMatch(null)
+          }}
+          homeTeam={selectedMatch.homeTeam}
+          awayTeam={selectedMatch.awayTeam}
+          league={selectedMatch.leagueCode}
+          homeTeamLogo={selectedMatch.homeCrest}
+          awayTeamLogo={selectedMatch.awayCrest}
+        />
+      )}
     </div>
   )
 }
