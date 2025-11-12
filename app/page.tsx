@@ -939,15 +939,19 @@ export default function Home() {
   useEffect(() => {
     if (expandedMatchId) {
       const currentTrend = trendData[expandedMatchId]
-      if (currentTrend && currentTrend.length > 0) {
-        setTimeout(() => {
-          const chartContainer = document.getElementById(`trend-chart-${expandedMatchId}`)
-          if (chartContainer) {
+      setTimeout(() => {
+        const chartContainer = document.getElementById(`trend-chart-${expandedMatchId}`)
+        if (chartContainer) {
+          // 데이터가 없어도 렌더링 시도 (renderChart가 메시지 표시)
+          if (currentTrend && currentTrend.length > 0) {
             console.log('📈 차트 자동 렌더링:', currentTrend.length, 'points')
             renderChart(chartContainer, currentTrend)
+          } else {
+            console.log('📊 차트 렌더링: 데이터 수집 중 메시지 표시')
+            renderChart(chartContainer, [])
           }
-        }, 200)
-      }
+        }
+      }, 200)
     }
   }, [trendData, expandedMatchId, darkMode])
 
@@ -1055,18 +1059,22 @@ export default function Home() {
       
       // 🔥 카드 클릭 시 항상 트렌드 데이터 새로고침
       console.log('📊 트렌드 데이터 강제 새로고침:', match.id)
-      await fetchTrendData(match.id.toString(), match)
+      const freshTrend = await fetchTrendData(match.id.toString(), match)
                   
       setTimeout(() => {
         const chartContainer = document.getElementById(`trend-chart-${match.id}`)
-        const currentTrend = trendData[match.id]
+        const currentTrend = freshTrend || trendData[match.id]
         
         // 트렌드 데이터가 있을 때만 차트 렌더링
-        if (chartContainer && currentTrend && currentTrend.length > 0) {
-          console.log('📈 차트 렌더링 시작:', currentTrend.length, 'points')
-          renderChart(chartContainer, currentTrend)
-        } else {
-          console.log('⚠️ 차트 렌더링 실패 - 데이터 없음')
+        if (chartContainer) {
+          if (currentTrend && currentTrend.length > 0) {
+            console.log('📈 차트 렌더링 시작:', currentTrend.length, 'points')
+            renderChart(chartContainer, currentTrend)
+          } else {
+            console.log('⚠️ 차트 렌더링 실패 - 데이터 없음')
+            // renderChart가 알아서 "데이터 수집 중" 메시지 표시
+            renderChart(chartContainer, [])
+          }
         }
       }, 100)
     }
@@ -1075,6 +1083,37 @@ export default function Home() {
   // 차트 렌더링 함수
   function renderChart(container: HTMLElement, trend: TrendData[]) {
     container.innerHTML = ''
+
+    // ✅ 최소 데이터 포인트 체크: 최소 2개 이상 필요
+    if (!trend || trend.length < 2) {
+      console.log('⚠️ 트렌드 데이터 부족:', trend?.length || 0, '개 (최소 2개 필요)')
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-[300px] text-center ${darkMode ? 'bg-black' : 'bg-white'} rounded-lg">
+          <div class="text-6xl mb-4">📊</div>
+          <div class="text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-2">
+            트렌드 데이터 수집 중...
+          </div>
+          <div class="text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-4">
+            30분마다 자동으로 데이터가 업데이트됩니다
+          </div>
+          <div class="flex items-center gap-4 px-6 py-3 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-gray-100'}">
+            <div class="text-center">
+              <div class="text-2xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}">${trend?.length || 0}</div>
+              <div class="text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}">현재</div>
+            </div>
+            <div class="text-2xl ${darkMode ? 'text-gray-700' : 'text-gray-300'}">/</div>
+            <div class="text-center">
+              <div class="text-2xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}">48+</div>
+              <div class="text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}">목표 (24시간)</div>
+            </div>
+          </div>
+          <div class="mt-4 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}">
+            💡 24시간 후 완전한 트렌드 차트를 확인하실 수 있습니다
+          </div>
+        </div>
+      `
+      return
+    }
 
     // Y축 범위 동적 계산
     const allValues = trend.flatMap(point => [
