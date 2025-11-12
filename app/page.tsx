@@ -561,18 +561,33 @@ export default function Home() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000)
       
+      console.log('🔍 Fetching trend data for:', matchId)
+      
       const response = await fetch(`/api/match-trend?matchId=${matchId}`, {
         signal: controller.signal
       })
       clearTimeout(timeoutId)
       
+      console.log('📡 API Response:', response.status, response.statusText)
+      
       const result = await response.json()
       
-      if (result.success && result.data.length > 0) {
+      console.log('📊 API Result:', {
+        success: result.success,
+        hasData: !!result.data,
+        isArray: Array.isArray(result.data),
+        length: result.data?.length,
+        count: result.count
+      })
+      
+      // ✅ 수정: 배열 체크 추가
+      if (result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
         // ✅ 시간순으로 정렬 (오름차순) - Lightweight Charts 요구사항
         const sortedData = [...result.data].sort((a, b) => 
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         )
+        
+        console.log('✅ Trend data sorted:', sortedData.length, 'points')
         
         // 💾 정렬된 데이터를 캐시에 저장
         setCachedData(cacheKey, sortedData)
@@ -581,13 +596,19 @@ export default function Home() {
         console.log(`📈 Loaded trend for match ${matchId}:`, sortedData.length, 'points (sorted)')
         return sortedData
       } else {
-        throw new Error('No trend data available')
+        console.warn('⚠️ No valid trend data:', result)
+        // 빈 배열 반환 (에러 throw 안 함)
+        setTrendData(prev => ({
+          ...prev,
+          [matchId]: []
+        }))
+        return []
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
         console.warn('⏱️ 트렌드 API 타임아웃')
       } else {
-        console.warn('⚠️ 트렌드 API 호출 실패:', err)
+        console.error('❌ 트렌드 API 호출 실패:', err)
       }
       setTrendData(prev => ({
         ...prev,
