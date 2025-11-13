@@ -19,11 +19,50 @@ const LEAGUES = [
     isEmoji: true
   },
   { 
+    code: 'CL', 
+    name: '챔피언스리그',
+    nameEn: 'Champions League',
+    flag: '🌍',
+    logo: 'https://media.api-sports.io/football/leagues/2.png',
+    isEmoji: false
+  },
+    { 
+    code: 'EL', 
+    name: '유로파리그',
+    nameEn: 'Europa League',
+    flag: '🌍',
+    logo: 'https://media.api-sports.io/football/leagues/3.png',
+    isEmoji: false
+  },
+  { 
+    code: 'UECL', 
+    name: 'UEFA 컨퍼런스리그', 
+    flag: '🌍',
+     logo: 'https://media.api-sports.io/football/leagues/848.png',
+    isEmoji: false
+  },
+    { 
+    code: 'UNL', 
+    name: 'UEFA 네이션스리그', 
+    logo: 'https://media.api-sports.io/football/leagues/5.png', 
+    flag: '🌍',
+    isEmoji: false
+  },
+
+  { 
     code: 'PL', 
     name: '프리미어리그',
     nameEn: 'Premier League',
     flag: 'https://flagcdn.com/w40/gb-eng.png',
     logo: 'https://media.api-sports.io/football/leagues/39.png',
+    isEmoji: false
+  },
+    { 
+    code: 'ELC', 
+    name: '챔피언십',
+    nameEn: 'Championship',
+    flag: 'https://flagcdn.com/w40/gb-eng.png',
+    logo: 'https://media.api-sports.io/football/leagues/40.png',
     isEmoji: false
   },
   { 
@@ -74,35 +113,14 @@ const LEAGUES = [
     logo: 'https://media.api-sports.io/football/leagues/88.png',
     isEmoji: false
   },
-  { 
-    code: 'CL', 
-    name: '챔피언스리그',
-    nameEn: 'Champions League',
-    flag: '⭐',
-    logo: 'https://media.api-sports.io/football/leagues/2.png',
-    isEmoji: false
-  },
-  { 
-    code: 'EL', 
-    name: '유로파리그',
-    nameEn: 'Europa League',
-    flag: '⭐',
-    logo: 'https://media.api-sports.io/football/leagues/3.png',
-    isEmoji: false
-  },
-  { 
-    code: 'ELC', 
-    name: '챔피언십',
-    nameEn: 'Championship',
-    flag: 'https://flagcdn.com/w40/gb-eng.png',
-    logo: 'https://media.api-sports.io/football/leagues/40.png',
-    isEmoji: false
-  },
+
+
+
 ]
 
 // 오즈 데이터가 있는 리그만 (경기 목록 필터용)
 const LEAGUES_WITH_ODDS = [
-  'ALL', 'PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'DED', 'CL', 'EL', 'ELC'
+  'ALL', 'CL', 'EL', 'UECL', 'UNL', 'PL', 'ELC', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'DED'
 ]
 
 // 헬퍼 함수들
@@ -658,7 +676,7 @@ export default function Home() {
         
         if (selectedLeague === 'ALL') {
           // 모든 리그의 경기 가져오기 (DB에서 오즈 포함)
-          const leagues = ['PL', 'PD', 'BL1', 'SA', 'FL1' ,'CL']
+          const leagues = ['CL', 'EL', 'UECL', 'UNL', 'PL', 'ELC', 'PD', 'BL1', 'SA', 'FL1']
           const promises = leagues.map(league => 
             fetch(`/api/odds-from-db?league=${league}`, {
               headers: {
