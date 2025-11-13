@@ -154,8 +154,8 @@ interface Match {
   time: string
   homeTeam: string          // 영문 팀명
   awayTeam: string          // 영문 팀명
-  homeTeamId?: number       // 🆕 추가
-  awayTeamId?: number       // 🆕 추가
+  home_team_id?: number     // 🆕 API에서 오는 형식 (snake_case)
+  away_team_id?: number     // 🆕 API에서 오는 형식 (snake_case)
   homeTeamKR?: string       // 🆕 추가 (한글 팀명)
   awayTeamKR?: string       // 🆕 추가 (한글 팀명)
   homeCrest: string

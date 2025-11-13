@@ -56,10 +56,10 @@ interface MatchPredictionProps {
   fixtureId: number | string
   homeTeam: string
   awayTeam: string
-  homeTeamKR?: string  // 한글 팀명 추가
-  awayTeamKR?: string  // 한글 팀명 추가
-  homeTeamId?: number
-  awayTeamId?: number
+  homeTeamKR?: string
+  awayTeamKR?: string
+  homeTeamId?: number     // camelCase로 받지만
+  awayTeamId?: number     // 내부적으로 사용
   darkMode: boolean
 }
 
@@ -545,7 +545,7 @@ export default function MatchPrediction({
                   <h4 className={`text-sm font-bold uppercase tracking-wider ${
                     darkMode ? 'text-gray-300' : 'text-gray-700'
                   }`}>
-                    Trend 인사이트
+                    AI 인사이트
                   </h4>
                   <div className={`ml-auto text-xs font-medium ${
                     darkMode ? 'text-gray-500' : 'text-gray-500'
@@ -761,7 +761,8 @@ export default function MatchPrediction({
         <div className={`text-xs text-center pt-4 mt-4 border-t ${
           darkMode ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-200'
         }`}>
-          ⚠️ 이 분석은 통계적 참고 자료입니다.       </div>
+          ⚠️ 이 분석은 통계적 참고 자료이며, 베팅을 권유하지 않습니다
+        </div>
 
 
       </div>
