@@ -632,10 +632,11 @@ export default function Home() {
         const cachedMatches = getCachedData(cacheKey)
         
         if (cachedMatches) {
-          // 캐시된 데이터 사용
-          setMatches(cachedMatches)
+          // 캐시된 데이터도 번역 처리 🆕
+          const translatedCached = await translateMatches(cachedMatches)
+          setMatches(translatedCached)
           setLoading(false)
-          console.log('✅ 캐시에서 경기 로드:', cachedMatches.length)
+          console.log('✅ 캐시에서 경기 로드 (번역 완료):', translatedCached.length)
           return
         }
         
