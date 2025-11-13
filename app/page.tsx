@@ -1360,12 +1360,12 @@ export default function Home() {
                 ? Math.round(latestTrend.awayWinProbability)
                 : match.awayWinRate
               
-              const homeTeam = match.homeTeam.length > 15 
-                ? match.homeTeam.substring(0, 15) + '...' 
-                : match.homeTeam
-              const awayTeam = match.awayTeam.length > 15 
-                ? match.awayTeam.substring(0, 15) + '...' 
-                : match.awayTeam
+              const homeTeam = (match.homeTeamKR || match.homeTeam).length > 15 
+               ? (match.homeTeamKR || match.homeTeam).substring(0, 15) + '...' 
+  : (match.homeTeamKR || match.homeTeam)
+const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15 
+  ? (match.awayTeamKR || match.awayTeam).substring(0, 15) + '...' 
+  : (match.awayTeamKR || match.awayTeam)
               
               const isHomeWinning = homeWin > awayWin
               const winningTeam = isHomeWinning ? homeTeam : awayTeam
