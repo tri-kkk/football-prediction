@@ -72,16 +72,6 @@ async function fetchFromApiFootball(endpoint: string) {
 
 export async function POST(request: Request) {
   try {
-    // ✅ Authorization 체크 제거 (Supabase Cron이 Authorization 없이 호출)
-    /*
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET || 'random_secret_string'
-    
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    */
-
     console.log('🏈 ========== API-Football Odds Collection Started ==========')
     console.log('⏰ Time:', new Date().toISOString())
 
@@ -132,6 +122,23 @@ export async function POST(request: Request) {
         // 각 경기마다 오즈 가져오기
         for (const fixture of fixtures) {
           try {
+            // 🆕 디버깅: 첫 번째 경기만 구조 출력
+            if (savedCount === 0) {
+              console.log('🔍 First fixture structure:', JSON.stringify({
+                fixtureId: fixture.fixture?.id,
+                homeTeam: {
+                  id: fixture.teams?.home?.id,
+                  name: fixture.teams?.home?.name,
+                  logo: fixture.teams?.home?.logo
+                },
+                awayTeam: {
+                  id: fixture.teams?.away?.id,
+                  name: fixture.teams?.away?.name,
+                  logo: fixture.teams?.away?.logo
+                }
+              }, null, 2))
+            }
+
             // 시간 필터링 (경기 336시간(14일) 전 ~ 종료 후 1시간)
             const commenceTime = new Date(fixture.fixture.date).getTime()
             const hoursUntilMatch = (commenceTime - now) / (1000 * 60 * 60)
@@ -184,15 +191,19 @@ export async function POST(request: Request) {
 
             const normalized = normalizePercentages(homePercent, drawPercent, awayPercent)
 
+            // 🆕 팀 ID 추출 (안전하게)
+            const homeTeamId = fixture.teams?.home?.id || null
+            const awayTeamId = fixture.teams?.away?.id || null
+
             // 3. DB 저장 (history)
             const historyData = {
               match_id: fixture.fixture.id.toString(),
               home_team: fixture.teams.home.name,
               away_team: fixture.teams.away.name,
-              home_team_id: fixture.teams.home.id,        // 🆕 추가
-              away_team_id: fixture.teams.away.id,
-              home_team_logo: fixture.teams.home.logo,  // 🆕 추가
-              away_team_logo: fixture.teams.away.logo,  // 🆕 추가
+              home_team_id: homeTeamId,
+              away_team_id: awayTeamId,
+              home_team_logo: fixture.teams.home.logo,
+              away_team_logo: fixture.teams.away.logo,
               league_code: league.code,
               commence_time: fixture.fixture.date,
               home_odds: homeOdds,
@@ -220,10 +231,10 @@ export async function POST(request: Request) {
                 p_match_id: fixture.fixture.id.toString(),
                 p_home_team: fixture.teams.home.name,
                 p_away_team: fixture.teams.away.name,
-                p_home_team_logo: fixture.teams.home.logo,  // 🆕 추가
-                p_away_team_logo: fixture.teams.away.logo,  // 🆕 추가
-                p_home_team_id: fixture.teams.home.id,        // 🆕 추가
-                p_away_team_id: fixture.teams.away.id,  
+                p_home_team_id: homeTeamId,
+                p_away_team_id: awayTeamId,
+                p_home_team_logo: fixture.teams.home.logo,
+                p_away_team_logo: fixture.teams.away.logo,
                 p_league_code: league.code,
                 p_commence_time: fixture.fixture.date,
                 p_home_odds: homeOdds,
@@ -239,7 +250,7 @@ export async function POST(request: Request) {
               console.error('❌ Latest save error:', latestError.message)
             } else {
               savedCount++
-              console.log(`✅ Saved: ${fixture.teams.home.name} vs ${fixture.teams.away.name} (${normalized.home.toFixed(1)}% / ${normalized.draw.toFixed(1)}% / ${normalized.away.toFixed(1)}%)`)
+              console.log(`✅ Saved: ${fixture.teams.home.name} (ID:${homeTeamId}) vs ${fixture.teams.away.name} (ID:${awayTeamId}) - ${normalized.home.toFixed(1)}% / ${normalized.draw.toFixed(1)}% / ${normalized.away.toFixed(1)}%`)
             }
 
             // API 제한 방지 (경기 간 0.5초 대기)
