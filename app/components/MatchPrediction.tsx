@@ -761,7 +761,7 @@ export default function MatchPrediction({
         <div className={`text-xs text-center pt-4 mt-4 border-t ${
           darkMode ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-200'
         }`}>
-          ⚠️ 이 분석은 통계적 참고 자료이며, 베팅을 권유하지 않습니다
+          ⚠️ 이 분석은 통계적 참고 자료입니다.
         </div>
 
 
