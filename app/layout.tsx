@@ -4,6 +4,7 @@ import Script from 'next/script'
 import Link from 'next/link'
 import GoogleTagManager from './GoogleTagManager'
 import Navigation from './components/Navigation'
+import MonetagVignette from './components/ads/MonetagVignette'
 
 export const metadata: Metadata = {
   title: 'Trend Soccer',
@@ -148,6 +149,9 @@ export default function RootLayout({
             </div>
           </div>
         </footer>
+
+        {/* Monetag Vignette Banner - 깔끔한 네이티브 광고 */}
+        <MonetagVignette />
       </body>
     </html>
   )
