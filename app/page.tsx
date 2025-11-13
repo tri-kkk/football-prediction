@@ -151,6 +151,12 @@ interface Match {
   leagueLogo: string
   date: string
   time: string
+   homeTeam: string          // 영문 팀명
+  awayTeam: string          // 영문 팀명
+  homeTeamId?: number       // 🆕 추가
+  awayTeamId?: number       // 🆕 추가
+  homeTeamKR?: string       // 🆕 추가 (한글 팀명)
+  awayTeamKR?: string       // 🆕 추가 (한글 팀명)
   homeTeam: string      // 팀명 (영문 - 화면 표시용)
   awayTeam: string      // 팀명 (영문 - 화면 표시용)
   homeCrest: string
@@ -192,30 +198,42 @@ function generateNewsKeywords(): NewsKeyword[] {
   ]
 }
 
-// 팀명을 한글로 번역하는 함수
-function translateTeamName(englishName: string): string {
-  // TEAM_NAME_KR에서 한글명 찾기
-  if (TEAM_NAME_KR[englishName]) {
-    return TEAM_NAME_KR[englishName]
-  }
+// 여러 팀을 한번에 번역 (성능 최적화)
+async function translateMatches(matches: any[]): Promise<any[]> {
+  // 모든 팀 ID 수집
+  const teamIds = new Set<number>()
+  matches.forEach(match => {
+    if (match.home_team_id) teamIds.add(match.home_team_id)
+    if (match.away_team_id) teamIds.add(match.away_team_id)
+  })
+
+  // 한번에 번역 요청
+  let translations: Record<number, string> = {}
   
-  // 대소문자 무시하고 찾기
-  const normalized = englishName.toLowerCase()
-  for (const [key, value] of Object.entries(TEAM_NAME_KR)) {
-    if (key.toLowerCase() === normalized) {
-      return value
+  if (teamIds.size > 0) {
+    try {
+      const response = await fetch('/api/team-translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamIds: Array.from(teamIds) })
+      })
+      const data = await response.json()
+      
+      // 팀 ID -> 한글명 매핑 생성
+      data.teams?.forEach((team: any) => {
+        translations[team.team_id] = team.korean_name
+      })
+    } catch (error) {
+      console.error('팀명 일괄 번역 실패:', error)
     }
   }
-  
-  // 부분 매칭 시도
-  for (const [key, value] of Object.entries(TEAM_NAME_KR)) {
-    if (key.toLowerCase().includes(normalized) || normalized.includes(key.toLowerCase())) {
-      return value
-    }
-  }
-  
-  // 번역 실패 시 원본 반환 (영문 그대로)
-  return englishName
+
+  // 경기 데이터에 한글 팀명 추가
+  return matches.map(match => ({
+    ...match,
+    homeTeamKR: translations[match.home_team_id] || match.homeTeam || match.home_team,
+    awayTeamKR: translations[match.away_team_id] || match.awayTeam || match.away_team,
+  }))
 }
 
 // 시간 포맷 함수 (UTC를 KST로 변환)
@@ -650,6 +668,8 @@ export default function Home() {
               id: match.match_id || match.id,  // ✅ match_id 우선!
               homeTeam: match.home_team || match.homeTeam,
               awayTeam: match.away_team || match.awayTeam,
+              home_team_id: match.home_team_id,  // 🆕 팀 ID 추가
+              away_team_id: match.away_team_id,  // 🆕 팀 ID 추가
               league: match.league || getLeagueName(match.league_code) || result.league,
               leagueCode: match.league_code || match.leagueCode || result.league,
               utcDate: match.commence_time || match.utcDate,
@@ -694,6 +714,8 @@ export default function Home() {
             id: match.match_id || match.id,  // ✅ match_id 우선!
             homeTeam: match.home_team || match.homeTeam,
             awayTeam: match.away_team || match.awayTeam,
+            home_team_id: match.home_team_id,  // 🆕 팀 ID 추가
+            away_team_id: match.away_team_id,  // 🆕 팀 ID 추가
             league: match.league || getLeagueName(match.league_code) || selectedLeague,
             leagueCode: match.league_code || match.leagueCode,
             utcDate: match.commence_time || match.utcDate,
@@ -784,7 +806,10 @@ export default function Home() {
         // 💾 캐시에 저장
         setCachedData(cacheKey, futureMatches)
         
-        setMatches(futureMatches)
+        // 🌐 팀명 한글 번역
+        const translatedMatches = await translateMatches(futureMatches)
+        
+        setMatches(translatedMatches)
         
         // ⚡ 트렌드 데이터는 카드 클릭 시에만 로드 (자동 로딩 비활성화)
         console.log('✅ 경기 데이터 로드 완료. 트렌드는 카드 클릭 시 로드됩니다.')
@@ -1867,7 +1892,7 @@ export default function Home() {
                         <div className="w-full flex items-center justify-center gap-4">
                           {/* 홈팀 이름 - 오른쪽 정렬 */}
                           <span className={`font-bold text-sm text-right flex-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {match.homeTeam}
+                            {match.homeTeamKR || match.homeTeam}
                           </span>
                           
                           {/* VS 공간 유지 */}
@@ -1875,7 +1900,7 @@ export default function Home() {
                           
                           {/* 원정팀 이름 - 왼쪽 정렬 */}
                           <span className={`font-bold text-sm text-left flex-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {match.awayTeam}
+                            {match.awayTeamKR || match.awayTeam}
                           </span>
                         </div>
                       </div>
