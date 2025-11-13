@@ -10,7 +10,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-// 리그 설정 (10개)
+// 리그 설정 (12개) - 🆕 UEFA Nations League & Conference League 추가
 const LEAGUES = [
   { code: 'PL', id: 39, name: 'Premier League' },
   { code: 'PD', id: 140, name: 'La Liga' },
@@ -22,6 +22,8 @@ const LEAGUES = [
   { code: 'CL', id: 2, name: 'Champions League' },
   { code: 'EL', id: 3, name: 'Europa League' },
   { code: 'ELC', id: 40, name: 'Championship' },
+  { code: 'UNL', id: 5, name: 'UEFA Nations League' }, // 🆕 네이션스리그
+  { code: 'UECL', id: 848, name: 'UEFA Conference League' }, // 🆕 컨퍼런스리그
 ]
 
 const LEAGUE_ID_TO_CODE: Record<number, string> = {
@@ -35,8 +37,9 @@ const LEAGUE_ID_TO_CODE: Record<number, string> = {
   2: 'CL',
   3: 'EL',
   40: 'ELC',
+  5: 'UNL', // 🆕 네이션스리그
+  848: 'UECL', // 🆕 컨퍼런스리그
 }
-
 // 오즈를 확률로 변환
 function oddsToPercentage(odds: number): number {
   if (!odds || odds <= 0) return 0
