@@ -189,6 +189,8 @@ export async function POST(request: Request) {
               match_id: fixture.fixture.id.toString(),
               home_team: fixture.teams.home.name,
               away_team: fixture.teams.away.name,
+              home_team_id: fixture.teams.home.id,        // 🆕 추가
+              away_team_id: fixture.teams.away.id,
               home_team_logo: fixture.teams.home.logo,  // 🆕 추가
               away_team_logo: fixture.teams.away.logo,  // 🆕 추가
               league_code: league.code,
@@ -220,6 +222,8 @@ export async function POST(request: Request) {
                 p_away_team: fixture.teams.away.name,
                 p_home_team_logo: fixture.teams.home.logo,  // 🆕 추가
                 p_away_team_logo: fixture.teams.away.logo,  // 🆕 추가
+                p_home_team_id: fixture.teams.home.id,        // 🆕 추가
+                p_away_team_id: fixture.teams.away.id,  
                 p_league_code: league.code,
                 p_commence_time: fixture.fixture.date,
                 p_home_odds: homeOdds,
