@@ -1,0 +1,67 @@
+{
+  "header": {
+    "title": "트렌드 사커",
+    "subtitle": "실시간 축구 배팅 오즈 분석"
+  },
+  "filters": {
+    "all": "전체",
+    "premier_league": "프리미어리그",
+    "la_liga": "라리가",
+    "bundesliga": "분데스리가",
+    "serie_a": "세리에A",
+    "ligue_1": "리그1",
+    "primeira_liga": "프리메이라리가",
+    "eredivisie": "에레디비시",
+    "champions_league": "챔피언스리그",
+    "europa_league": "유로파리그",
+    "championship": "챔피언십"
+  },
+  "match": {
+    "vs": "vs",
+    "home": "홈",
+    "draw": "무",
+    "away": "원정",
+    "no_odds": "오즈 없음",
+    "view_trend": "트렌드 보기",
+    "hide_trend": "트렌드 숨기기"
+  },
+  "trend": {
+    "title": "24시간 오즈 변화",
+    "hours_ago": "시간 전",
+    "current": "현재",
+    "highest": "최고",
+    "lowest": "최저",
+    "average": "평균",
+    "change": "변화"
+  },
+  "status": {
+    "loading": "로딩 중...",
+    "no_matches": "예정된 경기가 없습니다.",
+    "error": "데이터를 불러오는데 실패했습니다."
+  },
+  "footer": {
+    "disclaimer": "본 사이트는 정보 제공 목적으로만 사용되며, 도박을 권장하지 않습니다.",
+    "copyright": "© 2024 트렌드 사커. All rights reserved."
+  },
+  "date": {
+    "today": "오늘",
+    "tomorrow": "내일",
+    "month": "월",
+    "day": "일",
+    "hour": "시",
+    "minute": "분"
+  },
+  "odds": {
+    "bookmaker": "북메이커",
+    "last_update": "마지막 업데이트",
+    "opening": "시작",
+    "closing": "마감"
+  },
+  "buttons": {
+    "refresh": "새로고침",
+    "filter": "필터",
+    "sort": "정렬",
+    "expand": "펼치기",
+    "collapse": "접기"
+  }
+}

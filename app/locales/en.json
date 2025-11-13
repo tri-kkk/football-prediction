@@ -1,0 +1,67 @@
+{
+  "header": {
+    "title": "Trend Soccer",
+    "subtitle": "Real-time Football Betting Odds Analysis"
+  },
+  "filters": {
+    "all": "All Leagues",
+    "premier_league": "Premier League",
+    "la_liga": "La Liga",
+    "bundesliga": "Bundesliga",
+    "serie_a": "Serie A",
+    "ligue_1": "Ligue 1",
+    "primeira_liga": "Primeira Liga",
+    "eredivisie": "Eredivisie",
+    "champions_league": "Champions League",
+    "europa_league": "Europa League",
+    "championship": "Championship"
+  },
+  "match": {
+    "vs": "vs",
+    "home": "Home",
+    "draw": "Draw",
+    "away": "Away",
+    "no_odds": "No odds",
+    "view_trend": "View Trend",
+    "hide_trend": "Hide Trend"
+  },
+  "trend": {
+    "title": "24h Odds Movement",
+    "hours_ago": "h ago",
+    "current": "Current",
+    "highest": "High",
+    "lowest": "Low",
+    "average": "Avg",
+    "change": "Change"
+  },
+  "status": {
+    "loading": "Loading...",
+    "no_matches": "No scheduled matches.",
+    "error": "Failed to load data."
+  },
+  "footer": {
+    "disclaimer": "This site is for informational purposes only and does not encourage gambling.",
+    "copyright": "© 2024 Trend Soccer. All rights reserved."
+  },
+  "date": {
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "month": "Month",
+    "day": "Day",
+    "hour": "Hour",
+    "minute": "Min"
+  },
+  "odds": {
+    "bookmaker": "Bookmaker",
+    "last_update": "Last Updated",
+    "opening": "Opening",
+    "closing": "Closing"
+  },
+  "buttons": {
+    "refresh": "Refresh",
+    "filter": "Filter",
+    "sort": "Sort",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  }
+}

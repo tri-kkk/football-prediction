@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface PredictionData {
   predictions: {
@@ -73,6 +74,7 @@ export default function MatchPrediction({
   awayTeamId,
   darkMode 
 }: MatchPredictionProps) {
+  const { language } = useLanguage()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [prediction, setPrediction] = useState<PredictionData | null>(null)
   const [h2h, setH2h] = useState<H2HData | null>(null)
@@ -422,12 +424,42 @@ export default function MatchPrediction({
 
   // 비교 통계 (레이더 차트용)
   const comparisonStats = [
-    { label: '최근폼', icon: '📈', home: comparison.form.home, away: comparison.form.away },
-    { label: '공격력', icon: '⚔️', home: comparison.att.home, away: comparison.att.away },
-    { label: '수비력', icon: '🛡️', home: comparison.def.home, away: comparison.def.away },
-    { label: '득점력', icon: '⚽', home: comparison.goals.home, away: comparison.goals.away },
-    { label: '상대전적', icon: '📊', home: comparison.h2h.home, away: comparison.h2h.away },
-    { label: '포아송', icon: '📉', home: comparison.poisson_distribution.home, away: comparison.poisson_distribution.away },
+    { 
+      label: language === 'ko' ? '최근폼' : 'Form',
+      icon: '📈', 
+      home: comparison.form.home, 
+      away: comparison.form.away 
+    },
+    { 
+      label: language === 'ko' ? '공격력' : 'Attack',
+      icon: '⚔️', 
+      home: comparison.att.home, 
+      away: comparison.att.away 
+    },
+    { 
+      label: language === 'ko' ? '수비력' : 'Defense',
+      icon: '🛡️', 
+      home: comparison.def.home, 
+      away: comparison.def.away 
+    },
+    { 
+      label: language === 'ko' ? '득점력' : 'Goals',
+      icon: '⚽', 
+      home: comparison.goals.home, 
+      away: comparison.goals.away 
+    },
+    { 
+      label: language === 'ko' ? '상대전적' : 'H2H',
+      icon: '📊', 
+      home: comparison.h2h.home, 
+      away: comparison.h2h.away 
+    },
+    { 
+      label: language === 'ko' ? '포아송' : 'Poisson',
+      icon: '📉', 
+      home: comparison.poisson_distribution.home, 
+      away: comparison.poisson_distribution.away 
+    },
   ]
 
   return (
@@ -450,9 +482,9 @@ export default function MatchPrediction({
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
-            {tab === 'overview' && '📊 개요'}
-            {tab === 'stats' && '📈 상세통계'}
-            {tab === 'h2h' && '🔄 상대전적'}
+            {tab === 'overview' && (language === 'ko' ? '📊 개요' : '📊 Overview')}
+            {tab === 'stats' && (language === 'ko' ? '📈 상세통계' : '📈 Stats')}
+            {tab === 'h2h' && (language === 'ko' ? '🔄 상대전적' : '🔄 H2H')}
           </button>
         ))}
       </div>
@@ -484,7 +516,7 @@ export default function MatchPrediction({
                       : winnerInfo.color === 'gray' ? (darkMode ? 'text-gray-400' : 'text-gray-600')
                       : (darkMode ? 'text-red-400' : 'text-red-600')
                     }`}>
-                      예상 결과
+                      {language === 'ko' ? '예상 결과' : 'Prediction'}
                     </span>
                   </div>
                   <div className={`text-lg font-bold mb-1 ${
@@ -514,7 +546,7 @@ export default function MatchPrediction({
                       <span className={`text-xs font-bold uppercase tracking-wider ${
                         darkMode ? 'text-gray-400' : 'text-gray-600'
                       }`}>
-                        예상 스코어
+                        {language === 'ko' ? '예상 스코어' : 'Score Prediction'}
                       </span>
                     </div>
                   </div>
@@ -545,12 +577,12 @@ export default function MatchPrediction({
                   <h4 className={`text-sm font-bold uppercase tracking-wider ${
                     darkMode ? 'text-gray-300' : 'text-gray-700'
                   }`}>
-                    Trend insight
+                    {language === 'ko' ? 'Trend Insight' : 'Trend Insight'}
                   </h4>
                   <div className={`ml-auto text-xs font-medium ${
                     darkMode ? 'text-gray-500' : 'text-gray-500'
                   }`}>
-                    {insights.length}개
+                    {insights.length}{language === 'ko' ? '개' : ''}
                   </div>
                 </div>
                 <div className="space-y-2">
