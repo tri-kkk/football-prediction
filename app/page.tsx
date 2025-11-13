@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
 import H2HModal from './components/H2HModal'
+import { getTeamId } from './utils/teamIdMapping'
 
 // 리그 정보 (국기 이미지 포함)
 const LEAGUES = [
@@ -1995,6 +1996,10 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                         fixtureId={match.id}
                         homeTeam={match.homeTeam}
                         awayTeam={match.awayTeam}
+                        homeTeamKR={match.homeTeamKR}     // ✅ 한글 팀명
+                        awayTeamKR={match.awayTeamKR}     // ✅ 한글 팀명
+                        homeTeamId={match.home_team_id}
+                        awayTeamId={match.away_team_id}
                         darkMode={darkMode}
                       />
                       
