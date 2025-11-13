@@ -151,14 +151,12 @@ interface Match {
   leagueLogo: string
   date: string
   time: string
-   homeTeam: string          // 영문 팀명
+  homeTeam: string          // 영문 팀명
   awayTeam: string          // 영문 팀명
   homeTeamId?: number       // 🆕 추가
   awayTeamId?: number       // 🆕 추가
   homeTeamKR?: string       // 🆕 추가 (한글 팀명)
   awayTeamKR?: string       // 🆕 추가 (한글 팀명)
-  homeTeam: string      // 팀명 (영문 - 화면 표시용)
-  awayTeam: string      // 팀명 (영문 - 화면 표시용)
   homeCrest: string
   awayCrest: string
   homeScore: number | null
