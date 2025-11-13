@@ -545,7 +545,7 @@ export default function MatchPrediction({
                   <h4 className={`text-sm font-bold uppercase tracking-wider ${
                     darkMode ? 'text-gray-300' : 'text-gray-700'
                   }`}>
-                    AI 인사이트
+                    Trend insight
                   </h4>
                   <div className={`ml-auto text-xs font-medium ${
                     darkMode ? 'text-gray-500' : 'text-gray-500'
