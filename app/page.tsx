@@ -6,6 +6,7 @@ import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
 import H2HModal from './components/H2HModal'
 import { getTeamId } from './utils/teamIdMapping'
 import { useLanguage } from './contexts/LanguageContext'
+import LineupModal from './components/LineupModal'  
 
 // 리그 정보 (국기 이미지 포함)
 const LEAGUES = [
@@ -35,14 +36,16 @@ const LEAGUES = [
   },
   { 
     code: 'UECL', 
-    name: 'UEFA 컨퍼런스리그', 
+    name: 'UEFA 컨퍼런스리그',
+    nameEn: 'UEFA Conference League',
     flag: '🌍',
      logo: 'https://media.api-sports.io/football/leagues/848.png',
     isEmoji: false
   },
     { 
     code: 'UNL', 
-    name: 'UEFA 네이션스리그', 
+    name: 'UEFA 네이션스리그',
+    nameEn: 'UEFA Nations League',
     logo: 'https://media.api-sports.io/football/leagues/5.png', 
     flag: '🌍',
     isEmoji: false
@@ -197,6 +200,10 @@ interface Match {
   drawRate: number
   awayWinRate: number
   oddsSource: 'live' | 'historical'
+  // 🆕 라인업 관련 필드
+  lineupAvailable?: boolean
+  homeFormation?: string
+  awayFormation?: string
 }
 
 // 트렌드 데이터 인터페이스
@@ -367,6 +374,14 @@ export default function Home() {
   // AI 논평 상태
   const [aiCommentaries, setAiCommentaries] = useState<{ [key: number]: string }>({})
   const [commentaryLoading, setCommentaryLoading] = useState<{ [key: number]: boolean }>({})
+  // 🆕 라인업 상태
+  const [lineupStatus, setLineupStatus] = useState<Record<number, {
+    available: boolean
+    homeFormation?: string
+    awayFormation?: string
+  }>>({})
+  const [lineupModalOpen, setLineupModalOpen] = useState(false)
+  const [selectedMatchForLineup, setSelectedMatchForLineup] = useState<Match | null>(null)
   // 날짜 필터와 페이지네이션
   const [selectedDate, setSelectedDate] = useState<string>('week')  // 기본값 'week'로 변경
   const [currentPage, setCurrentPage] = useState(1)
@@ -381,6 +396,9 @@ export default function Home() {
 
   // 전체 리그 목록 (전체 제외)
   const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
+  
+  // 순위표용 리그 목록 (Nations League 제외)
+  const standingsLeagues = availableLeagues.filter(l => l.code !== 'UNL')
 
   // 다크모드 토글
   useEffect(() => {
@@ -453,12 +471,18 @@ export default function Home() {
   useEffect(() => {
     if (selectedLeague === 'ALL') return
     
-    const leagueIndex = availableLeagues.findIndex(l => l.code === selectedLeague)
+    // Nations League 선택 시 순위표 숨김
+    if (selectedLeague === 'UNL') {
+      setStandings([])
+      return
+    }
+    
+    const leagueIndex = standingsLeagues.findIndex(l => l.code === selectedLeague)
     if (leagueIndex !== -1 && leagueIndex !== currentLeagueIndex) {
       setCurrentLeagueIndex(leagueIndex)
       setStandings(allLeagueStandings[selectedLeague] || [])
     }
-  }, [selectedLeague, availableLeagues, allLeagueStandings, currentLeagueIndex])
+  }, [selectedLeague, standingsLeagues, allLeagueStandings, currentLeagueIndex])
 
   // 자동 스크롤 효과 + 터치/마우스 드래그 지원
   useEffect(() => {
@@ -840,8 +864,16 @@ export default function Home() {
         
         setMatches(translatedMatches)
         
-        // ⚡ 트렌드 데이터는 카드 클릭 시에만 로드 (자동 로딩 비활성화)
-        console.log('✅ 경기 데이터 로드 완료. 트렌드는 카드 클릭 시 로드됩니다.')
+        // 🆕 라인업 상태 체크
+        if (translatedMatches.length > 0) {
+          checkLineupStatus(translatedMatches)
+        }
+        
+        // 🆕 트렌드 데이터 자동 로드 (모든 경기)
+        console.log('📊 트렌드 데이터 자동 로드 시작...')
+        for (const match of translatedMatches.slice(0, 10)) { // 처음 10경기만
+          fetchTrendData(match.id.toString(), match)
+        }
         
       } catch (error: any) {
         console.error('❌ 에러:', error)
@@ -849,6 +881,31 @@ export default function Home() {
       } finally {
         setLoading(false)
       }
+    }
+    
+    // 🆕 라인업 상태 체크 함수
+    const checkLineupStatus = async (matches: Match[]) => {
+      const statusMap: Record<number, any> = {}
+      
+      for (const match of matches) {
+        try {
+          const response = await fetch(`/api/lineup-status?fixtureId=${match.id}`)
+          const data = await response.json()
+          
+          if (data.success && data.lineupAvailable) {
+            statusMap[match.id] = {
+              available: true,
+              homeFormation: data.homeFormation,
+              awayFormation: data.awayFormation,
+            }
+            console.log(`⚽ 라인업 발표: ${match.homeTeam} (${data.homeFormation}) vs ${match.awayTeam} (${data.awayFormation})`)
+          }
+        } catch (error) {
+          console.error(`❌ Error checking lineup for match ${match.id}:`, error)
+        }
+      }
+      
+      setLineupStatus(statusMap)
     }
     
     // 트렌드 데이터 로드 (동기 버전 - Promise 반환)
@@ -911,11 +968,11 @@ export default function Home() {
   // 순위표 데이터 가져오기
   const fetchStandings = async (league: string) => {
     if (league === 'ALL') {
-      // 전체 리그 선택 시 모든 리그의 순위표 로드
+      // 전체 리그 선택 시 모든 리그의 순위표 로드 (Nations League 제외)
       setStandingsLoading(true)
       const allStandings: { [key: string]: any[] } = {}
       
-      for (const l of availableLeagues) {
+      for (const l of standingsLeagues) {
         try {
           const cacheKey = `standings_${l.code}`
           const cached = getCachedData(cacheKey)
@@ -940,8 +997,8 @@ export default function Home() {
       setStandingsLoading(false)
       
       // 첫 번째 리그 표시
-      if (availableLeagues.length > 0) {
-        setStandings(allStandings[availableLeagues[0].code] || [])
+      if (standingsLeagues.length > 0) {
+        setStandings(allStandings[standingsLeagues[0].code] || [])
       }
       return
     }
@@ -1823,16 +1880,11 @@ export default function Home() {
                   <div id={`match-card-${match.id}`}>
                   {/* 경기 카드 - 가로 배치 */}
                   <div
-                    onClick={() => handleMatchClick(match)}
                     className={`
-                      relative rounded-2xl transition-all duration-200 cursor-pointer group
+                      relative rounded-2xl transition-all duration-200
                       ${darkMode 
-                        ? 'bg-[#1a1a1a] border border-gray-800 hover:border-blue-500' 
-                        : 'bg-white border border-gray-200 hover:border-blue-400'
-                      } 
-                      ${expandedMatchId === match.id 
-                        ? 'ring-2 ring-blue-500 scale-[1.02]' 
-                        : 'hover:shadow-xl hover:scale-[1.02]'
+                        ? 'bg-[#1a1a1a] border border-gray-800' 
+                        : 'bg-white border border-gray-200'
                       }
                     `}
                   >
@@ -1886,26 +1938,77 @@ export default function Home() {
                         </span>
                       </div>
 
-                      {/* 오른쪽: 상대전적 버튼 */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedMatch(match)
-                          setH2hModalOpen(true)
-                        }}
-                        className={`
-                          flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm
-                          transition-all hover:scale-105 active:scale-95 shadow-sm
-                          ${darkMode 
-                            ? 'bg-blue-600 hover:bg-blue-500 text-white border border-blue-500' 
-                            : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500'
+                      {/* 오른쪽: 라인업 버튼 + 상대전적 버튼 */}
+                      <div className="flex items-center gap-2">
+                        {/* 🆕 라인업 보기 버튼 - 항상 표시, 발표 여부에 따라 스타일 변경 */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (lineupStatus[match.id]?.available) {
+                              setSelectedMatchForLineup(match)
+                              setLineupModalOpen(true)
+                            }
+                          }}
+                          disabled={!lineupStatus[match.id]?.available}
+                          className={`
+                            relative flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm
+                            transition-all shadow-sm
+                            ${lineupStatus[match.id]?.available
+                              ? // 라인업 발표됨 - 활성화
+                                darkMode 
+                                  ? 'bg-green-600 hover:bg-green-500 text-white border border-green-500 hover:scale-105 active:scale-95 cursor-pointer' 
+                                  : 'bg-green-600 hover:bg-green-700 text-white border border-green-500 hover:scale-105 active:scale-95 cursor-pointer'
+                              : // 라인업 미발표 - 비활성화
+                                darkMode
+                                  ? 'bg-gray-700 text-gray-500 border border-gray-600 cursor-not-allowed opacity-50'
+                                  : 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-50'
+                            }
+                          `}
+                          title={
+                            lineupStatus[match.id]?.available
+                              ? `라인업: ${lineupStatus[match.id]?.homeFormation} vs ${lineupStatus[match.id]?.awayFormation}`
+                              : '라인업 미발표 (경기 시작 1시간 전 발표 예정)'
                           }
-                        `}
-                        title="상대전적 보기"
-                      >
-                        <span>📊</span>
-                        <span className="hidden sm:inline">상대전적</span>
-                      </button>
+                        >
+                          {/* NEW 배지 - 라인업 발표시만 표시 */}
+                          {lineupStatus[match.id]?.available && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                              NEW
+                            </span>
+                          )}
+                          
+                          {/* 아이콘 - 발표 여부에 따라 변경 */}
+                          <span>
+                            {lineupStatus[match.id]?.available ? '⚽' : '🔒'}
+                          </span>
+                          
+                          {/* 텍스트 */}
+                          <span className="hidden sm:inline">
+                            {currentLanguage === 'ko' ? '라인업' : 'Lineup'}
+                          </span>
+                        </button>
+                        
+                        {/* 상대전적 버튼 */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedMatch(match)
+                            setH2hModalOpen(true)
+                          }}
+                          className={`
+                            flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm
+                            transition-all hover:scale-105 active:scale-95 shadow-sm
+                            ${darkMode 
+                              ? 'bg-blue-600 hover:bg-blue-500 text-white border border-blue-500' 
+                              : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500'
+                            }
+                          `}
+                          title="상대전적 보기"
+                        >
+                          <span>📊</span>
+                          <span className="hidden sm:inline">상대전적</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* 메인 콘텐츠 영역 */}
@@ -2040,50 +2143,13 @@ export default function Home() {
                         awayTeamKR={match.awayTeamKR}     // ✅ 한글 팀명
                         homeTeamId={match.home_team_id}
                         awayTeamId={match.away_team_id}
+                        trendData={trendData[match.id] || []}  // 🆕 트렌드 데이터 전달
                         darkMode={darkMode}
                       />
                       
-                      
-                      {/* 트렌드 보기 힌트 - hover 시에만 표시 */}
-                      <div className={`
-                        mt-3 flex items-center justify-center gap-2
-                        text-xs font-medium
-                        opacity-0 group-hover:opacity-100
-                        transition-opacity duration-200
-                        ${darkMode ? 'text-gray-400' : 'text-gray-500'}
-                      `}>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        <span>{currentLanguage === 'ko' ? '클릭하면 24시간 트렌드를 볼 수 있습니다' : 'Click to view 24-hour trend'}</span>
-                      </div>
                     </div>
                   </div>
 
-                  {/* 확장된 트렌드 차트 */}
-                  {expandedMatchId === match.id && (
-                    <div className={`mt-4 p-6 rounded-2xl animate-fadeIn ${
-                      darkMode ? 'bg-[#0f0f0f] border border-gray-800' : 'bg-white border border-gray-200'
-                    }`}>
-                      <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        📈 24시간 트렌드
-                      </h3>
-                      
-                      {/* 트렌드 데이터 로딩 중 */}
-                      {!trendData[match.id] || trendData[match.id].length === 0 ? (
-                        <div className="text-center py-12">
-                          <div className="text-4xl mb-3 animate-bounce">📊</div>
-                          <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                            트렌드 데이터 로딩 중...
-                          </p>
-                        </div>
-                      ) : (
-                        <div id={`trend-chart-${match.id}`} className="mb-4"></div>
-                      )}
-
-                    </div>
-                  )}
                 </div>
               </React.Fragment>
               )
@@ -2202,10 +2268,10 @@ export default function Home() {
                     <button
                       onClick={() => {
                         const newIndex = currentLeagueIndex === 0 
-                          ? availableLeagues.length - 1 
+                          ? standingsLeagues.length - 1 
                           : currentLeagueIndex - 1
                         setCurrentLeagueIndex(newIndex)
-                        setStandings(allLeagueStandings[availableLeagues[newIndex].code] || [])
+                        setStandings(allLeagueStandings[standingsLeagues[newIndex].code] || [])
                       }}
                       className={`p-2 rounded-lg transition-colors ${
                         darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
@@ -2219,15 +2285,15 @@ export default function Home() {
                     {/* 리그명 + 로고 */}
                     <div className="flex items-center gap-3">
                       <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {availableLeagues[currentLeagueIndex]?.name || '프리미어리그'}
+                        {standingsLeagues[currentLeagueIndex]?.name || '프리미어리그'}
                       </h2>
                       <div className="w-10 h-10 bg-white rounded-lg p-1.5 flex items-center justify-center">
-                        {availableLeagues[currentLeagueIndex]?.isEmoji ? (
-                          <span className="text-2xl">{availableLeagues[currentLeagueIndex]?.logo}</span>
+                        {standingsLeagues[currentLeagueIndex]?.isEmoji ? (
+                          <span className="text-2xl">{standingsLeagues[currentLeagueIndex]?.logo}</span>
                         ) : (
                           <img 
-                            src={availableLeagues[currentLeagueIndex]?.logo}
-                            alt={availableLeagues[currentLeagueIndex]?.name}
+                            src={standingsLeagues[currentLeagueIndex]?.logo}
+                            alt={standingsLeagues[currentLeagueIndex]?.name}
                             className="w-full h-full object-contain"
                             onError={(e) => {
                               e.currentTarget.src = 'https://via.placeholder.com/40?text=?'
@@ -2240,11 +2306,11 @@ export default function Home() {
                     {/* 오른쪽 화살표 */}
                     <button
                       onClick={() => {
-                        const newIndex = currentLeagueIndex === availableLeagues.length - 1 
+                        const newIndex = currentLeagueIndex === standingsLeagues.length - 1 
                           ? 0 
                           : currentLeagueIndex + 1
                         setCurrentLeagueIndex(newIndex)
-                        setStandings(allLeagueStandings[availableLeagues[newIndex].code] || [])
+                        setStandings(allLeagueStandings[standingsLeagues[newIndex].code] || [])
                       }}
                       className={`p-2 rounded-lg transition-colors ${
                         darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
@@ -2522,6 +2588,21 @@ export default function Home() {
           league={selectedMatch.leagueCode}
           homeTeamLogo={selectedMatch.homeCrest}
           awayTeamLogo={selectedMatch.awayCrest}
+        />
+      )}
+
+      {/* 🆕 라인업 모달 */}
+      {lineupModalOpen && selectedMatchForLineup && (
+        <LineupModal
+          isOpen={lineupModalOpen}
+          onClose={() => {
+            setLineupModalOpen(false)
+            setSelectedMatchForLineup(null)
+          }}
+          fixtureId={selectedMatchForLineup.id}
+          homeTeam={selectedMatchForLineup.homeTeam}
+          awayTeam={selectedMatchForLineup.awayTeam}
+          darkMode={darkMode}
         />
       )}
     </div>

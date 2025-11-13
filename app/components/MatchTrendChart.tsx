@@ -23,7 +23,7 @@ export default function MatchTrendChart({ data, darkMode = false }: MatchTrendCh
 
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
-      height: 100,
+      height: 300,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: darkMode ? '#94a3b8' : '#64748b',
@@ -39,7 +39,7 @@ export default function MatchTrendChart({ data, darkMode = false }: MatchTrendCh
       },
       rightPriceScale: {
         borderColor: darkMode ? '#334155' : '#e2e8f0',
-        visible: false,
+        visible: true,
       },
       crosshair: {
         vertLine: {
@@ -48,42 +48,45 @@ export default function MatchTrendChart({ data, darkMode = false }: MatchTrendCh
           style: LineStyle.Dashed,
         },
         horzLine: {
-          visible: false,
+          visible: true,
+          color: darkMode ? '#64748b' : '#94a3b8',
+          style: LineStyle.Dashed,
         },
       },
     })
 
-    // 홈팀 승률 라인 (파란색)
+    // Home team win probability line (blue)
     const homeLineSeries = chart.addLineSeries({
       color: '#3b82f6',
-      lineWidth: 2,
+      lineWidth: 3,
       crosshairMarkerVisible: true,
       crosshairMarkerRadius: 4,
       lastValueVisible: false,
       priceLineVisible: false,
     })
 
-    // 원정팀 승률 라인 (빨간색)
+    // Away team win probability line (red)
     const awayLineSeries = chart.addLineSeries({
       color: '#ef4444',
-      lineWidth: 2,
+      lineWidth: 3,
       crosshairMarkerVisible: true,
       crosshairMarkerRadius: 4,
       lastValueVisible: false,
       priceLineVisible: false,
     })
 
-    // 무승부 영역 (회색 영역)
-    const drawAreaSeries = chart.addAreaSeries({
-      topColor: darkMode ? 'rgba(148, 163, 184, 0.3)' : 'rgba(148, 163, 184, 0.2)',
-      bottomColor: darkMode ? 'rgba(148, 163, 184, 0.05)' : 'rgba(148, 163, 184, 0.1)',
-      lineColor: darkMode ? 'rgba(148, 163, 184, 0.5)' : 'rgba(148, 163, 184, 0.4)',
-      lineWidth: 1,
+    // Draw probability line (gray)
+    const drawLineSeries = chart.addLineSeries({
+      color: '#9ca3af',
+      lineWidth: 2,
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 4,
       lastValueVisible: false,
       priceLineVisible: false,
+      lineStyle: LineStyle.Dashed,
     })
 
-    // 데이터 변환
+    // Data conversion
     const homeData = data.map(d => ({
       time: Math.floor(new Date(d.timestamp).getTime() / 1000) as any,
       value: d.homeWinProbability,
@@ -96,14 +99,14 @@ export default function MatchTrendChart({ data, darkMode = false }: MatchTrendCh
 
     const drawData = data.map(d => ({
       time: Math.floor(new Date(d.timestamp).getTime() / 1000) as any,
-      value: d.drawProbability + 50, // 중앙에 위치하도록 오프셋
+      value: d.drawProbability,
     }))
 
     homeLineSeries.setData(homeData)
     awayLineSeries.setData(awayData)
-    drawAreaSeries.setData(drawData)
+    drawLineSeries.setData(drawData)
 
-    // Y축 범위 설정 (0-100%)
+    // Y-axis range setting (0-100%)
     chart.priceScale('right').applyOptions({
       scaleMargins: {
         top: 0.1,
@@ -111,7 +114,7 @@ export default function MatchTrendChart({ data, darkMode = false }: MatchTrendCh
       },
     })
 
-    // 반응형 처리
+    // Responsive handling
     const handleResize = () => {
       if (chartContainerRef.current) {
         chart.applyOptions({ 
@@ -132,19 +135,19 @@ export default function MatchTrendChart({ data, darkMode = false }: MatchTrendCh
     <div className="relative w-full">
       <div ref={chartContainerRef} className="w-full" />
       
-      {/* 범례 */}
+      {/* Legend */}
       <div className="flex items-center justify-center gap-4 mt-2 text-xs">
         <div className="flex items-center gap-1">
           <div className="w-3 h-0.5 bg-blue-500"></div>
-          <span className={darkMode ? 'text-slate-400' : 'text-slate-600'}>홈</span>
+          <span className={darkMode ? 'text-slate-400' : 'text-slate-600'}>HOME</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-0.5 bg-slate-400"></div>
-          <span className={darkMode ? 'text-slate-400' : 'text-slate-600'}>무승부</span>
+          <span className={darkMode ? 'text-slate-400' : 'text-slate-600'}>DRAW</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-0.5 bg-red-500"></div>
-          <span className={darkMode ? 'text-slate-400' : 'text-slate-600'}>원정</span>
+          <span className={darkMode ? 'text-slate-400' : 'text-slate-600'}>AWAY</span>
         </div>
       </div>
     </div>

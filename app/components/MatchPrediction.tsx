@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
+import MatchTrendChart from './MatchTrendChart'
 
 interface PredictionData {
   predictions: {
@@ -53,6 +54,13 @@ interface H2HData {
   }
 }
 
+interface TrendData {
+  timestamp: string
+  homeWinProbability: number
+  drawProbability: number
+  awayWinProbability: number
+}
+
 interface MatchPredictionProps {
   fixtureId: number | string
   homeTeam: string
@@ -61,6 +69,7 @@ interface MatchPredictionProps {
   awayTeamKR?: string
   homeTeamId?: number     // camelCase로 받지만
   awayTeamId?: number     // 내부적으로 사용
+  trendData?: TrendData[] // 🆕 트렌드 데이터
   darkMode: boolean
 }
 
@@ -72,21 +81,31 @@ export default function MatchPrediction({
   awayTeamKR,
   homeTeamId,
   awayTeamId,
+  trendData: propsTrendData = [], // 🆕 기본값 빈 배열
   darkMode 
 }: MatchPredictionProps) {
   const { language } = useLanguage()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [prediction, setPrediction] = useState<PredictionData | null>(null)
   const [h2h, setH2h] = useState<H2HData | null>(null)
+  const [trendData, setTrendData] = useState<TrendData[]>(propsTrendData) // 🆕 props에서 초기화
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'h2h'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'h2h' | 'trend'>('overview')
   
   // 디버그 상태
   const [debugInfo, setDebugInfo] = useState({
     predictionStatus: 'pending' as 'pending' | 'success' | 'failed',
     h2hStatus: 'pending' as 'pending' | 'success' | 'failed' | 'skipped',
   })
+
+  // 🆕 props에서 받은 trendData 업데이트
+  useEffect(() => {
+    if (propsTrendData && propsTrendData.length > 0) {
+      console.log('📊 Trend data from props:', propsTrendData.length)
+      setTrendData(propsTrendData)
+    }
+  }, [propsTrendData])
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -157,6 +176,14 @@ export default function MatchPrediction({
           setDebugInfo(prev => ({ ...prev, h2hStatus: 'skipped' }))
         }
 
+        // 3. 트렌드 데이터는 props에서만 받음 (API 호출 제거)
+        console.log('ℹ️ Trend data: Using only from props')
+        if (propsTrendData && propsTrendData.length > 0) {
+          console.log('✅ Trend data from props:', propsTrendData.length)
+        } else {
+          console.log('⚠️ No trend data in props')
+        }
+
       } catch (err) {
         console.error('❌ Fetch error:', err)
         
@@ -192,8 +219,13 @@ export default function MatchPrediction({
     fetchAllData()
   }, [fixtureId, homeTeamId, awayTeamId])
 
-  // 레이더 차트 그리기
+  // 레이더 차트 그리기 (stats 탭에서만)
   useEffect(() => {
+    // stats 탭이 아니면 실행 안 함
+    if (activeTab !== 'stats') {
+      return
+    }
+    
     console.log('🎨 Radar chart effect triggered')
     console.log('- prediction:', prediction ? 'exists' : 'null')
     console.log('- canvasRef.current:', canvasRef.current ? 'exists' : 'null')
@@ -468,7 +500,7 @@ export default function MatchPrediction({
     }`}>
       {/* 탭 헤더 */}
       <div className={`flex border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-        {(['overview', 'stats', 'h2h'] as const).map((tab) => (
+        {(['overview', 'stats', 'h2h', 'trend'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -485,6 +517,7 @@ export default function MatchPrediction({
             {tab === 'overview' && (language === 'ko' ? '📊 개요' : '📊 Overview')}
             {tab === 'stats' && (language === 'ko' ? '📈 상세통계' : '📈 Stats')}
             {tab === 'h2h' && (language === 'ko' ? '🔄 상대전적' : '🔄 H2H')}
+            {tab === 'trend' && (language === 'ko' ? '📊 트렌드' : '📊 Trend')}
           </button>
         ))}
       </div>
@@ -786,6 +819,85 @@ export default function MatchPrediction({
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 트렌드 탭 */}
+        {activeTab === 'trend' && (
+          <div className="space-y-4">
+            <div className={`rounded-xl p-4 ${
+              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+            }`}>
+              <h3 className={`text-lg font-bold mb-4 ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              }`}>
+                {language === 'ko' ? '📊 24시간 오즈 트렌드' : '📊 24-Hour Odds Trend'}
+              </h3>
+              
+              {/* 트렌드 차트 */}
+              {trendData.length > 0 ? (
+                <div>
+                  <MatchTrendChart data={trendData} darkMode={darkMode} />
+                  
+                  {/* 통계 정보 */}
+                  <div className="grid grid-cols-3 gap-2 mt-4">
+                    <div className={`text-center p-2 rounded-lg ${
+                      darkMode ? 'bg-blue-900/20' : 'bg-blue-50'
+                    }`}>
+                      <p className={`text-xs ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                        {language === 'ko' ? '홈 최고' : 'Home Peak'}
+                      </p>
+                      <p className={`text-lg font-bold ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                        {Math.max(...trendData.map(d => d.homeWinProbability)).toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className={`text-center p-2 rounded-lg ${
+                      darkMode ? 'bg-gray-800' : 'bg-gray-100'
+                    }`}>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {language === 'ko' ? '무승부 평균' : 'Draw Avg'}
+                      </p>
+                      <p className={`text-lg font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {(trendData.reduce((sum, d) => sum + d.drawProbability, 0) / trendData.length).toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className={`text-center p-2 rounded-lg ${
+                      darkMode ? 'bg-red-900/20' : 'bg-red-50'
+                    }`}>
+                      <p className={`text-xs ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                        {language === 'ko' ? '원정 최고' : 'Away Peak'}
+                      </p>
+                      <p className={`text-lg font-bold ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                        {Math.max(...trendData.map(d => d.awayWinProbability)).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* 데이터 포인트 수 */}
+                  <p className={`text-xs text-center mt-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {language === 'ko' 
+                      ? `${trendData.length}개 데이터 포인트 • 최근 24시간`
+                      : `${trendData.length} data points • Last 24 hours`}
+                  </p>
+                </div>
+              ) : (
+                <div className={`rounded-lg p-6 text-center ${
+                  darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
+                }`}>
+                  <span className="text-4xl mb-2 block">📊</span>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {language === 'ko' 
+                      ? '트렌드 데이터가 아직 수집되지 않았습니다' 
+                      : 'Trend data not yet available'}
+                  </p>
+                  <p className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {language === 'ko'
+                      ? '경기 시작 24시간 전부터 2시간마다 수집됩니다'
+                      : 'Data collected every 2 hours, starting 24h before match'}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
