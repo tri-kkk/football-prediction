@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface MenuItem {
-  label: string
+  labelKo: string
+  labelEn: string
   href: string
   icon: string
   badge?: string
@@ -14,23 +16,27 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { 
-    label: '라이브 예측', 
+    labelKo: '라이브 예측',
+    labelEn: 'Live Predictions',
     href: '/', 
     icon: '⚽' 
   },
   { 
-    label: '스마트 대시보드', 
+    labelKo: '스마트 대시보드',
+    labelEn: 'Smart Dashboard',
     href: '/dashboard', 
     icon: '📊' 
   },
   { 
-    label: '배당 무브먼트', 
+    labelKo: '배당 무브먼트',
+    labelEn: 'Odds Movement',
     href: '/movement', 
     icon: '🌊', 
     badge: 'NEW',
   },
   { 
-    label: '마켓 웨이브', 
+    labelKo: '마켓 웨이브',
+    labelEn: 'Market Wave',
     href: '/market-wave', 
     icon: '🎯', 
     badge: 'WAIT',
@@ -40,6 +46,7 @@ const menuItems: MenuItem[] = [
 
 export default function Navigation() {
   const pathname = usePathname()
+  const { language } = useLanguage()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
@@ -65,7 +72,7 @@ export default function Navigation() {
               onClick={(e) => isDisabled && e.preventDefault()}
             >
               <span className="mr-2">{item.icon}</span>
-              {item.label}
+              {language === 'ko' ? item.labelKo : item.labelEn}
               
               {/* Phase Badge */}
               {item.badge && (
@@ -115,7 +122,7 @@ export default function Navigation() {
                   }}
                 >
                   <span className="mr-3 text-xl">{item.icon}</span>
-                  {item.label}
+                  {language === 'ko' ? item.labelKo : item.labelEn}
                   
                   {/* Phase Badge */}
                   {item.badge && (

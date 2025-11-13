@@ -6,82 +6,94 @@ import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
 import H2HModal from './components/H2HModal'
 import { getTeamId } from './utils/teamIdMapping'
+import { useLanguage } from './contexts/LanguageContext'
 
 // 리그 정보 (국기 이미지 포함)
 const LEAGUES = [
   { 
     code: 'ALL', 
-    name: '전체', 
+    name: '전체',
+    nameEn: 'All Leagues',
     flag: '🌍',
     logo: '🌍',
     isEmoji: true
   },
   { 
     code: 'PL', 
-    name: '프리미어리그', 
+    name: '프리미어리그',
+    nameEn: 'Premier League',
     flag: 'https://flagcdn.com/w40/gb-eng.png',
     logo: 'https://media.api-sports.io/football/leagues/39.png',
     isEmoji: false
   },
   { 
     code: 'PD', 
-    name: '라리가', 
+    name: '라리가',
+    nameEn: 'La Liga',
     flag: 'https://flagcdn.com/w40/es.png',
     logo: 'https://media.api-sports.io/football/leagues/140.png',
     isEmoji: false
   },
   { 
     code: 'BL1', 
-    name: '분데스리가', 
+    name: '분데스리가',
+    nameEn: 'Bundesliga',
     flag: 'https://flagcdn.com/w40/de.png',
     logo: 'https://media.api-sports.io/football/leagues/78.png',
     isEmoji: false
   },
   { 
     code: 'SA', 
-    name: '세리에A', 
+    name: '세리에A',
+    nameEn: 'Serie A',
     flag: 'https://flagcdn.com/w40/it.png',
     logo: 'https://media.api-sports.io/football/leagues/135.png',
     isEmoji: false
   },
   { 
     code: 'FL1', 
-    name: '리그1', 
+    name: '리그1',
+    nameEn: 'Ligue 1',
     flag: 'https://flagcdn.com/w40/fr.png',
     logo: 'https://media.api-sports.io/football/leagues/61.png',
     isEmoji: false
   },
   { 
     code: 'PPL', 
-    name: '프리메이라리가', 
+    name: '프리메이라리가',
+    nameEn: 'Primeira Liga',
     flag: 'https://flagcdn.com/w40/pt.png',
     logo: 'https://media.api-sports.io/football/leagues/94.png',
     isEmoji: false
   },
   { 
     code: 'DED', 
-    name: '에레디비시', 
+    name: '에레디비시',
+    nameEn: 'Eredivisie',
     flag: 'https://flagcdn.com/w40/nl.png',
     logo: 'https://media.api-sports.io/football/leagues/88.png',
     isEmoji: false
   },
   { 
     code: 'CL', 
-    name: '챔피언스리그', 
+    name: '챔피언스리그',
+    nameEn: 'Champions League',
     flag: '⭐',
     logo: 'https://media.api-sports.io/football/leagues/2.png',
     isEmoji: false
   },
   { 
     code: 'EL', 
-    name: '유로파리그', 
+    name: '유로파리그',
+    nameEn: 'Europa League',
     flag: '⭐',
     logo: 'https://media.api-sports.io/football/leagues/3.png',
     isEmoji: false
   },
   { 
     code: 'ELC', 
-    name: '챔피언십', 
+    name: '챔피언십',
+    nameEn: 'Championship',
     flag: 'https://flagcdn.com/w40/gb-eng.png',
     logo: 'https://media.api-sports.io/football/leagues/40.png',
     isEmoji: false
@@ -323,6 +335,7 @@ function setCachedData(key: string, data: any) {
 }
 
 export default function Home() {
+  const { t, language: currentLanguage } = useLanguage()
   const [selectedLeague, setSelectedLeague] = useState('ALL')
   const [matches, setMatches] = useState<Match[]>([])
     const [h2hModalOpen, setH2hModalOpen] = useState(false)
@@ -333,7 +346,6 @@ export default function Home() {
   const [trendData, setTrendData] = useState<{ [key: number]: TrendData[] }>({})
   const [newsKeywords, setNewsKeywords] = useState<NewsKeyword[]>([])
   const [darkMode, setDarkMode] = useState(true)
-  const [language, setLanguage] = useState<'ko' | 'en'>('ko')
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   // AI 논평 상태
   const [aiCommentaries, setAiCommentaries] = useState<{ [key: number]: string }>({})
@@ -1336,9 +1348,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
-      {/* 헤더 */}
-    
-
       {/* 승률 배너 (자동 스크롤) */}
       <div className="bg-[#0f0f0f] border-b border-gray-900">
         <div className="py-4 overflow-hidden">
@@ -1362,15 +1371,22 @@ export default function Home() {
                 ? Math.round(latestTrend.awayWinProbability)
                 : match.awayWinRate
               
-              const homeTeam = (match.homeTeamKR || match.homeTeam).length > 15 
-               ? (match.homeTeamKR || match.homeTeam).substring(0, 15) + '...' 
-  : (match.homeTeamKR || match.homeTeam)
-const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15 
-  ? (match.awayTeamKR || match.awayTeam).substring(0, 15) + '...' 
-  : (match.awayTeamKR || match.awayTeam)
+              const homeTeam = currentLanguage === 'ko' 
+                ? (match.homeTeamKR || match.homeTeam)
+                : match.homeTeam
+              const homeTeamDisplay = homeTeam.length > 15 
+                ? homeTeam.substring(0, 15) + '...' 
+                : homeTeam
+              
+              const awayTeam = currentLanguage === 'ko'
+                ? (match.awayTeamKR || match.awayTeam)
+                : match.awayTeam
+              const awayTeamDisplay = awayTeam.length > 15 
+                ? awayTeam.substring(0, 15) + '...' 
+                : awayTeam
               
               const isHomeWinning = homeWin > awayWin
-              const winningTeam = isHomeWinning ? homeTeam : awayTeam
+              const winningTeam = isHomeWinning ? homeTeamDisplay : awayTeamDisplay
               const winningCrest = isHomeWinning ? match.homeCrest : match.awayCrest
               const winProbability = isHomeWinning ? homeWin : awayWin
               
@@ -1404,7 +1420,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                         {winningTeam}
                       </div>
                       <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                        {isHomeWinning ? 'Home' : 'Away'}
+                        {isHomeWinning ? (currentLanguage === 'ko' ? '홈' : 'Home') : (currentLanguage === 'ko' ? '원정' : 'Away')}
                       </div>
                     </div>
                   </div>
@@ -1415,7 +1431,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                     {winProbability}%
                   </div>
                   <div className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                    Win Probability
+                    {currentLanguage === 'ko' ? '승률' : 'Win Probability'}
                   </div>
                   
                   <div className={`text-xs font-medium mt-2 pt-2 border-t ${
@@ -1480,7 +1496,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
               <h2 className={`text-lg font-bold mb-4 ${
                 darkMode ? 'text-white' : 'text-gray-900'
               }`}>
-                Popular Leagues
+                {currentLanguage === 'ko' ? '인기 리그' : 'Popular Leagues'}
               </h2>
               <nav className="space-y-2">
                 {LEAGUES
@@ -1513,7 +1529,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                         />
                       </div>
                     )}
-                    <span className="text-sm">{league.name}</span>
+                    <span className="text-sm">{currentLanguage === 'ko' ? league.name : league.nameEn}</span>
                   </button>
                 ))}
               </nav>
@@ -1538,10 +1554,13 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                     <div className="w-4 h-4 bg-white rounded-full animate-pulse" />
                     <div>
                       <h2 className="text-2xl font-bold text-white mb-1">
-                        🔴 지금 {liveCount}개 경기 진행 중!
+                        🔴 {currentLanguage === 'ko' ? `지금 ${liveCount}개 경기 진행 중!` : `${liveCount} Live Matches Now!`}
                       </h2>
                       <p className="text-white/90 text-sm">
-                        실시간 점수와 배당 변화를 확인하세요 • 15초마다 자동 업데이트
+                        {currentLanguage === 'ko' 
+                          ? '실시간 점수와 배당 변화를 확인하세요 • 15초마다 자동 업데이트'
+                          : 'Check live scores and odds • Auto-update every 15 seconds'
+                        }
                       </p>
                     </div>
                   </div>
@@ -1590,7 +1609,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                           }}
                         />
                       )}
-                      <span>{league.name}</span>
+                      <span>{currentLanguage === 'ko' ? league.name : league.nameEn}</span>
                     </span>
                   </button>
                 ))}
@@ -1630,10 +1649,10 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
         <div className="mb-6">
           <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
             {[
-              { value: 'today', label: '오늘' },
-              { value: 'tomorrow', label: '내일' },
-              { value: 'week', label: '이번 주' },
-              { value: 'upcoming', label: '다가오는 경기' }
+              { value: 'today', labelKo: '오늘', labelEn: 'Today' },
+              { value: 'tomorrow', labelKo: '내일', labelEn: 'Tomorrow' },
+              { value: 'week', labelKo: '이번 주', labelEn: 'This Week' },
+              { value: 'upcoming', labelKo: '다가오는 경기', labelEn: 'Upcoming' }
             ].map((date) => (
               <button
                 key={date.value}
@@ -1652,7 +1671,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                 }`}
               >
-                {date.label}
+                {currentLanguage === 'ko' ? date.labelKo : date.labelEn}
               </button>
             ))}
           </div>
@@ -1666,7 +1685,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
           <div className="text-center py-20">
             <div className="text-6xl mb-4 animate-bounce">⚽</div>
             <p className={`text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              로딩 중...
+              {t.status.loading}
             </p>
           </div>
         )}
@@ -1734,10 +1753,10 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                           </svg>
                           <div>
                             <p className="text-sm font-medium text-blue-300">
-                              이번 주 예정된 경기가 없습니다
+                              {currentLanguage === 'ko' ? '이번 주 예정된 경기가 없습니다' : 'No matches scheduled this week'}
                             </p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              가장 가까운 경기를 보여드립니다
+                              {currentLanguage === 'ko' ? '가장 가까운 경기를 보여드립니다' : 'Showing nearest available matches'}
                             </p>
                           </div>
                         </div>
@@ -1756,8 +1775,12 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                   {paginatedMatches.length === 0 ? (
                     <div className={`text-center py-20 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       <div className="text-6xl mb-4">📅</div>
-                      <p className="text-xl mb-2">선택한 날짜에 예정된 경기가 없습니다.</p>
-                      <p className="text-sm">다른 날짜를 선택해보세요!</p>
+                      <p className="text-xl mb-2">
+                        {currentLanguage === 'ko' ? '선택한 날짜에 예정된 경기가 없습니다.' : 'No matches scheduled for the selected date.'}
+                      </p>
+                      <p className="text-sm">
+                        {currentLanguage === 'ko' ? '다른 날짜를 선택해보세요!' : 'Try selecting a different date!'}
+                      </p>
                     </div>
                   ) : (
                     <>
@@ -1892,7 +1915,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                         <div className="w-full flex items-center justify-center gap-4">
                           {/* 홈팀 이름 - 오른쪽 정렬 */}
                           <span className={`font-bold text-sm text-right flex-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {match.homeTeamKR || match.homeTeam}
+                            {currentLanguage === 'ko' ? (match.homeTeamKR || match.homeTeam) : match.homeTeam}
                           </span>
                           
                           {/* VS 공간 유지 */}
@@ -1900,7 +1923,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                           
                           {/* 원정팀 이름 - 왼쪽 정렬 */}
                           <span className={`font-bold text-sm text-left flex-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {match.awayTeamKR || match.awayTeam}
+                            {currentLanguage === 'ko' ? (match.awayTeamKR || match.awayTeam) : match.awayTeam}
                           </span>
                         </div>
                       </div>
@@ -2016,7 +2039,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        <span>클릭하면 24시간 트렌드를 볼 수 있습니다</span>
+                        <span>{currentLanguage === 'ko' ? '클릭하면 24시간 트렌드를 볼 수 있습니다' : 'Click to view 24-hour trend'}</span>
                       </div>
                     </div>
                   </div>
@@ -2071,7 +2094,7 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                         : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
                   }`}
                 >
-                  이전
+                  {currentLanguage === 'ko' ? '이전' : 'Previous'}
                 </button>
                 
                 <div className="flex items-center gap-2">
@@ -2122,11 +2145,14 @@ const awayTeam = (match.awayTeamKR || match.awayTeam).length > 15
                         : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
                   }`}
                 >
-                  다음
+                  {currentLanguage === 'ko' ? '다음' : 'Next'}
                 </button>
                 
                 <span className={`ml-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {currentPage} / {totalPages} 페이지 (총 {totalMatches}경기)
+                  {currentLanguage === 'ko' 
+                    ? `${currentPage} / ${totalPages} 페이지 (총 ${totalMatches}경기)`
+                    : `Page ${currentPage} / ${totalPages} (${totalMatches} matches)`
+                  }
                 </span>
               </div>
             )}

@@ -5,6 +5,8 @@ import Link from 'next/link'
 import GoogleTagManager from './GoogleTagManager'
 import Navigation from './components/Navigation'
 import MonetagVignette from './components/ads/MonetagVignette'
+import { LanguageProvider } from './contexts/LanguageContext'
+import LanguageToggle from './components/LanguageToggle'
 
 export const metadata: Metadata = {
   title: 'Trend Soccer',
@@ -39,6 +41,7 @@ export default function RootLayout({
         <meta name="c982cca4dc6a1656193e00065dfdc54ab48699769" content="c982cca4dc6a1656193e00065dfdc54ab48699769" />
       </head>
       <body className="bg-[#0f0f0f] text-white">
+        <LanguageProvider>
         {/* Google Tag Manager */}
         <GoogleTagManager />
 
@@ -85,9 +88,9 @@ export default function RootLayout({
         {/* Global Navigation */}
         <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-3 cursor-pointer">
+              <Link href="/" className="flex items-center gap-3 cursor-pointer flex-shrink-0">
                 <img 
                   src="/logo.svg" 
                   alt="Trend Soccer" 
@@ -95,8 +98,15 @@ export default function RootLayout({
                 />
               </Link>
               
-              {/* Navigation */}
-              <Navigation />
+              {/* Navigation - 중앙 */}
+              <div className="flex-1 flex justify-center">
+                <Navigation />
+              </div>
+              
+              {/* Language Toggle - 우측 */}
+              <div className="flex-shrink-0">
+                <LanguageToggle />
+              </div>
             </div>
           </div>
         </header>
@@ -152,6 +162,7 @@ export default function RootLayout({
 
         {/* Monetag Vignette Banner - 깔끔한 네이티브 광고 */}
         <MonetagVignette />
+        </LanguageProvider>
       </body>
     </html>
   )
