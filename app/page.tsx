@@ -1,5 +1,4 @@
 'use client'
-import NewsKeywords from './components/NewsKeywords'
 import MatchPrediction from './components/MatchPrediction'
 import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
@@ -2061,13 +2060,7 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-<div className={`mt-3 pt-3 border-t ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
-  <NewsKeywords
-    homeTeam={match.homeTeam}
-    awayTeam={match.awayTeam}
-    matchId={match.id}
-  />
-</div>
+
                   {/* 확장된 트렌드 차트 */}
                   {expandedMatchId === match.id && (
                     <div className={`mt-4 p-6 rounded-2xl animate-fadeIn ${
