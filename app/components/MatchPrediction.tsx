@@ -683,11 +683,36 @@ export default function MatchPrediction({
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
-            {tab === 'overview' && (language === 'ko' ? '📊 개요' : '📊 Overview')}
-            {tab === 'stats' && (language === 'ko' ? '📈 상세통계' : '📈 Stats')}
-            {tab === 'h2h' && (language === 'ko' ? '⚔️ 상대전적' : '⚔️ H2H')}
-            {tab === 'form' && (language === 'ko' ? '📈 최근폼' : '📈 Form')}
-            {tab === 'trend' && (language === 'ko' ? '📊 트렌드' : '📊 Trend')}
+            {tab === 'overview' && (
+              <>
+                <span className="md:hidden">📊</span>
+                <span className="hidden md:inline">{language === 'ko' ? '📊 개요' : '📊 Overview'}</span>
+              </>
+            )}
+            {tab === 'stats' && (
+              <>
+                <span className="md:hidden">📈</span>
+                <span className="hidden md:inline">{language === 'ko' ? '📈 상세통계' : '📈 Stats'}</span>
+              </>
+            )}
+            {tab === 'h2h' && (
+              <>
+                <span className="md:hidden">⚔️</span>
+                <span className="hidden md:inline">{language === 'ko' ? '⚔️ 상대전적' : '⚔️ H2H'}</span>
+              </>
+            )}
+            {tab === 'form' && (
+              <>
+                <span className="md:hidden">📈</span>
+                <span className="hidden md:inline">{language === 'ko' ? '📈 최근폼' : '📈 Form'}</span>
+              </>
+            )}
+            {tab === 'trend' && (
+              <>
+                <span className="md:hidden">📊</span>
+                <span className="hidden md:inline">{language === 'ko' ? '📊 트렌드' : '📊 Trend'}</span>
+              </>
+            )}
           </button>
         ))}
       </div>

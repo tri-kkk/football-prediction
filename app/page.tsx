@@ -1423,7 +1423,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
       {/* 승률 배너 (자동 스크롤) */}
-      <div className="bg-[#0f0f0f] border-b border-gray-900">
+      
+      {/* 데스크톱: 세로형 카드 */}
+      <div className="hidden md:block bg-[#0f0f0f] border-b border-gray-900">
         <div className="py-4 overflow-hidden">
           <div 
             ref={scrollContainerRef}
@@ -1520,6 +1522,82 @@ export default function Home() {
               )
             })
           })()}
+          </div>
+        </div>
+      </div>
+
+      {/* 모바일: 콤팩트 가로형 */}
+      <div className="md:hidden bg-[#0f0f0f] border-b border-gray-900">
+        <div className="py-2 overflow-hidden">
+          <div 
+            ref={scrollContainerRef}
+            className="flex gap-2 px-3 overflow-x-auto scrollbar-hide"
+            style={{ scrollBehavior: 'auto' }}
+          >
+            {(() => {
+              const uniqueMatches = matches.slice(0, 20)
+              return [...uniqueMatches, ...uniqueMatches].map((match, index) => {
+                const currentTrend = trendData[match.id]
+                const latestTrend = currentTrend?.[currentTrend.length - 1]
+                
+                const homeWin = latestTrend 
+                  ? Math.round(latestTrend.homeWinProbability)
+                  : match.homeWinRate
+                const awayWin = latestTrend 
+                  ? Math.round(latestTrend.awayWinProbability)
+                  : match.awayWinRate
+                
+                const homeTeam = currentLanguage === 'ko' 
+                  ? (match.homeTeamKR || match.homeTeam)
+                  : match.homeTeam
+                const homeTeamDisplay = homeTeam.length > 8 
+                  ? homeTeam.substring(0, 8) + '...' 
+                  : homeTeam
+                
+                const awayTeam = currentLanguage === 'ko'
+                  ? (match.awayTeamKR || match.awayTeam)
+                  : match.awayTeam
+                const awayTeamDisplay = awayTeam.length > 8 
+                  ? awayTeam.substring(0, 8) + '...' 
+                  : awayTeam
+                
+                const isHomeWinning = homeWin > awayWin
+                const winningTeam = isHomeWinning ? homeTeamDisplay : awayTeamDisplay
+                const winningCrest = isHomeWinning ? match.homeCrest : match.awayCrest
+                const winProbability = isHomeWinning ? homeWin : awayWin
+                
+                return (
+                  <div
+                    key={`mobile-${match.id}-${index}`}
+                    onClick={() => {
+                      const element = document.getElementById(`match-card-${match.id}`)
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }
+                      handleMatchClick(match)
+                    }}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all bg-[#1a1a1a] border border-gray-800 whitespace-nowrap ${
+                      expandedMatchId === match.id ? 'ring-2 ring-blue-500' : 'hover:border-gray-700'
+                    }`}
+                  >
+                    <img 
+                      src={winningCrest} 
+                      alt={winningTeam} 
+                      className="w-6 h-6 flex-shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">⚽</text></svg>'
+                      }}
+                    />
+                    <span className="text-sm font-bold text-white">
+                      {winningTeam}
+                    </span>
+                    <span className="text-lg font-black text-blue-400">
+                      {winProbability}%
+                    </span>
+                  </div>
+                )
+              })
+            })()}
           </div>
         </div>
       </div>
@@ -1645,51 +1723,6 @@ export default function Home() {
               </a>
             )}
             
-            {/* 리그 필터 (모바일만) */}
-            <div className={`lg:hidden mb-6 p-3 rounded-2xl ${
-              darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
-            }`}>
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                {LEAGUES
-                  .filter(league => LEAGUES_WITH_ODDS.includes(league.code))
-                  .map((league) => (
-                  <button
-                    key={league.code}
-                    onClick={() => {
-                      setSelectedLeague(league.code)
-                      setCurrentPage(1) // 리그 변경 시 1페이지로 리셋
-                    }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap flex-shrink-0 ${
-                      selectedLeague === league.code
-                        ? darkMode 
-                          ? 'bg-white text-black shadow-lg transform scale-105'
-                          : 'bg-black text-white shadow-lg transform scale-105'
-                        : darkMode
-                          ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-                    }`}
-                  >
-                    {/* 모바일/데스크탑 모두: 국기 + 이름 */}
-                    <span className="flex items-center gap-2">
-                      {league.isEmoji ? (
-                        <span className="text-base">{league.flag}</span>
-                      ) : (
-                        <img 
-                          src={league.flag} 
-                          alt={league.name}
-                          className="w-4 h-3 object-cover rounded"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      )}
-                      <span>{currentLanguage === 'ko' ? league.name : league.nameEn}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) */}
             <div className="hidden lg:block mb-6">
               <div className={`rounded-xl overflow-hidden mx-auto`} style={{ maxWidth: '728px' }}>
@@ -1721,7 +1754,7 @@ export default function Home() {
 
         {/* 날짜 필터 */}
         <div className="mb-6">
-          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
+          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2 px-2">
             {[
               { value: 'today', labelKo: '오늘', labelEn: 'Today' },
               { value: 'tomorrow', labelKo: '내일', labelEn: 'Tomorrow' },
@@ -1735,7 +1768,7 @@ export default function Home() {
                   setCurrentPage(1) // 날짜 변경 시 1페이지로 리셋
                   setShowFallbackBanner(false) // 배너 숨김
                 }}
-                className={`px-6 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                   selectedDate === date.value
                     ? darkMode 
                       ? 'bg-blue-600 text-white shadow-lg'
@@ -1910,15 +1943,15 @@ export default function Home() {
                           }
                         })()}
                         
-                        {/* 리그명 */}
-                        <span className={`text-base font-bold ${
+                        {/* 리그명 - 모바일 숨김 */}
+                        <span className={`hidden md:inline text-base font-bold ${
                           darkMode ? 'text-white' : 'text-black'
                         }`}>
                           {match.league}
                         </span>
                         
-                        {/* 구분선 */}
-                        <span className={`text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
+                        {/* 구분선 - 모바일 숨김 */}
+                        <span className={`hidden md:inline text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
                         
                         {/* 날짜 */}
                         <span className={`text-sm font-semibold ${
