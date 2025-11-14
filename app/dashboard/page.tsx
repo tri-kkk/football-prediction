@@ -287,7 +287,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 ">
         
         {/* 에러 메시지 */}
         {error && (
@@ -603,9 +603,13 @@ export default function DashboardPage() {
       {/* 커스텀 스타일 */}
       <style jsx global>{`
         /* 가로 스크롤 최적화 */
+        /* 가로 스크롤 최적화 */
         .overflow-x-auto {
           -webkit-overflow-scrolling: touch;
           scroll-behavior: smooth;
+          /* 세로 스크롤은 부모로 전파 */
+          overscroll-behavior-x: contain;
+          overscroll-behavior-y: auto;
         }
 
         /* 커스텀 스크롤바 (WebKit) */
