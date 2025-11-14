@@ -109,7 +109,7 @@ interface MatchPredictionProps {
   awayTeamKR?: string
   homeTeamId?: number
   awayTeamId?: number
-  league: string // 🆕 리그 정보
+  league?: string // 🆕 리그 정보
   trendData?: TrendData[]
   darkMode: boolean
 }
