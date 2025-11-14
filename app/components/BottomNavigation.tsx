@@ -50,7 +50,7 @@ export default function BottomNavigation() {
   return (
     <>
       {/* 모바일 전용 하단 네비게이션 */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#1a1a1a] border-t border-gray-800 shadow-2xl">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[9999] bg-[#1a1a1a] border-t border-gray-800 shadow-2xl" style={{ touchAction: 'auto' }}>
         <div className="flex items-center justify-around px-2 py-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href
@@ -107,9 +107,6 @@ export default function BottomNavigation() {
           })}
         </div>
       </nav>
-
-      {/* 컨텐츠가 하단 네비에 가려지지 않도록 여백 추가 */}
-      <div className="md:hidden h-20" />
     </>
   )
 }

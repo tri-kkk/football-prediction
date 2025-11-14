@@ -113,7 +113,7 @@ export default function RootLayout({
         </header>
 
         {/* Main Content */}
-        <main>
+        <main className="pb-20 md:pb-0">
           {children}
         </main>
 
