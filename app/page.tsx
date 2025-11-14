@@ -2020,27 +2020,6 @@ export default function Home() {
                             {currentLanguage === 'ko' ? '라인업' : 'Lineup'}
                           </span>
                         </button>
-                        
-                        {/* 상대전적 버튼 */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedMatch(match)
-                            setH2hModalOpen(true)
-                          }}
-                          className={`
-                            flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm
-                            transition-all hover:scale-105 active:scale-95 shadow-sm
-                            ${darkMode 
-                              ? 'bg-blue-600 hover:bg-blue-500 text-white border border-blue-500' 
-                              : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500'
-                            }
-                          `}
-                          title="상대전적 보기"
-                        >
-                          <span>📊</span>
-                          <span className="hidden sm:inline">상대전적</span>
-                        </button>
                       </div>
                     </div>
 

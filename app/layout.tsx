@@ -4,6 +4,7 @@ import Script from 'next/script'
 import Link from 'next/link'
 import GoogleTagManager from './GoogleTagManager'
 import Navigation from './components/Navigation'
+import BottomNavigation from './components/BottomNavigation'
 import MonetagVignette from './components/ads/MonetagVignette'
 import { LanguageProvider } from './contexts/LanguageContext'
 import LanguageToggle from './components/LanguageToggle'
@@ -87,23 +88,23 @@ export default function RootLayout({
 
         {/* Global Navigation */}
         <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between gap-4">
-              {/* Logo */}
-              <Link href="/" className="flex items-center gap-3 cursor-pointer flex-shrink-0">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              {/* 좌측: Logo */}
+              <Link href="/" className="flex items-center gap-3 cursor-pointer">
                 <img 
                   src="/logo.svg" 
                   alt="Trend Soccer" 
-                  className="h-14 w-auto"
+                  className="h-12 w-auto"
                 />
               </Link>
               
-              {/* Navigation - 중앙 */}
-              <div className="flex-1 flex justify-center">
+              {/* 중앙: Desktop Navigation (PC만) */}
+              <div className="hidden md:block">
                 <Navigation />
               </div>
               
-              {/* Language Toggle - 우측 */}
+              {/* 우측: Language Toggle */}
               <div className="flex-shrink-0">
                 <LanguageToggle />
               </div>
@@ -115,6 +116,9 @@ export default function RootLayout({
         <main>
           {children}
         </main>
+
+        {/* 모바일 하단 네비게이션 */}
+        <BottomNavigation />
 
         {/* Footer */}
         <footer className="mt-20 py-12 border-t border-gray-800 bg-[#1a1a1a]">
