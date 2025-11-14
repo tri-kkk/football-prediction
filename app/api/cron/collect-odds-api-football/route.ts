@@ -163,29 +163,53 @@ export async function POST(request: Request) {
               continue
             }
 
-            // 첫 번째 북메이커의 오즈 사용
-            const bookmaker = oddsResponse.bookmakers[0]
-            const matchWinnerBet = bookmaker.bets.find(
-              (bet: any) => bet.name === 'Match Winner' || bet.id === 1
-            )
+            // 🆕 다중 북메이커 평균 로직 (3~10개)
+            const bookmakers = oddsResponse.bookmakers.slice(0, 10) // 최대 10개
+            let validOddsCount = 0
+            let totalHomeOdds = 0
+            let totalDrawOdds = 0
+            let totalAwayOdds = 0
+            const bookmakerNames: string[] = []
 
-            if (!matchWinnerBet) {
+            for (const bookmaker of bookmakers) {
+              const matchWinnerBet = bookmaker.bets.find(
+                (bet: any) => bet.name === 'Match Winner' || bet.id === 1
+              )
+
+              if (!matchWinnerBet) continue
+
+              const homeOdds = parseFloat(
+                matchWinnerBet.values.find((v: any) => v.value === 'Home')?.odd || '0'
+              )
+              const drawOdds = parseFloat(
+                matchWinnerBet.values.find((v: any) => v.value === 'Draw')?.odd || '0'
+              )
+              const awayOdds = parseFloat(
+                matchWinnerBet.values.find((v: any) => v.value === 'Away')?.odd || '0'
+              )
+
+              // 유효한 오즈만 집계
+              if (homeOdds > 0 && drawOdds > 0 && awayOdds > 0) {
+                totalHomeOdds += homeOdds
+                totalDrawOdds += drawOdds
+                totalAwayOdds += awayOdds
+                validOddsCount++
+                bookmakerNames.push(bookmaker.name)
+              }
+            }
+
+            // 최소 3개 북메이커 필요
+            if (validOddsCount < 3) {
+              console.log(`⚠️ Not enough bookmakers (${validOddsCount}): ${fixture.teams.home.name} vs ${fixture.teams.away.name}`)
               continue
             }
 
-            const homeOdds = parseFloat(
-              matchWinnerBet.values.find((v: any) => v.value === 'Home')?.odd || '0'
-            )
-            const drawOdds = parseFloat(
-              matchWinnerBet.values.find((v: any) => v.value === 'Draw')?.odd || '0'
-            )
-            const awayOdds = parseFloat(
-              matchWinnerBet.values.find((v: any) => v.value === 'Away')?.odd || '0'
-            )
+            // 평균 계산
+            const homeOdds = totalHomeOdds / validOddsCount
+            const drawOdds = totalDrawOdds / validOddsCount
+            const awayOdds = totalAwayOdds / validOddsCount
 
-            if (!homeOdds || !drawOdds || !awayOdds) {
-              continue
-            }
+            console.log(`📊 ${validOddsCount} bookmakers averaged: ${bookmakerNames.slice(0, 3).join(', ')}${validOddsCount > 3 ? `... (+${validOddsCount - 3})` : ''}`)
 
             // 확률 계산
             const homePercent = oddsToPercentage(homeOdds)
@@ -215,7 +239,7 @@ export async function POST(request: Request) {
               home_probability: normalized.home,
               draw_probability: normalized.draw,
               away_probability: normalized.away,
-              odds_source: bookmaker.name,
+              odds_source: `Averaged from ${validOddsCount} bookmakers`,
             }
 
             const { error: historyError } = await supabase
@@ -246,7 +270,7 @@ export async function POST(request: Request) {
                 p_home_probability: normalized.home,
                 p_draw_probability: normalized.draw,
                 p_away_probability: normalized.away,
-                p_odds_source: bookmaker.name,
+                p_odds_source: `Averaged from ${validOddsCount} bookmakers`,
               })
 
             if (latestError) {

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import MatchTrendChart from './MatchTrendChart'
+import { getTeamLogo } from '../teamLogos'
 
 interface PredictionData {
   predictions: {
@@ -33,7 +34,46 @@ interface PredictionData {
   }
 }
 
+// 🆕 H2H 데이터 구조
+interface H2HMatch {
+  date: string
+  league: string
+  homeTeam: string
+  awayTeam: string
+  homeScore: number
+  awayScore: number
+  winner: 'home' | 'away' | 'draw'
+  isHomeTeamHome: boolean
+}
+
+interface FormMatch {
+  date: string
+  opponent: string
+  score: string
+  result: 'W' | 'D' | 'L'
+  isHome: boolean
+}
+
+interface Statistics {
+  totalMatches: number
+  homeWins: number
+  draws: number
+  awayWins: number
+  homeWinPercentage: number
+  drawPercentage: number
+  awayWinPercentage: number
+  avgGoalsHome: string
+  avgGoalsAway: string
+}
+
 interface H2HData {
+  h2hMatches: H2HMatch[]
+  homeForm: FormMatch[]
+  awayForm: FormMatch[]
+  statistics: Statistics
+}
+
+interface H2HDataOld {
   h2h: {
     matches: Array<{
       date: string
@@ -67,10 +107,115 @@ interface MatchPredictionProps {
   awayTeam: string
   homeTeamKR?: string
   awayTeamKR?: string
-  homeTeamId?: number     // camelCase로 받지만
-  awayTeamId?: number     // 내부적으로 사용
-  trendData?: TrendData[] // 🆕 트렌드 데이터
+  homeTeamId?: number
+  awayTeamId?: number
+  league: string // 🆕 리그 정보
+  trendData?: TrendData[]
   darkMode: boolean
+}
+
+// 🆕 현실적인 스코어 계산 함수
+function calculateRealisticScore(
+  avgHome: number, 
+  avgAway: number, 
+  homeWinPercent: number, 
+  drawPercent: number, 
+  awayWinPercent: number
+): { home: number; away: number } {
+  
+  // 🔥 음수 또는 유효하지 않은 데이터 처리
+  if (avgHome < 0 || avgAway < 0 || isNaN(avgHome) || isNaN(avgAway)) {
+    console.warn('⚠️ Invalid goal data, using win percentages:', { avgHome, avgAway })
+    
+    // 승률 기반으로만 스코어 예측
+    const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
+    
+    if (maxPercent === homeWinPercent) {
+      // 홈 우세
+      if (homeWinPercent > 50) return { home: 2, away: 0 }
+      if (homeWinPercent > 40) return { home: 2, away: 1 }
+      return { home: 1, away: 0 }
+    } else if (maxPercent === awayWinPercent) {
+      // 원정 우세
+      if (awayWinPercent > 50) return { home: 0, away: 2 }
+      if (awayWinPercent > 40) return { home: 1, away: 2 }
+      return { home: 0, away: 1 }
+    } else {
+      // 무승부
+      return { home: 1, away: 1 }
+    }
+  }
+  
+  // 1. 평균 득점 기반 기본 스코어
+  let homeGoals = Math.floor(avgHome)  // 내림 (보수적)
+  let awayGoals = Math.floor(avgAway)
+  
+  // 2. 소수점을 확률로 변환 (예: 1.7 → 70% 확률로 +1골)
+  const homeDecimal = avgHome - homeGoals
+  const awayDecimal = avgAway - awayGoals
+  
+  // 3. 승률 기반 조정
+  const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
+  
+  if (maxPercent === homeWinPercent) {
+    // 홈 승리 예상
+    if (homeDecimal > 0.6) homeGoals += 1  // 60% 이상이면 올림
+    if (homeWinPercent > 60 && homeGoals <= awayGoals) {
+      homeGoals = awayGoals + 1  // 강력한 홈 우세면 최소 1골 차
+    }
+  } else if (maxPercent === awayWinPercent) {
+    // 원정 승리 예상
+    if (awayDecimal > 0.6) awayGoals += 1
+    if (awayWinPercent > 60 && awayGoals <= homeGoals) {
+      awayGoals = homeGoals + 1  // 강력한 원정 우세면 최소 1골 차
+    }
+  } else {
+    // 무승부 예상
+    if (drawPercent > 35) {
+      // 무승부 가능성 높으면 비슷하게
+      const avg = (homeGoals + awayGoals) / 2
+      homeGoals = Math.round(avg)
+      awayGoals = Math.round(avg)
+    }
+  }
+  
+  // 4. 현실성 체크
+  const totalGoals = homeGoals + awayGoals
+  
+  // 총 득점이 5골 이상이면 조정 (축구는 보통 2-3골)
+  if (totalGoals > 5) {
+    const scale = 4 / totalGoals  // 최대 4골로 제한
+    homeGoals = Math.round(homeGoals * scale)
+    awayGoals = Math.round(awayGoals * scale)
+  }
+  
+  // 5. 최소값 보장 (0-0은 너무 지루)
+  if (totalGoals === 0) {
+    if (homeWinPercent > awayWinPercent) {
+      homeGoals = 1
+    } else if (awayWinPercent > homeWinPercent) {
+      awayGoals = 1
+    } else {
+      homeGoals = 1
+      awayGoals = 1
+    }
+  }
+  
+  // 6. 최종 일관성 체크
+  const finalHome = homeGoals
+  const finalAway = awayGoals
+  
+  // 승률과 스코어가 일치하는지 확인
+  if (homeWinPercent > awayWinPercent + 15 && finalHome <= finalAway) {
+    // 홈 승률이 15%p 이상 높은데 스코어가 지거나 비김 → 조정
+    return { home: finalAway + 1, away: finalAway }
+  }
+  if (awayWinPercent > homeWinPercent + 15 && finalAway <= finalHome) {
+    // 원정 승률이 15%p 이상 높은데 스코어가 지거나 비김 → 조정
+    return { home: finalHome, away: finalHome + 1 }
+  }
+  
+  return { home: finalHome, away: finalAway }
 }
 
 export default function MatchPrediction({ 
@@ -81,31 +226,65 @@ export default function MatchPrediction({
   awayTeamKR,
   homeTeamId,
   awayTeamId,
-  trendData: propsTrendData = [], // 🆕 기본값 빈 배열
+  league,
+  trendData: propsTrendData = [],
   darkMode 
 }: MatchPredictionProps) {
   const { language } = useLanguage()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [prediction, setPrediction] = useState<PredictionData | null>(null)
-  const [h2h, setH2h] = useState<H2HData | null>(null)
-  const [trendData, setTrendData] = useState<TrendData[]>(propsTrendData) // 🆕 props에서 초기화
+  const [h2hOld, setH2hOld] = useState<H2HDataOld | null>(null)
+  const [h2h, setH2h] = useState<H2HData | null>(null) // 🆕 새로운 H2H 데이터
+  const [trendData, setTrendData] = useState<TrendData[]>(propsTrendData)
   const [loading, setLoading] = useState(true)
+  const [h2hLoading, setH2hLoading] = useState(false) // 🆕 H2H 로딩 상태
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'h2h' | 'trend'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'h2h' | 'form' | 'trend'>('overview')
   
-  // 디버그 상태
+  // 🆕 팀 로고
+  const homeTeamLogo = getTeamLogo(homeTeam)
+  const awayTeamLogo = getTeamLogo(awayTeam)
+  
   const [debugInfo, setDebugInfo] = useState({
     predictionStatus: 'pending' as 'pending' | 'success' | 'failed',
     h2hStatus: 'pending' as 'pending' | 'success' | 'failed' | 'skipped',
   })
 
-  // 🆕 props에서 받은 trendData 업데이트
   useEffect(() => {
     if (propsTrendData && propsTrendData.length > 0) {
       console.log('📊 Trend data from props:', propsTrendData.length)
       setTrendData(propsTrendData)
     }
   }, [propsTrendData])
+
+  // 🆕 H2H 데이터 로딩 함수
+  const loadH2HData = async () => {
+    if (h2h || h2hLoading) return
+    
+    try {
+      setH2hLoading(true)
+      console.log(`🔍 Fetching H2H data: ${homeTeam} vs ${awayTeam}`)
+      
+      const response = await fetch(
+        `/api/h2h?homeTeam=${encodeURIComponent(homeTeam)}&awayTeam=${encodeURIComponent(awayTeam)}&league=${league}`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ H2H data loaded:', data)
+        setH2h(data)
+        setDebugInfo(prev => ({ ...prev, h2hStatus: 'success' }))
+      } else {
+        console.warn('⚠️ H2H API failed')
+        setDebugInfo(prev => ({ ...prev, h2hStatus: 'failed' }))
+      }
+    } catch (err) {
+      console.error('❌ H2H fetch error:', err)
+      setDebugInfo(prev => ({ ...prev, h2hStatus: 'failed' }))
+    } finally {
+      setH2hLoading(false)
+    }
+  }
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -125,7 +304,6 @@ export default function MatchPrediction({
         } else {
           console.warn(`⚠️ Prediction API failed: ${predResponse.status}`)
           
-          // 기본 예측 데이터 사용 (에러 시)
           const fallbackPrediction: PredictionData = {
             predictions: {
               winner: { id: 0, name: 'Unknown', comment: '' },
@@ -151,7 +329,7 @@ export default function MatchPrediction({
           setDebugInfo(prev => ({ ...prev, predictionStatus: 'fallback' as any }))
         }
 
-        // 2. H2H 데이터 (선택, 팀 ID 필요)
+        // 2. 기존 H2H 데이터 (선택, 팀 ID 필요) - overview 탭용
         if (homeTeamId && awayTeamId) {
           console.log(`🔍 Fetching H2H for teams: ${homeTeamId} vs ${awayTeamId}`)
           
@@ -160,7 +338,7 @@ export default function MatchPrediction({
               if (res.ok) {
                 const data = await res.json()
                 console.log('✅ H2H data:', data)
-                setH2h(data)
+                setH2hOld(data)
                 setDebugInfo(prev => ({ ...prev, h2hStatus: 'success' }))
               } else {
                 console.warn('⚠️ H2H API failed')
@@ -176,18 +354,9 @@ export default function MatchPrediction({
           setDebugInfo(prev => ({ ...prev, h2hStatus: 'skipped' }))
         }
 
-        // 3. 트렌드 데이터는 props에서만 받음 (API 호출 제거)
-        console.log('ℹ️ Trend data: Using only from props')
-        if (propsTrendData && propsTrendData.length > 0) {
-          console.log('✅ Trend data from props:', propsTrendData.length)
-        } else {
-          console.log('⚠️ No trend data in props')
-        }
-
       } catch (err) {
         console.error('❌ Fetch error:', err)
         
-        // 에러 시 폴백 데이터
         const fallbackPrediction: PredictionData = {
           predictions: {
             winner: { id: 0, name: 'Unknown', comment: '' },
@@ -219,17 +388,20 @@ export default function MatchPrediction({
     fetchAllData()
   }, [fixtureId, homeTeamId, awayTeamId])
 
+  // 🆕 H2H/Form 탭 클릭 시 데이터 로드
+  useEffect(() => {
+    if ((activeTab === 'h2h' || activeTab === 'form') && !h2h && !h2hLoading) {
+      loadH2HData()
+    }
+  }, [activeTab])
+
   // 레이더 차트 그리기 (stats 탭에서만)
   useEffect(() => {
-    // stats 탭이 아니면 실행 안 함
     if (activeTab !== 'stats') {
       return
     }
     
     console.log('🎨 Radar chart effect triggered')
-    console.log('- prediction:', prediction ? 'exists' : 'null')
-    console.log('- canvasRef.current:', canvasRef.current ? 'exists' : 'null')
-    console.log('- activeTab:', activeTab)
     
     if (!prediction || !canvasRef.current) {
       console.log('⚠️ Radar chart: Missing requirements')
@@ -244,7 +416,6 @@ export default function MatchPrediction({
     }
 
     console.log('✅ Drawing radar chart...')
-    console.log('- comparison:', prediction.comparison)
 
     const { comparison } = prediction
     const centerX = canvas.width / 2
@@ -259,8 +430,6 @@ export default function MatchPrediction({
       { label: '상대전적', home: parseFloat(comparison.h2h.home.replace('%', '')), away: parseFloat(comparison.h2h.away.replace('%', '')), angle: 4 * Math.PI / 3 },
       { label: '포아송', home: parseFloat(comparison.poisson_distribution.home.replace('%', '')), away: parseFloat(comparison.poisson_distribution.away.replace('%', '')), angle: 5 * Math.PI / 3 },
     ]
-
-    console.log('- categories:', categories)
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -352,7 +521,6 @@ export default function MatchPrediction({
     )
   }
 
-  // 에러 또는 데이터 없음
   if (error || !prediction) {
     return null
   }
@@ -364,26 +532,27 @@ export default function MatchPrediction({
   const awayPercent = parseFloat(pred.percent.away.replace('%', ''))
   const maxPercent = Math.max(homePercent, drawPercent, awayPercent)
 
-  // 한글 팀명 사용 (없으면 영문 팀명)
   const homeTeamDisplay = homeTeamKR || homeTeam
   const awayTeamDisplay = awayTeamKR || awayTeam
 
-  // 예상 스코어 계산 - 더 현실적으로 조정 (평균 2.5골 기준)
-  const rawHomeGoals = Math.abs(parseFloat(pred.goals.home))
-  const rawAwayGoals = Math.abs(parseFloat(pred.goals.away))
-  const totalRawGoals = rawHomeGoals + rawAwayGoals
+  // 🆕 현실적인 스코어 계산
+  const avgHomeGoals = Math.abs(parseFloat(pred.goals.home))  // 🔥 절댓값 처리
+  const avgAwayGoals = Math.abs(parseFloat(pred.goals.away))  // 🔥 절댓값 처리
   
-  // 총 득점이 4골 이상이면 비율 조정
-  let homeGoals, awayGoals
-  if (totalRawGoals > 4) {
-    // 비율 유지하면서 총합을 3-4골로 제한
-    const scale = 3.5 / totalRawGoals
-    homeGoals = Math.max(0, Math.round(rawHomeGoals * scale))
-    awayGoals = Math.max(0, Math.round(rawAwayGoals * scale))
-  } else {
-    homeGoals = Math.round(rawHomeGoals)
-    awayGoals = Math.round(rawAwayGoals)
-  }
+  console.log(`📊 Score calculation input:`)
+  console.log(`  - Raw API goals: ${pred.goals.home} - ${pred.goals.away}`)
+  console.log(`  - Abs goals: ${avgHomeGoals} - ${avgAwayGoals}`)
+  console.log(`  - Win%: ${homePercent}% / ${drawPercent}% / ${awayPercent}%`)
+  
+  const { home: homeGoals, away: awayGoals } = calculateRealisticScore(
+    avgHomeGoals,
+    avgAwayGoals,
+    homePercent,
+    drawPercent,
+    awayPercent
+  )
+  
+  console.log(`  - Final score: ${homeGoals} - ${awayGoals}`)
   
   const winnerInfo = homeGoals > awayGoals
     ? { team: homeTeamDisplay, percent: homePercent, color: 'blue' as const, result: '승리' }
@@ -391,7 +560,7 @@ export default function MatchPrediction({
     ? { team: awayTeamDisplay, percent: awayPercent, color: 'red' as const, result: '승리' }
     : { team: '무승부', percent: drawPercent, color: 'gray' as const, result: '예상' }
 
-  // 인사이트 생성 (부상자 제외, 아이콘 제거)
+  // 인사이트 생성
   const insights: Array<{ text: string; type: 'positive' | 'neutral' | 'negative' }> = []
 
   const homeFormValue = parseFloat(comparison.form.home)
@@ -404,9 +573,9 @@ export default function MatchPrediction({
     insights.push({ text: `${awayTeamDisplay}의 최근 폼이 매우 좋습니다 (${comparison.form.away})`, type: 'positive' })
   }
 
-  // H2H 인사이트
-  if (h2h?.h2h) {
-    const { summary } = h2h.h2h
+  // H2H 인사이트 (기존 API 데이터 사용)
+  if (h2hOld?.h2h) {
+    const { summary } = h2hOld.h2h
     if (summary.total >= 3) {
       const team1WinRate = parseFloat(summary.team1WinRate)
       const team2WinRate = parseFloat(summary.team2WinRate)
@@ -454,7 +623,7 @@ export default function MatchPrediction({
     insights.push({ text: `예상 총 득점 ${totalGoals}골 - 수비적인 경기 예상`, type: 'neutral' })
   }
 
-  // 비교 통계 (레이더 차트용)
+  // 비교 통계
   const comparisonStats = [
     { 
       label: language === 'ko' ? '최근폼' : 'Form',
@@ -500,7 +669,7 @@ export default function MatchPrediction({
     }`}>
       {/* 탭 헤더 */}
       <div className={`flex border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-        {(['overview', 'stats', 'h2h', 'trend'] as const).map((tab) => (
+        {(['overview', 'stats', 'h2h', 'form', 'trend'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -516,7 +685,8 @@ export default function MatchPrediction({
           >
             {tab === 'overview' && (language === 'ko' ? '📊 개요' : '📊 Overview')}
             {tab === 'stats' && (language === 'ko' ? '📈 상세통계' : '📈 Stats')}
-            {tab === 'h2h' && (language === 'ko' ? '🔄 상대전적' : '🔄 H2H')}
+            {tab === 'h2h' && (language === 'ko' ? '⚔️ 상대전적' : '⚔️ H2H')}
+            {tab === 'form' && (language === 'ko' ? '📈 최근폼' : '📈 Form')}
             {tab === 'trend' && (language === 'ko' ? '📊 트렌드' : '📊 Trend')}
           </button>
         ))}
@@ -524,15 +694,14 @@ export default function MatchPrediction({
 
       {/* 탭 내용 */}
       <div className="p-4">
-        {/* 개요 탭 */}
+        {/* 개요 탭 - 원본 디자인 유지 */}
         {activeTab === 'overview' && (
           <div className="space-y-3">
-            {/* 예상 결과 & 스코어 통합 카드 - 매우 컴팩트 */}
+            {/* 예상 결과 & 스코어 */}
             <div className={`rounded-xl overflow-hidden ${
               darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200 shadow-sm'
             }`}>
               <div className="p-4">
-                {/* 예상 승자 */}
                 <div className="text-center mb-3">
                   <div className={`inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-lg ${
                     winnerInfo.color === 'blue' ? (darkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200')
@@ -566,10 +735,8 @@ export default function MatchPrediction({
                   </div>
                 </div>
 
-                {/* 구분선 */}
                 <div className={`h-px my-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
 
-                {/* 예상 스코어 - 중앙 정렬만 */}
                 <div>
                   <div className="text-center mb-2">
                     <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg ${
@@ -584,7 +751,6 @@ export default function MatchPrediction({
                     </div>
                   </div>
                   
-                  {/* 스코어만 중앙에 크게 */}
                   <div className="flex items-center justify-center gap-4">
                     <div className={`text-4xl font-black ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                       {homeGoals}
@@ -644,81 +810,131 @@ export default function MatchPrediction({
                   ))}
                 </div>
               </div>
-            ) : (
-              <div className={`p-6 rounded-lg text-center ${
-                darkMode 
-                  ? 'bg-gray-900 border border-gray-800' 
-                  : 'bg-gray-50 border border-gray-200'
-              }`}>
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
-                  darkMode ? 'bg-gray-800' : 'bg-gray-200'
-                }`}>
-                  <span className="text-xl">💡</span>
+            ) : null}
+
+            {/* 승률 비교 바 */}
+            <div className={`p-4 rounded-xl ${
+              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+            }`}>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm font-medium mb-2">
+                  <span className={darkMode ? 'text-blue-400' : 'text-blue-600'}>
+                    {homeTeamDisplay}
+                  </span>
+                  <span className={darkMode ? 'text-red-400' : 'text-red-600'}>
+                    {awayTeamDisplay}
+                  </span>
                 </div>
-                <p className={`text-sm font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  기본 예측 분석을 제공합니다
-                </p>
-                <p className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
-                  더 자세한 인사이트는 곧 추가될 예정입니다
-                </p>
+                <div className="relative h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div 
+                    className="absolute left-0 top-0 h-full bg-blue-500 transition-all"
+                    style={{ width: `${homePercent}%` }}
+                  />
+                  <div 
+                    className="absolute right-0 top-0 h-full bg-red-500 transition-all"
+                    style={{ width: `${awayPercent}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-between px-3 text-xs font-bold text-white">
+                    <span>{homePercent.toFixed(0)}%</span>
+                    <span>{awayPercent.toFixed(0)}%</span>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* 비교 통계 미리보기 */}
+            <div className="grid grid-cols-2 gap-2">
+              {comparisonStats.slice(0, 4).map((stat, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3 rounded-lg ${
+                    darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">{stat.icon}</span>
+                    <span className={`text-xs font-bold ${
+                      darkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      {stat.label}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-bold">
+                    <span className={darkMode ? 'text-blue-400' : 'text-blue-600'}>
+                      {stat.home}
+                    </span>
+                    <span className={darkMode ? 'text-red-400' : 'text-red-600'}>
+                      {stat.away}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* 상세통계 탭 */}
+        {/* 상세통계 탭 - 원본 디자인 유지 */}
         {activeTab === 'stats' && (
           <div className="space-y-4">
-            <div className="flex justify-center">
-              <canvas ref={canvasRef} width={300} height={300} className="max-w-full" />
-            </div>
-            
-            <div className="flex items-center justify-center gap-4 text-xs">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{homeTeamDisplay}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{awayTeamDisplay}</span>
+            {/* 레이더 차트 */}
+            <div className={`p-4 rounded-xl ${
+              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+            }`}>
+              <h3 className={`text-sm font-bold mb-4 uppercase tracking-wider ${
+                darkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                {language === 'ko' ? '📊 종합 비교' : '📊 Overall Comparison'}
+              </h3>
+              <div className="flex justify-center">
+                <canvas
+                  ref={canvasRef}
+                  width={300}
+                  height={300}
+                  className="max-w-full"
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mt-4">
+            {/* 상세 비교 */}
+            <div className="space-y-2">
               {comparisonStats.map((stat, idx) => {
-                const homeVal = parseFloat(stat.home.replace('%', ''))
-                const awayVal = parseFloat(stat.away.replace('%', ''))
-                const isHomeLeading = homeVal > awayVal
-                
+                const homeValue = parseFloat(stat.home)
+                const awayValue = parseFloat(stat.away)
+
                 return (
-                  <div key={idx} className={`p-3 rounded-lg border ${
-                    darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50 border-gray-200'
-                  }`}>
-                    <div className="flex items-center gap-1 mb-2">
-                      <span className="text-xs">{stat.icon}</span>
-                      <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {stat.label}
-                      </span>
+                  <div
+                    key={idx}
+                    className={`p-3 rounded-lg ${
+                      darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{stat.icon}</span>
+                        <span className={`text-sm font-bold ${
+                          darkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>
+                          {stat.label}
+                        </span>
+                      </div>
+                      <div className="flex gap-4 text-sm font-bold">
+                        <span className={darkMode ? 'text-blue-400' : 'text-blue-600'}>
+                          {stat.home}
+                        </span>
+                        <span className={darkMode ? 'text-red-400' : 'text-red-600'}>
+                          {stat.away}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`text-sm font-bold ${
-                        isHomeLeading ? (darkMode ? 'text-blue-400' : 'text-blue-600') : (darkMode ? 'text-gray-500' : 'text-gray-400')
-                      }`}>
-                        {stat.home}
-                      </span>
-                      <span className={`text-sm font-bold ${
-                        !isHomeLeading ? (darkMode ? 'text-red-400' : 'text-red-600') : (darkMode ? 'text-gray-500' : 'text-gray-400')
-                      }`}>
-                        {stat.away}
-                      </span>
-                    </div>
-                    <div className="flex gap-1 h-1.5 rounded-full overflow-hidden">
-                      <div className={`transition-all duration-700 ${
-                        isHomeLeading ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-gray-500'
-                      }`} style={{ width: stat.home }}></div>
-                      <div className={`transition-all duration-700 ${
-                        !isHomeLeading ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gray-500'
-                      }`} style={{ width: stat.away }}></div>
+                    <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="absolute left-0 top-0 h-full bg-blue-500 transition-all"
+                        style={{ width: `${homeValue}%` }}
+                      />
+                      <div 
+                        className="absolute right-0 top-0 h-full bg-red-500 transition-all"
+                        style={{ width: `${awayValue}%` }}
+                      />
                     </div>
                   </div>
                 )
@@ -727,102 +943,401 @@ export default function MatchPrediction({
           </div>
         )}
 
-        {/* 상대전적 탭 */}
+        {/* 🆕 상대전적 탭 */}
         {activeTab === 'h2h' && (
           <div className="space-y-4">
-            {h2h?.h2h ? (
+            {h2hLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                  상대전적 데이터 로딩 중...
+                </p>
+              </div>
+            ) : h2h?.h2hMatches ? (
               <>
-                {/* 요약 카드 */}
-                <div className={`p-4 rounded-lg ${
-                  darkMode ? 'bg-gradient-to-r from-purple-900/20 to-indigo-900/20 border border-purple-800/30' : 'bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200'
+                {/* 통계 카드 - 애널리틱스 스타일 */}
+                <div className={`p-4 rounded-xl ${
+                  darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
                 }`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-sm">📊</span>
-                    <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      최근 {h2h.h2h.summary.total}경기 전적
+                  <div className={`flex items-center gap-2 mb-4 px-3 py-1.5 rounded-lg ${
+                    darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
+                    <h4 className={`text-xs font-bold uppercase tracking-wider ${
+                      darkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      최근 {h2h.statistics.totalMatches}경기 전적
                     </h4>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div>
-                      <div className={`text-2xl font-black mb-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                        {h2h.h2h.summary.team1Wins}
+                  
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="text-center">
+                      <div className={`text-3xl font-black mb-1 ${
+                        darkMode ? 'text-blue-400' : 'text-blue-600'
+                      }`}>
+                        {h2h.statistics.homeWins}
                       </div>
-                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>승</div>
-                      <div className={`text-xs font-medium ${darkMode ? 'text-blue-400/70' : 'text-blue-600/70'}`}>
-                        {h2h.h2h.summary.team1WinRate}
+                      <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>승</div>
+                      <div className={`text-sm font-bold ${
+                        darkMode ? 'text-blue-400/70' : 'text-blue-600/70'
+                      }`}>
+                        {h2h.statistics.homeWinPercentage.toFixed(0)}%
                       </div>
                     </div>
-                    <div>
-                      <div className={`text-2xl font-black mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {h2h.h2h.summary.draws}
+                    <div className="text-center">
+                      <div className={`text-3xl font-black mb-1 ${
+                        darkMode ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                        {h2h.statistics.draws}
                       </div>
-                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>무</div>
+                      <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>무</div>
+                      <div className={`text-sm font-bold ${
+                        darkMode ? 'text-gray-400/70' : 'text-gray-600/70'
+                      }`}>
+                        {h2h.statistics.drawPercentage.toFixed(0)}%
+                      </div>
                     </div>
-                    <div>
-                      <div className={`text-2xl font-black mb-1 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
-                        {h2h.h2h.summary.team2Wins}
+                    <div className="text-center">
+                      <div className={`text-3xl font-black mb-1 ${
+                        darkMode ? 'text-red-400' : 'text-red-600'
+                      }`}>
+                        {h2h.statistics.awayWins}
                       </div>
-                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>승</div>
-                      <div className={`text-xs font-medium ${darkMode ? 'text-red-400/70' : 'text-red-600/70'}`}>
-                        {h2h.h2h.summary.team2WinRate}
+                      <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>승</div>
+                      <div className={`text-sm font-bold ${
+                        darkMode ? 'text-red-400/70' : 'text-red-600/70'
+                      }`}>
+                        {h2h.statistics.awayWinPercentage.toFixed(0)}%
                       </div>
+                    </div>
+                  </div>
+
+                  {/* 평균 득점 */}
+                  <div className={`grid grid-cols-2 gap-3 p-3 rounded-lg ${
+                    darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
+                  }`}>
+                    <div className="text-center">
+                      <p className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        평균 득점 (홈)
+                      </p>
+                      <p className={`text-lg font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                        {h2h.statistics.avgGoalsHome}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        평균 득점 (원정)
+                      </p>
+                      <p className={`text-lg font-bold ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                        {h2h.statistics.avgGoalsAway}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* 최근 경기 목록 */}
+                {/* 최근 경기 목록 - 애널리틱스 스타일 */}
                 <div className="space-y-2">
-                  <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    최근 경기
-                  </h4>
-                  {h2h.h2h.matches.slice(0, 5).map((match, idx) => (
-                    <div key={idx} className={`p-3 rounded-lg ${
-                      darkMode ? 'bg-gray-900/50 border border-gray-800' : 'bg-gray-50 border border-gray-200'
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                    darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                    <h4 className={`text-xs font-bold uppercase tracking-wider ${
+                      darkMode ? 'text-gray-400' : 'text-gray-600'
                     }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 text-left">
-                          <span className={`text-sm ${
-                            match.teams.home.winner ? 'font-bold' : ''
-                          } ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            {match.teams.home.name}
+                      최근 경기
+                    </h4>
+                  </div>
+                  {h2h.h2hMatches.slice(0, 10).map((match, idx) => (
+                    <div 
+                      key={idx}
+                      className={`rounded-lg p-3 ${
+                        darkMode 
+                          ? 'bg-gray-900 border border-gray-800 hover:border-gray-700' 
+                          : 'bg-white border border-gray-200 hover:border-gray-300'
+                      } transition-colors`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        {/* 홈팀 */}
+                        <div className="flex items-center gap-2 flex-1">
+                          <div className="w-6 h-6 rounded-full bg-white dark:bg-gray-800 p-1">
+                            <img 
+                              src={getTeamLogo(match.homeTeam)} 
+                              alt={match.homeTeam}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          </div>
+                          <span className={`text-xs font-bold truncate ${
+                            match.isHomeTeamHome && match.winner === 'home'
+                              ? darkMode ? 'text-white' : 'text-gray-900'
+                              : darkMode ? 'text-gray-500' : 'text-gray-500'
+                          }`}>
+                            {match.homeTeam}
                           </span>
                         </div>
-                        <div className="px-3">
-                          <span className={`text-sm font-bold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            {match.goals.home} - {match.goals.away}
+
+                        {/* 스코어 */}
+                        <div className={`px-3 py-1 rounded-lg font-black text-sm ${
+                          darkMode ? 'bg-gray-800' : 'bg-gray-100'
+                        }`}>
+                          <span className={match.winner === 'home' 
+                            ? darkMode ? 'text-blue-400' : 'text-blue-600'
+                            : darkMode ? 'text-gray-400' : 'text-gray-600'
+                          }>
+                            {match.homeScore}
+                          </span>
+                          <span className={darkMode ? 'text-gray-600' : 'text-gray-400'}> - </span>
+                          <span className={match.winner === 'away' 
+                            ? darkMode ? 'text-red-400' : 'text-red-600'
+                            : darkMode ? 'text-gray-400' : 'text-gray-600'
+                          }>
+                            {match.awayScore}
                           </span>
                         </div>
-                        <div className="flex-1 text-right">
-                          <span className={`text-sm ${
-                            match.teams.away.winner ? 'font-bold' : ''
-                          } ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            {match.teams.away.name}
+
+                        {/* 원정팀 */}
+                        <div className="flex items-center gap-2 flex-1 justify-end">
+                          <span className={`text-xs font-bold truncate ${
+                            !match.isHomeTeamHome && match.winner === 'away'
+                              ? darkMode ? 'text-white' : 'text-gray-900'
+                              : darkMode ? 'text-gray-500' : 'text-gray-500'
+                          }`}>
+                            {match.awayTeam}
                           </span>
+                          <div className="w-6 h-6 rounded-full bg-white dark:bg-gray-800 p-1">
+                            <img 
+                              src={getTeamLogo(match.awayTeam)} 
+                              alt={match.awayTeam}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* 결과 */}
+                        <div className="flex-shrink-0 w-10">
+                          {match.winner !== 'draw' && (
+                            <span className={`inline-flex items-center justify-center w-full px-1.5 py-0.5 rounded text-xs font-black ${
+                              (match.winner === 'home' && match.isHomeTeamHome) || 
+                              (match.winner === 'away' && !match.isHomeTeamHome)
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
+                              {((match.winner === 'home' && match.isHomeTeamHome) || 
+                                (match.winner === 'away' && !match.isHomeTeamHome)) ? '승' : '패'}
+                            </span>
+                          )}
+                          {match.winner === 'draw' && (
+                            <span className="inline-flex items-center justify-center w-full px-1.5 py-0.5 rounded text-xs font-black bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                              무
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className={`text-xs mt-1 text-center ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                        {new Date(match.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+
+                      {/* 날짜 */}
+                      <div className={`text-xs text-center pt-2 border-t ${
+                        darkMode ? 'text-gray-500 border-gray-800' : 'text-gray-500 border-gray-200'
+                      }`}>
+                        {new Date(match.date).toLocaleDateString('ko-KR', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
                       </div>
                     </div>
                   ))}
                 </div>
               </>
             ) : (
-              <div className={`p-6 rounded-lg text-center ${
-                darkMode ? 'bg-gray-900/50 border border-gray-800' : 'bg-gray-50 border border-gray-200'
+              <div className={`p-8 rounded-xl text-center ${
+                darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
               }`}>
+                <span className="text-4xl mb-3 block">⚔️</span>
                 <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  ℹ️ 상대전적 데이터가 없습니다
-                </p>
-                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                  (팀 ID가 필요하거나 최근 맞대결 기록이 없습니다)
+                  상대전적 데이터가 없습니다
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {/* 트렌드 탭 */}
+        {/* 🆕 최근 폼 탭 */}
+        {activeTab === 'form' && (
+          <div className="space-y-4">
+            {h2hLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                  최근 폼 데이터 로딩 중...
+                </p>
+              </div>
+            ) : h2h?.homeForm && h2h?.awayForm ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* 홈팀 폼 */}
+                <div>
+                  <div className={`flex items-center gap-3 mb-3 p-3 rounded-lg ${
+                    darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                  }`}>
+                    <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 p-1.5">
+                      <img 
+                        src={homeTeamLogo} 
+                        alt={homeTeam}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text y="30" font-size="30">⚽</text></svg>'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <h3 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {homeTeam}
+                      </h3>
+                      <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        최근 5경기
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {h2h.homeForm.map((match, index) => (
+                      <div 
+                        key={index}
+                        className={`rounded-lg p-3 border ${
+                          darkMode
+                            ? 'bg-gray-900 border-gray-800 hover:border-blue-700'
+                            : 'bg-white border-gray-200 hover:border-blue-300'
+                        } transition-colors`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs px-2 py-0.5 rounded font-bold ${
+                                match.isHome 
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                              }`}>
+                                {match.isHome ? '홈' : '원정'}
+                              </span>
+                            </div>
+                            <div className={`text-xs font-bold mb-1 ${
+                              darkMode ? 'text-white' : 'text-gray-900'
+                            }`}>
+                              vs {match.opponent}
+                            </div>
+                            <div className={`text-xs font-medium ${
+                              darkMode ? 'text-gray-500' : 'text-gray-500'
+                            }`}>
+                              {match.score}
+                            </div>
+                          </div>
+                          
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm ${
+                            match.result === 'W'
+                              ? 'bg-green-500 text-white'
+                              : match.result === 'D'
+                                ? 'bg-gray-400 text-white'
+                                : 'bg-red-500 text-white'
+                          }`}>
+                            {match.result}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 원정팀 폼 */}
+                <div>
+                  <div className={`flex items-center gap-3 mb-3 p-3 rounded-lg ${
+                    darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                  }`}>
+                    <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 p-1.5">
+                      <img 
+                        src={awayTeamLogo} 
+                        alt={awayTeam}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text y="30" font-size="30">⚽</text></svg>'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <h3 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {awayTeam}
+                      </h3>
+                      <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        최근 5경기
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {h2h.awayForm.map((match, index) => (
+                      <div 
+                        key={index}
+                        className={`rounded-lg p-3 border ${
+                          darkMode
+                            ? 'bg-gray-900 border-gray-800 hover:border-red-700'
+                            : 'bg-white border-gray-200 hover:border-red-300'
+                        } transition-colors`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs px-2 py-0.5 rounded font-bold ${
+                                match.isHome 
+                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                              }`}>
+                                {match.isHome ? '홈' : '원정'}
+                              </span>
+                            </div>
+                            <div className={`text-xs font-bold mb-1 ${
+                              darkMode ? 'text-white' : 'text-gray-900'
+                            }`}>
+                              vs {match.opponent}
+                            </div>
+                            <div className={`text-xs font-medium ${
+                              darkMode ? 'text-gray-500' : 'text-gray-500'
+                            }`}>
+                              {match.score}
+                            </div>
+                          </div>
+                          
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm ${
+                            match.result === 'W'
+                              ? 'bg-green-500 text-white'
+                              : match.result === 'D'
+                                ? 'bg-gray-400 text-white'
+                                : 'bg-red-500 text-white'
+                          }`}>
+                            {match.result}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className={`p-8 rounded-xl text-center ${
+                darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+              }`}>
+                <span className="text-4xl mb-3 block">📈</span>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  최근 폼 데이터가 없습니다
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 트렌드 탭 - 원본 유지 */}
         {activeTab === 'trend' && (
           <div className="space-y-4">
             <div className={`rounded-xl p-4 ${
@@ -834,12 +1349,10 @@ export default function MatchPrediction({
                 {language === 'ko' ? '📊 24시간 오즈 트렌드' : '📊 24-Hour Odds Trend'}
               </h3>
               
-              {/* 트렌드 차트 */}
               {trendData.length > 0 ? (
                 <div>
                   <MatchTrendChart data={trendData} darkMode={darkMode} />
                   
-                  {/* 통계 정보 */}
                   <div className="grid grid-cols-3 gap-2 mt-4">
                     <div className={`text-center p-2 rounded-lg ${
                       darkMode ? 'bg-blue-900/20' : 'bg-blue-50'
@@ -873,7 +1386,6 @@ export default function MatchPrediction({
                     </div>
                   </div>
                   
-                  {/* 데이터 포인트 수 */}
                   <p className={`text-xs text-center mt-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                     {language === 'ko' 
                       ? `${trendData.length}개 데이터 포인트 • 최근 24시간`
@@ -900,30 +1412,7 @@ export default function MatchPrediction({
             </div>
           </div>
         )}
-
-        {/* 면책 조항 */}
-        <div className={`text-xs text-center pt-4 mt-4 border-t ${
-          darkMode ? 'text-gray-600 border-gray-800' : 'text-gray-400 border-gray-200'
-        }`}>
-          ⚠️ 이 분석은 통계적 참고 자료입니다.
-        </div>
-
-
       </div>
-
-      {/* 애니메이션 스타일 */}
-      <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   )
 }
