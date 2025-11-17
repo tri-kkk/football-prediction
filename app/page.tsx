@@ -371,6 +371,7 @@ export default function Home() {
   const [newsKeywords, setNewsKeywords] = useState<NewsKeyword[]>([])
   const [darkMode, setDarkMode] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const desktopScrollRef = useRef<HTMLDivElement>(null) // 🆕 데스크톱 전용
   // AI 논평 상태
   const [aiCommentaries, setAiCommentaries] = useState<{ [key: number]: string }>({})
   const [commentaryLoading, setCommentaryLoading] = useState<{ [key: number]: boolean }>({})
@@ -393,6 +394,8 @@ export default function Home() {
   const [allLeagueStandings, setAllLeagueStandings] = useState<{ [key: string]: any[] }>({})
   // 🔴 라이브 경기 수
   const [liveCount, setLiveCount] = useState(0)
+  // 📊 배너 자동 롤링
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0)
 
   // 전체 리그 목록 (전체 제외)
   const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
@@ -408,6 +411,15 @@ export default function Home() {
       document.documentElement.classList.remove('dark')
     }
   }, [darkMode])
+
+  // 📊 배너 자동 롤링 타이머 (5초마다)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentBannerIndex((prev) => (prev + 1) % 3) // 0, 1, 2 순환
+    }, 5000) // 5초마다 변경
+
+    return () => clearInterval(timer)
+  }, [])
 
   // HilltopAds 광고 로드 (임시 비활성화)
   /*
@@ -484,136 +496,77 @@ export default function Home() {
     }
   }, [selectedLeague, standingsLeagues, allLeagueStandings, currentLeagueIndex])
 
-  // 자동 스크롤 효과 + 터치/마우스 드래그 지원
+  // 자동 스크롤 효과 + 터치/마우스 드래그 지원 (데스크톱 & 모바일)
   useEffect(() => {
-    const container = scrollContainerRef.current
-    if (!container || matches.length === 0) return
+    // 🖥️ 데스크톱 자동 스크롤
+    const desktopContainer = desktopScrollRef.current
+    // 📱 모바일 자동 스크롤
+    const mobileContainer = scrollContainerRef.current
+    
+    if (matches.length === 0) {
+      console.log('⚠️ 자동 스크롤 중단: 경기 데이터 없음', { matchCount: matches.length })
+      return
+    }
 
-    let scrollPosition = 0
+    // 공통 설정
     const scrollSpeed = 0.5
-    let intervalId: NodeJS.Timeout | null = null
-    let isScrolling = true
-    let isDragging = false
-    let startX = 0
-    let scrollLeft = 0
-    let resumeTimer: NodeJS.Timeout | null = null
+    let desktopScrollPos = 0
+    let mobileScrollPos = 0
+    let desktopIntervalId: NodeJS.Timeout | null = null
+    let mobileIntervalId: NodeJS.Timeout | null = null
 
-    const startScrolling = () => {
-      intervalId = setInterval(() => {
-        if (!isScrolling || isDragging) return
+    // 🖥️ 데스크톱 자동 스크롤
+    if (desktopContainer) {
+      console.log('✅ 데스크톱 자동 스크롤 시작:', { 
+        matchCount: matches.length, 
+        scrollWidth: desktopContainer.scrollWidth 
+      })
+
+      desktopIntervalId = setInterval(() => {
+        desktopScrollPos += scrollSpeed
+        desktopContainer.scrollLeft = desktopScrollPos
         
-        scrollPosition += scrollSpeed
-        if (container) {
-          container.scrollLeft = scrollPosition
-          
-          const maxScroll = container.scrollWidth / 2
-          if (scrollPosition >= maxScroll) {
-            scrollPosition = 0
-            container.scrollLeft = 0
-          }
+        const maxScroll = desktopContainer.scrollWidth / 2
+        if (desktopScrollPos >= maxScroll) {
+          desktopScrollPos = 0
+          desktopContainer.scrollLeft = 0
         }
       }, 20)
+
+      desktopContainer.style.cursor = 'grab'
     }
 
-    const stopScrolling = () => {
-      isScrolling = false
-      if (intervalId) {
-        clearInterval(intervalId)
-        intervalId = null
-      }
+    // 📱 모바일 자동 스크롤
+    if (mobileContainer) {
+      console.log('✅ 모바일 자동 스크롤 시작:', { 
+        matchCount: matches.length, 
+        scrollWidth: mobileContainer.scrollWidth 
+      })
+
+      mobileIntervalId = setInterval(() => {
+        mobileScrollPos += scrollSpeed
+        mobileContainer.scrollLeft = mobileScrollPos
+        
+        const maxScroll = mobileContainer.scrollWidth / 2
+        if (mobileScrollPos >= maxScroll) {
+          mobileScrollPos = 0
+          mobileContainer.scrollLeft = 0
+        }
+      }, 20)
+
+      mobileContainer.style.cursor = 'grab'
     }
 
-    const resumeScrollAfterDelay = () => {
-      if (resumeTimer) clearTimeout(resumeTimer)
-      resumeTimer = setTimeout(() => {
-        scrollPosition = container.scrollLeft
-        isScrolling = true
-        startScrolling()
-      }, 2000)
-    }
-
-    // 터치 이벤트
-    const handleTouchStart = (e: TouchEvent) => {
-      isDragging = true
-      stopScrolling()
-      startX = e.touches[0].pageX - container.offsetLeft
-      scrollLeft = container.scrollLeft
-    }
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDragging) return
-      e.preventDefault()
-      const x = e.touches[0].pageX - container.offsetLeft
-      const walk = (x - startX) * 2
-      container.scrollLeft = scrollLeft - walk
-    }
-
-    const handleTouchEnd = () => {
-      isDragging = false
-      resumeScrollAfterDelay()
-    }
-
-    // 마우스 드래그
-    const handleMouseDown = (e: MouseEvent) => {
-      isDragging = true
-      stopScrolling()
-      startX = e.pageX - container.offsetLeft
-      scrollLeft = container.scrollLeft
-      container.style.cursor = 'grabbing'
-      container.style.userSelect = 'none'
-    }
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return
-      e.preventDefault()
-      const x = e.pageX - container.offsetLeft
-      const walk = (x - startX) * 2
-      container.scrollLeft = scrollLeft - walk
-    }
-
-    const handleMouseUp = () => {
-      if (!isDragging) return
-      isDragging = false
-      container.style.cursor = 'grab'
-      container.style.userSelect = ''
-      resumeScrollAfterDelay()
-    }
-
-    const handleMouseLeave = () => {
-      if (isDragging) {
-        isDragging = false
-        container.style.cursor = 'grab'
-        container.style.userSelect = ''
-        resumeScrollAfterDelay()
-      }
-    }
-
-    // 커서 스타일
-    container.style.cursor = 'grab'
-
-    // 이벤트 리스너 등록
-    container.addEventListener('touchstart', handleTouchStart, { passive: true })
-    container.addEventListener('touchmove', handleTouchMove, { passive: false })
-    container.addEventListener('touchend', handleTouchEnd)
-    container.addEventListener('mousedown', handleMouseDown)
-    container.addEventListener('mousemove', handleMouseMove)
-    container.addEventListener('mouseup', handleMouseUp)
-    container.addEventListener('mouseleave', handleMouseLeave)
-
-    startScrolling()
-
+    // Cleanup
     return () => {
-      if (intervalId) clearInterval(intervalId)
-      if (resumeTimer) clearTimeout(resumeTimer)
-      container.removeEventListener('touchstart', handleTouchStart)
-      container.removeEventListener('touchmove', handleTouchMove)
-      container.removeEventListener('touchend', handleTouchEnd)
-      container.removeEventListener('mousedown', handleMouseDown)
-      container.removeEventListener('mousemove', handleMouseMove)
-      container.removeEventListener('mouseup', handleMouseUp)
-      container.removeEventListener('mouseleave', handleMouseLeave)
-      container.style.cursor = ''
-      container.style.userSelect = ''
+      if (desktopIntervalId) clearInterval(desktopIntervalId)
+      if (mobileIntervalId) clearInterval(mobileIntervalId)
+      if (desktopContainer) {
+        desktopContainer.style.cursor = ''
+      }
+      if (mobileContainer) {
+        mobileContainer.style.cursor = ''
+      }
     }
   }, [matches])
 
@@ -1428,7 +1381,7 @@ export default function Home() {
       <div className="hidden md:block bg-[#0f0f0f] border-b border-gray-900">
         <div className="py-4 overflow-hidden">
           <div 
-            ref={scrollContainerRef}
+            ref={desktopScrollRef}
             className="flex gap-4 px-4 overflow-x-auto scrollbar-hide"
             style={{ scrollBehavior: 'auto' }}
           >

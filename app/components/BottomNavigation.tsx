@@ -50,7 +50,16 @@ export default function BottomNavigation() {
   return (
     <>
       {/* 모바일 전용 하단 네비게이션 */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[9999] bg-[#1a1a1a] border-t border-gray-800 shadow-2xl" style={{ touchAction: 'auto' }}>
+      <nav 
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[9999] bg-[#1a1a1a] border-t border-gray-800 shadow-2xl" 
+        style={{ 
+          touchAction: 'auto',
+          position: 'fixed',
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
+          willChange: 'transform'
+        }}
+      >
         <div className="flex items-center justify-around px-2 py-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href
