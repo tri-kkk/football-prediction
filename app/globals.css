@@ -12,3 +12,118 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* ==============================================
+   모바일 스크롤바 완전 숨김
+   ============================================== */
+
+/* 모든 요소의 스크롤바 숨김 (모바일만) */
+@media (max-width: 768px) {
+  /* Webkit 브라우저 (Chrome, Safari, Edge) */
+  *::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: none;
+  }
+
+  /* IE */
+  * {
+    -ms-overflow-style: none;
+  }
+
+  /* 추가: overflow 스타일 유지하면서 스크롤바만 숨김 */
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE */
+  }
+
+  .overflow-x-auto::-webkit-scrollbar,
+  .overflow-y-auto::-webkit-scrollbar,
+  .overflow-auto::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+/* ==============================================
+   Safe Area 지원 (아이폰 노치 대응)
+   ============================================== */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* ==============================================
+   기본 scrollbar-hide 클래스 (전체 화면)
+   ============================================== */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* ==============================================
+   터치 영역 최적화 (44px 이상)
+   ============================================== */
+@media (max-width: 768px) {
+  button,
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* 작은 버튼에도 충분한 터치 영역 */
+  .touch-target {
+    position: relative;
+  }
+
+  .touch-target::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ==============================================
+   부드러운 스크롤 애니메이션
+   ============================================== */
+@media (max-width: 768px) {
+  * {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* ==============================================
+   모바일 전용 유틸리티
+   ============================================== */
+@media (max-width: 768px) {
+  /* 하단 네비게이션 여백 (80px) */
+  .pb-nav {
+    padding-bottom: 80px;
+  }
+
+  /* 모바일 풀 높이 (하단 네비 제외) */
+  .mobile-vh {
+    min-height: calc(100vh - 64px);
+  }
+}
