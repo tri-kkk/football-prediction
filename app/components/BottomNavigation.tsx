@@ -24,7 +24,7 @@ export default function MobileBottomNav() {
     {
       href: '/dashboard',
       icon: '📊',
-      labelKo: '대시보드',
+      labelKo: '스마트 필터',
       labelEn: 'Dashboard'
     }
   ]

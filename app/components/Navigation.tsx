@@ -29,7 +29,7 @@ const menuItems: MenuItem[] = [
     
   },
   { 
-    labelKo: '스마트 대시보드',
+    labelKo: '스마트 필터',
     labelEn: 'Smart Dashboard',
     href: '/dashboard', 
     icon: '📊' 

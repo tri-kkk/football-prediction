@@ -1249,10 +1249,19 @@ export default function MatchPrediction({
                                 {match.isHome ? '홈' : '원정'}
                               </span>
                             </div>
-                            <div className={`text-xs font-bold mb-1 ${
+                            <div className={`flex items-center gap-2 text-xs font-bold mb-1 ${
                               darkMode ? 'text-white' : 'text-gray-900'
                             }`}>
-                              vs {match.opponent}
+                              <span>vs</span>
+                              <img 
+                                src={getTeamLogo(match.opponent, league)}
+                                alt={match.opponent}
+                                className="w-5 h-5 object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><text y="16" font-size="16">⚽</text></svg>'
+                                }}
+                              />
+                              <span>{match.opponent}</span>
                             </div>
                             <div className={`text-xs font-medium ${
                               darkMode ? 'text-gray-500' : 'text-gray-500'
@@ -1322,10 +1331,19 @@ export default function MatchPrediction({
                                 {match.isHome ? '홈' : '원정'}
                               </span>
                             </div>
-                            <div className={`text-xs font-bold mb-1 ${
+                            <div className={`flex items-center gap-2 text-xs font-bold mb-1 ${
                               darkMode ? 'text-white' : 'text-gray-900'
                             }`}>
-                              vs {match.opponent}
+                              <span>vs</span>
+                              <img 
+                                src={getTeamLogo(match.opponent, league)}
+                                alt={match.opponent}
+                                className="w-5 h-5 object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><text y="16" font-size="16">⚽</text></svg>'
+                                }}
+                              />
+                              <span>{match.opponent}</span>
                             </div>
                             <div className={`text-xs font-medium ${
                               darkMode ? 'text-gray-500' : 'text-gray-500'
