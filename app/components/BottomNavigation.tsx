@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import Image from 'next/image'
 import { useLanguage } from '../contexts/LanguageContext'
 
 export default function MobileBottomNav() {
@@ -11,7 +12,7 @@ export default function MobileBottomNav() {
   const navItems = [
     {
       href: '/',
-      icon: '⚽',
+      icon: 'logo',
       labelKo: '홈',
       labelEn: 'Home'
     },
@@ -45,7 +46,21 @@ export default function MobileBottomNav() {
                   : 'text-gray-400 active:text-gray-300'
               }`}
             >
-              <span className="text-2xl mb-1">{item.icon}</span>
+              {item.icon === 'logo' ? (
+                <div className="mb-1">
+                  <Image
+                    src="/favicon.svg"
+                    alt="Home"
+                    width={28}
+                    height={28}
+                    className={`transition-opacity ${
+                      isActive ? 'opacity-100' : 'opacity-60'
+                    }`}
+                  />
+                </div>
+              ) : (
+                <span className="text-2xl mb-1">{item.icon}</span>
+              )}
               <span className="text-xs font-medium">
                 {language === 'ko' ? item.labelKo : item.labelEn}
               </span>

@@ -722,69 +722,74 @@ export default function MatchPrediction({
         {/* 개요 탭 - 원본 디자인 유지 */}
         {activeTab === 'overview' && (
           <div className="space-y-3">
-            {/* 예상 결과 & 스코어 */}
+            {/* 🔥 예상 결과 & 스코어 - 통합 컴팩트 버전 */}
             <div className={`rounded-xl overflow-hidden ${
               darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200 shadow-sm'
             }`}>
               <div className="p-4">
-                <div className="text-center mb-3">
-                  <div className={`inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-lg ${
-                    winnerInfo.color === 'blue' ? (darkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200')
-                    : winnerInfo.color === 'gray' ? (darkMode ? 'bg-gray-500/10 border border-gray-500/20' : 'bg-gray-50 border border-gray-300')
-                    : (darkMode ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200')
+                {/* 모바일: 세로 배치 / 데스크탑: 가로 배치 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                  {/* 예상 결과 */}
+                  <div className={`text-center p-4 rounded-lg ${
+                    darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
                   }`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${
-                      winnerInfo.color === 'blue' ? 'bg-blue-500' :
-                      winnerInfo.color === 'gray' ? 'bg-gray-500' :
-                      'bg-red-500'
-                    }`}></div>
-                    <span className={`text-xs font-bold uppercase tracking-wider ${
+                    <div className={`inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-lg ${
+                      winnerInfo.color === 'blue' ? (darkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200')
+                      : winnerInfo.color === 'gray' ? (darkMode ? 'bg-gray-500/10 border border-gray-500/20' : 'bg-gray-50 border border-gray-300')
+                      : (darkMode ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200')
+                    }`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        winnerInfo.color === 'blue' ? 'bg-blue-500' :
+                        winnerInfo.color === 'gray' ? 'bg-gray-500' :
+                        'bg-red-500'
+                      }`}></div>
+                      <span className={`text-xs font-bold uppercase tracking-wider ${
+                        winnerInfo.color === 'blue' ? (darkMode ? 'text-blue-400' : 'text-blue-600')
+                        : winnerInfo.color === 'gray' ? (darkMode ? 'text-gray-400' : 'text-gray-600')
+                        : (darkMode ? 'text-red-400' : 'text-red-600')
+                      }`}>
+                        {language === 'ko' ? '예상 결과' : 'Prediction'}
+                      </span>
+                    </div>
+                    <div className={`text-lg font-bold mb-1 ${
+                      darkMode ? 'text-gray-100' : 'text-gray-900'
+                    }`}>
+                      {winnerInfo.team}
+                    </div>
+                    <div className={`text-4xl md:text-5xl font-black ${
                       winnerInfo.color === 'blue' ? (darkMode ? 'text-blue-400' : 'text-blue-600')
                       : winnerInfo.color === 'gray' ? (darkMode ? 'text-gray-400' : 'text-gray-600')
                       : (darkMode ? 'text-red-400' : 'text-red-600')
                     }`}>
-                      {language === 'ko' ? '예상 결과' : 'Prediction'}
-                    </span>
+                      {winnerInfo.percent.toFixed(0)}%
+                    </div>
                   </div>
-                  <div className={`text-lg font-bold mb-1 ${
-                    darkMode ? 'text-gray-100' : 'text-gray-900'
-                  }`}>
-                    {winnerInfo.team}
-                  </div>
-                  <div className={`text-3xl font-black ${
-                    winnerInfo.color === 'blue' ? (darkMode ? 'text-blue-400' : 'text-blue-600')
-                    : winnerInfo.color === 'gray' ? (darkMode ? 'text-gray-400' : 'text-gray-600')
-                    : (darkMode ? 'text-red-400' : 'text-red-600')
-                  }`}>
-                    {winnerInfo.percent.toFixed(0)}%
-                  </div>
-                </div>
 
-                <div className={`h-px my-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
-
-                <div>
-                  <div className="text-center mb-2">
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg ${
-                      darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                  {/* 예상 스코어 */}
+                  <div className={`text-center p-4 rounded-lg ${
+                    darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
+                  }`}>
+                    <div className={`inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-lg ${
+                      darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
                     }`}>
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
                       <span className={`text-xs font-bold uppercase tracking-wider ${
                         darkMode ? 'text-gray-400' : 'text-gray-600'
                       }`}>
-                        {language === 'ko' ? '예상 스코어' : 'Score Prediction'}
+                        {language === 'ko' ? '예상 스코어' : 'Score'}
                       </span>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-center gap-4">
-                    <div className={`text-4xl font-black ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                      {homeGoals}
-                    </div>
-                    <div className={`text-2xl font-bold ${darkMode ? 'text-gray-700' : 'text-gray-300'}`}>
-                      :
-                    </div>
-                    <div className={`text-4xl font-black ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
-                      {awayGoals}
+                    
+                    <div className="flex items-center justify-center gap-3 md:gap-4 mt-2">
+                      <div className={`text-4xl md:text-5xl font-black ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                        {homeGoals}
+                      </div>
+                      <div className={`text-2xl md:text-3xl font-bold ${darkMode ? 'text-gray-700' : 'text-gray-300'}`}>
+                        :
+                      </div>
+                      <div className={`text-4xl md:text-5xl font-black ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                        {awayGoals}
+                      </div>
                     </div>
                   </div>
                 </div>

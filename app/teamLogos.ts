@@ -457,6 +457,8 @@ export const API_FOOTBALL_TEAM_IDS: Record<string, number> = {
   'Leganes': 728,
   'Leganés': 728,
   'CD Leganés': 728,
+  'Levante': 552,
+  'Levante UD': 552,
 
   // 분데스리가
   'Bayern Munich': 157,
