@@ -315,42 +315,7 @@ export default function ResultsPage() {
     <div className="min-h-screen bg-[#0a0a0a] text-white pb-20 md:pb-0">
       <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-            📋 {language === 'ko' ? '경기 일정 & 결과' : 'Match Schedule & Results'}
-          </h1>
-        </div>
-
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 py-4">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4 text-center">
-              <div>
-                <div className="text-xl md:text-2xl font-black">{stats.total}</div>
-                <div className="text-xs opacity-75">{language === 'ko' ? '전체' : 'Total'}</div>
-              </div>
-              <div>
-                <div className="text-xl md:text-2xl font-black">{stats.scheduled}</div>
-                <div className="text-xs opacity-75">{language === 'ko' ? '예정' : 'Scheduled'}</div>
-              </div>
-              <div>
-                <div className="text-xl md:text-2xl font-black">{stats.live}</div>
-                <div className="text-xs opacity-75">{language === 'ko' ? '진행중' : 'Live'}</div>
-              </div>
-              <div>
-                <div className="text-xl md:text-2xl font-black">{stats.finished}</div>
-                <div className="text-xs opacity-75">{language === 'ko' ? '종료' : 'Finished'}</div>
-              </div>
-              <div>
-                <div className="text-xl md:text-2xl font-black">{stats.correct}</div>
-                <div className="text-xs opacity-75">{language === 'ko' ? '적중' : 'Correct'}</div>
-              </div>
-              <div>
-                <div className="text-xl md:text-2xl font-black">{stats.accuracy}%</div>
-                <div className="text-xs opacity-75">{language === 'ko' ? '적중률' : 'Accuracy'}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+            </div> 
         <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
             {LEAGUES.map(league => (
