@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 // Supabase 클라이언트
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_KEY!
 )
 
 // API-Football 설정
