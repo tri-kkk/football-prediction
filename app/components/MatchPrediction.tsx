@@ -292,6 +292,33 @@ export default function MatchPrediction({
         setLoading(true)
         setError(null)
 
+        // 🔥 0. DB에서 스코어 먼저 조회
+        console.log(`🔍 Fetching score from DB for match: ${fixtureId}`)
+        let dbScore: { home: number; away: number } | null = null
+        let dbProbabilities: { home: number; draw: number; away: number } | null = null
+
+        try {
+          const dbResponse = await fetch(`/api/match-score?match_id=${fixtureId}`)
+          if (dbResponse.ok) {
+            const dbData = await dbResponse.json()
+            if (dbData.success && dbData.data) {
+              dbScore = {
+                home: dbData.data.predictedScoreHome,
+                away: dbData.data.predictedScoreAway
+              }
+              dbProbabilities = {
+                home: dbData.data.homeProbability,
+                draw: dbData.data.drawProbability,
+                away: dbData.data.awayProbability
+              }
+              console.log('✅ DB score found:', dbScore)
+              console.log('✅ DB probabilities:', dbProbabilities)
+            }
+          }
+        } catch (dbError) {
+          console.warn('⚠️ DB score fetch failed, will use prediction API:', dbError)
+        }
+
         // 1. Prediction 데이터 (필수)
         console.log(`🔍 Fetching prediction for fixture: ${fixtureId}`)
         const predResponse = await fetch(`/api/predictions?fixture=${fixtureId}`)
@@ -299,19 +326,50 @@ export default function MatchPrediction({
         if (predResponse.ok) {
           const predData = await predResponse.json()
           console.log('✅ Prediction data:', predData)
+          
+          // 🔥 DB 스코어가 있으면 덮어쓰기
+          if (dbScore) {
+            predData.predictions.goals = {
+              home: dbScore.home.toString(),
+              away: dbScore.away.toString()
+            }
+            console.log('🔄 Overriding API goals with DB score:', dbScore)
+          }
+          
+          // 🔥 DB 확률이 있으면 덮어쓰기
+          if (dbProbabilities) {
+            predData.predictions.percent = {
+              home: `${dbProbabilities.home.toFixed(1)}%`,
+              draw: `${dbProbabilities.draw.toFixed(1)}%`,
+              away: `${dbProbabilities.away.toFixed(1)}%`
+            }
+            console.log('🔄 Overriding API probabilities with DB:', dbProbabilities)
+          }
+          
           setPrediction(predData)
           setDebugInfo(prev => ({ ...prev, predictionStatus: 'success' }))
         } else {
           console.warn(`⚠️ Prediction API failed: ${predResponse.status}`)
           
+          // 🔥 DB 스코어가 있으면 그걸로 fallback
           const fallbackPrediction: PredictionData = {
             predictions: {
               winner: { id: 0, name: 'Unknown', comment: '' },
               win_or_draw: false,
               under_over: null,
-              goals: { home: '1.5', away: '1.5' },
-              advice: '이 경기의 예측 데이터는 현재 제공되지 않습니다',
-              percent: { home: '33%', draw: '34%', away: '33%' }
+              goals: dbScore 
+                ? { home: dbScore.home.toString(), away: dbScore.away.toString() }
+                : { home: '1.5', away: '1.5' },
+              advice: dbScore 
+                ? 'DB에 저장된 예측 스코어를 사용합니다'
+                : '이 경기의 예측 데이터는 현재 제공되지 않습니다',
+              percent: dbProbabilities
+                ? {
+                    home: `${dbProbabilities.home.toFixed(1)}%`,
+                    draw: `${dbProbabilities.draw.toFixed(1)}%`,
+                    away: `${dbProbabilities.away.toFixed(1)}%`
+                  }
+                : { home: '33%', draw: '34%', away: '33%' }
             },
             comparison: {
               form: { home: '50%', away: '50%' },
@@ -324,7 +382,7 @@ export default function MatchPrediction({
             }
           }
           
-          console.log('ℹ️ Using fallback prediction data')
+          console.log('ℹ️ Using fallback prediction data' + (dbScore ? ' (with DB score)' : ''))
           setPrediction(fallbackPrediction)
           setDebugInfo(prev => ({ ...prev, predictionStatus: 'fallback' as any }))
         }
@@ -514,7 +572,7 @@ export default function MatchPrediction({
         <div className="flex items-center justify-center gap-3 py-2">
           <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            AI 분석 중...
+            트렌드 분석 중...
           </span>
         </div>
       </div>
