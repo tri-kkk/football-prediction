@@ -16,10 +16,17 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { 
-    labelKo: '라이브 예측',
+    labelKo: '경기 예측',
     labelEn: 'Live Predictions',
     href: '/', 
     icon: '⚽' 
+  },
+  { 
+    labelKo: '경기 결과',
+    labelEn: 'Match Results',
+    href: '/results', 
+    icon: '📋',
+    
   },
   { 
     labelKo: '스마트 대시보드',
@@ -27,21 +34,8 @@ const menuItems: MenuItem[] = [
     href: '/dashboard', 
     icon: '📊' 
   },
-  { 
-    labelKo: '배당 무브먼트',
-    labelEn: 'Odds Movement',
-    href: '/movement', 
-    icon: '🌊', 
-    badge: 'NEW',
-  },
-  { 
-    labelKo: '마켓 웨이브',
-    labelEn: 'Market Wave',
-    href: '/market-wave', 
-    icon: '🎯', 
-    badge: 'WAIT',
-    disabled: true 
-  },
+
+  
 ]
 
 export default function Navigation() {
