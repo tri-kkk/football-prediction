@@ -305,7 +305,7 @@ export default function DashboardPage() {
           {/* 가로 스크롤 컨테이너 */}
           <div className="relative">
             {/* 스크롤 가능한 필터 리스트 */}
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent hover:scrollbar-thumb-gray-600 snap-x snap-mandatory">
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
               {smartFilters.map(filter => {
                 const isActive = activeFilters.includes(filter.id)
                 const matchCount = Array.isArray(matches) ? matches.filter(filter.filter).length : 0
@@ -335,11 +335,6 @@ export default function DashboardPage() {
                 )
               })}
             </div>
-            
-            {/* 스크롤 힌트 (모바일) */}
-            <div className="md:hidden mt-2 text-center">
-              <span className="text-xs text-gray-500">← 좌우로 스크롤하세요 →</span>
-            </div>
           </div>
         </div>
 
@@ -352,7 +347,7 @@ export default function DashboardPage() {
           
           {/* 가로 스크롤 컨테이너 */}
           <div className="relative -mx-4 md:mx-0">
-            <div className="flex gap-3 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent hover:scrollbar-thumb-gray-600 snap-x snap-mandatory">
+            <div className="flex gap-3 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide snap-x snap-mandatory">
               {LEAGUES.map((league) => (
                 <button
                   key={league.code}
@@ -380,11 +375,6 @@ export default function DashboardPage() {
                   <span className="whitespace-nowrap">{league.name}</span>
                 </button>
               ))}
-            </div>
-            
-            {/* 스크롤 힌트 (모바일) */}
-            <div className="md:hidden mt-2 text-center">
-              <span className="text-xs text-gray-500">← 좌우로 스크롤하세요 →</span>
             </div>
           </div>
         </div>
@@ -603,7 +593,6 @@ export default function DashboardPage() {
       {/* 커스텀 스타일 */}
       <style jsx global>{`
         /* 가로 스크롤 최적화 */
-        /* 가로 스크롤 최적화 */
         .overflow-x-auto {
           -webkit-overflow-scrolling: touch;
           scroll-behavior: smooth;
@@ -612,28 +601,15 @@ export default function DashboardPage() {
           overscroll-behavior-y: auto;
         }
 
-        /* 커스텀 스크롤바 (WebKit) */
-        .scrollbar-thin::-webkit-scrollbar {
-          height: 6px;
+        /* 스크롤바 완전히 숨기기 */
+        .scrollbar-hide {
+          /* Chrome, Safari, Edge */
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
         }
-
-        .scrollbar-thin::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-          background: #374151;
-          border-radius: 3px;
-        }
-
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-          background: #4b5563;
-        }
-
-        /* Firefox 스크롤바 */
-        .scrollbar-thin {
-          scrollbar-width: thin;
-          scrollbar-color: #374151 transparent;
+        
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari, Opera */
         }
 
         /* 스냅 스크롤 부드럽게 */
