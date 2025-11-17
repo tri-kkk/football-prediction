@@ -177,8 +177,6 @@ export default function ResultsPage() {
         const data = await response.json()
         
         if (data.success && data.data) {
-          console.log('🔍 첫 번째 경기 RAW:', data.data[0])
-          console.log('🔍 모든 필드:', Object.keys(data.data[0]))
           scheduledMatches = data.data.map((match: any) => parseMatch(match))
         }
       }
@@ -191,6 +189,7 @@ export default function ResultsPage() {
         finishedMatches = resultsData.matches.map((match: any) => parseMatch(match, true))
       }
 
+      // 🔥 수정 1: 최신 경기가 위로 (오름차순 정렬)
       const allMatches = [...scheduledMatches, ...finishedMatches].sort((a, b) => 
         new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()
       )
@@ -235,13 +234,9 @@ export default function ResultsPage() {
 
     if (match.predicted_score_home !== null && match.predicted_score_home !== undefined &&
         match.predicted_score_away !== null && match.predicted_score_away !== undefined) {
-      // DB에 저장된 스코어가 있으면 그대로 사용
       predictedScoreHome = match.predicted_score_home
       predictedScoreAway = match.predicted_score_away
-      console.log('✅ DB 스코어 사용:', predictedScoreHome, '-', predictedScoreAway)
     } else {
-      // 없으면 계산
-      console.log('⚠️ DB 스코어 없음, 계산 시작')
       const avgHomeGoals = homeProb > 50 ? 1.5 : homeProb > 40 ? 1.3 : 1.0
       const avgAwayGoals = awayProb > 50 ? 1.5 : awayProb > 40 ? 1.3 : 1.0
       
@@ -254,7 +249,6 @@ export default function ResultsPage() {
       )
       predictedScoreHome = calculated.home
       predictedScoreAway = calculated.away
-      console.log('⚠️ 계산된 스코어:', predictedScoreHome, '-', predictedScoreAway)
     }
 
     return {
@@ -264,8 +258,9 @@ export default function ResultsPage() {
       awayTeam: match.away_team || match.awayTeam || 'Away Team',
       homeTeamKR: TEAM_NAME_KR[match.home_team || match.homeTeam] || undefined,
       awayTeamKR: TEAM_NAME_KR[match.away_team || match.awayTeam] || undefined,
-      homeCrest: getTeamLogo(match.home_team || match.homeTeam) || '/default-logo.png',
-      awayCrest: getTeamLogo(match.away_team || match.awayTeam) || '/default-logo.png',
+      // 🔥 수정 2: DB 로고 우선 사용
+      homeCrest: match.home_team_logo || getTeamLogo(match.home_team || match.homeTeam) || '/default-logo.png',
+      awayCrest: match.away_team_logo || getTeamLogo(match.away_team || match.awayTeam) || '/default-logo.png',
       matchDate: matchDate,
       time: new Date(matchDate).toLocaleString('ko-KR', {
         month: 'numeric',
@@ -517,7 +512,7 @@ export default function ResultsPage() {
 
                   {match.matchStatus === 'SCHEDULED' && (
                     <div className="mt-3 pt-3 border-t border-gray-800">
-                      <div className="text-xs text-gray-500 mb-1">AI {language === 'ko' ? '예측' : 'Prediction'}</div>
+                      <div className="text-xs text-gray-500 mb-1">승률 {language === 'ko' ? '예측' : 'Prediction'}</div>
                       <div className="flex gap-2 text-xs">
                         <div className="flex-1 text-center">
                           <div className="text-blue-400 font-bold">{match.predictedHomeProbability.toFixed(0)}%</div>
