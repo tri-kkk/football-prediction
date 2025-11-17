@@ -1205,27 +1205,15 @@ export default function MatchPrediction({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* 홈팀 폼 */}
                 <div>
-                  <div className={`flex items-center gap-3 mb-3 p-3 rounded-lg ${
+                  <div className={`mb-3 p-3 rounded-lg ${
                     darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
                   }`}>
-                    <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 p-1.5">
-                      <img 
-                        src={homeTeamLogo} 
-                        alt={homeTeam}
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text y="30" font-size="30">⚽</text></svg>'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <h3 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {homeTeam}
-                      </h3>
-                      <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        최근 5경기
-                      </p>
-                    </div>
+                    <h3 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {homeTeam}
+                    </h3>
+                    <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      최근 5경기
+                    </p>
                   </div>
                   
                   <div className="space-y-2">
@@ -1249,19 +1237,10 @@ export default function MatchPrediction({
                                 {match.isHome ? '홈' : '원정'}
                               </span>
                             </div>
-                            <div className={`flex items-center gap-2 text-xs font-bold mb-1 ${
+                            <div className={`text-xs font-bold mb-1 ${
                               darkMode ? 'text-white' : 'text-gray-900'
                             }`}>
-                              <span>vs</span>
-                              <img 
-                                src={getTeamLogo(match.opponent, league)}
-                                alt={match.opponent}
-                                className="w-5 h-5 object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><text y="16" font-size="16">⚽</text></svg>'
-                                }}
-                              />
-                              <span>{match.opponent}</span>
+                              vs {match.opponent}
                             </div>
                             <div className={`text-xs font-medium ${
                               darkMode ? 'text-gray-500' : 'text-gray-500'
@@ -1287,27 +1266,15 @@ export default function MatchPrediction({
 
                 {/* 원정팀 폼 */}
                 <div>
-                  <div className={`flex items-center gap-3 mb-3 p-3 rounded-lg ${
+                  <div className={`mb-3 p-3 rounded-lg ${
                     darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
                   }`}>
-                    <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 p-1.5">
-                      <img 
-                        src={awayTeamLogo} 
-                        alt={awayTeam}
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text y="30" font-size="30">⚽</text></svg>'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <h3 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {awayTeam}
-                      </h3>
-                      <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        최근 5경기
-                      </p>
-                    </div>
+                    <h3 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {awayTeam}
+                    </h3>
+                    <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      최근 5경기
+                    </p>
                   </div>
                   
                   <div className="space-y-2">
@@ -1331,19 +1298,10 @@ export default function MatchPrediction({
                                 {match.isHome ? '홈' : '원정'}
                               </span>
                             </div>
-                            <div className={`flex items-center gap-2 text-xs font-bold mb-1 ${
+                            <div className={`text-xs font-bold mb-1 ${
                               darkMode ? 'text-white' : 'text-gray-900'
                             }`}>
-                              <span>vs</span>
-                              <img 
-                                src={getTeamLogo(match.opponent, league)}
-                                alt={match.opponent}
-                                className="w-5 h-5 object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><text y="16" font-size="16">⚽</text></svg>'
-                                }}
-                              />
-                              <span>{match.opponent}</span>
+                              vs {match.opponent}
                             </div>
                             <div className={`text-xs font-medium ${
                               darkMode ? 'text-gray-500' : 'text-gray-500'
