@@ -100,49 +100,46 @@ export default function ResultsPage() {
   const getPredictionBadge = (result: MatchResult) => {
     if (result.predictionType === 'exact') {
       return {
+        text: language === 'ko' ? '완벽 적중' : 'Exact',
         icon: '🎯',
-        text: language === 'ko' ? '완벽 적중' : 'Perfect',
         color: 'bg-green-500',
         borderColor: 'border-green-500',
-        textColor: 'text-green-500'
+        textColor: 'text-green-400'
       }
     } else if (result.predictionType === 'winner_only') {
       return {
-        icon: '⚠️',
         text: language === 'ko' ? '승부 적중' : 'Winner',
+        icon: '✅',
         color: 'bg-yellow-500',
         borderColor: 'border-yellow-500',
-        textColor: 'text-yellow-500'
+        textColor: 'text-yellow-400'
       }
     } else {
       return {
-        icon: '❌',
         text: language === 'ko' ? '예측 실패' : 'Wrong',
+        icon: '❌',
         color: 'bg-red-500',
         borderColor: 'border-red-500',
-        textColor: 'text-red-500'
+        textColor: 'text-red-400'
       }
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] pb-20 md:pb-0">
+    <div className="min-h-screen bg-[#0a0a0a] text-white pb-20 md:pb-0">
       {/* 헤더 */}
-      <div className="sticky top-0 z-50 bg-[#0f0f0f] border-b border-gray-800">
-        {/* 데스크톱: 컨테이너 최대 너비 */}
-        <div className="max-w-7xl mx-auto">
-          <div className="px-4 py-3">
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <span>📋</span>
-              {language === 'ko' ? '경기 결과' : 'Match Results'}
-            </h1>
-          </div>
+      <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-gray-800">
+        {/* 타이틀 */}
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+            📋 {language === 'ko' ? '경기 결과' : 'Match Results'}
+          </h1>
         </div>
 
-        {/* 통계 요약 - 반응형 */}
-        <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-6 text-white text-center">
+        {/* 통계 요약 - 그라데이션 배경 */}
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 py-4">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-4 text-center">
             <div>
               <div className="text-2xl md:text-3xl font-black">{stats.total}</div>
               <div className="text-xs md:text-sm opacity-75">
@@ -180,7 +177,7 @@ export default function ResultsPage() {
           </div>
           
           {/* 프로그레스 바 */}
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto px-4">
             <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden">
               <div 
                 className="bg-white h-full transition-all duration-500"
@@ -190,7 +187,7 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* 리그 필터 - 자연스러운 드래그 (스크롤바 숨김) */}
+        {/* 리그 필터 */}
         <div className="max-w-7xl mx-auto">
           <div 
             className="overflow-x-auto scrollbar-hide"
@@ -218,7 +215,7 @@ export default function ResultsPage() {
         </div>
       </div>
 
-        {/* 기간 & 필터 - 컴팩트 */}
+        {/* 기간 & 필터 */}
         <div className="max-w-7xl mx-auto px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide">
           {/* 기간 필터 */}
           <div className="flex gap-1 bg-gray-800 rounded-lg p-1 min-w-max">
@@ -262,13 +259,13 @@ export default function ResultsPage() {
             ))}
           </div>
         </div>
-      </div> {/* 헤더 닫기 */}
+      </div>
 
-      {/* 결과 리스트 - 데스크톱 2단 그리드 */}
+      {/* 결과 리스트 */}
       <div className="max-w-7xl mx-auto px-3 py-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         {loading ? (
-          // 로딩 스켈레톤
+          // 로딩
           <>
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="bg-gray-800 rounded-xl p-4 animate-pulse">
@@ -278,7 +275,7 @@ export default function ResultsPage() {
             ))}
           </>
         ) : results.length === 0 ? (
-          // 결과 없음 (전체 너비)
+          // 결과 없음
           <div className="md:col-span-2 text-center py-20">
             <div className="text-6xl mb-4">📭</div>
             <p className="text-gray-400">
@@ -292,6 +289,20 @@ export default function ResultsPage() {
             const homeTeam = language === 'ko' ? (result.homeTeamKR || result.homeTeam) : result.homeTeam
             const awayTeam = language === 'ko' ? (result.awayTeamKR || result.awayTeam) : result.awayTeam
             
+            // 승자에 따른 확률 표시
+            let winnerProb = 0
+            let winnerText = ''
+            if (result.predictedWinner === 'home') {
+              winnerProb = result.predictedHomeProbability
+              winnerText = homeTeam
+            } else if (result.predictedWinner === 'away') {
+              winnerProb = result.predictedAwayProbability
+              winnerText = awayTeam
+            } else {
+              winnerProb = result.predictedDrawProbability
+              winnerText = language === 'ko' ? '무승부' : 'Draw'
+            }
+
             return (
               <div
                 key={result.id}
@@ -350,32 +361,20 @@ export default function ResultsPage() {
                     </div>
                   </div>
 
-                  {/* 예측 정보 */}
+                  {/* 트렌드 분석 - 확률만 표시 */}
                   <div className="mt-4 pt-4 border-t border-gray-800">
                     <div className="flex items-center justify-between text-sm">
                       <div className="text-gray-400">
                         {language === 'ko' ? '트렌드 분석' : 'Trend Analysis'}
                       </div>
-                      <div className={`font-bold ${badge.textColor}`}>
-                        {result.predictedScoreHome} - {result.predictedScoreAway}
-                        {' '}
-                        ({result.predictedWinner === 'home' ? homeTeam : 
-                          result.predictedWinner === 'away' ? awayTeam : 
-                          language === 'ko' ? '무승부' : 'Draw'})
+                      <div className={`font-bold ${badge.textColor} flex items-center gap-2`}>
+                        <span>
+                          {result.predictedScoreHome}-{result.predictedScoreAway} ({winnerText})
+                        </span>
+                        <span className="text-gray-400 text-xs">
+                          {winnerProb.toFixed(1)}%
+                        </span>
                       </div>
-                    </div>
-
-                    {/* 승률 바 - 컴팩트 */}
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500"
-                          style={{ width: `${result.predictedHomeProbability}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-500 min-w-[40px] text-right">
-                        {result.predictedHomeProbability.toFixed(0)}%
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -386,7 +385,7 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      {/* 하단 여백 (모바일 네비게이션 바 공간: 80px) */}
+      {/* 하단 여백 */}
       <div className="h-20 md:h-0" />
     </div>
   )
