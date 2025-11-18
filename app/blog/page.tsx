@@ -61,14 +61,7 @@ export default function BlogPage() {
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white">
       {/* 헤더 타이틀 */}
-      <div className="border-b border-gray-800 pt-6 pb-4">
-        <div className="max-w-6xl mx-auto px-4">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            📝 TrendSoccer 블로그
-          </h1>
-          <p className="text-gray-400 text-sm mt-2">축구 트렌드와 데이터 분석 인사이트</p>
-        </div>
-      </div>
+      
 
       {/* 카테고리 필터 - 모바일 최적화 */}
       <div className="border-b border-gray-800 bg-[#0f0f0f] sticky top-0 z-10">
