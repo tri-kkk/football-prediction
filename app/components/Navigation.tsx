@@ -9,33 +9,62 @@ interface MenuItem {
   labelKo: string
   labelEn: string
   href: string
-  icon: string
+  icon: React.ReactNode
   badge?: string
   disabled?: boolean
 }
 
+// FotMob 스타일 SVG 픽토그램 아이콘
 const menuItems: MenuItem[] = [
   { 
-    labelKo: '경기 예측',
-    labelEn: 'Live Predictions',
+    labelKo: '경기 일정',
+    labelEn: 'Predictions',
     href: '/', 
-    icon: '⚽' 
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+        <path d="M12 6v6l4 2" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    )
   },
   { 
-    labelKo: '경기 결과',
-    labelEn: 'Match Results',
+    labelKo: '경기 현황',
+    labelEn: 'Results',
     href: '/results', 
-    icon: '📋',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M9 11l3 3L22 4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  },
+  { 
+    labelKo: '스마트 대시보드',
+    labelEn: 'Dashboard',
+    href: '/dashboard', 
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect x="3" y="3" width="7" height="7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="14" y="3" width="7" height="7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="14" y="14" width="7" height="7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="3" y="14" width="7" height="7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  },
+  { 
+    labelKo: '매치 리포트',
+    labelEn: 'Stats',
+    href: '/blog', 
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M3 3v18h18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M18 17V9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M13 17v-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8 17v-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
     
   },
-  { 
-    labelKo: '스마트 필터',
-    labelEn: 'Smart Dashboard',
-    href: '/dashboard', 
-    icon: '📊' 
-  },
-
-  
 ]
 
 export default function Navigation() {
@@ -45,8 +74,8 @@ export default function Navigation() {
 
   return (
     <>
-      {/* Desktop Navigation - 개선된 스타일 */}
-      <nav className="hidden md:flex items-center gap-2">
+      {/* Desktop Navigation - FotMob 스타일 */}
+      <nav className="hidden md:flex items-center gap-1">
         {menuItems.map((item) => {
           const isActive = pathname === item.href
           const isDisabled = item.disabled
@@ -56,23 +85,27 @@ export default function Navigation() {
               key={item.href}
               href={isDisabled ? '#' : item.href}
               className={`
-                relative px-4 py-2 rounded-lg font-medium transition-all
+                relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all
                 ${isActive 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                  : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  ? 'bg-blue-500 text-white shadow-md' 
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
                 }
-                ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+                ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}
               `}
               onClick={(e) => isDisabled && e.preventDefault()}
             >
-              <span className="mr-2">{item.icon}</span>
-              {language === 'ko' ? item.labelKo : item.labelEn}
+              <div className={`${isActive ? 'text-white' : 'text-gray-400'}`}>
+                {item.icon}
+              </div>
+              <span className="text-sm">
+                {language === 'ko' ? item.labelKo : item.labelEn}
+              </span>
               
               {/* Badge */}
               {item.badge && (
-                <span className={`absolute -top-2 -right-2 px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                <span className={`absolute -top-1 -right-1 px-1.5 py-0.5 text-[9px] font-bold rounded-full ${
                   item.badge === 'NEW' 
-                    ? 'bg-yellow-500 text-black animate-pulse' 
+                    ? 'bg-yellow-400 text-black' 
                     : 'bg-gray-600 text-gray-300'
                 }`}>
                   {item.badge}
@@ -83,9 +116,9 @@ export default function Navigation() {
         })}
       </nav>
 
-      {/* Mobile Menu Button - 깔끔한 스타일 */}
+      {/* Mobile Menu Button */}
       <button
-        className="md:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+        className="md:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/50 transition-colors"
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         aria-label="메뉴"
       >
@@ -98,11 +131,11 @@ export default function Navigation() {
         </svg>
       </button>
 
-      {/* Mobile Menu - 개선된 드롭다운 */}
+      {/* Mobile Menu - FotMob 스타일 */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0f0f0f] border-t border-gray-800 shadow-2xl z-50 animate-slideDown">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex flex-col gap-2">
+        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0f0f0f] border-t border-gray-800 shadow-2xl z-50">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex flex-col gap-1">
               {menuItems.map((item) => {
                 const isActive = pathname === item.href
                 const isDisabled = item.disabled
@@ -112,12 +145,12 @@ export default function Navigation() {
                     key={item.href}
                     href={isDisabled ? '#' : item.href}
                     className={`
-                      relative flex items-center px-4 py-3 rounded-lg font-medium transition-all
+                      relative flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all
                       ${isActive 
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                        ? 'bg-blue-500 text-white shadow-md' 
+                        : 'text-gray-300 hover:bg-gray-800/50 hover:text-white'
                       }
-                      ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+                      ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}
                     `}
                     onClick={(e) => {
                       if (isDisabled) {
@@ -127,14 +160,16 @@ export default function Navigation() {
                       }
                     }}
                   >
-                    <span className="mr-3 text-xl">{item.icon}</span>
+                    <div className={`${isActive ? 'text-white' : 'text-gray-400'}`}>
+                      {item.icon}
+                    </div>
                     <span className="flex-1">{language === 'ko' ? item.labelKo : item.labelEn}</span>
                     
                     {/* Badge */}
                     {item.badge && (
                       <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
                         item.badge === 'NEW' 
-                          ? 'bg-yellow-500 text-black' 
+                          ? 'bg-yellow-400 text-black' 
                           : 'bg-gray-600 text-gray-300'
                       }`}>
                         {item.badge}
