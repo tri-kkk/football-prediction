@@ -686,7 +686,7 @@ export default function DashboardPage() {
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600/20 text-blue-400 border border-blue-600/30"
                           >
                             <span>{badge.icon}</span>
-                            <span>{badge.name}</span>
+                            <span>{badge.label}</span>
                           </span>
                         ))}
                       </div>
