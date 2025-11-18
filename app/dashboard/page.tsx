@@ -501,7 +501,7 @@ export default function DashboardPage() {
                           ? 'text-gray-200' 
                           : 'text-gray-600'
                     }`}>
-                      {filter.name}
+                      {filter.label}
                     </div>
                     
                     {/* 하단: 설명 */}
