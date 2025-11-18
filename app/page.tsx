@@ -6,7 +6,8 @@ import { getTeamLogo, TEAM_NAME_KR } from './teamLogos'
 import H2HModal from './components/H2HModal'
 import { getTeamId } from './utils/teamIdMapping'
 import { useLanguage } from './contexts/LanguageContext'
-import LineupModal from './components/LineupModal'  
+import LineupModal from './components/LineupModal'
+import BlogPreviewSidebar from './components/BlogPreviewSidebar'  
 
 // 리그 정보 (국기 이미지 포함)
 const LEAGUES = [
@@ -1600,49 +1601,55 @@ export default function Home() {
 
           {/* 왼쪽 사이드바: Popular Leagues (PC 전용) */}
           <aside className={`hidden lg:block w-64 flex-shrink-0`}>
-            <div className={`sticky top-20 rounded-2xl p-4 ${
-              darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
-            }`}>
-              <h2 className={`text-lg font-bold mb-4 ${
-                darkMode ? 'text-white' : 'text-gray-900'
+            <div className="space-y-6">
+              {/* Popular Leagues */}
+              <div className={`rounded-2xl p-4 ${
+                darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
               }`}>
-                {currentLanguage === 'ko' ? '인기 리그' : 'Popular Leagues'}
-              </h2>
-              <nav className="space-y-2">
-                {LEAGUES
-                  .filter(league => LEAGUES_WITH_ODDS.includes(league.code))
-                  .map((league) => (
-                  <button
-                    key={league.code}
-                    onClick={() => setSelectedLeague(league.code)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-left ${
-                      selectedLeague === league.code
-                        ? darkMode 
-                          ? 'bg-white text-black shadow-lg'
-                          : 'bg-black text-white shadow-lg'
-                        : darkMode
-                          ? 'text-gray-300 hover:bg-gray-800'
-                          : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    {league.isEmoji ? (
-                      <span className="text-2xl">{league.logo}</span>
-                    ) : (
-                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1 flex-shrink-0">
-                        <img 
-                          src={league.logo} 
-                          alt={league.name}
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      </div>
-                    )}
-                    <span className="text-sm">{currentLanguage === 'ko' ? league.name : league.nameEn}</span>
-                  </button>
-                ))}
-              </nav>
+                <h2 className={`text-lg font-bold mb-4 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  {currentLanguage === 'ko' ? '인기 리그' : 'Popular Leagues'}
+                </h2>
+                <nav className="space-y-2">
+                  {LEAGUES
+                    .filter(league => LEAGUES_WITH_ODDS.includes(league.code))
+                    .map((league) => (
+                    <button
+                      key={league.code}
+                      onClick={() => setSelectedLeague(league.code)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-left ${
+                        selectedLeague === league.code
+                          ? darkMode 
+                            ? 'bg-white text-black shadow-lg'
+                            : 'bg-black text-white shadow-lg'
+                          : darkMode
+                            ? 'text-gray-300 hover:bg-gray-800'
+                            : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {league.isEmoji ? (
+                        <span className="text-2xl">{league.logo}</span>
+                      ) : (
+                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1 flex-shrink-0">
+                          <img 
+                            src={league.logo} 
+                            alt={league.name}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        </div>
+                      )}
+                      <span className="text-sm">{currentLanguage === 'ko' ? league.name : league.nameEn}</span>
+                    </button>
+                  ))}
+                </nav>
+              </div>
+
+              {/* 블로그 미리보기 */}
+              <BlogPreviewSidebar darkMode={darkMode} />
             </div>
           </aside>
 
