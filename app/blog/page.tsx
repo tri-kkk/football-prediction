@@ -18,10 +18,10 @@ interface BlogPost {
 
 const categories = [
   { value: 'all', label: '전체', emoji: '📚' },
-    { value: 'weekly', label: '주간 분석', emoji: '📊' },
+  { value: 'weekly', label: '주간 분석', emoji: '📊' },
   { value: 'preview', label: '경기 프리뷰', emoji: '🔮' },
   { value: 'analysis', label: '심층 분석', emoji: '🎯' },
-  ]
+]
 
 export default function BlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([])
@@ -60,22 +60,51 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white">
-      {/* 카테고리 필터 */}
-      <div className="border-b border-gray-800 pt-4">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      {/* 헤더 타이틀 */}
+      <div className="border-b border-gray-800 pt-6 pb-4">
+        <div className="max-w-6xl mx-auto px-4">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            📝 TrendSoccer 블로그
+          </h1>
+          <p className="text-gray-400 text-sm mt-2">축구 트렌드와 데이터 분석 인사이트</p>
+        </div>
+      </div>
+
+      {/* 카테고리 필터 - 모바일 최적화 */}
+      <div className="border-b border-gray-800 bg-[#0f0f0f] sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-3">
+          {/* Desktop: 가로 배치 */}
+          <div className="hidden md:flex gap-2">
             {categories.map(cat => (
               <button
                 key={cat.value}
                 onClick={() => setSelectedCategory(cat.value)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition font-medium ${
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg whitespace-nowrap transition-all font-medium ${
                   selectedCategory === cat.value
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    ? 'bg-blue-500 text-white shadow-md scale-105'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
                 }`}
               >
-                <span>{cat.emoji}</span>
-                {cat.label}
+                <span className="text-lg">{cat.emoji}</span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Mobile: 2x2 그리드 */}
+          <div className="md:hidden grid grid-cols-2 gap-2">
+            {categories.map(cat => (
+              <button
+                key={cat.value}
+                onClick={() => setSelectedCategory(cat.value)}
+                className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg transition-all ${
+                  selectedCategory === cat.value
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : 'bg-gray-800 text-gray-300 active:bg-gray-700'
+                }`}
+              >
+                <span className="text-2xl">{cat.emoji}</span>
+                <span className="text-xs font-medium">{cat.label}</span>
               </button>
             ))}
           </div>
