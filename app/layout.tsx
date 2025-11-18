@@ -60,10 +60,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <head>
-        {/* HilltopAds 사이트 소유권 확인 */}
-        <meta name="c982cca4dc6a1656193e00065dfdc54ab48699769" content="c982cca4dc6a1656193e00065dfdc54ab48699769" />
-      </head>
       <body className="bg-[#0f0f0f] text-white">
         <LanguageProvider>
         {/* Google Tag Manager */}
@@ -76,67 +72,6 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7858814871438044"
           crossOrigin="anonymous"
           strategy="afterInteractive"
-        />
-
-        {/* HilltopAds In-page Push - Desktop Only */}
-        <Script
-          id="hilltopads-inpage-push"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              // 모바일 체크 함수
-              function isMobile() {
-                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-                  || window.innerWidth < 768;
-              }
-              
-              // PC일 때만 광고 로드
-              if (!isMobile()) {
-                (function(mvvkk){
-                  var d = document,
-                      s = d.createElement('script'),
-                      l = d.scripts[d.scripts.length - 1];
-                  s.settings = mvvkk || {};
-                  s.src = "//aggressivestruggle.com/bRXUV/sZd.G/lS0YY/WPcE/ve/m/9nufZHU/l/kePrTrYY2_OYToYY0jNljigktvNvjnYb5TNejpQm2tO-Ql";
-                  s.async = true;
-                  s.referrerPolicy = 'no-referrer-when-downgrade';
-                  l.parentNode.insertBefore(s, l);
-                })({})
-              } else {
-                console.log('📱 모바일 감지: HilltopAds 비활성화');
-              }
-            `
-          }}
-        />
-
-        {/* Monetag Vignette Banner - Desktop Only (모바일 비활성화) */}
-        <Script
-          id="monetag-vignette"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              // 모바일 체크 함수
-              function isMobileDevice() {
-                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-                  || window.innerWidth < 768;
-              }
-              
-              // PC일 때만 Monetag Vignette 로드
-              if (!isMobileDevice()) {
-                // Monetag Vignette 스크립트
-                (function(d,z,s){
-                  s.src='https://'+d+'/400/'+z;
-                  try{
-                    (document.body||document.documentElement).appendChild(s)
-                  }catch(e){}
-                })('gloaphoo.net',8348835,document.createElement('script'));
-                
-                console.log('💻 PC 감지: Monetag Vignette 활성화');
-              } else {
-                console.log('📱 모바일 감지: Monetag Vignette 비활성화');
-              }
-            `
-          }}
         />
 
         {/* Global Navigation */}
