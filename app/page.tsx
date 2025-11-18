@@ -1375,6 +1375,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
+      {/* SEO용 H1 태그 - 화면에서 숨김 */}
+      <h1 className="sr-only">
+        실시간 해외축구 경기 예측 & 프리뷰 플랫폼 · Trend Soccer
+      </h1>
+      
       {/* 승률 배너 (자동 스크롤) */}
       
       {/* 데스크톱: 세로형 카드 */}

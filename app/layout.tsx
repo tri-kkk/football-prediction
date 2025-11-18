@@ -9,15 +9,39 @@ import { LanguageProvider } from './contexts/LanguageContext'
 import LanguageToggle from './components/LanguageToggle'
 
 export const metadata: Metadata = {
-  title: 'Trend Soccer',
+  metadataBase: new URL('https://www.trendsoccer.com'),
+  title: 'Trend Soccer - 실시간 해외축구 경기 예측 & 프리뷰 플랫폼',
   description: '실시간 확률 기반 축구 경기 예측 분석. 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그 승률 및 트렌드 분석 제공',
-  keywords: '축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그',
+  keywords: '축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰',
   authors: [{ name: 'Trend Soccer' }],
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: 'https://www.trendsoccer.com',
+  },
   openGraph: {
-    title: 'Trend Soccer',
+    title: 'Trend Soccer - 실시간 해외축구 경기 예측 & 프리뷰 플랫폼',
     description: '실시간 확률 기반 축구 경기 예측 분석 플랫폼',
     type: 'website',
     locale: 'ko_KR',
+    url: 'https://www.trendsoccer.com',
+    siteName: 'Trend Soccer',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Trend Soccer - 축구 경기 예측 플랫폼',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Trend Soccer - 실시간 해외축구 경기 예측',
+    description: '실시간 확률 기반 축구 경기 예측 분석 플랫폼',
+    images: ['/og-image.jpg'],
   },
   icons: {
     icon: [
