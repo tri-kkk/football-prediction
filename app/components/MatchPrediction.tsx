@@ -785,8 +785,8 @@ export default function MatchPrediction({
               darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200 shadow-sm'
             }`}>
               <div className="p-4">
-                {/* 모바일: 세로 배치 / 데스크탑: 가로 배치 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                {/* 모바일/데스크탑 모두 가로 배치 */}
+                <div className="grid grid-cols-2 gap-3 md:gap-6">
                   {/* 예상 결과 */}
                   <div className={`text-center p-4 rounded-lg ${
                     darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
@@ -854,110 +854,89 @@ export default function MatchPrediction({
               </div>
             </div>
 
-            {/* AI 인사이트 */}
+            {/* AI 인사이트 - 심플한 디자인 */}
             {insights.length > 0 ? (
               <div className="space-y-3">
-                <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg ${
-                  darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                {/* 헤더 */}
+                <div className={`flex items-center justify-between px-4 py-3 rounded-lg ${
+                  darkMode ? 'bg-gray-800/50 border border-gray-700' : 'bg-gray-50 border border-gray-200'
                 }`}>
-                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                  <h4 className={`text-sm font-bold uppercase tracking-wider ${
-                    darkMode ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
-                    {language === 'ko' ? 'Trend Insight' : 'Trend Insight'}
-                  </h4>
-                  <div className={`ml-auto text-xs font-medium ${
-                    darkMode ? 'text-gray-500' : 'text-gray-500'
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">💡</span>
+                    <h4 className={`text-sm font-bold ${
+                      darkMode ? 'text-gray-200' : 'text-gray-800'
+                    }`}>
+                      {language === 'ko' ? '매치 프리뷰' : 'Insights'}
+                    </h4>
+                  </div>
+                  <div className={`text-xs font-medium px-2 py-1 rounded ${
+                    darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
                   }`}>
                     {insights.length}{language === 'ko' ? '개' : ''}
                   </div>
                 </div>
+
+                {/* 인사이트 리스트 */}
                 <div className="space-y-2">
                   {insights.map((insight, idx) => (
                     <div
                       key={idx}
-                      className={`p-4 rounded-lg flex items-start gap-3 ${
+                      className={`p-3.5 rounded-lg flex items-start gap-3 ${
                         darkMode 
-                          ? 'bg-gray-900 border border-gray-800 hover:border-gray-700' 
-                          : 'bg-white border border-gray-200 hover:border-gray-300'
-                      } transition-colors`}
+                          ? 'bg-gray-900 border border-gray-800' 
+                          : 'bg-white border border-gray-200'
+                      }`}
                     >
-                      <div className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${
+                      {/* 번호 */}
+                      <div className={`flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
                         darkMode 
-                          ? 'bg-gray-800 text-gray-400 border border-gray-700' 
-                          : 'bg-gray-100 text-gray-600 border border-gray-200'
+                          ? 'bg-gray-800 text-gray-400' 
+                          : 'bg-gray-100 text-gray-600'
                       }`}>
                         {idx + 1}
                       </div>
-                      <p className={`text-sm flex-1 leading-relaxed ${
+
+                      {/* 텍스트 */}
+                      <p className={`text-sm leading-relaxed flex-1 ${
                         darkMode ? 'text-gray-300' : 'text-gray-700'
                       }`}>
                         {insight.text}
                       </p>
+
+                      {/* 타입 표시 */}
+                      <div className={`flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${
+                        insight.type === 'positive' ? 'bg-green-500' :
+                        insight.type === 'negative' ? 'bg-red-500' :
+                        'bg-blue-500'
+                      }`}></div>
                     </div>
                   ))}
                 </div>
-              </div>
-            ) : null}
 
-            {/* 승률 비교 바 */}
-            <div className={`p-4 rounded-xl ${
-              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
-            }`}>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm font-medium mb-2">
-                  <span className={darkMode ? 'text-blue-400' : 'text-blue-600'}>
-                    {homeTeamDisplay}
-                  </span>
-                  <span className={darkMode ? 'text-red-400' : 'text-red-600'}>
-                    {awayTeamDisplay}
-                  </span>
-                </div>
-                <div className="relative h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div 
-                    className="absolute left-0 top-0 h-full bg-blue-500 transition-all"
-                    style={{ width: `${homePercent}%` }}
-                  />
-                  <div 
-                    className="absolute right-0 top-0 h-full bg-red-500 transition-all"
-                    style={{ width: `${awayPercent}%` }}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-between px-3 text-xs font-bold text-white">
-                    <span>{homePercent.toFixed(0)}%</span>
-                    <span>{awayPercent.toFixed(0)}%</span>
-                  </div>
+                {/* 안내 메시지 */}
+                <div className={`text-center py-2 text-xs ${
+                  darkMode ? 'text-gray-500' : 'text-gray-500'
+                }`}>
+                  {language === 'ko' 
+                    ? '더 자세한 통계는 상세통계 탭에서 확인하세요' 
+                    : 'Check Stats tab for detailed analysis'}
                 </div>
               </div>
-            </div>
-
-            {/* 비교 통계 미리보기 */}
-            <div className="grid grid-cols-2 gap-2">
-              {comparisonStats.slice(0, 4).map((stat, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3 rounded-lg ${
-                    darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">{stat.icon}</span>
-                    <span className={`text-xs font-bold ${
-                      darkMode ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
-                      {stat.label}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm font-bold">
-                    <span className={darkMode ? 'text-blue-400' : 'text-blue-600'}>
-                      {stat.home}
-                    </span>
-                    <span className={darkMode ? 'text-red-400' : 'text-red-600'}>
-                      {stat.away}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            ) : (
+              /* 인사이트 없을 때 */
+              <div className={`p-6 rounded-lg text-center ${
+                darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
+              }`}>
+                <span className="text-3xl mb-2 block">🔍</span>
+                <p className={`text-sm ${
+                  darkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  {language === 'ko' 
+                    ? '경기 인사이트를 분석 중입니다...' 
+                    : 'Analyzing match insights...'}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
