@@ -5,7 +5,6 @@ import Link from 'next/link'
 import GoogleTagManager from './GoogleTagManager'
 import Navigation from './components/Navigation'
 import BottomNavigation from './components/BottomNavigation'
-import MonetagVignette from './components/ads/MonetagVignette'
 import { LanguageProvider } from './contexts/LanguageContext'
 import LanguageToggle from './components/LanguageToggle'
 
@@ -55,7 +54,7 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
 
-        {/* HilltopAds In-page Push - Desktop Only (간단한 방법) */}
+        {/* HilltopAds In-page Push - Desktop Only */}
         <Script
           id="hilltopads-inpage-push"
           strategy="afterInteractive"
@@ -81,6 +80,36 @@ export default function RootLayout({
                 })({})
               } else {
                 console.log('📱 모바일 감지: HilltopAds 비활성화');
+              }
+            `
+          }}
+        />
+
+        {/* Monetag Vignette Banner - Desktop Only (모바일 비활성화) */}
+        <Script
+          id="monetag-vignette"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              // 모바일 체크 함수
+              function isMobileDevice() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                  || window.innerWidth < 768;
+              }
+              
+              // PC일 때만 Monetag Vignette 로드
+              if (!isMobileDevice()) {
+                // Monetag Vignette 스크립트
+                (function(d,z,s){
+                  s.src='https://'+d+'/400/'+z;
+                  try{
+                    (document.body||document.documentElement).appendChild(s)
+                  }catch(e){}
+                })('gloaphoo.net',8348835,document.createElement('script'));
+                
+                console.log('💻 PC 감지: Monetag Vignette 활성화');
+              } else {
+                console.log('📱 모바일 감지: Monetag Vignette 비활성화');
               }
             `
           }}
@@ -163,9 +192,6 @@ export default function RootLayout({
             </div>
           </div>
         </footer>
-
-        {/* Monetag Vignette Banner - 깔끔한 네이티브 광고 */}
-        <MonetagVignette />
         </LanguageProvider>
       </body>
     </html>
