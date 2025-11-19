@@ -26,19 +26,18 @@ export default function MatchTrendChart({ data, darkMode }: MatchTrendChartProps
     console.log('🔍 data.length:', data?.length)
     console.log('🔍 chartContainerRef.current:', chartContainerRef.current)
     
+    // ✅ 컨테이너만 체크, 데이터는 체크 안 함 (MatchPrediction에서 이미 체크)
     if (!chartContainerRef.current) {
       console.warn('⚠️ No container')
       return
     }
     
-    if (!data || data.length === 0) {
-      console.warn('⚠️ No data:', data?.length)
-      return
-    }
+    // ✅ 데이터 체크 제거 - 무조건 차트 그리기
+    // MatchPrediction에서 이미 trendData.length > 0 체크함
 
     const container = chartContainerRef.current
     
-    console.log('📊 Chart rendering with', data.length, 'points')
+    console.log('📊 Chart rendering with', data?.length || 0, 'points')
     
     // 🔧 기존 차트 제거 (강제 리렌더링)
     if (chartRef.current) {
