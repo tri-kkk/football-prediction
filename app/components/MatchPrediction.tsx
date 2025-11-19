@@ -1389,7 +1389,7 @@ export default function MatchPrediction({
               <h3 className={`text-lg font-bold mb-4 ${
                 darkMode ? 'text-white' : 'text-gray-900'
               }`}>
-                {language === 'ko' ? '📊 24시간 오즈 트렌드' : '📊 24-Hour Odds Trend'}
+                {language === 'ko' ? '📊 매치 트렌드' : '📊 Trend (Cumulative)'}
               </h3>
               
               {trendData.length > 0 ? (
@@ -1431,8 +1431,8 @@ export default function MatchPrediction({
                   
                   <p className={`text-xs text-center mt-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                     {language === 'ko' 
-                      ? `${trendData.length}개 데이터 포인트 • 최근 24시간`
-                      : `${trendData.length} data points • Last 24 hours`}
+                      ? `${trendData.length}개 데이터 포인트 • 누적 히스토리`
+                      : `${trendData.length} data points • Cumulative history`}
                   </p>
                 </div>
               ) : (
@@ -1443,12 +1443,12 @@ export default function MatchPrediction({
                   <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {language === 'ko' 
                       ? '트렌드 데이터가 아직 수집되지 않았습니다' 
-                      : 'Trend data not yet available'}
+                      : 'Trend data not yet collected'}
                   </p>
                   <p className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
                     {language === 'ko'
-                      ? '경기 시작 24시간 전부터 2시간마다 수집됩니다'
-                      : 'Data collected every 2 hours, starting 24h before match'}
+                      ? '30분마다 자동으로 수집됩니다'
+                      : 'Data collected automatically every 30 minutes'}
                   </p>
                 </div>
               )}

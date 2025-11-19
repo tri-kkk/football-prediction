@@ -1,4 +1,4 @@
-// 트렌드 차트용 데이터 (슈퍼 디버깅 버전)
+// 트렌드 차트용 데이터 (누적 히스토리 버전) ✨
 export const dynamic = 'force-dynamic'
 
 interface TrendPoint {
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const matchId = searchParams.get('matchId')
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('🚀 match-trend API 호출 시작')
+    console.log('🚀 match-trend API 호출 시작 (누적 모드)')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     
     if (!matchId) {
@@ -44,13 +44,8 @@ export async function GET(request: Request) {
       }, { status: 500 })
     }
     
-    // 24시간 전
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    
-    console.log('⏰ 시간 범위:', {
-      from: twentyFourHoursAgo,
-      to: new Date().toISOString()
-    })
+    // ✅ 변경: 시간 제한 제거 → 모든 히스토리
+    console.log('⏰ 시간 범위: 첫 수집 시점 ~ 현재 (누적)')
     
     // 🔍 Step 1: 오늘 수집된 모든 match_id 확인
     console.log('\n🔍 Step 1: 오늘 수집된 경기 확인')
@@ -90,8 +85,8 @@ export async function GET(request: Request) {
       console.warn('⚠️ Step 1 실패:', err)
     }
     
-    // 🔍 Step 2: 여러 방식으로 조회 시도
-    console.log('\n🔍 Step 2: 데이터 조회 시도')
+    // 🔍 Step 2: 여러 방식으로 조회 시도 (시간 제한 없음)
+    console.log('\n🔍 Step 2: 데이터 조회 시도 (전체 히스토리)')
     
     const queries = [
       { name: '정확한 일치', filter: `match_id=eq.${matchId}` },
@@ -105,9 +100,10 @@ export async function GET(request: Request) {
     for (const query of queries) {
       console.log(`\n🔗 시도: ${query.name}`)
       
+      // ✅ 변경: created_at 필터 제거 → 모든 히스토리
       const apiUrl = `${supabaseUrl}/rest/v1/match_odds_history?` +
         `${query.filter}&` +
-        `created_at=gte.${twentyFourHoursAgo}&` +
+        // `created_at=gte.${twentyFourHoursAgo}&` ← 제거됨!
         `select=created_at,home_probability,draw_probability,away_probability&` +
         `order=created_at.asc`
       
@@ -176,13 +172,22 @@ export async function GET(request: Request) {
       awayWinProbability: Number(point.away_probability)
     }))
     
+    // ✅ 추가: 메타데이터 계산
+    const firstPoint = formatted[0]
+    const lastPoint = formatted[formatted.length - 1]
+    const firstTime = new Date(firstPoint.timestamp).getTime()
+    const lastTime = new Date(lastPoint.timestamp).getTime()
+    const timespanHours = (lastTime - firstTime) / (1000 * 60 * 60)
+    const timespanDays = timespanHours / 24
+    
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('✅ 성공!')
+    console.log('✅ 성공! (누적 히스토리)')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('방법:', successMethod)
-    console.log('데이터:', formatted.length, '개')
-    console.log('첫 포인트:', formatted[0]?.timestamp)
-    console.log('마지막:', formatted[formatted.length - 1]?.timestamp)
+    console.log('데이터 포인트:', formatted.length, '개')
+    console.log('첫 수집:', firstPoint.timestamp)
+    console.log('마지막 업데이트:', lastPoint.timestamp)
+    console.log('누적 기간:', timespanDays.toFixed(1), '일 (', timespanHours.toFixed(1), '시간)')
     console.log('소요 시간:', duration, 'ms')
     
     return Response.json({
@@ -190,7 +195,15 @@ export async function GET(request: Request) {
       data: formatted,
       count: formatted.length,
       source: 'database',
-      period: '24h',
+      period: 'cumulative', // ✅ 변경: '24h' → 'cumulative'
+      metadata: {
+        firstCollected: firstPoint.timestamp,
+        lastUpdated: lastPoint.timestamp,
+        timespanHours: timespanHours.toFixed(1),
+        timespanDays: timespanDays.toFixed(1),
+        totalDataPoints: formatted.length,
+        avgIntervalMinutes: ((timespanHours * 60) / (formatted.length - 1)).toFixed(1)
+      },
       debug: {
         method: successMethod,
         duration: `${duration}ms`
