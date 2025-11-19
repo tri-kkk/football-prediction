@@ -4,66 +4,41 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useLanguage } from '../contexts/LanguageContext'
+import Image from 'next/image'
 
 interface MenuItem {
   labelKo: string
   labelEn: string
   href: string
-  icon: React.ReactNode
+  icon: string
   badge?: string
   disabled?: boolean
 }
 
-// FotMob 스타일 SVG 픽토그램 아이콘
 const menuItems: MenuItem[] = [
   { 
-    labelKo: '경기 일정',
-    labelEn: 'Predictions',
+    labelKo: '프리뷰',
+    labelEn: 'Preview',
     href: '/', 
-    icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <circle cx="12" cy="12" r="10" strokeWidth="2"/>
-        <path d="M12 6v6l4 2" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    )
+    icon: '/preview.svg'
   },
   { 
-    labelKo: '경기 현황',
-    labelEn: 'Results',
+    labelKo: '경기 일정',
+    labelEn: 'Schedule',
     href: '/results', 
-    icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path d="M9 11l3 3L22 4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    )
+    icon: '/event.svg'
   },
   { 
-    labelKo: '스마트 대시보드',
+    labelKo: '대시보드',
     labelEn: 'Dashboard',
     href: '/dashboard', 
-    icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <rect x="3" y="3" width="7" height="7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <rect x="14" y="3" width="7" height="7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <rect x="14" y="14" width="7" height="7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <rect x="3" y="14" width="7" height="7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    )
+    icon: '/dashboard.svg'
   },
   { 
-    labelKo: '매치 리포트',
-    labelEn: 'Stats',
+    labelKo: '아티클',
+    labelEn: 'Article',
     href: '/blog', 
-    icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path d="M3 3v18h18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M18 17V9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M13 17v-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M8 17v-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-    
+    icon: '/article.svg'
   },
 ]
 
@@ -74,7 +49,7 @@ export default function Navigation() {
 
   return (
     <>
-      {/* Desktop Navigation - FotMob 스타일 */}
+      {/* Desktop Navigation */}
       <nav className="hidden md:flex items-center gap-1">
         {menuItems.map((item) => {
           const isActive = pathname === item.href
@@ -94,8 +69,14 @@ export default function Navigation() {
               `}
               onClick={(e) => isDisabled && e.preventDefault()}
             >
-              <div className={`${isActive ? 'text-white' : 'text-gray-400'}`}>
-                {item.icon}
+              <div className={`relative ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                <Image 
+                  src={item.icon} 
+                  alt={item.labelEn}
+                  width={20} 
+                  height={20}
+                  className={isActive ? 'brightness-125' : ''}
+                />
               </div>
               <span className="text-sm">
                 {language === 'ko' ? item.labelKo : item.labelEn}
@@ -131,7 +112,7 @@ export default function Navigation() {
         </svg>
       </button>
 
-      {/* Mobile Menu - FotMob 스타일 */}
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-[#0f0f0f] border-t border-gray-800 shadow-2xl z-50">
           <div className="container mx-auto px-4 py-3">
@@ -160,8 +141,14 @@ export default function Navigation() {
                       }
                     }}
                   >
-                    <div className={`${isActive ? 'text-white' : 'text-gray-400'}`}>
-                      {item.icon}
+                    <div className={`relative ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                      <Image 
+                        src={item.icon} 
+                        alt={item.labelEn}
+                        width={20} 
+                        height={20}
+                        className={isActive ? 'brightness-125' : ''}
+                      />
                     </div>
                     <span className="flex-1">{language === 'ko' ? item.labelKo : item.labelEn}</span>
                     
