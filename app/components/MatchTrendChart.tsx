@@ -21,8 +21,18 @@ export default function MatchTrendChart({ data, darkMode }: MatchTrendChartProps
   const chartRef = useRef<IChartApi | null>(null)
 
   useEffect(() => {
-    if (!chartContainerRef.current || !data || data.length === 0) {
-      console.warn('⚠️ Chart: No container or no data')
+    console.log('🔍 useEffect triggered')
+    console.log('🔍 data:', data)
+    console.log('🔍 data.length:', data?.length)
+    console.log('🔍 chartContainerRef.current:', chartContainerRef.current)
+    
+    if (!chartContainerRef.current) {
+      console.warn('⚠️ No container')
+      return
+    }
+    
+    if (!data || data.length === 0) {
+      console.warn('⚠️ No data:', data?.length)
       return
     }
 
@@ -30,7 +40,24 @@ export default function MatchTrendChart({ data, darkMode }: MatchTrendChartProps
     
     console.log('📊 Chart rendering with', data.length, 'points')
     
-    // 🔧 페이드인 제거 - 즉시 표시
+    // 🔧 기존 차트 제거 (강제 리렌더링)
+    if (chartRef.current) {
+      try {
+        console.log('🔄 Removing old chart')
+        // disposed 상태가 아닐 때만 제거
+        if (!chartRef.current.options) {
+          console.log('⚠️ Chart already disposed')
+        } else {
+          chartRef.current.remove()
+        }
+      } catch (error) {
+        console.warn('⚠️ Error removing chart:', error)
+      }
+      chartRef.current = null
+    }
+    
+    // 🔧 컨테이너 초기화
+    container.innerHTML = ''
     container.style.opacity = '1'
     
     // Y축 범위 동적 계산
@@ -219,10 +246,20 @@ export default function MatchTrendChart({ data, darkMode }: MatchTrendChartProps
     // 클린업
     return () => {
       window.removeEventListener('resize', handleResize)
-      chart.remove()
+      try {
+        if (chart && !chart.options) {
+          console.log('⚠️ Chart already disposed in cleanup')
+        } else if (chart) {
+          chart.remove()
+          console.log('✅ Chart removed in cleanup')
+        }
+      } catch (error) {
+        console.warn('⚠️ Error in cleanup:', error)
+      }
     }
   }, [data, darkMode])
 
+  // ✅ MatchPrediction에서 이미 체크하므로 여기서는 제거
   return (
     <div 
       ref={chartContainerRef} 
