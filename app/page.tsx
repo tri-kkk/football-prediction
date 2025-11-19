@@ -1214,7 +1214,7 @@ export default function Home() {
       return
     }
 
-    // Y축 범위 동적 계산
+    // Y축 범위 동적 계산 (개선 버전)
     const allValues = trend.flatMap(point => [
       point.homeWinProbability,
       point.drawProbability,
@@ -1223,11 +1223,31 @@ export default function Home() {
     const minValue = Math.min(...allValues)
     const maxValue = Math.max(...allValues)
     
-    // 여유 공간 추가 (변화를 더 크게 보이도록)
+    // 변동폭 계산
     const range = maxValue - minValue
-    const padding = Math.max(range * 0.2, 5) // 최소 5% 패딩
+    
+    // 🎯 개선: 변동폭이 작을 때 더 크게 확대
+    let padding
+    if (range < 10) {
+      // 변동폭 10% 미만 → 50% 패딩 (확대)
+      padding = range * 1.5
+    } else if (range < 20) {
+      // 변동폭 20% 미만 → 30% 패딩
+      padding = range * 0.8
+    } else {
+      // 변동폭 20% 이상 → 20% 패딩
+      padding = range * 0.3
+    }
+    
     const yMin = Math.max(0, minValue - padding)
     const yMax = Math.min(100, maxValue + padding)
+
+    // 🎨 애니메이션: 차트 컨테이너 페이드인
+    container.style.opacity = '0'
+    container.style.transition = 'opacity 0.5s ease-in'
+    setTimeout(() => {
+      container.style.opacity = '1'
+    }, 50)
 
     const chart = createChart(container, {
       width: container.clientWidth,
@@ -1256,27 +1276,39 @@ export default function Home() {
       },
     })
 
-    // 홈팀 승률 (파란색 영역)
+    // 홈팀 승률 (파란색 영역 - 강화)
     const homeSeries = chart.addAreaSeries({
-      topColor: 'rgba(59, 130, 246, 0.4)',
-      bottomColor: 'rgba(59, 130, 246, 0.05)',
+      topColor: 'rgba(59, 130, 246, 0.6)',      // 불투명도 증가
+      bottomColor: 'rgba(59, 130, 246, 0.1)',   // 불투명도 증가
       lineColor: '#3b82f6',
-      lineWidth: 3,
+      lineWidth: 4,                              // 두께 증가
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 6,
+      lastValueVisible: true,
+      priceLineVisible: false,
     })
 
-    // 무승부 (회색 선)
+    // 무승부 (회색 선 - 강화)
     const drawSeries = chart.addLineSeries({
       color: '#9ca3af',
       lineWidth: 3,
       lineStyle: 2, // 점선
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 5,
+      lastValueVisible: true,
+      priceLineVisible: false,
     })
 
-    // 원정팀 승률 (빨간색 영역)
+    // 원정팀 승률 (빨간색 영역 - 강화)
     const awaySeries = chart.addAreaSeries({
-      topColor: 'rgba(239, 68, 68, 0.4)',
-      bottomColor: 'rgba(239, 68, 68, 0.05)',
+      topColor: 'rgba(239, 68, 68, 0.6)',       // 불투명도 증가
+      bottomColor: 'rgba(239, 68, 68, 0.1)',    // 불투명도 증가
       lineColor: '#ef4444',
-      lineWidth: 3,
+      lineWidth: 4,                              // 두께 증가
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 6,
+      lastValueVisible: true,
+      priceLineVisible: false,
     })
 
     // 중복 시간 제거 및 데이터 준비
@@ -1315,6 +1347,7 @@ export default function Home() {
     // 데이터 포인트 마커 추가 (각 시간대별)
     const markers = uniqueTrend.map((point, index) => {
       const time = Math.floor(new Date(point.timestamp).getTime() / 1000) as any
+      const isLatest = index === uniqueTrend.length - 1  // 🎨 최신 포인트
       
       // 최고값을 가진 팀에만 마커 표시
       const maxProb = Math.max(
@@ -1339,7 +1372,7 @@ export default function Home() {
         position,
         color,
         shape: 'circle' as const,
-        size: 0.5,
+        size: isLatest ? 1.5 : 0.5,  // 🎨 최신 포인트 크게
       }
     })
     
@@ -2046,12 +2079,14 @@ export default function Home() {
                             } ${homeChange > 0 ? 'animate-pulse' : ''}`}>
                               {Math.round(displayHomeProb)}%
                             </div>
-                            <div className="h-4 mt-1">
+                            <div className="h-5 mt-1">
                               {homeChange !== 0 && (
-                                <div className={`text-xs font-bold ${
-                                  homeChange > 0 ? 'text-green-500' : 'text-red-500'
+                                <div className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-black animate-bounce ${
+                                  homeChange > 0 
+                                    ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
+                                    : 'bg-red-500/20 text-red-400 border border-red-500/50'
                                 }`}>
-                                  {homeChange > 0 ? '↑' : '↓'} {Math.abs(Math.round(homeChange))}%
+                                  {homeChange > 0 ? '▲' : '▼'} {Math.abs(homeChange).toFixed(1)}%
                                 </div>
                               )}
                             </div>
@@ -2098,12 +2133,14 @@ export default function Home() {
                             }`}>
                               {Math.round(displayAwayProb)}%
                             </div>
-                            <div className="h-4 mt-1">
+                            <div className="h-5 mt-1">
                               {awayChange !== 0 && (
-                                <div className={`text-xs font-bold ${
-                                  awayChange > 0 ? 'text-green-500' : 'text-red-500'
+                                <div className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-black animate-bounce ${
+                                  awayChange > 0 
+                                    ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
+                                    : 'bg-red-500/20 text-red-400 border border-red-500/50'
                                 }`}>
-                                  {awayChange > 0 ? '↑' : '↓'} {Math.abs(Math.round(awayChange))}%
+                                  {awayChange > 0 ? '▲' : '▼'} {Math.abs(awayChange).toFixed(1)}%
                                 </div>
                               )}
                             </div>
@@ -2547,8 +2584,47 @@ export default function Home() {
           }
         }
         
+        @keyframes chartPulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.05);
+          }
+        }
+        
+        @keyframes chartGlow {
+          0%, 100% {
+            filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.3));
+          }
+          50% {
+            filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+          }
+        }
+        
+        @keyframes slideInFromLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
         .animate-fadeIn {
           animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        .chart-container {
+          animation: slideInFromLeft 0.6s ease-out;
+        }
+        
+        .chart-latest-marker {
+          animation: chartPulse 2s ease-in-out infinite;
         }
       `}</style>
 
