@@ -488,12 +488,12 @@ export default function MatchPrediction({
     const radius = Math.min(centerX, centerY) - 40
 
     const categories = [
-      { label: '최근폼', home: parseFloat(comparison.form.home.replace('%', '')), away: parseFloat(comparison.form.away.replace('%', '')), angle: 0 },
-      { label: '공격력', home: parseFloat(comparison.att.home.replace('%', '')), away: parseFloat(comparison.att.away.replace('%', '')), angle: Math.PI / 3 },
-      { label: '수비력', home: parseFloat(comparison.def.home.replace('%', '')), away: parseFloat(comparison.def.away.replace('%', '')), angle: 2 * Math.PI / 3 },
-      { label: '득점력', home: parseFloat(comparison.goals.home.replace('%', '')), away: parseFloat(comparison.goals.away.replace('%', '')), angle: Math.PI },
-      { label: '상대전적', home: parseFloat(comparison.h2h.home.replace('%', '')), away: parseFloat(comparison.h2h.away.replace('%', '')), angle: 4 * Math.PI / 3 },
-      { label: '포아송', home: parseFloat(comparison.poisson_distribution.home.replace('%', '')), away: parseFloat(comparison.poisson_distribution.away.replace('%', '')), angle: 5 * Math.PI / 3 },
+      { label: language === 'ko' ? '최근폼' : 'Form', home: parseFloat(comparison.form.home.replace('%', '')), away: parseFloat(comparison.form.away.replace('%', '')), angle: 0 },
+      { label: language === 'ko' ? '공격력' : 'Attack', home: parseFloat(comparison.att.home.replace('%', '')), away: parseFloat(comparison.att.away.replace('%', '')), angle: Math.PI / 3 },
+      { label: language === 'ko' ? '수비력' : 'Defense', home: parseFloat(comparison.def.home.replace('%', '')), away: parseFloat(comparison.def.away.replace('%', '')), angle: 2 * Math.PI / 3 },
+      { label: language === 'ko' ? '득점력' : 'Goals', home: parseFloat(comparison.goals.home.replace('%', '')), away: parseFloat(comparison.goals.away.replace('%', '')), angle: Math.PI },
+      { label: language === 'ko' ? '상대전적' : 'H2H', home: parseFloat(comparison.h2h.home.replace('%', '')), away: parseFloat(comparison.h2h.away.replace('%', '')), angle: 4 * Math.PI / 3 },
+      { label: language === 'ko' ? '포아송' : 'Poisson', home: parseFloat(comparison.poisson_distribution.home.replace('%', '')), away: parseFloat(comparison.poisson_distribution.away.replace('%', '')), angle: 5 * Math.PI / 3 },
     ]
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -597,8 +597,8 @@ export default function MatchPrediction({
   const awayPercent = parseFloat(pred.percent.away.replace('%', ''))
   const maxPercent = Math.max(homePercent, drawPercent, awayPercent)
 
-  const homeTeamDisplay = homeTeamKR || homeTeam
-  const awayTeamDisplay = awayTeamKR || awayTeam
+  const homeTeamDisplay = language === 'ko' ? (homeTeamKR || homeTeam) : homeTeam
+  const awayTeamDisplay = language === 'ko' ? (awayTeamKR || awayTeam) : awayTeam
 
   // 🆕 현실적인 스코어 계산
   const avgHomeGoals = Math.abs(parseFloat(pred.goals.home))  // 🔥 절댓값 처리
@@ -623,7 +623,7 @@ export default function MatchPrediction({
     ? { team: homeTeamDisplay, percent: homePercent, color: 'blue' as const, result: '승리' }
     : homeGoals < awayGoals
     ? { team: awayTeamDisplay, percent: awayPercent, color: 'red' as const, result: '승리' }
-    : { team: '무승부', percent: drawPercent, color: 'gray' as const, result: '예상' }
+    : { team: language === 'ko' ? '무승부' : 'Draw', percent: drawPercent, color: 'gray' as const, result: language === 'ko' ? '예상' : 'Expected' }
 
   // 인사이트 생성
   const insights: Array<{ text: string; type: 'positive' | 'neutral' | 'negative' }> = []
@@ -632,10 +632,20 @@ export default function MatchPrediction({
   const awayFormValue = parseFloat(comparison.form.away)
   
   if (homeFormValue > 70) {
-    insights.push({ text: `${homeTeamDisplay}의 최근 폼이 매우 좋습니다 (${comparison.form.home})`, type: 'positive' })
+    insights.push({ 
+      text: language === 'ko' 
+        ? `${homeTeamDisplay}의 최근 폼이 매우 좋습니다 (${comparison.form.home})` 
+        : `${homeTeamDisplay} in excellent form (${comparison.form.home})`, 
+      type: 'positive' 
+    })
   }
   if (awayFormValue > 70) {
-    insights.push({ text: `${awayTeamDisplay}의 최근 폼이 매우 좋습니다 (${comparison.form.away})`, type: 'positive' })
+    insights.push({ 
+      text: language === 'ko' 
+        ? `${awayTeamDisplay}의 최근 폼이 매우 좋습니다 (${comparison.form.away})` 
+        : `${awayTeamDisplay} in excellent form (${comparison.form.away})`, 
+      type: 'positive' 
+    })
   }
 
   // H2H 인사이트 (기존 API 데이터 사용)
@@ -647,12 +657,16 @@ export default function MatchPrediction({
       
       if (team1WinRate >= 60) {
         insights.push({ 
-          text: `최근 ${summary.total}경기에서 ${homeTeamDisplay}이 ${summary.team1Wins}승으로 우세합니다`, 
+          text: language === 'ko'
+            ? `최근 ${summary.total}경기에서 ${homeTeamDisplay}이 ${summary.team1Wins}승으로 우세합니다`
+            : `${homeTeamDisplay} dominant with ${summary.team1Wins} wins in last ${summary.total} matches`, 
           type: 'positive' 
         })
       } else if (team2WinRate >= 60) {
         insights.push({ 
-          text: `최근 ${summary.total}경기에서 ${awayTeamDisplay}이 ${summary.team2Wins}승으로 우세합니다`, 
+          text: language === 'ko'
+            ? `최근 ${summary.total}경기에서 ${awayTeamDisplay}이 ${summary.team2Wins}승으로 우세합니다`
+            : `${awayTeamDisplay} dominant with ${summary.team2Wins} wins in last ${summary.total} matches`, 
           type: 'positive' 
         })
       }
@@ -675,7 +689,9 @@ export default function MatchPrediction({
   
   if (awayAttValue > 70 && homeDefValue < 40) {
     insights.push({ 
-      text: `${awayTeamDisplay}의 강력한 공격 vs ${homeTeamDisplay}의 약한 수비 - 다득점 가능성`, 
+      text: language === 'ko'
+        ? `${awayTeamDisplay}의 강력한 공격 vs ${homeTeamDisplay}의 약한 수비 - 다득점 가능성`
+        : `${awayTeamDisplay}'s strong attack vs ${homeTeamDisplay}'s weak defense - High scoring likely`, 
       type: 'positive' 
     })
   }
@@ -683,9 +699,19 @@ export default function MatchPrediction({
   // 예상 득점 분석
   const totalGoals = homeGoals + awayGoals
   if (totalGoals >= 4) {
-    insights.push({ text: `예상 총 득점 ${totalGoals}골 - 박진감 넘치는 경기 예상`, type: 'neutral' })
+    insights.push({ 
+      text: language === 'ko'
+        ? `예상 총 득점 ${totalGoals}골 - 박진감 넘치는 경기 예상`
+        : `Expected ${totalGoals} total goals - Exciting match ahead`, 
+      type: 'neutral' 
+    })
   } else if (totalGoals <= 2) {
-    insights.push({ text: `예상 총 득점 ${totalGoals}골 - 수비적인 경기 예상`, type: 'neutral' })
+    insights.push({ 
+      text: language === 'ko'
+        ? `예상 총 득점 ${totalGoals}골 - 수비적인 경기 예상`
+        : `Expected ${totalGoals} total goals - Defensive match likely`, 
+      type: 'neutral' 
+    })
   }
 
   // 비교 통계
@@ -1024,7 +1050,7 @@ export default function MatchPrediction({
               <div className="p-8 text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
                 <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                  상대전적 데이터 로딩 중...
+                  {language === 'ko' ? '상대전적 데이터 로딩 중...' : 'Loading H2H data...'}
                 </p>
               </div>
             ) : h2h?.h2hMatches ? (
@@ -1040,7 +1066,9 @@ export default function MatchPrediction({
                     <h4 className={`text-xs font-bold uppercase tracking-wider ${
                       darkMode ? 'text-gray-400' : 'text-gray-600'
                     }`}>
-                      최근 {h2h.statistics.totalMatches}경기 전적
+                      {language === 'ko' 
+                        ? `최근 ${h2h.statistics.totalMatches}경기 전적`
+                        : `Last ${h2h.statistics.totalMatches} Matches`}
                     </h4>
                   </div>
                   
@@ -1051,7 +1079,9 @@ export default function MatchPrediction({
                       }`}>
                         {h2h.statistics.homeWins}
                       </div>
-                      <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>승</div>
+                      <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {language === 'ko' ? '승' : 'W'}
+                      </div>
                       <div className={`text-sm font-bold ${
                         darkMode ? 'text-blue-400/70' : 'text-blue-600/70'
                       }`}>
@@ -1064,7 +1094,9 @@ export default function MatchPrediction({
                       }`}>
                         {h2h.statistics.draws}
                       </div>
-                      <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>무</div>
+                      <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {language === 'ko' ? '무' : 'D'}
+                      </div>
                       <div className={`text-sm font-bold ${
                         darkMode ? 'text-gray-400/70' : 'text-gray-600/70'
                       }`}>
@@ -1077,7 +1109,9 @@ export default function MatchPrediction({
                       }`}>
                         {h2h.statistics.awayWins}
                       </div>
-                      <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>승</div>
+                      <div className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {language === 'ko' ? '승' : 'W'}
+                      </div>
                       <div className={`text-sm font-bold ${
                         darkMode ? 'text-red-400/70' : 'text-red-600/70'
                       }`}>
@@ -1092,7 +1126,7 @@ export default function MatchPrediction({
                   }`}>
                     <div className="text-center">
                       <p className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        평균 득점 (홈)
+                        {language === 'ko' ? '평균 득점 (홈)' : 'Avg Goals (Home)'}
                       </p>
                       <p className={`text-lg font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                         {h2h.statistics.avgGoalsHome}
@@ -1100,7 +1134,7 @@ export default function MatchPrediction({
                     </div>
                     <div className="text-center">
                       <p className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        평균 득점 (원정)
+                        {language === 'ko' ? '평균 득점 (원정)' : 'Avg Goals (Away)'}
                       </p>
                       <p className={`text-lg font-bold ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
                         {h2h.statistics.avgGoalsAway}
@@ -1114,7 +1148,9 @@ export default function MatchPrediction({
                   <h4 className={`text-xs font-bold mb-3 ${
                     darkMode ? 'text-gray-400' : 'text-gray-600'
                   }`}>
-                    최근 {h2h.h2hMatches.length}경기
+                    {language === 'ko' 
+                      ? `최근 ${h2h.h2hMatches.length}경기`
+                      : `Last ${h2h.h2hMatches.length} Matches`}
                   </h4>
                   
                   {h2h.h2hMatches.slice(0, 10).map((match, idx) => {
@@ -1169,7 +1205,7 @@ export default function MatchPrediction({
                               <span className={`text-xs px-1 py-0.5 rounded font-bold flex-shrink-0 ${
                                 darkMode ? 'bg-[#2a2a2a] text-gray-400' : 'bg-gray-200 text-gray-600'
                               }`}>
-                                홈
+                                {language === 'ko' ? '홈' : 'H'}
                               </span>
                             )}
                           </div>
@@ -1201,7 +1237,7 @@ export default function MatchPrediction({
                               <span className={`text-xs px-1 py-0.5 rounded font-bold flex-shrink-0 ${
                                 darkMode ? 'bg-[#2a2a2a] text-gray-400' : 'bg-gray-200 text-gray-600'
                               }`}>
-                                홈
+                                {language === 'ko' ? '홈' : 'H'}
                               </span>
                             )}
                             <span className={`text-sm truncate ${
@@ -1246,7 +1282,7 @@ export default function MatchPrediction({
               <div className="p-8 text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
                 <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                  최근 폼 데이터 로딩 중...
+                  {language === 'ko' ? '최근 폼 데이터 로딩 중...' : 'Loading recent form data...'}
                 </p>
               </div>
             ) : h2h?.homeForm && h2h?.awayForm ? (
@@ -1381,7 +1417,7 @@ export default function MatchPrediction({
               }`}>
                 <span className="text-4xl mb-3 block">◈</span>
                 <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  최근 폼 데이터가 없습니다
+                  {language === 'ko' ? '최근 폼 데이터가 없습니다' : 'No recent form data available'}
                 </p>
               </div>
             )}
