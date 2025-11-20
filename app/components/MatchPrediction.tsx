@@ -40,6 +40,8 @@ interface H2HMatch {
   league: string
   homeTeam: string
   awayTeam: string
+  homeTeamId: number      // ✅ 추가!
+  awayTeamId: number      // ✅ 추가!
   homeScore: number
   awayScore: number
   winner: 'home' | 'away' | 'draw'
@@ -1149,7 +1151,7 @@ export default function MatchPrediction({
                           {/* 홈팀 */}
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <img 
-                              src={getTeamLogo(match.homeTeam)}
+                              src={getTeamLogo(match.homeTeamId, getKoreanTeamName(match.homeTeam))}
                               alt={match.homeTeam}
                               className="w-5 h-5 object-contain flex-shrink-0"
                               onError={(e) => {
@@ -1210,7 +1212,7 @@ export default function MatchPrediction({
                               {getKoreanTeamName(match.awayTeam)}
                             </span>
                             <img 
-                              src={getTeamLogo(match.awayTeam)}
+                              src={getTeamLogo(match.awayTeamId, getKoreanTeamName(match.awayTeam))}
                               alt={match.awayTeam}
                               className="w-5 h-5 object-contain flex-shrink-0"
                               onError={(e) => {

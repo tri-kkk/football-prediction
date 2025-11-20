@@ -654,8 +654,16 @@ export const TEAM_LOGOS: Record<string, string> = (() => {
   return logos
 })()
 
-// 팀 로고 가져오기 함수 (스마트 매칭)
-export function getTeamLogo(teamName: string): string {
+// 팀 로고 가져오기 함수 (팀 ID 또는 팀 이름 지원)
+export function getTeamLogo(teamIdOrName: number | string, fallbackName?: string): string {
+  // Step 0: 팀 ID가 주어진 경우 직접 URL 반환
+  if (typeof teamIdOrName === 'number') {
+    return `https://media.api-sports.io/football/teams/${teamIdOrName}.png`
+  }
+  
+  // 팀 이름이 주어진 경우
+  const teamName = teamIdOrName
+  
   if (!teamName) {
     return 'https://via.placeholder.com/48x48/1e293b/ffffff?text=TEAM'
   }
