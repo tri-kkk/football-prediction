@@ -29,13 +29,6 @@ interface TeamLineup {
   }
 }
 
-interface LineupData {
-  fixture: {
-    id: number
-  }
-  lineups: TeamLineup[]
-}
-
 interface LineupModalProps {
   isOpen: boolean
   onClose: () => void
@@ -43,6 +36,7 @@ interface LineupModalProps {
   homeTeam: string
   awayTeam: string
   darkMode: boolean
+  testMode?: boolean  // 🧪 테스트 모드 prop 추가
 }
 
 export default function LineupModal({
@@ -51,7 +45,8 @@ export default function LineupModal({
   fixtureId,
   homeTeam,
   awayTeam,
-  darkMode
+  darkMode,
+  testMode = false  // 🧪 기본값 false
 }: LineupModalProps) {
   const [lineups, setLineups] = useState<TeamLineup[]>([])
   const [loading, setLoading] = useState(true)
@@ -65,19 +60,43 @@ export default function LineupModal({
         setLoading(true)
         setError(null)
 
-        const response = await fetch(`/api/lineups?fixtureId=${fixtureId}`)
+        // 🧪 테스트 모드일 때 test=true 파라미터 추가
+        const url = testMode 
+          ? `/api/lineup-details?fixtureId=${fixtureId}&test=true`
+          : `/api/lineup-details?fixtureId=${fixtureId}`
+
+        const response = await fetch(url)
         
         if (!response.ok) {
           throw new Error('라인업 데이터를 불러올 수 없습니다')
         }
 
-        const data: LineupData = await response.json()
+        const data = await response.json()
         
-        if (!data.lineups || data.lineups.length === 0) {
+        // 새로운 응답 형식 처리
+        if (!data.success || !data.available) {
           throw new Error('라인업 정보가 없습니다')
         }
 
-        setLineups(data.lineups)
+        // home/away 형식을 lineups 배열로 변환
+        const formattedLineups: TeamLineup[] = [
+          {
+            team: data.home.team,
+            formation: data.home.formation,
+            startXI: data.home.startXI.map((p: any) => ({ player: p })),
+            substitutes: data.home.substitutes.map((p: any) => ({ player: p })),
+            coach: data.home.coach,
+          },
+          {
+            team: data.away.team,
+            formation: data.away.formation,
+            startXI: data.away.startXI.map((p: any) => ({ player: p })),
+            substitutes: data.away.substitutes.map((p: any) => ({ player: p })),
+            coach: data.away.coach,
+          }
+        ]
+
+        setLineups(formattedLineups)
       } catch (err) {
         setError(err instanceof Error ? err.message : '알 수 없는 오류')
       } finally {
@@ -86,7 +105,7 @@ export default function LineupModal({
     }
 
     fetchLineups()
-  }, [isOpen, fixtureId])
+  }, [isOpen, fixtureId, testMode])  // testMode 의존성 추가
 
   // 모달이 닫혀있으면 렌더링 안함
   if (!isOpen) return null
@@ -117,7 +136,7 @@ export default function LineupModal({
               <h2 className={`text-2xl font-bold ${
                 darkMode ? 'text-white' : 'text-gray-900'
               }`}>
-                ⚽ 선발 라인업
+                ⚽ 선발 라인업 {testMode && <span className="text-yellow-500 text-sm">🧪 TEST</span>}
               </h2>
               <p className={`text-sm mt-1 ${
                 darkMode ? 'text-gray-400' : 'text-gray-600'

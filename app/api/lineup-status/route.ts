@@ -17,7 +17,9 @@ export async function GET(request: Request) {
       )
     }
 
-    // lineup_status 테이블에서 조회
+    console.log(`🔍 Checking lineup status for fixture ${fixtureId}`)
+
+    // Supabase DB에서 라인업 상태 조회 (빠름!)
     const { data, error } = await supabase
       .from('lineup_status')
       .select('*')
@@ -26,6 +28,7 @@ export async function GET(request: Request) {
 
     if (error && error.code !== 'PGRST116') {
       // PGRST116 = 데이터 없음 (정상)
+      console.error('❌ Database error:', error)
       throw error
     }
 
@@ -35,21 +38,38 @@ export async function GET(request: Request) {
         success: true,
         lineupAvailable: false,
         message: 'Lineup not checked yet',
+        lastChecked: null,
       })
     }
 
-    return NextResponse.json({
+    // 라인업 상태 반환
+    const response = {
       success: true,
       lineupAvailable: data.lineup_available,
+      homeTeam: data.home_team,
+      awayTeam: data.away_team,
       homeFormation: data.home_formation,
       awayFormation: data.away_formation,
-      updatedAt: data.updated_at,
-    })
+      homeCoach: data.home_coach,
+      awayCoach: data.away_coach,
+      lastChecked: data.updated_at,
+    }
+
+    if (data.lineup_available) {
+      console.log(`✅ Lineup available: ${data.home_formation} vs ${data.away_formation}`)
+    } else {
+      console.log(`⏳ Lineup not available yet`)
+    }
+
+    return NextResponse.json(response)
 
   } catch (error: any) {
-    console.error('Error fetching lineup status:', error)
+    console.error('❌ Error fetching lineup status:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch lineup status' },
+      { 
+        error: 'Failed to fetch lineup status',
+        details: error.message 
+      },
       { status: 500 }
     )
   }

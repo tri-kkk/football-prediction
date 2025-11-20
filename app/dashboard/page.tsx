@@ -396,14 +396,16 @@ export default function DashboardPage() {
                   {league.isEmoji ? (
                     <span className="text-base">{league.flag}</span>
                   ) : (
-                    <img 
-                      src={league.logo || league.flag} 
-                      alt={league.name}
-                      className="w-4 h-4 object-contain flex-shrink-0"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
+                    <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center p-1 flex-shrink-0">
+                      <img 
+                        src={league.logo || league.flag} 
+                        alt={league.name}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </div>
                   )}
                   <span className="whitespace-nowrap">{league.name}</span>
                 </button>
@@ -428,14 +430,16 @@ export default function DashboardPage() {
                 {league.isEmoji ? (
                   <span className="text-lg">{league.flag}</span>
                 ) : (
-                  <img 
-                    src={league.logo || league.flag} 
-                    alt={league.name}
-                    className="w-5 h-5 object-contain"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
+                  <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center p-1.5">
+                    <img 
+                      src={league.logo || league.flag} 
+                      alt={league.name}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
+                  </div>
                 )}
                 <span>{league.name}</span>
               </button>
@@ -588,27 +592,31 @@ export default function DashboardPage() {
                     <div className="flex flex-col items-center gap-3 mb-6">
                       {/* 엠블럼과 VS */}
                       <div className="flex items-center justify-center gap-4">
-                        <img 
-                          src={match.homeCrest} 
-                          alt={match.homeTeamKR}
-                          className="w-12 h-12 object-contain"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><text y="36" font-size="36">⚽</text></svg>'
-                          }}
-                        />
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
+                          <img 
+                            src={match.homeCrest} 
+                            alt={match.homeTeamKR}
+                            className="w-10 h-10 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><text y="36" font-size="36">⚽</text></svg>'
+                            }}
+                          />
+                        </div>
                         
                         <div className="px-3 py-1 rounded-lg text-xs font-black bg-gray-800 text-gray-400">
                           VS
                         </div>
                         
-                        <img 
-                          src={match.awayCrest} 
-                          alt={match.awayTeamKR}
-                          className="w-12 h-12 object-contain"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><text y="36" font-size="36">⚽</text></svg>'
-                          }}
-                        />
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
+                          <img 
+                            src={match.awayCrest} 
+                            alt={match.awayTeamKR}
+                            className="w-10 h-10 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><text y="36" font-size="36">⚽</text></svg>'
+                            }}
+                          />
+                        </div>
                       </div>
                       
                       {/* 팀 이름 */}

@@ -1123,92 +1123,72 @@ export default function MatchPrediction({
                           : 'bg-white border border-gray-200 hover:border-gray-300'
                       } transition-colors`}
                     >
-                      <div className="flex items-center gap-3 mb-2">
-                        {/* 홈팀 */}
-                        <div className="flex items-center gap-2 flex-1">
-                          <div className="w-6 h-6 rounded-full bg-white dark:bg-gray-800 p-1">
-                            <img 
-                              src={getTeamLogo(match.homeTeam)} 
-                              alt={match.homeTeam}
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none'
-                              }}
-                            />
-                          </div>
-                          <span className={`text-xs font-bold truncate ${
+                      <div className="flex items-center justify-between gap-4 mb-2">
+                        {/* 홈팀 - 엠블럼 제거, 폰트 개선 */}
+                        <div className="flex-1 text-left">
+                          <span className={`text-sm font-bold ${
                             match.isHomeTeamHome && match.winner === 'home'
                               ? darkMode ? 'text-white' : 'text-gray-900'
-                              : darkMode ? 'text-gray-500' : 'text-gray-500'
+                              : darkMode ? 'text-gray-400' : 'text-gray-500'
                           }`}>
                             {match.homeTeam}
                           </span>
                         </div>
 
-                        {/* 스코어 */}
-                        <div className={`px-3 py-1 rounded-lg font-black text-sm ${
+                        {/* 스코어 - 크기 증가, 가독성 개선 */}
+                        <div className={`px-4 py-1.5 rounded-lg font-black text-base ${
                           darkMode ? 'bg-gray-800' : 'bg-gray-100'
                         }`}>
                           <span className={match.winner === 'home' 
                             ? darkMode ? 'text-blue-400' : 'text-blue-600'
-                            : darkMode ? 'text-gray-400' : 'text-gray-600'
+                            : darkMode ? 'text-gray-300' : 'text-gray-600'
                           }>
                             {match.homeScore}
                           </span>
-                          <span className={darkMode ? 'text-gray-600' : 'text-gray-400'}> - </span>
+                          <span className={darkMode ? 'text-gray-600 mx-1' : 'text-gray-400 mx-1'}>:</span>
                           <span className={match.winner === 'away' 
                             ? darkMode ? 'text-red-400' : 'text-red-600'
-                            : darkMode ? 'text-gray-400' : 'text-gray-600'
+                            : darkMode ? 'text-gray-300' : 'text-gray-600'
                           }>
                             {match.awayScore}
                           </span>
                         </div>
 
-                        {/* 원정팀 */}
-                        <div className="flex items-center gap-2 flex-1 justify-end">
-                          <span className={`text-xs font-bold truncate ${
+                        {/* 원정팀 - 엠블럼 제거, 폰트 개선 */}
+                        <div className="flex-1 text-right">
+                          <span className={`text-sm font-bold ${
                             !match.isHomeTeamHome && match.winner === 'away'
                               ? darkMode ? 'text-white' : 'text-gray-900'
-                              : darkMode ? 'text-gray-500' : 'text-gray-500'
+                              : darkMode ? 'text-gray-400' : 'text-gray-500'
                           }`}>
                             {match.awayTeam}
                           </span>
-                          <div className="w-6 h-6 rounded-full bg-white dark:bg-gray-800 p-1">
-                            <img 
-                              src={getTeamLogo(match.awayTeam)} 
-                              alt={match.awayTeam}
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none'
-                              }}
-                            />
-                          </div>
                         </div>
 
-                        {/* 결과 */}
-                        <div className="flex-shrink-0 w-10">
+                        {/* 결과 배지 */}
+                        <div className="flex-shrink-0 w-12">
                           {match.winner !== 'draw' && (
-                            <span className={`inline-flex items-center justify-center w-full px-1.5 py-0.5 rounded text-xs font-black ${
+                            <span className={`inline-flex items-center justify-center w-full px-2 py-1 rounded text-xs font-black ${
                               (match.winner === 'home' && match.isHomeTeamHome) || 
                               (match.winner === 'away' && !match.isHomeTeamHome)
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                ? 'bg-blue-500 text-white dark:bg-blue-600'
+                                : 'bg-red-500 text-white dark:bg-red-600'
                             }`}>
                               {((match.winner === 'home' && match.isHomeTeamHome) || 
                                 (match.winner === 'away' && !match.isHomeTeamHome)) ? '승' : '패'}
                             </span>
                           )}
                           {match.winner === 'draw' && (
-                            <span className="inline-flex items-center justify-center w-full px-1.5 py-0.5 rounded text-xs font-black bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                            <span className="inline-flex items-center justify-center w-full px-2 py-1 rounded text-xs font-black bg-gray-500 text-white dark:bg-gray-600">
                               무
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* 날짜 */}
-                      <div className={`text-xs text-center pt-2 border-t ${
-                        darkMode ? 'text-gray-500 border-gray-800' : 'text-gray-500 border-gray-200'
+                      {/* 날짜 - 더 깔끔하게 */}
+                      <div className={`text-xs text-center pt-2 mt-2 border-t ${
+                        darkMode ? 'text-gray-500 border-gray-800' : 'text-gray-400 border-gray-200'
                       }`}>
                         {new Date(match.date).toLocaleDateString('ko-KR', { 
                           year: 'numeric', 

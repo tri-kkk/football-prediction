@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { TEAM_NAME_KR } from '../../teamLogos'
 
 // 리그 ID 매핑
 const LEAGUE_IDS: Record<string, number> = {
@@ -16,6 +17,15 @@ const LEAGUE_IDS: Record<string, number> = {
 
 export async function GET(request: NextRequest) {
   try {
+    // 🧪 테스트 모드: ?test=true 로 활성화
+    const { searchParams } = new URL(request.url)
+    const testMode = searchParams.get('test') === 'true'
+
+    if (testMode) {
+      console.log('🧪 테스트 모드: 임시 데이터 반환')
+      return NextResponse.json(generateTestData())
+    }
+
     const apiKey = process.env.API_FOOTBALL_KEY
 
     if (!apiKey) {
@@ -54,20 +64,46 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ 필터링된 경기 수:', liveMatches.length)
 
-    // 한글 팀명 추가 (기존 teamLogos.ts 활용)
-    const matchesWithKorean = liveMatches.map((match: any) => ({
-      ...match,
-      teams: {
-        home: {
-          ...match.teams.home,
-          nameKR: translateTeamName(match.teams.home.name)
-        },
-        away: {
-          ...match.teams.away,
-          nameKR: translateTeamName(match.teams.away.name)
-        }
+    // 한글 팀명 및 추가 정보 추가
+    const matchesWithKorean = liveMatches.map((match: any) => {
+      // 리그 코드 찾기 (역매핑)
+      const leagueCode = Object.keys(LEAGUE_IDS).find(
+        key => LEAGUE_IDS[key] === match.league.id
+      ) || 'UNKNOWN'
+
+      return {
+        id: match.fixture.id,
+        leagueCode: leagueCode,
+        league: match.league.name,
+        leagueLogo: match.league.logo,
+        country: match.league.country,
+        
+        // 경기 시간
+        date: match.fixture.date,
+        timestamp: match.fixture.timestamp,
+        
+        // 경기 상태
+        status: match.fixture.status.short, // 'LIVE', '1H', '2H', 'HT', 'ET', 'P', 'FT' 등
+        statusLong: match.fixture.status.long,
+        elapsed: match.fixture.status.elapsed, // 진행 시간 (분)
+        
+        // 팀 정보
+        homeTeam: match.teams.home.name,
+        awayTeam: match.teams.away.name,
+        homeTeamKR: translateTeamName(match.teams.home.name),
+        awayTeamKR: translateTeamName(match.teams.away.name),
+        homeCrest: match.teams.home.logo,
+        awayCrest: match.teams.away.logo,
+        
+        // 현재 스코어
+        homeScore: match.goals.home,
+        awayScore: match.goals.away,
+        
+        // 하프타임 스코어
+        halftimeHomeScore: match.score.halftime.home,
+        halftimeAwayScore: match.score.halftime.away
       }
-    }))
+    })
 
     return NextResponse.json({
       success: true,
@@ -88,21 +124,139 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 팀명 번역 함수 (간단 버전, 나중에 teamLogos.ts와 통합)
+// 팀명 번역 함수 (teamLogos.ts의 TEAM_NAME_KR 활용)
 function translateTeamName(englishName: string): string {
-  const translations: Record<string, string> = {
-    'Liverpool': '리버풀',
-    'Chelsea': '첼시',
-    'Arsenal': '아스널',
-    'Manchester City': '맨체스터 시티',
-    'Manchester United': '맨체스터 유나이티드',
-    'Tottenham': '토트넘',
-    'Real Madrid': '레알 마드리드',
-    'Barcelona': '바르셀로나',
-    'Bayern Munich': '바이에른 뮌헨',
-    'Borussia Dortmund': '도르트문트',
-    // 더 추가...
+  // 먼저 TEAM_NAME_KR 객체에서 검색
+  if (TEAM_NAME_KR[englishName]) {
+    return TEAM_NAME_KR[englishName]
   }
+  
+  // 없으면 영문 그대로 반환
+  return englishName
+}
 
-  return translations[englishName] || englishName
+// 🧪 테스트 데이터 생성 함수
+function generateTestData() {
+  const now = new Date()
+  
+  const testMatches = [
+    {
+      id: 1234567,
+      leagueCode: 'PL',
+      league: 'Premier League',
+      leagueLogo: 'https://media.api-sports.io/football/leagues/39.png',
+      country: 'England',
+      date: now.toISOString(),
+      timestamp: Math.floor(now.getTime() / 1000),
+      status: '2H',
+      statusLong: 'Second Half',
+      elapsed: 67,
+      homeTeam: 'Manchester City',
+      awayTeam: 'Liverpool',
+      homeTeamKR: '맨체스터 시티',
+      awayTeamKR: '리버풀',
+      homeCrest: 'https://media.api-sports.io/football/teams/50.png',
+      awayCrest: 'https://media.api-sports.io/football/teams/40.png',
+      homeScore: 2,
+      awayScore: 1,
+      halftimeHomeScore: 1,
+      halftimeAwayScore: 0
+    },
+    {
+      id: 1234568,
+      leagueCode: 'PD',
+      league: 'La Liga',
+      leagueLogo: 'https://media.api-sports.io/football/leagues/140.png',
+      country: 'Spain',
+      date: now.toISOString(),
+      timestamp: Math.floor(now.getTime() / 1000),
+      status: '1H',
+      statusLong: 'First Half',
+      elapsed: 23,
+      homeTeam: 'Real Madrid',
+      awayTeam: 'Barcelona',
+      homeTeamKR: '레알 마드리드',
+      awayTeamKR: '바르셀로나',
+      homeCrest: 'https://media.api-sports.io/football/teams/541.png',
+      awayCrest: 'https://media.api-sports.io/football/teams/529.png',
+      homeScore: 0,
+      awayScore: 0,
+      halftimeHomeScore: null,
+      halftimeAwayScore: null
+    },
+    {
+      id: 1234569,
+      leagueCode: 'BL1',
+      league: 'Bundesliga',
+      leagueLogo: 'https://media.api-sports.io/football/leagues/78.png',
+      country: 'Germany',
+      date: now.toISOString(),
+      timestamp: Math.floor(now.getTime() / 1000),
+      status: 'HT',
+      statusLong: 'Halftime',
+      elapsed: 45,
+      homeTeam: 'Bayern Munich',
+      awayTeam: 'Borussia Dortmund',
+      homeTeamKR: '바이에른 뮌헨',
+      awayTeamKR: '보루시아 도르트문트',
+      homeCrest: 'https://media.api-sports.io/football/teams/157.png',
+      awayCrest: 'https://media.api-sports.io/football/teams/165.png',
+      homeScore: 1,
+      awayScore: 1,
+      halftimeHomeScore: 1,
+      halftimeAwayScore: 1
+    },
+    {
+      id: 1234570,
+      leagueCode: 'CL',
+      league: 'Champions League',
+      leagueLogo: 'https://media.api-sports.io/football/leagues/2.png',
+      country: 'Europe',
+      date: now.toISOString(),
+      timestamp: Math.floor(now.getTime() / 1000),
+      status: '2H',
+      statusLong: 'Second Half',
+      elapsed: 78,
+      homeTeam: 'Inter',
+      awayTeam: 'AC Milan',
+      homeTeamKR: '인테르',
+      awayTeamKR: 'AC 밀란',
+      homeCrest: 'https://media.api-sports.io/football/teams/505.png',
+      awayCrest: 'https://media.api-sports.io/football/teams/489.png',
+      homeScore: 3,
+      awayScore: 2,
+      halftimeHomeScore: 2,
+      halftimeAwayScore: 1
+    },
+    {
+      id: 1234571,
+      leagueCode: 'FL1',
+      league: 'Ligue 1',
+      leagueLogo: 'https://media.api-sports.io/football/leagues/61.png',
+      country: 'France',
+      date: now.toISOString(),
+      timestamp: Math.floor(now.getTime() / 1000),
+      status: '1H',
+      statusLong: 'First Half',
+      elapsed: 12,
+      homeTeam: 'Paris Saint Germain',
+      awayTeam: 'Marseille',
+      homeTeamKR: '파리 생제르맹',
+      awayTeamKR: '마르세유',
+      homeCrest: 'https://media.api-sports.io/football/teams/85.png',
+      awayCrest: 'https://media.api-sports.io/football/teams/79.png',
+      homeScore: 0,
+      awayScore: 1,
+      halftimeHomeScore: null,
+      halftimeAwayScore: null
+    }
+  ]
+
+  return {
+    success: true,
+    count: testMatches.length,
+    matches: testMatches,
+    timestamp: now.toISOString(),
+    testMode: true
+  }
 }
