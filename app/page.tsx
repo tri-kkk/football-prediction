@@ -161,20 +161,12 @@ function getLeagueFlag(leagueCode: string): { url: string; isEmoji: boolean } {
 }
 
 // 리그 코드를 한글 이름으로 변환
-function getLeagueName(leagueCode: string): string {
-  const leagueNames: Record<string, string> = {
-    'PL': '프리미어리그',
-    'PD': '라리가',
-    'BL1': '분데스리가',
-    'SA': '세리에A',
-    'FL1': '리그1',
-    'CL': '챔피언스리그',
-    'PPL': '프리메이라리가',
-    'DED': '에레디비시',
-    'EL': '유로파리그',
-    'ELC': '챔피언십',
+function getLeagueName(leagueCode: string, language: string = 'ko'): string {
+  const league = LEAGUES.find(l => l.code === leagueCode)
+  if (league) {
+    return language === 'ko' ? league.name : league.nameEn
   }
-  return leagueNames[leagueCode] || leagueCode
+  return leagueCode
 }
 
 // Match 인터페이스
@@ -288,7 +280,7 @@ function formatTime(utcDateString: string): string {
 }
 
 // 날짜 포맷 (UTC를 KST로 변환)
-function formatDate(utcDateString: string): string {
+function formatDate(utcDateString: string, language: string = 'ko'): string {
   // API에서 UTC ISO 문자열을 받음: "2025-11-22T12:30:00+00:00" 또는 "2025-11-22T12:30:00Z"
   const utcDate = new Date(utcDateString)
   
@@ -307,9 +299,9 @@ function formatDate(utcDateString: string): string {
   const matchDateKST = new Date(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate())
   
   if (matchDateKST.getTime() === todayKST.getTime()) {
-    return '오늘'
+    return language === 'ko' ? '오늘' : 'Today'
   } else if (matchDateKST.getTime() === tomorrowKST.getTime()) {
-    return '내일'
+    return language === 'ko' ? '내일' : 'Tomorrow'
   } else {
     // YYYY/MM/DD 형식으로 변환
     const year = kstDate.getUTCFullYear()
@@ -1945,7 +1937,7 @@ export default function Home() {
                         <span className={`hidden md:inline text-base font-bold ${
                           darkMode ? 'text-white' : 'text-black'
                         }`}>
-                          {match.league}
+                          {getLeagueName(match.leagueCode, currentLanguage)}
                         </span>
                         
                         {/* 구분선 - 모바일 숨김 */}
@@ -1955,7 +1947,7 @@ export default function Home() {
                         <span className={`text-sm font-semibold ${
                           darkMode ? 'text-gray-300' : 'text-gray-700'
                         }`}>
-                          {formatDate(match.utcDate)}
+                          {formatDate(match.utcDate, currentLanguage)}
                         </span>
                         
                         {/* 구분선 */}
@@ -2297,7 +2289,10 @@ export default function Home() {
                     {/* 리그명 + 로고 */}
                     <div className="flex items-center gap-3">
                       <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {standingsLeagues[currentLeagueIndex]?.name || '프리미어리그'}
+                        {currentLanguage === 'ko' 
+                          ? (standingsLeagues[currentLeagueIndex]?.name || '프리미어리그')
+                          : (standingsLeagues[currentLeagueIndex]?.nameEn || 'Premier League')
+                        }
                       </h2>
                       <div className="w-10 h-10 bg-white rounded-lg p-1.5 flex items-center justify-center">
                         {standingsLeagues[currentLeagueIndex]?.isEmoji ? (
@@ -2340,9 +2335,9 @@ export default function Home() {
                   darkMode ? 'text-gray-500 bg-[#0f0f0f]' : 'text-gray-600 bg-gray-50'
                 }`}>
                   <div className="w-8">#</div>
-                  <div className="flex-1">경기</div>
+                  <div className="flex-1">{currentLanguage === 'ko' ? '경기' : 'Matches'}</div>
                   <div className="w-12 text-center">=</div>
-                  <div className="w-12 text-right">승점</div>
+                  <div className="w-12 text-right">{currentLanguage === 'ko' ? '승점' : 'Pts'}</div>
                 </div>
 
                 {/* 순위표 내용 */}
@@ -2439,7 +2434,7 @@ export default function Home() {
                 <div className={`p-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                   <div className="flex items-center justify-between">
                     <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {getLeagueName(selectedLeague)}
+                      {getLeagueName(selectedLeague, currentLanguage)}
                     </h2>
                     {/* 리그 로고 */}
                     <div className="w-10 h-10 bg-white rounded-lg p-1.5 flex items-center justify-center">
@@ -2448,7 +2443,7 @@ export default function Home() {
                       ) : (
                         <img 
                           src={LEAGUES.find(l => l.code === selectedLeague)?.logo}
-                          alt={getLeagueName(selectedLeague)}
+                          alt={getLeagueName(selectedLeague, currentLanguage)}
                           className="w-full h-full object-contain"
                           onError={(e) => {
                             e.currentTarget.src = 'https://via.placeholder.com/40?text=?'
@@ -2464,9 +2459,9 @@ export default function Home() {
                   darkMode ? 'text-gray-500 bg-[#0f0f0f]' : 'text-gray-600 bg-gray-50'
                 }`}>
                   <div className="w-8">#</div>
-                  <div className="flex-1">경기</div>
+                  <div className="flex-1">{currentLanguage === 'ko' ? '경기' : 'Matches'}</div>
                   <div className="w-12 text-center">=</div>
-                  <div className="w-12 text-right">승점</div>
+                  <div className="w-12 text-right">{currentLanguage === 'ko' ? '승점' : 'Pts'}</div>
                 </div>
 
                 {/* 순위표 내용 */}
