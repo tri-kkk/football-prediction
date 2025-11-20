@@ -1436,66 +1436,53 @@ export default function MatchPrediction({
                 {language === 'ko' ? '📊 매치 트렌드' : '📊 Trend (Cumulative)'}
               </h3>
               
-              {trendData.length > 0 ? (
-                <div>
-                  <MatchTrendChart data={trendData} darkMode={darkMode} />
-                  
-                  <div className="grid grid-cols-3 gap-2 mt-4">
-                    <div className={`text-center p-2 rounded-lg ${
-                      darkMode ? 'bg-blue-900/20' : 'bg-blue-50'
-                    }`}>
-                      <p className={`text-xs ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                        {language === 'ko' ? '홈 최고' : 'Home Peak'}
-                      </p>
-                      <p className={`text-lg font-bold ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
-                        {Math.max(...trendData.map(d => d.homeWinProbability)).toFixed(0)}%
-                      </p>
+              {/* 트렌드 차트는 항상 표시 */}
+              <div>
+                <MatchTrendChart data={trendData} darkMode={darkMode} />
+                
+                {trendData.length > 0 && (
+                  <>
+                    <div className="grid grid-cols-3 gap-2 mt-4">
+                      <div className={`text-center p-2 rounded-lg ${
+                        darkMode ? 'bg-blue-900/20' : 'bg-blue-50'
+                      }`}>
+                        <p className={`text-xs ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                          {language === 'ko' ? '홈 최고' : 'Home Peak'}
+                        </p>
+                        <p className={`text-lg font-bold ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                          {Math.max(...trendData.map(d => d.homeWinProbability)).toFixed(0)}%
+                        </p>
+                      </div>
+                      <div className={`text-center p-2 rounded-lg ${
+                        darkMode ? 'bg-[#2a2a2a]' : 'bg-gray-100'
+                      }`}>
+                        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {language === 'ko' ? '무승부 평균' : 'Draw Avg'}
+                        </p>
+                        <p className={`text-lg font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {(trendData.reduce((sum, d) => sum + d.drawProbability, 0) / trendData.length).toFixed(0)}%
+                        </p>
+                      </div>
+                      <div className={`text-center p-2 rounded-lg ${
+                        darkMode ? 'bg-red-900/20' : 'bg-red-50'
+                      }`}>
+                        <p className={`text-xs ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                          {language === 'ko' ? '원정 최고' : 'Away Peak'}
+                        </p>
+                        <p className={`text-lg font-bold ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                          {Math.max(...trendData.map(d => d.awayWinProbability)).toFixed(0)}%
+                        </p>
+                      </div>
                     </div>
-                    <div className={`text-center p-2 rounded-lg ${
-                      darkMode ? 'bg-[#2a2a2a]' : 'bg-gray-100'
-                    }`}>
-                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {language === 'ko' ? '무승부 평균' : 'Draw Avg'}
-                      </p>
-                      <p className={`text-lg font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {(trendData.reduce((sum, d) => sum + d.drawProbability, 0) / trendData.length).toFixed(0)}%
-                      </p>
-                    </div>
-                    <div className={`text-center p-2 rounded-lg ${
-                      darkMode ? 'bg-red-900/20' : 'bg-red-50'
-                    }`}>
-                      <p className={`text-xs ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
-                        {language === 'ko' ? '원정 최고' : 'Away Peak'}
-                      </p>
-                      <p className={`text-lg font-bold ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
-                        {Math.max(...trendData.map(d => d.awayWinProbability)).toFixed(0)}%
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <p className={`text-xs text-center mt-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {language === 'ko' 
-                      ? `${trendData.length}개 데이터 포인트 • 누적 히스토리`
-                      : `${trendData.length} data points • Cumulative history`}
-                  </p>
-                </div>
-              ) : (
-                <div className={`rounded-lg p-6 text-center ${
-                  darkMode ? 'bg-[#1a1a1a]' : 'bg-gray-50'
-                }`}>
-                  <span className="text-4xl mb-2 block">⌇</span>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {language === 'ko' 
-                      ? '트렌드 데이터가 아직 수집되지 않았습니다' 
-                      : 'Trend data not yet collected'}
-                  </p>
-                  <p className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                    {language === 'ko'
-                      ? '30분마다 자동으로 수집됩니다'
-                      : 'Data collected automatically every 30 minutes'}
-                  </p>
-                </div>
-              )}
+                    
+                    <p className={`text-xs text-center mt-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {language === 'ko' 
+                        ? `${trendData.length}개 데이터 포인트 • 누적 히스토리`
+                        : `${trendData.length} data points • Cumulative history`}
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}
