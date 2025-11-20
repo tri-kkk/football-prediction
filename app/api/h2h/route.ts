@@ -146,7 +146,7 @@ async function getTeamId(teamName: string, apiKey: string): Promise<number | nul
   }
 }
 
-// H2H 경기 데이터 가공
+// H2H 경기 데이터 가공 - ✅ 팀 ID 추가!
 function processH2HMatches(matches: any[], homeTeamId: number, awayTeamId: number) {
   return matches.map((match: any) => {
     const isHomeTeamHome = match.teams.home.id === homeTeamId
@@ -156,6 +156,8 @@ function processH2HMatches(matches: any[], homeTeamId: number, awayTeamId: numbe
       league: match.league.name,
       homeTeam: match.teams.home.name,
       awayTeam: match.teams.away.name,
+      homeTeamId: match.teams.home.id,      // ✅ 추가!
+      awayTeamId: match.teams.away.id,      // ✅ 추가!
       homeScore: match.goals.home,
       awayScore: match.goals.away,
       winner: match.teams.home.winner ? 'home' : (match.teams.away.winner ? 'away' : 'draw'),
