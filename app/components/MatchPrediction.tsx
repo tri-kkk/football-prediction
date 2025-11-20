@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import MatchTrendChart from './MatchTrendChart'
-import { getTeamLogo } from '../teamLogos'
+import { getTeamLogo, TEAM_NAME_KR } from '../teamLogos'
 
 interface PredictionData {
   predictions: {
@@ -112,6 +112,11 @@ interface MatchPredictionProps {
   league?: string // 🆕 리그 정보
   trendData?: TrendData[]
   darkMode: boolean
+}
+
+// ✅ 한글 팀명 변환 함수
+const getKoreanTeamName = (teamName: string): string => {
+  return TEAM_NAME_KR[teamName] || teamName
 }
 
 // 🆕 현실적인 스코어 계산 함수
@@ -685,37 +690,37 @@ export default function MatchPrediction({
   const comparisonStats = [
     { 
       label: language === 'ko' ? '최근폼' : 'Form',
-      icon: '📈', 
+      icon: '◈', 
       home: comparison.form.home, 
       away: comparison.form.away 
     },
     { 
       label: language === 'ko' ? '공격력' : 'Attack',
-      icon: '⚔️', 
+      icon: '▲', 
       home: comparison.att.home, 
       away: comparison.att.away 
     },
     { 
       label: language === 'ko' ? '수비력' : 'Defense',
-      icon: '🛡️', 
+      icon: '■', 
       home: comparison.def.home, 
       away: comparison.def.away 
     },
     { 
       label: language === 'ko' ? '득점력' : 'Goals',
-      icon: '⚽', 
+      icon: '●', 
       home: comparison.goals.home, 
       away: comparison.goals.away 
     },
     { 
       label: language === 'ko' ? '상대전적' : 'H2H',
-      icon: '📊', 
+      icon: '⚡', 
       home: comparison.h2h.home, 
       away: comparison.h2h.away 
     },
     { 
       label: language === 'ko' ? '포아송' : 'Poisson',
-      icon: '📉', 
+      icon: '⌇', 
       home: comparison.poisson_distribution.home, 
       away: comparison.poisson_distribution.away 
     },
@@ -734,41 +739,41 @@ export default function MatchPrediction({
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               activeTab === tab
                 ? darkMode
-                  ? 'bg-gray-900 text-blue-400 border-b-2 border-blue-400'
+                  ? 'bg-[#1a1a1a] text-blue-400 border-b-2 border-blue-400'
                   : 'bg-white text-blue-600 border-b-2 border-blue-600'
                 : darkMode
-                ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-900/50'
+                ? 'text-gray-400 hover:text-gray-300 hover:bg-[#1a1a1a]'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
             {tab === 'overview' && (
               <>
-                <span className="md:hidden">📊</span>
-                <span className="hidden md:inline">{language === 'ko' ? '📊 개요' : '📊 Overview'}</span>
+                <span className="md:hidden text-base">▣</span>
+                <span className="hidden md:inline">{language === 'ko' ? '▣ 개요' : '▣ Overview'}</span>
               </>
             )}
             {tab === 'stats' && (
               <>
-                <span className="md:hidden">📈</span>
-                <span className="hidden md:inline">{language === 'ko' ? '📈 상세통계' : '📈 Stats'}</span>
+                <span className="md:hidden text-base">⊞</span>
+                <span className="hidden md:inline">{language === 'ko' ? '⊞ 통계' : '⊞ Stats'}</span>
               </>
             )}
             {tab === 'h2h' && (
               <>
-                <span className="md:hidden">⚔️</span>
-                <span className="hidden md:inline">{language === 'ko' ? '⚔️ 상대전적' : '⚔️ H2H'}</span>
+                <span className="md:hidden text-base">⚡</span>
+                <span className="hidden md:inline">{language === 'ko' ? '⚡ 상대전적' : '⚡ H2H'}</span>
               </>
             )}
             {tab === 'form' && (
               <>
-                <span className="md:hidden">📈</span>
-                <span className="hidden md:inline">{language === 'ko' ? '📈 최근폼' : '📈 Form'}</span>
+                <span className="md:hidden text-base">◈</span>
+                <span className="hidden md:inline">{language === 'ko' ? '◈ 최근폼' : '◈ Form'}</span>
               </>
             )}
             {tab === 'trend' && (
               <>
-                <span className="md:hidden">📊</span>
-                <span className="hidden md:inline">{language === 'ko' ? '📊 트렌드' : '📊 Trend'}</span>
+                <span className="md:hidden text-base">⌇</span>
+                <span className="hidden md:inline">{language === 'ko' ? '⌇ 트렌드' : '⌇ Trend'}</span>
               </>
             )}
           </button>
@@ -782,14 +787,14 @@ export default function MatchPrediction({
           <div className="space-y-3">
             {/* 🔥 예상 결과 & 스코어 - 통합 컴팩트 버전 */}
             <div className={`rounded-xl overflow-hidden ${
-              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200 shadow-sm'
+              darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200 shadow-sm'
             }`}>
               <div className="p-4">
                 {/* 모바일/데스크탑 모두 가로 배치 */}
                 <div className="grid grid-cols-2 gap-3 md:gap-6">
                   {/* 예상 결과 */}
                   <div className={`text-center p-4 rounded-lg ${
-                    darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
+                    darkMode ? 'bg-[#1a1a1a]' : 'bg-gray-50'
                   }`}>
                     <div className={`inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-lg ${
                       winnerInfo.color === 'blue' ? (darkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200')
@@ -825,10 +830,10 @@ export default function MatchPrediction({
 
                   {/* 예상 스코어 */}
                   <div className={`text-center p-4 rounded-lg ${
-                    darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
+                    darkMode ? 'bg-[#1a1a1a]' : 'bg-gray-50'
                   }`}>
                     <div className={`inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-lg ${
-                      darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+                      darkMode ? 'bg-[#2a2a2a] border border-gray-700' : 'bg-white border border-gray-200'
                     }`}>
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
                       <span className={`text-xs font-bold uppercase tracking-wider ${
@@ -859,10 +864,10 @@ export default function MatchPrediction({
               <div className="space-y-3">
                 {/* 헤더 */}
                 <div className={`flex items-center justify-between px-4 py-3 rounded-lg ${
-                  darkMode ? 'bg-gray-800/50 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                  darkMode ? 'bg-[#1a1a1a] border border-gray-700' : 'bg-gray-50 border border-gray-200'
                 }`}>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">💡</span>
+                    <span className="text-lg">●</span>
                     <h4 className={`text-sm font-bold ${
                       darkMode ? 'text-gray-200' : 'text-gray-800'
                     }`}>
@@ -883,14 +888,14 @@ export default function MatchPrediction({
                       key={idx}
                       className={`p-3.5 rounded-lg flex items-start gap-3 ${
                         darkMode 
-                          ? 'bg-gray-900 border border-gray-800' 
+                          ? 'bg-[#1a1a1a] border border-gray-800' 
                           : 'bg-white border border-gray-200'
                       }`}
                     >
                       {/* 번호 */}
                       <div className={`flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
                         darkMode 
-                          ? 'bg-gray-800 text-gray-400' 
+                          ? 'bg-[#2a2a2a] text-gray-400' 
                           : 'bg-gray-100 text-gray-600'
                       }`}>
                         {idx + 1}
@@ -925,9 +930,9 @@ export default function MatchPrediction({
             ) : (
               /* 인사이트 없을 때 */
               <div className={`p-6 rounded-lg text-center ${
-                darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
+                darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-gray-50 border border-gray-200'
               }`}>
-                <span className="text-3xl mb-2 block">🔍</span>
+                <span className="text-3xl mb-2 block">◉</span>
                 <p className={`text-sm ${
                   darkMode ? 'text-gray-400' : 'text-gray-600'
                 }`}>
@@ -945,12 +950,12 @@ export default function MatchPrediction({
           <div className="space-y-4">
             {/* 레이더 차트 */}
             <div className={`p-4 rounded-xl ${
-              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+              darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
             }`}>
               <h3 className={`text-sm font-bold mb-4 uppercase tracking-wider ${
                 darkMode ? 'text-gray-300' : 'text-gray-700'
               }`}>
-                {language === 'ko' ? '📊 종합 비교' : '📊 Overall Comparison'}
+                {language === 'ko' ? '▣ 종합 비교' : '▣ Overall Comparison'}
               </h3>
               <div className="flex justify-center">
                 <canvas
@@ -972,7 +977,7 @@ export default function MatchPrediction({
                   <div
                     key={idx}
                     className={`p-3 rounded-lg ${
-                      darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                      darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -1024,10 +1029,10 @@ export default function MatchPrediction({
               <>
                 {/* 통계 카드 - 애널리틱스 스타일 */}
                 <div className={`p-4 rounded-xl ${
-                  darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                  darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
                 }`}>
                   <div className={`flex items-center gap-2 mb-4 px-3 py-1.5 rounded-lg ${
-                    darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                    darkMode ? 'bg-[#2a2a2a] border border-gray-700' : 'bg-gray-50 border border-gray-200'
                   }`}>
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
                     <h4 className={`text-xs font-bold uppercase tracking-wider ${
@@ -1081,7 +1086,7 @@ export default function MatchPrediction({
 
                   {/* 평균 득점 */}
                   <div className={`grid grid-cols-2 gap-3 p-3 rounded-lg ${
-                    darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
+                    darkMode ? 'bg-[#1a1a1a]' : 'bg-gray-50'
                   }`}>
                     <div className="text-center">
                       <p className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -1102,109 +1107,128 @@ export default function MatchPrediction({
                   </div>
                 </div>
 
-                {/* 최근 경기 목록 - 애널리틱스 스타일 */}
+                {/* 최근 경기 목록 - FotMob 스타일 */}
                 <div className="space-y-2">
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
-                    darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                  <h4 className={`text-xs font-bold mb-3 ${
+                    darkMode ? 'text-gray-400' : 'text-gray-600'
                   }`}>
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                    <h4 className={`text-xs font-bold uppercase tracking-wider ${
-                      darkMode ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
-                      최근 경기
-                    </h4>
-                  </div>
-                  {h2h.h2hMatches.slice(0, 10).map((match, idx) => (
-                    <div 
-                      key={idx}
-                      className={`rounded-lg p-3 ${
-                        darkMode 
-                          ? 'bg-gray-900 border border-gray-800 hover:border-gray-700' 
-                          : 'bg-white border border-gray-200 hover:border-gray-300'
-                      } transition-colors`}
-                    >
-                      <div className="flex items-center justify-between gap-4 mb-2">
-                        {/* 홈팀 - 엠블럼 제거, 폰트 개선 */}
-                        <div className="flex-1 text-left">
-                          <span className={`text-sm font-bold ${
-                            match.isHomeTeamHome && match.winner === 'home'
-                              ? darkMode ? 'text-white' : 'text-gray-900'
-                              : darkMode ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                            {match.homeTeam}
-                          </span>
-                        </div>
-
-                        {/* 스코어 - 크기 증가, 가독성 개선 */}
-                        <div className={`px-4 py-1.5 rounded-lg font-black text-base ${
-                          darkMode ? 'bg-gray-800' : 'bg-gray-100'
+                    최근 {h2h.h2hMatches.length}경기
+                  </h4>
+                  
+                  {h2h.h2hMatches.slice(0, 10).map((match, idx) => {
+                    // 승자 판단
+                    const homeWon = match.winner === 'home'
+                    const awayWon = match.winner === 'away'
+                    const isDraw = match.winner === 'draw'
+                    
+                    return (
+                      <div 
+                        key={idx}
+                        className={`rounded-lg p-3 border ${
+                          darkMode 
+                            ? 'bg-[#1a1a1a] border-gray-800/50 hover:bg-[#1a1a1a] hover:border-gray-700' 
+                            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                        } transition-all`}
+                      >
+                        {/* 날짜 + 리그 */}
+                        <div className={`flex items-center justify-between mb-2 text-xs ${
+                          darkMode ? 'text-gray-500' : 'text-gray-500'
                         }`}>
-                          <span className={match.winner === 'home' 
-                            ? darkMode ? 'text-blue-400' : 'text-blue-600'
-                            : darkMode ? 'text-gray-300' : 'text-gray-600'
-                          }>
-                            {match.homeScore}
+                          <span>
+                            {new Date(match.date).toLocaleDateString('ko-KR', { 
+                              year: 'numeric', 
+                              month: '2-digit', 
+                              day: '2-digit' 
+                            }).replace(/\. /g, '.').replace(/\.$/,'')}
                           </span>
-                          <span className={darkMode ? 'text-gray-600 mx-1' : 'text-gray-400 mx-1'}>:</span>
-                          <span className={match.winner === 'away' 
-                            ? darkMode ? 'text-red-400' : 'text-red-600'
-                            : darkMode ? 'text-gray-300' : 'text-gray-600'
-                          }>
-                            {match.awayScore}
-                          </span>
+                          <span>{match.league}</span>
                         </div>
 
-                        {/* 원정팀 - 엠블럼 제거, 폰트 개선 */}
-                        <div className="flex-1 text-right">
-                          <span className={`text-sm font-bold ${
-                            !match.isHomeTeamHome && match.winner === 'away'
+                        {/* 팀 + 스코어 */}
+                        <div className="flex items-center justify-between gap-3">
+                          {/* 홈팀 */}
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <img 
+                              src={getTeamLogo(match.homeTeam)}
+                              alt={match.homeTeam}
+                              className="w-5 h-5 object-contain flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/20x20.png?text=?'
+                              }}
+                            />
+                            <span className={`text-sm truncate ${
+                              homeWon
+                                ? 'font-black ' + (darkMode ? 'text-white' : 'text-gray-900')
+                                : 'font-medium ' + (darkMode ? 'text-gray-400' : 'text-gray-600')
+                            }`}>
+                              {getKoreanTeamName(match.homeTeam)}
+                            </span>
+                            {match.isHomeTeamHome && (
+                              <span className={`text-xs px-1 py-0.5 rounded font-bold flex-shrink-0 ${
+                                darkMode ? 'bg-[#2a2a2a] text-gray-400' : 'bg-gray-200 text-gray-600'
+                              }`}>
+                                홈
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 스코어 */}
+                          <div className={`px-3 py-1 rounded font-black text-base flex-shrink-0 ${
+                            darkMode ? 'bg-[#2a2a2a]' : 'bg-white'
+                          }`}>
+                            <span className={homeWon 
                               ? darkMode ? 'text-white' : 'text-gray-900'
                               : darkMode ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                            {match.awayTeam}
-                          </span>
-                        </div>
+                            }>
+                              {match.homeScore}
+                            </span>
+                            <span className={darkMode ? 'text-gray-600 mx-1.5' : 'text-gray-400 mx-1.5'}>
+                              -
+                            </span>
+                            <span className={awayWon 
+                              ? darkMode ? 'text-white' : 'text-gray-900'
+                              : darkMode ? 'text-gray-400' : 'text-gray-500'
+                            }>
+                              {match.awayScore}
+                            </span>
+                          </div>
 
-                        {/* 결과 배지 */}
-                        <div className="flex-shrink-0 w-12">
-                          {match.winner !== 'draw' && (
-                            <span className={`inline-flex items-center justify-center w-full px-2 py-1 rounded text-xs font-black ${
-                              (match.winner === 'home' && match.isHomeTeamHome) || 
-                              (match.winner === 'away' && !match.isHomeTeamHome)
-                                ? 'bg-blue-500 text-white dark:bg-blue-600'
-                                : 'bg-red-500 text-white dark:bg-red-600'
+                          {/* 원정팀 */}
+                          <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                            {!match.isHomeTeamHome && (
+                              <span className={`text-xs px-1 py-0.5 rounded font-bold flex-shrink-0 ${
+                                darkMode ? 'bg-[#2a2a2a] text-gray-400' : 'bg-gray-200 text-gray-600'
+                              }`}>
+                                홈
+                              </span>
+                            )}
+                            <span className={`text-sm truncate ${
+                              awayWon
+                                ? 'font-black ' + (darkMode ? 'text-white' : 'text-gray-900')
+                                : 'font-medium ' + (darkMode ? 'text-gray-400' : 'text-gray-600')
                             }`}>
-                              {((match.winner === 'home' && match.isHomeTeamHome) || 
-                                (match.winner === 'away' && !match.isHomeTeamHome)) ? '승' : '패'}
+                              {getKoreanTeamName(match.awayTeam)}
                             </span>
-                          )}
-                          {match.winner === 'draw' && (
-                            <span className="inline-flex items-center justify-center w-full px-2 py-1 rounded text-xs font-black bg-gray-500 text-white dark:bg-gray-600">
-                              무
-                            </span>
-                          )}
+                            <img 
+                              src={getTeamLogo(match.awayTeam)}
+                              alt={match.awayTeam}
+                              className="w-5 h-5 object-contain flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/20x20.png?text=?'
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
-
-                      {/* 날짜 - 더 깔끔하게 */}
-                      <div className={`text-xs text-center pt-2 mt-2 border-t ${
-                        darkMode ? 'text-gray-500 border-gray-800' : 'text-gray-400 border-gray-200'
-                      }`}>
-                        {new Date(match.date).toLocaleDateString('ko-KR', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </>
             ) : (
               <div className={`p-8 rounded-xl text-center ${
-                darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
               }`}>
-                <span className="text-4xl mb-3 block">⚔️</span>
+                <span className="text-4xl mb-3 block">⚡</span>
                 <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   상대전적 데이터가 없습니다
                 </p>
@@ -1213,7 +1237,7 @@ export default function MatchPrediction({
           </div>
         )}
 
-        {/* 🆕 최근 폼 탭 */}
+        {/* 🆕 최근 폼 탭 - FotMob 스타일 */}
         {activeTab === 'form' && (
           <div className="space-y-4">
             {h2hLoading ? (
@@ -1225,57 +1249,58 @@ export default function MatchPrediction({
               </div>
             ) : h2h?.homeForm && h2h?.awayForm ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* 홈팀 폼 */}
+                {/* 홈팀 폼 - FotMob 스타일 */}
                 <div>
-                  <div className={`mb-3 p-3 rounded-lg ${
-                    darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                  <div className={`mb-3 px-3 py-2 rounded-lg ${
+                    darkMode ? 'bg-[#1a1a1a]/50 border border-gray-800' : 'bg-white border border-gray-200'
                   }`}>
-                    <h3 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-xs font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                       {homeTeam}
                     </h3>
-                    <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      최근 5경기
-                    </p>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {h2h.homeForm.map((match, index) => (
                       <div 
                         key={index}
-                        className={`rounded-lg p-3 border ${
+                        className={`rounded-lg px-3 py-2 ${
                           darkMode
-                            ? 'bg-gray-900 border-gray-800 hover:border-blue-700'
-                            : 'bg-white border-gray-200 hover:border-blue-300'
+                            ? 'bg-[#1a1a1a]/30 hover:bg-[#1a1a1a]/60'
+                            : 'bg-gray-50 hover:bg-gray-100'
                         } transition-colors`}
                       >
-                        <div className="flex justify-between items-center">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-xs px-2 py-0.5 rounded font-bold ${
-                                match.isHome 
-                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                              }`}>
-                                {match.isHome ? '홈' : '원정'}
-                              </span>
-                            </div>
-                            <div className={`text-xs font-bold mb-1 ${
-                              darkMode ? 'text-white' : 'text-gray-900'
-                            }`}>
-                              vs {match.opponent}
-                            </div>
-                            <div className={`text-xs font-medium ${
-                              darkMode ? 'text-gray-500' : 'text-gray-500'
-                            }`}>
-                              {match.score}
-                            </div>
+                        <div className="flex items-center justify-between gap-3">
+                          {/* 홈/원정 아이콘 */}
+                          <div className={`text-[10px] font-bold w-4 text-center flex-shrink-0 ${
+                            darkMode ? 'text-gray-500' : 'text-gray-400'
+                          }`}>
+                            {match.isHome ? 'H' : 'A'}
                           </div>
                           
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm ${
+                          {/* 상대팀 */}
+                          <div className={`flex-1 text-xs font-medium truncate ${
+                            darkMode ? 'text-gray-300' : 'text-gray-700'
+                          }`}>
+                            {getKoreanTeamName(match.opponent)}
+                          </div>
+                          
+                          {/* 스코어 */}
+                          <div className={`text-xs font-bold flex-shrink-0 px-2 py-0.5 rounded ${
+                            match.result === 'W'
+                              ? darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
+                              : match.result === 'D'
+                                ? darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'
+                                : darkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {match.score}
+                          </div>
+                          
+                          {/* 결과 */}
+                          <div className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-black flex-shrink-0 ${
                             match.result === 'W'
                               ? 'bg-green-500 text-white'
                               : match.result === 'D'
-                                ? 'bg-gray-400 text-white'
+                                ? 'bg-gray-500 text-white'
                                 : 'bg-red-500 text-white'
                           }`}>
                             {match.result}
@@ -1286,57 +1311,58 @@ export default function MatchPrediction({
                   </div>
                 </div>
 
-                {/* 원정팀 폼 */}
+                {/* 원정팀 폼 - FotMob 스타일 */}
                 <div>
-                  <div className={`mb-3 p-3 rounded-lg ${
-                    darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                  <div className={`mb-3 px-3 py-2 rounded-lg ${
+                    darkMode ? 'bg-[#1a1a1a]/50 border border-gray-800' : 'bg-white border border-gray-200'
                   }`}>
-                    <h3 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-xs font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                       {awayTeam}
                     </h3>
-                    <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      최근 5경기
-                    </p>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {h2h.awayForm.map((match, index) => (
                       <div 
                         key={index}
-                        className={`rounded-lg p-3 border ${
+                        className={`rounded-lg px-3 py-2 ${
                           darkMode
-                            ? 'bg-gray-900 border-gray-800 hover:border-red-700'
-                            : 'bg-white border-gray-200 hover:border-red-300'
+                            ? 'bg-[#1a1a1a]/30 hover:bg-[#1a1a1a]/60'
+                            : 'bg-gray-50 hover:bg-gray-100'
                         } transition-colors`}
                       >
-                        <div className="flex justify-between items-center">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-xs px-2 py-0.5 rounded font-bold ${
-                                match.isHome 
-                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                              }`}>
-                                {match.isHome ? '홈' : '원정'}
-                              </span>
-                            </div>
-                            <div className={`text-xs font-bold mb-1 ${
-                              darkMode ? 'text-white' : 'text-gray-900'
-                            }`}>
-                              vs {match.opponent}
-                            </div>
-                            <div className={`text-xs font-medium ${
-                              darkMode ? 'text-gray-500' : 'text-gray-500'
-                            }`}>
-                              {match.score}
-                            </div>
+                        <div className="flex items-center justify-between gap-3">
+                          {/* 홈/원정 아이콘 */}
+                          <div className={`text-[10px] font-bold w-4 text-center flex-shrink-0 ${
+                            darkMode ? 'text-gray-500' : 'text-gray-400'
+                          }`}>
+                            {match.isHome ? 'H' : 'A'}
                           </div>
                           
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm ${
+                          {/* 상대팀 */}
+                          <div className={`flex-1 text-xs font-medium truncate ${
+                            darkMode ? 'text-gray-300' : 'text-gray-700'
+                          }`}>
+                            {getKoreanTeamName(match.opponent)}
+                          </div>
+                          
+                          {/* 스코어 */}
+                          <div className={`text-xs font-bold flex-shrink-0 px-2 py-0.5 rounded ${
+                            match.result === 'W'
+                              ? darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
+                              : match.result === 'D'
+                                ? darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'
+                                : darkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {match.score}
+                          </div>
+                          
+                          {/* 결과 */}
+                          <div className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-black flex-shrink-0 ${
                             match.result === 'W'
                               ? 'bg-green-500 text-white'
                               : match.result === 'D'
-                                ? 'bg-gray-400 text-white'
+                                ? 'bg-gray-500 text-white'
                                 : 'bg-red-500 text-white'
                           }`}>
                             {match.result}
@@ -1349,9 +1375,9 @@ export default function MatchPrediction({
               </div>
             ) : (
               <div className={`p-8 rounded-xl text-center ${
-                darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+                darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
               }`}>
-                <span className="text-4xl mb-3 block">📈</span>
+                <span className="text-4xl mb-3 block">◈</span>
                 <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   최근 폼 데이터가 없습니다
                 </p>
@@ -1364,7 +1390,7 @@ export default function MatchPrediction({
         {activeTab === 'trend' && (
           <div className="space-y-4">
             <div className={`rounded-xl p-4 ${
-              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+              darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
             }`}>
               <h3 className={`text-lg font-bold mb-4 ${
                 darkMode ? 'text-white' : 'text-gray-900'
@@ -1388,7 +1414,7 @@ export default function MatchPrediction({
                       </p>
                     </div>
                     <div className={`text-center p-2 rounded-lg ${
-                      darkMode ? 'bg-gray-800' : 'bg-gray-100'
+                      darkMode ? 'bg-[#2a2a2a]' : 'bg-gray-100'
                     }`}>
                       <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         {language === 'ko' ? '무승부 평균' : 'Draw Avg'}
@@ -1417,9 +1443,9 @@ export default function MatchPrediction({
                 </div>
               ) : (
                 <div className={`rounded-lg p-6 text-center ${
-                  darkMode ? 'bg-gray-800/50' : 'bg-gray-50'
+                  darkMode ? 'bg-[#1a1a1a]' : 'bg-gray-50'
                 }`}>
-                  <span className="text-4xl mb-2 block">📊</span>
+                  <span className="text-4xl mb-2 block">⌇</span>
                   <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {language === 'ko' 
                       ? '트렌드 데이터가 아직 수집되지 않았습니다' 
