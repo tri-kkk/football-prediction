@@ -418,15 +418,17 @@ export default function ResultsPage() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
-                        <img 
-                          src={match.homeCrest} 
-                          alt={match.homeTeam} 
-                          className="w-8 h-8 object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                          }}
-                        />
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
+                          <img 
+                            src={match.homeCrest} 
+                            alt={match.homeTeam} 
+                            className="w-6 h-6 object-contain"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                        </div>
                         <span className="font-medium">
                           {language === 'ko' && match.homeTeamKR ? match.homeTeamKR : match.homeTeam}
                         </span>
@@ -447,15 +449,17 @@ export default function ResultsPage() {
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
-                        <img 
-                          src={match.awayCrest} 
-                          alt={match.awayTeam} 
-                          className="w-8 h-8 object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                          }}
-                        />
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
+                          <img 
+                            src={match.awayCrest} 
+                            alt={match.awayTeam} 
+                            className="w-6 h-6 object-contain"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                        </div>
                         <span className="font-medium">
                           {language === 'ko' && match.awayTeamKR ? match.awayTeamKR : match.awayTeam}
                         </span>
