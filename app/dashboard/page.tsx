@@ -345,7 +345,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2 mb-3">
             <span className="text-sm font-bold text-gray-400">{currentLanguage === 'ko' ? '🏆 리그 선택' : '🏆 Select League'}</span>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto md:overflow-x-visible md:flex-wrap pb-2 scrollbar-hide">
             {LEAGUES.map((league) => {
               const isActive = selectedLeague === league.code
               return (
