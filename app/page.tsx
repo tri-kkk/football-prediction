@@ -1967,43 +1967,16 @@ export default function Home() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (lineupStatus[match.id]?.available) {
-                              setSelectedMatchForLineup(match)
-                              setLineupModalOpen(true)
-                            }
+                            setSelectedMatchForLineup(match)
+                            setLineupModalOpen(true)
                           }}
-                          disabled={!lineupStatus[match.id]?.available}
-                          className={`
-                            relative flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm
-                            transition-all shadow-sm
-                            ${lineupStatus[match.id]?.available
-                              ? // 라인업 발표됨 - 활성화
-                                darkMode 
-                                  ? 'bg-green-600 hover:bg-green-500 text-white border border-green-500 hover:scale-105 active:scale-95 cursor-pointer' 
-                                  : 'bg-green-600 hover:bg-green-700 text-white border border-green-500 hover:scale-105 active:scale-95 cursor-pointer'
-                              : // 라인업 미발표 - 비활성화
-                                darkMode
-                                  ? 'bg-gray-700 text-gray-500 border border-gray-600 cursor-not-allowed opacity-50'
-                                  : 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-50'
-                            }
-                          `}
-                          title={
-                            lineupStatus[match.id]?.available
-                              ? `라인업: ${lineupStatus[match.id]?.homeFormation} vs ${lineupStatus[match.id]?.awayFormation}`
-                              : '라인업 미발표 (경기 시작 1시간 전 발표 예정)'
-                          }
+                          disabled={false}
+                          className="relative flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all shadow-sm bg-green-600 hover:bg-green-700 text-white border border-green-500 hover:scale-105 active:scale-95 cursor-pointer"
+                          title="라인업 보기"
                         >
-                          {/* NEW 배지 - 라인업 발표시만 표시 */}
-                          {lineupStatus[match.id]?.available && (
-                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
-                              NEW
-                            </span>
-                          )}
                           
-                          {/* 아이콘 - 발표 여부에 따라 변경 */}
-                          <span>
-                            {lineupStatus[match.id]?.available ? '⚽' : '🔒'}
-                          </span>
+                          {/* 아이콘 */}
+                          <span>⚽</span>
                           
                           {/* 텍스트 */}
                           <span className="hidden sm:inline">
