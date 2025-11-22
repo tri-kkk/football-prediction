@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import LineupWidget from '../components/LineupWidget'  // 🆕 라인업 위젯 import
+import LineupWidget from '../components/LineupWidget'
 
 interface MatchEvent {
   time: number
@@ -25,7 +25,7 @@ interface MatchStats {
 
 interface LiveMatch {
   id: number
-  fixtureId?: number  // 🆕 API-Football fixture ID
+  fixtureId?: number
   leagueCode: string
   league: string
   leagueLogo: string
@@ -57,7 +57,7 @@ export default function LivePage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<string>('')
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'lineup'>('overview')  // 🆕 탭 상태
+  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'lineup'>('overview')
 
   const leagues = [
     { code: 'ALL', nameKo: '전체', nameEn: 'All' },
@@ -143,6 +143,15 @@ export default function LivePage() {
       default:
         return '•'
     }
+  }
+
+  // ✅ 하프타임 스코어 표시 여부 결정 함수
+  const shouldShowHalftimeScore = (match: LiveMatch) => {
+    // 하프타임 스코어가 없으면 표시 안 함
+    if (match.halftimeHomeScore === null) return false
+    
+    // HT(하프타임), 2H(후반전), ET(연장전), P(승부차기), FT(종료)일 때만 표시
+    return ['HT', '2H', 'ET', 'P', 'FT'].includes(match.status)
   }
 
   if (loading) {
@@ -245,7 +254,7 @@ export default function LivePage() {
               >
                 {/* 경기 메인 카드 */}
                 <div className="p-5">
-                  {/* 리그 & 상태 헤더 - 개선된 디자인 */}
+                  {/* 리그 & 상태 헤더 */}
                   <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-800">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center p-1.5 shadow-sm">
@@ -275,7 +284,7 @@ export default function LivePage() {
                     </div>
                   </div>
 
-                  {/* 경기 스코어 - 대형 디스플레이 */}
+                  {/* 경기 스코어 */}
                   <div className="mb-5">
                     {/* 홈팀 */}
                     <div className="flex items-center justify-between mb-4">
@@ -326,8 +335,8 @@ export default function LivePage() {
                     </div>
                   </div>
 
-                  {/* 하프타임 스코어 */}
-                  {match.halftimeHomeScore !== null && (
+                  {/* ✅ 하프타임 스코어 - 조건 개선 */}
+                  {shouldShowHalftimeScore(match) && (
                     <div className="bg-[#0a0a0a] rounded-lg p-3 mb-4">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500 font-medium">
@@ -353,7 +362,7 @@ export default function LivePage() {
                 {/* 확장된 상세 정보 */}
                 {expandedMatch === match.id && (
                   <div className="border-t border-gray-800 bg-[#0f0f0f]">
-                    {/* 🆕 탭 네비게이션 */}
+                    {/* 탭 네비게이션 */}
                     <div className="px-5 pt-5 pb-3 border-b border-gray-800">
                       <div className="flex gap-2">
                         <button
@@ -393,46 +402,51 @@ export default function LivePage() {
                     {activeTab === 'overview' && (
                       <div>
                         {/* 경기 이벤트 타임라인 */}
-                        {match.events && match.events.length > 0 && (
-                      <div className="p-5 border-b border-gray-800">
-                        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                          <span className="text-green-500">📋</span>
-                          {language === 'ko' ? '경기 이벤트' : 'Match Events'}
-                        </h3>
-                        <div className="space-y-2">
-                          {match.events.map((event, idx) => (
-                            <div
-                              key={idx}
-                              className={`flex items-center gap-3 p-2 rounded ${
-                                event.team === 'home' ? 'bg-blue-500/10' : 'bg-red-500/10'
-                              }`}
-                            >
-                              <span className="text-xs font-bold text-gray-400 w-8 tabular-nums">
-                                {event.time}'
-                              </span>
-                              <span className="text-lg">{getEventIcon(event.type)}</span>
-                              <div className="flex-1">
-                                <div className="text-sm text-white font-medium">{event.player}</div>
-                                {event.detail && (
-                                  <div className="text-xs text-gray-500">{event.detail}</div>
-                                )}
-                              </div>
-                              <span className={`text-xs px-2 py-1 rounded ${
-                                event.team === 'home' 
-                                  ? 'bg-blue-500 text-white' 
-                                  : 'bg-red-500 text-white'
-                              }`}>
-                                {event.team === 'home' ? 'HOME' : 'AWAY'}
-                              </span>
+                        {match.events && match.events.length > 0 ? (
+                          <div className="p-5 border-b border-gray-800">
+                            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                              <span className="text-green-500">📋</span>
+                              {language === 'ko' ? '경기 이벤트' : 'Match Events'}
+                            </h3>
+                            <div className="space-y-2">
+                              {match.events.map((event, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`flex items-center gap-3 p-2 rounded ${
+                                    event.team === 'home' ? 'bg-blue-500/10' : 'bg-red-500/10'
+                                  }`}
+                                >
+                                  <span className="text-xs font-bold text-gray-400 w-8 tabular-nums">
+                                    {event.time}'
+                                  </span>
+                                  <span className="text-lg">{getEventIcon(event.type)}</span>
+                                  <div className="flex-1">
+                                    <div className="text-sm text-white font-medium">{event.player}</div>
+                                    {event.detail && (
+                                      <div className="text-xs text-gray-500">{event.detail}</div>
+                                    )}
+                                  </div>
+                                  <span className={`text-xs px-2 py-1 rounded ${
+                                    event.team === 'home' 
+                                      ? 'bg-blue-500 text-white' 
+                                      : 'bg-red-500 text-white'
+                                  }`}>
+                                    {event.team === 'home' ? 'HOME' : 'AWAY'}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center">
+                            <div className="text-4xl mb-3">📋</div>
+                            <p className="text-gray-400">아직 주요 이벤트가 없습니다</p>
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {/* 🆕 통계 탭 */}
+                    {/* 통계 탭 */}
                     {activeTab === 'stats' && (
                       <div>
                         {match.stats ? (
@@ -492,7 +506,7 @@ export default function LivePage() {
                       </div>
                     )}
 
-                    {/* 🆕 라인업 탭 */}
+                    {/* 라인업 탭 */}
                     {activeTab === 'lineup' && (
                       <div className="p-5">
                         <LineupWidget
@@ -510,7 +524,7 @@ export default function LivePage() {
         )}
       </div>
 
-      {/* 하단 실시간 스코어 티커 - 고정 */}
+      {/* 하단 실시간 스코어 티커 */}
       <div className="fixed bottom-0 left-0 right-0 bg-[#1a1a1a] border-t border-gray-700 py-3 z-20">
         <div className="overflow-hidden">
           <div className="flex animate-scroll gap-8">
