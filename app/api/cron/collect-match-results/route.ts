@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase 클라이언트
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY!
 )
 
-// API-Football 설정
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY!
 const API_FOOTBALL_HOST = 'v3.football.api-sports.io'
 
-// 리그 매핑
 const LEAGUES = [
   { code: 'PL', apiId: 39, name: 'Premier League' },
   { code: 'PD', apiId: 140, name: 'La Liga' },
@@ -25,7 +22,6 @@ const LEAGUES = [
   { code: 'ELC', apiId: 40, name: 'Championship' }
 ]
 
-// 팀 이름 한글 매핑 (간단 버전)
 const TEAM_KR_MAP: { [key: string]: string } = {
   'Manchester City': '맨체스터 시티',
   'Liverpool': '리버풀',
@@ -38,20 +34,27 @@ const TEAM_KR_MAP: { [key: string]: string } = {
   'Atletico Madrid': '아틀레티코 마드리드',
   'Bayern Munich': '바이에른 뮌헨',
   'Borussia Dortmund': '도르트문트',
-  // ... 더 추가 가능
+  'Mainz': '마인츠',
+  'Hoffenheim': '호펜하임',
+  'Nice': '니스',
+  'Marseille': '마르세유',
 }
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔄 Starting match results collection...')
 
-    // 1. 어제와 오늘 종료된 경기 수집
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
-    
+    // 🔥 수정: 지난 3일간 조회 (시간대 문제 해결)
     const today = new Date()
-    const todayStr = today.toISOString().split('T')[0]
+    const dates: string[] = []
+    
+    for (let i = 0; i < 3; i++) {
+      const date = new Date()
+      date.setDate(today.getDate() - i)
+      dates.push(date.toISOString().split('T')[0])
+    }
+
+    console.log('📅 Checking dates:', dates)
 
     let allFinishedMatches: any[] = []
 
@@ -59,28 +62,35 @@ export async function GET(request: NextRequest) {
     for (const league of LEAGUES) {
       console.log(`📊 Fetching finished matches for ${league.name}...`)
       
-      // 어제 경기
-      const yesterdayMatches = await fetchFinishedMatches(league.apiId, yesterdayStr)
-      // 오늘 경기
-      const todayMatches = await fetchFinishedMatches(league.apiId, todayStr)
-      
-      allFinishedMatches = [
-        ...allFinishedMatches,
-        ...yesterdayMatches.map((m: any) => ({ ...m, league: league.code })),
-        ...todayMatches.map((m: any) => ({ ...m, league: league.code }))
-      ]
-      
-      // API Rate Limit 방지
-      await sleep(1000)
+      // 🔥 수정: 지난 3일 모두 조회
+      for (const date of dates) {
+        const matches = await fetchFinishedMatches(league.apiId, date)
+        console.log(`  ${date}: ${matches.length} matches`)
+        
+        allFinishedMatches = [
+          ...allFinishedMatches,
+          ...matches.map((m: any) => ({ ...m, league: league.code }))
+        ]
+        
+        // API Rate Limit 방지
+        await sleep(500)
+      }
     }
 
     console.log(`✅ Found ${allFinishedMatches.length} finished matches`)
+
+    // 중복 제거 (같은 match_id)
+    const uniqueMatches = Array.from(
+      new Map(allFinishedMatches.map(m => [m.fixture.id, m])).values()
+    )
+    
+    console.log(`🔍 After deduplication: ${uniqueMatches.length} unique matches`)
 
     // 2. 우리가 예측했던 경기 찾기
     const { data: predictions, error: predError } = await supabase
       .from('match_odds_latest')
       .select('*')
-      .in('match_id', allFinishedMatches.map(m => m.fixture.id))
+      .in('match_id', uniqueMatches.map(m => m.fixture.id))
 
     if (predError) {
       console.error('❌ Error fetching predictions:', predError)
@@ -93,35 +103,31 @@ export async function GET(request: NextRequest) {
     let savedCount = 0
     let skippedCount = 0
 
-    for (const match of allFinishedMatches) {
+    for (const match of uniqueMatches) {
       const matchId = match.fixture.id
       const prediction = predictions?.find(p => p.match_id === matchId)
 
       if (!prediction) {
+        console.log(`⏭️  Skipping ${match.teams.home.name} vs ${match.teams.away.name} - No prediction`)
         skippedCount++
-        continue // 예측 없는 경기는 스킵
+        continue
       }
 
-      // 실제 스코어
       const finalScoreHome = match.goals.home
       const finalScoreAway = match.goals.away
 
-      // 예측 스코어 (오즈 기반 계산)
       const { predictedWinner, predictedScoreHome, predictedScoreAway, probabilities } = 
         calculatePrediction(prediction)
 
-      // 적중 여부 계산
       const { isCorrect, predictionType } = checkPrediction(
         { home: finalScoreHome, away: finalScoreAway },
         { home: predictedScoreHome, away: predictedScoreAway, winner: predictedWinner }
       )
 
-      // match_results에 저장
       const resultData = {
         match_id: matchId,
         league: match.league,
         
-        // 팀 정보
         home_team: match.teams.home.name,
         away_team: match.teams.away.name,
         home_team_kr: TEAM_KR_MAP[match.teams.home.name] || match.teams.home.name,
@@ -131,12 +137,10 @@ export async function GET(request: NextRequest) {
         home_crest: match.teams.home.logo,
         away_crest: match.teams.away.logo,
         
-        // 실제 결과
         final_score_home: finalScoreHome,
         final_score_away: finalScoreAway,
         match_status: match.fixture.status.short,
         
-        // 예측
         predicted_winner: predictedWinner,
         predicted_score_home: predictedScoreHome,
         predicted_score_away: predictedScoreAway,
@@ -144,16 +148,13 @@ export async function GET(request: NextRequest) {
         predicted_draw_probability: probabilities.draw,
         predicted_away_probability: probabilities.away,
         
-        // 적중 여부
         is_correct: isCorrect,
         prediction_type: predictionType,
         
-        // 날짜
         match_date: new Date(match.fixture.date),
         updated_at: new Date()
       }
 
-      // Upsert (있으면 업데이트, 없으면 생성)
       const { error: saveError } = await supabase
         .from('match_results')
         .upsert(resultData, { onConflict: 'match_id' })
@@ -162,17 +163,19 @@ export async function GET(request: NextRequest) {
         console.error(`❌ Error saving match ${matchId}:`, saveError)
       } else {
         savedCount++
-        console.log(`✅ Saved: ${match.teams.home.name} ${finalScoreHome}-${finalScoreAway} ${match.teams.away.name} | Prediction: ${predictedScoreHome}-${predictedScoreAway} | ${isCorrect ? '✅ Correct' : '❌ Wrong'}`)
+        console.log(`✅ ${match.teams.home.name} ${finalScoreHome}-${finalScoreAway} ${match.teams.away.name} | Predicted: ${predictedScoreHome}-${predictedScoreAway} | ${isCorrect ? '✅ Correct' : '❌ Wrong'}`)
       }
     }
 
     return NextResponse.json({
       success: true,
+      datesChecked: dates,
       finishedMatches: allFinishedMatches.length,
+      uniqueMatches: uniqueMatches.length,
       withPredictions: predictions?.length || 0,
       saved: savedCount,
       skipped: skippedCount,
-      message: `Collected ${savedCount} match results`
+      message: `Collected ${savedCount} match results from last 3 days`
     })
 
   } catch (error) {
@@ -184,11 +187,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ========================================
-// 헬퍼 함수들
-// ========================================
-
-// API-Football에서 종료된 경기 가져오기
 async function fetchFinishedMatches(leagueId: number, date: string) {
   const url = `https://${API_FOOTBALL_HOST}/fixtures?league=${leagueId}&date=${date}&status=FT`
   
@@ -208,26 +206,22 @@ async function fetchFinishedMatches(leagueId: number, date: string) {
   return data.response || []
 }
 
-// 오즈 기반 예측 계산
 function calculatePrediction(prediction: any) {
   const homeOdds = prediction.home_odds || 2.0
   const drawOdds = prediction.draw_odds || 3.5
   const awayOdds = prediction.away_odds || 3.0
 
-  // 확률 계산 (오즈 역수)
   const homeProb = 1 / homeOdds
   const drawProb = 1 / drawOdds
   const awayProb = 1 / awayOdds
   const total = homeProb + drawProb + awayProb
 
-  // 정규화
   const probabilities = {
     home: Number(((homeProb / total) * 100).toFixed(2)),
     draw: Number(((drawProb / total) * 100).toFixed(2)),
     away: Number(((awayProb / total) * 100).toFixed(2))
   }
 
-  // 승자 예측
   let predictedWinner: 'home' | 'away' | 'draw' = 'home'
   if (probabilities.away > probabilities.home && probabilities.away > probabilities.draw) {
     predictedWinner = 'away'
@@ -235,7 +229,6 @@ function calculatePrediction(prediction: any) {
     predictedWinner = 'draw'
   }
 
-  // 스코어 예측 (간단한 알고리즘)
   let predictedScoreHome = 1
   let predictedScoreAway = 1
 
@@ -258,17 +251,14 @@ function calculatePrediction(prediction: any) {
   }
 }
 
-// 적중 여부 체크
 function checkPrediction(
   actual: { home: number; away: number },
   predicted: { home: number; away: number; winner: 'home' | 'away' | 'draw' }
 ) {
-  // 완벽 적중
   if (actual.home === predicted.home && actual.away === predicted.away) {
     return { isCorrect: true, predictionType: 'exact' as const }
   }
 
-  // 승부만 적중
   const actualWinner = 
     actual.home > actual.away ? 'home' :
     actual.away > actual.home ? 'away' : 'draw'
@@ -277,11 +267,9 @@ function checkPrediction(
     return { isCorrect: true, predictionType: 'winner_only' as const }
   }
 
-  // 틀림
   return { isCorrect: false, predictionType: 'wrong' as const }
 }
 
-// Sleep 함수
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
