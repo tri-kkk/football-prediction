@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const APIFOOTBALL_KEY = process.env.APIFOOTBALL_KEY!
+const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY!
 
 interface Player {
   player: {
@@ -28,7 +28,7 @@ interface Lineup {
   substitutes: Player[]
 }
 
-// 🧪 테스트 라인업 데이터
+// 테스트 라인업 데이터
 const TEST_LINEUP_DATA = {
   success: true,
   available: true,
@@ -46,9 +46,9 @@ const TEST_LINEUP_DATA = {
     formation: "4-2-3-1",
     formationArray: [4, 2, 3, 1],
     startXI: [
-      { id: 18835, name: "André Onana", number: 24, position: "G", grid: "1:1", coordinates: { x: 1, y: 1 } },
+      { id: 18835, name: "Andre Onana", number: 24, position: "G", grid: "1:1", coordinates: { x: 1, y: 1 } },
       { id: 2935, name: "Diogo Dalot", number: 20, position: "D", grid: "2:1", coordinates: { x: 1, y: 2 } },
-      { id: 909, name: "Lisandro Martínez", number: 6, position: "D", grid: "2:2", coordinates: { x: 2, y: 2 } },
+      { id: 909, name: "Lisandro Martinez", number: 6, position: "D", grid: "2:2", coordinates: { x: 2, y: 2 } },
       { id: 882, name: "Harry Maguire", number: 5, position: "D", grid: "2:3", coordinates: { x: 3, y: 2 } },
       { id: 18767, name: "Noussair Mazraoui", number: 3, position: "D", grid: "2:4", coordinates: { x: 4, y: 2 } },
       { id: 640, name: "Casemiro", number: 18, position: "M", grid: "3:1", coordinates: { x: 1, y: 3 } },
@@ -56,10 +56,10 @@ const TEST_LINEUP_DATA = {
       { id: 2930, name: "Bruno Fernandes", number: 8, position: "M", grid: "4:1", coordinates: { x: 1, y: 4 } },
       { id: 889, name: "Alejandro Garnacho", number: 17, position: "M", grid: "4:2", coordinates: { x: 2, y: 4 } },
       { id: 1461, name: "Amad Diallo", number: 16, position: "M", grid: "4:3", coordinates: { x: 3, y: 4 } },
-      { id: 1503, name: "Rasmus Højlund", number: 11, position: "F", grid: "5:1", coordinates: { x: 1, y: 5 } }
+      { id: 1503, name: "Rasmus Hojlund", number: 11, position: "F", grid: "5:1", coordinates: { x: 1, y: 5 } }
     ],
     substitutes: [
-      { id: 18893, name: "Altay Bayındır", number: 1, position: "G" },
+      { id: 18893, name: "Altay Bayindir", number: 1, position: "G" },
       { id: 2836, name: "Jonny Evans", number: 35, position: "D" },
       { id: 20153, name: "Leny Yoro", number: 15, position: "D" },
       { id: 325, name: "Luke Shaw", number: 23, position: "D" },
@@ -85,13 +85,13 @@ const TEST_LINEUP_DATA = {
     formationArray: [4, 3, 3],
     startXI: [
       { id: 18846, name: "David Raya", number: 22, position: "G", grid: "1:1", coordinates: { x: 1, y: 1 } },
-      { id: 18855, name: "Jurriën Timber", number: 12, position: "D", grid: "2:1", coordinates: { x: 1, y: 2 } },
-      { id: 626, name: "Gabriel Magalhães", number: 6, position: "D", grid: "2:2", coordinates: { x: 2, y: 2 } },
+      { id: 18855, name: "Jurrien Timber", number: 12, position: "D", grid: "2:1", coordinates: { x: 1, y: 2 } },
+      { id: 626, name: "Gabriel Magalhaes", number: 6, position: "D", grid: "2:2", coordinates: { x: 2, y: 2 } },
       { id: 627, name: "William Saliba", number: 2, position: "D", grid: "2:3", coordinates: { x: 3, y: 2 } },
       { id: 18933, name: "Riccardo Calafiori", number: 33, position: "D", grid: "2:4", coordinates: { x: 4, y: 2 } },
       { id: 642, name: "Thomas Partey", number: 5, position: "M", grid: "3:1", coordinates: { x: 1, y: 3 } },
       { id: 30986, name: "Declan Rice", number: 41, position: "M", grid: "3:2", coordinates: { x: 2, y: 3 } },
-      { id: 19193, name: "Martin Ødegaard", number: 8, position: "M", grid: "3:3", coordinates: { x: 3, y: 3 } },
+      { id: 19193, name: "Martin Odegaard", number: 8, position: "M", grid: "3:3", coordinates: { x: 3, y: 3 } },
       { id: 645, name: "Bukayo Saka", number: 7, position: "F", grid: "4:1", coordinates: { x: 1, y: 4 } },
       { id: 30846, name: "Kai Havertz", number: 29, position: "F", grid: "4:2", coordinates: { x: 2, y: 4 } },
       { id: 31, name: "Gabriel Martinelli", number: 11, position: "F", grid: "4:3", coordinates: { x: 3, y: 4 } }
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const fixtureId = searchParams.get('fixtureId')
-    const testMode = searchParams.get('test') === 'true'  // 🧪 테스트 모드 체크
+    const testMode = searchParams.get('test') === 'true'
 
     if (!fixtureId) {
       return NextResponse.json(
@@ -124,7 +124,7 @@ export async function GET(request: Request) {
       )
     }
 
-    // 🧪 테스트 모드일 때는 테스트 데이터 반환
+    // 테스트 모드
     if (testMode) {
       console.log(`🧪 Test mode: Returning mock lineup data for fixture ${fixtureId}`)
       return NextResponse.json(TEST_LINEUP_DATA)
@@ -137,7 +137,7 @@ export async function GET(request: Request) {
       `https://v3.football.api-sports.io/fixtures/lineups?fixture=${fixtureId}`,
       {
         headers: {
-          'x-rapidapi-key': APIFOOTBALL_KEY,
+          'x-rapidapi-key': API_FOOTBALL_KEY,
           'x-rapidapi-host': 'v3.football.api-sports.io',
         },
       }
@@ -170,12 +170,10 @@ export async function GET(request: Request) {
       if (!grid) return { x: 0, y: 0 }
       
       const [row, col] = grid.split(':').map(n => parseInt(n))
-      const formationArray = parseFormation(formation)
-      const maxInRow = Math.max(...formationArray)
       
       return {
-        x: col, // 가로 위치 (1부터 시작)
-        y: row, // 세로 위치 (1=골키퍼, 2=수비, ...)
+        x: col,
+        y: row,
       }
     }
 
