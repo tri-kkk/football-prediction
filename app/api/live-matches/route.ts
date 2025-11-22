@@ -72,6 +72,13 @@ export async function GET(request: NextRequest) {
           key => LEAGUE_IDS[key] === match.league.id
         ) || 'UNKNOWN'
 
+        // 홈/어웨이 팀 ID 저장 (✅ 중요!)
+        const homeTeamId = match.teams.home.id
+        const awayTeamId = match.teams.away.id
+
+        console.log(`🏠 Home: ${match.teams.home.name} (ID: ${homeTeamId})`)
+        console.log(`✈️  Away: ${match.teams.away.name} (ID: ${awayTeamId})`)
+
         // 🆕 경기 이벤트 & 통계 조회
         let events: any[] = []
         let stats: any = null
@@ -90,7 +97,9 @@ export async function GET(request: NextRequest) {
           
           if (eventsResponse.ok) {
             const eventsData = await eventsResponse.json()
-            events = processEvents(eventsData.response || [])
+            // ✅ homeTeamId와 awayTeamId를 전달!
+            events = processEvents(eventsData.response || [], homeTeamId, awayTeamId)
+            console.log(`✅ 경기 ${match.fixture.id}: ${events.length}개 이벤트`)
           }
 
           // 경기 통계 조회 (점유율, 슈팅 등)
@@ -114,7 +123,7 @@ export async function GET(request: NextRequest) {
 
         return {
           id: match.fixture.id,
-          fixtureId: match.fixture.id, // ✅ 추가!
+          fixtureId: match.fixture.id,
           leagueCode: leagueCode,
           league: match.league.name,
           leagueLogo: match.league.logo,
@@ -138,8 +147,8 @@ export async function GET(request: NextRequest) {
           awayCrest: match.teams.away.logo,
           
           // 현재 스코어
-          homeScore: match.goals.home,
-          awayScore: match.goals.away,
+          homeScore: match.goals.home || 0,
+          awayScore: match.goals.away || 0,
           
           // 하프타임 스코어
           halftimeHomeScore: match.score.halftime.home,
@@ -151,6 +160,8 @@ export async function GET(request: NextRequest) {
         }
       })
     )
+
+    console.log(`📊 총 ${matchesWithDetails.length}개 경기 상세 정보 조회 완료`)
 
     return NextResponse.json({
       success: true,
@@ -171,24 +182,33 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 🆕 이벤트 처리 함수
-function processEvents(apiEvents: any[]): any[] {
+// 🆕 이벤트 처리 함수 (완전 수정!)
+function processEvents(apiEvents: any[], homeTeamId: number, awayTeamId: number): any[] {
   return apiEvents
     .filter(event => {
-      // 주요 이벤트만 필터링 (골, 카드, 교체)
+      // 주요 이벤트만 필터링
       return ['Goal', 'Card', 'subst'].includes(event.type)
     })
-    .map(event => ({
-      time: event.time.elapsed,
-      type: event.type === 'Goal' ? 'goal' : 
-            event.type === 'Card' ? 'card' : 'subst',
-      team: event.team.id === event.team.id ? 'home' : 'away', // 간단히 처리
-      player: event.player.name,
-      detail: event.detail || event.comments || undefined
-    }))
+    .map(event => {
+      // ✅ 팀 ID로 정확하게 홈/어웨이 구분
+      const eventTeamId = event.team.id
+      const isHomeTeam = eventTeamId === homeTeamId
+      
+      console.log(`  Event: ${event.type} by ${event.player.name} (Team ID: ${eventTeamId}, ${isHomeTeam ? 'HOME' : 'AWAY'})`)
+      
+      return {
+        time: event.time.elapsed,
+        type: event.type === 'Goal' ? 'goal' : 
+              event.type === 'Card' ? 'card' : 'subst',
+        team: isHomeTeam ? 'home' : 'away', // ✅ 수정!
+        player: event.player.name,
+        detail: event.detail || event.comments || undefined
+      }
+    })
+    .sort((a, b) => b.time - a.time) // 최신 이벤트가 위로
 }
 
-// 🆕 통계 처리 함수
+// 통계 처리 함수
 function processStats(apiStats: any[]): any {
   if (apiStats.length !== 2) return null
 
@@ -205,13 +225,20 @@ function processStats(apiStats: any[]): any {
     }
   }
 
+  const getPossession = () => {
+    const homePoss = homeStats.statistics.find((s: any) => s.type === 'Ball Possession')?.value
+    const awayPoss = awayStats.statistics.find((s: any) => s.type === 'Ball Possession')?.value
+    
+    return {
+      home: homePoss ? parseInt(homePoss.replace('%', '')) : 50,
+      away: awayPoss ? parseInt(awayPoss.replace('%', '')) : 50
+    }
+  }
+
   return {
     shotsOnGoal: getStat('Shots on Goal'),
     shotsOffGoal: getStat('Shots off Goal'),
-    possession: {
-      home: parseInt(homeStats.statistics.find((s: any) => s.type === 'Ball Possession')?.value || '50'),
-      away: parseInt(awayStats.statistics.find((s: any) => s.type === 'Ball Possession')?.value || '50')
-    },
+    possession: getPossession(),
     corners: getStat('Corner Kicks'),
     offsides: getStat('Offsides'),
     fouls: getStat('Fouls'),
@@ -235,7 +262,7 @@ function generateTestData() {
   const testMatches = [
     {
       id: 1234567,
-      fixtureId: 1234567, // ✅ 추가!
+      fixtureId: 1234567,
       leagueCode: 'PL',
       league: 'Premier League',
       leagueLogo: 'https://media.api-sports.io/football/leagues/39.png',
@@ -255,7 +282,6 @@ function generateTestData() {
       awayScore: 1,
       halftimeHomeScore: 1,
       halftimeAwayScore: 0,
-      // 🆕 이벤트 추가
       events: [
         {
           time: 23,
@@ -286,7 +312,6 @@ function generateTestData() {
           detail: 'Normal Goal'
         }
       ],
-      // 🆕 통계 추가
       stats: {
         shotsOnGoal: { home: 8, away: 5 },
         shotsOffGoal: { home: 4, away: 3 },
@@ -295,40 +320,6 @@ function generateTestData() {
         offsides: { home: 2, away: 1 },
         fouls: { home: 9, away: 12 },
         yellowCards: { home: 1, away: 2 },
-        redCards: { home: 0, away: 0 }
-      }
-    },
-    {
-      id: 1234568,
-      fixtureId: 1234568,
-      leagueCode: 'PD',
-      league: 'La Liga',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/140.png',
-      country: 'Spain',
-      date: now.toISOString(),
-      timestamp: Math.floor(now.getTime() / 1000),
-      status: '1H',
-      statusLong: 'First Half',
-      elapsed: 23,
-      homeTeam: 'Real Madrid',
-      awayTeam: 'Barcelona',
-      homeTeamKR: '레알 마드리드',
-      awayTeamKR: '바르셀로나',
-      homeCrest: 'https://media.api-sports.io/football/teams/541.png',
-      awayCrest: 'https://media.api-sports.io/football/teams/529.png',
-      homeScore: 0,
-      awayScore: 0,
-      halftimeHomeScore: null,
-      halftimeAwayScore: null,
-      events: [],
-      stats: {
-        shotsOnGoal: { home: 2, away: 3 },
-        shotsOffGoal: { home: 1, away: 2 },
-        possession: { home: 52, away: 48 },
-        corners: { home: 3, away: 2 },
-        offsides: { home: 1, away: 0 },
-        fouls: { home: 4, away: 5 },
-        yellowCards: { home: 0, away: 1 },
         redCards: { home: 0, away: 0 }
       }
     }
