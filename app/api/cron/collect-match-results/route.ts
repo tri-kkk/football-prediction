@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔄 Starting match results collection...')
 
-    // 🔥 수정: 지난 3일 범위로 한번에 조회
     const today = new Date()
     const threeDaysAgo = new Date()
     threeDaysAgo.setDate(today.getDate() - 3)
@@ -59,9 +58,8 @@ export async function GET(request: NextRequest) {
     for (const league of LEAGUES) {
       console.log(`\n📊 Fetching ${league.name}...`)
       
-      // 🔥 수정: from/to 범위로 한번에 조회
       const matches = await fetchFinishedMatches(league.apiId, fromDate, toDate)
-      console.log(`  → Found ${matches.length} FT matches`)
+      console.log(`  → Found ${matches.length} finished matches`)
       
       allFinishedMatches = [
         ...allFinishedMatches,
@@ -82,7 +80,7 @@ export async function GET(request: NextRequest) {
     const { data: predictions, error: predError } = await supabase
       .from('match_odds_latest')
       .select('*')
-      .in('match_id', uniqueMatches.map(m => m.fixture.id))
+      .in('match_id', uniqueMatches.map(m => String(m.fixture.id)))
 
     if (predError) {
       console.error('❌ Error fetching predictions:', predError)
@@ -95,8 +93,8 @@ export async function GET(request: NextRequest) {
     let skippedCount = 0
 
     for (const match of uniqueMatches) {
-      const matchId = match.fixture.id
-      const prediction = predictions?.find(p => p.match_id === matchId)
+      const matchId = String(match.fixture.id)
+      const prediction = predictions?.find(p => String(p.match_id) === matchId)
 
       if (!prediction) {
         console.log(`⏭️  Skip: ${match.teams.home.name} vs ${match.teams.away.name}`)
@@ -107,7 +105,7 @@ export async function GET(request: NextRequest) {
       const finalScoreHome = match.goals.home
       const finalScoreAway = match.goals.away
 
-      const { predictedWinner, predictedScoreHome, predictedScoreAway, probabilities} = 
+      const { predictedWinner, predictedScoreHome, predictedScoreAway, probabilities } = 
         calculatePrediction(prediction)
 
       const { isCorrect, predictionType } = checkPrediction(
@@ -116,7 +114,7 @@ export async function GET(request: NextRequest) {
       )
 
       const resultData = {
-        match_id: matchId,
+        match_id: parseInt(matchId),
         league: match.league,
         
         home_team: match.teams.home.name,
@@ -178,9 +176,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 🔥 수정: from/to 범위 사용
+// 🔥 수정: status 필터 제거 + 시간 기반 필터링
 async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: string) {
-  const url = `https://${API_FOOTBALL_HOST}/fixtures?league=${leagueId}&from=${fromDate}&to=${toDate}&status=FT`
+  // status=FT 제거
+  const url = `https://${API_FOOTBALL_HOST}/fixtures?league=${leagueId}&from=${fromDate}&to=${toDate}`
   
   const response = await fetch(url, {
     headers: {
@@ -195,7 +194,36 @@ async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: 
   }
 
   const data = await response.json()
-  return data.response || []
+  const allMatches = data.response || []
+  
+  // 코드에서 종료 경기 필터링
+  const now = new Date()
+  const finishedMatches = allMatches.filter((m: any) => {
+    const status = m.fixture.status.short
+    
+    // FT, AET, PEN 상태
+    if (status === 'FT' || status === 'AET' || status === 'PEN') {
+      return true
+    }
+    
+    // 또는 킥오프 3시간 경과 (API 업데이트 지연 대응)
+    const kickoff = new Date(m.fixture.date)
+    const hoursElapsed = (now.getTime() - kickoff.getTime()) / (1000 * 60 * 60)
+    
+    if (hoursElapsed > 3) {
+      console.log(`  🕒 ${m.teams.home.name} vs ${m.teams.away.name}: ${hoursElapsed.toFixed(1)}h elapsed, forcing FT`)
+      return true
+    }
+    
+    return false
+  })
+  
+  console.log(`  📊 Total: ${allMatches.length}, Finished: ${finishedMatches.length}`)
+  if (allMatches.length > 0 && finishedMatches.length === 0) {
+    console.log(`  ℹ️  Statuses found:`, [...new Set(allMatches.map((m: any) => m.fixture.status.short))])
+  }
+  
+  return finishedMatches
 }
 
 function calculatePrediction(prediction: any) {
