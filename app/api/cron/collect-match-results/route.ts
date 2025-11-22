@@ -176,10 +176,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 🔥 수정: status 필터 제거 + 시간 기반 필터링
 async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: string) {
-  // status=FT 제거
-  const url = `https://${API_FOOTBALL_HOST}/fixtures?league=${leagueId}&from=${fromDate}&to=${toDate}`
+  // 🔥 season 파라미터 추가 (필수!)
+  const season = new Date().getFullYear()
+  const url = `https://${API_FOOTBALL_HOST}/fixtures?league=${leagueId}&season=${season}&from=${fromDate}&to=${toDate}`
+  
+  console.log(`🔍 Fetching: ${url}`)
   
   const response = await fetch(url, {
     headers: {
@@ -196,17 +198,21 @@ async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: 
   const data = await response.json()
   const allMatches = data.response || []
   
-  // 코드에서 종료 경기 필터링
+  console.log(`  📊 API returned: ${allMatches.length} total matches`)
+  
+  if (allMatches.length > 0) {
+    const statuses = [...new Set(allMatches.map((m: any) => m.fixture.status.short))]
+    console.log(`  ℹ️  Statuses found:`, statuses)
+  }
+  
   const now = new Date()
   const finishedMatches = allMatches.filter((m: any) => {
     const status = m.fixture.status.short
     
-    // FT, AET, PEN 상태
     if (status === 'FT' || status === 'AET' || status === 'PEN') {
       return true
     }
     
-    // 또는 킥오프 3시간 경과 (API 업데이트 지연 대응)
     const kickoff = new Date(m.fixture.date)
     const hoursElapsed = (now.getTime() - kickoff.getTime()) / (1000 * 60 * 60)
     
@@ -218,10 +224,7 @@ async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: 
     return false
   })
   
-  console.log(`  📊 Total: ${allMatches.length}, Finished: ${finishedMatches.length}`)
-  if (allMatches.length > 0 && finishedMatches.length === 0) {
-    console.log(`  ℹ️  Statuses found:`, [...new Set(allMatches.map((m: any) => m.fixture.status.short))])
-  }
+  console.log(`  ✅ Finished matches: ${finishedMatches.length}`)
   
   return finishedMatches
 }
