@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getTeamLogo, TEAM_NAME_KR } from '../teamLogos'
 
@@ -283,11 +283,54 @@ export default function ResultsPage() {
     }
   }
 
-  const filteredMatches = matches.filter(match => {
-    const leagueMatch = selectedLeague === 'ALL' || match.league === selectedLeague
-    const statusMatch = selectedStatus === 'ALL' || match.matchStatus === selectedStatus
-    return leagueMatch && statusMatch
-  })
+  const filteredMatches = useMemo(() => {
+    const now = new Date()
+    
+    return matches
+      .map(match => {
+        // 🔥 추가: 경기 시작 시간이 2시간 이상 지났으면 자동으로 종료로 간주
+        const matchTime = new Date(match.matchDate)
+        const hoursSinceMatch = (now.getTime() - matchTime.getTime()) / (1000 * 60 * 60)
+        
+        // 경기 시작 2시간 지났으면 강제로 FINISHED 상태로 변경
+        if (hoursSinceMatch > 2 && match.matchStatus === 'SCHEDULED') {
+          return { ...match, matchStatus: 'FINISHED' as MatchStatus }
+        }
+        
+        return match
+      })
+      .filter(match => {
+        // 리그 필터
+        if (selectedLeague !== 'ALL' && match.league !== selectedLeague) {
+          return false
+        }
+        
+        // 상태 필터
+        if (selectedStatus !== 'ALL' && match.matchStatus !== selectedStatus) {
+          return false
+        }
+        
+        // 기간 필터
+        const matchDate = new Date(match.matchDate)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        if (selectedPeriod === 'today') {
+          const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          return matchDate >= today && matchDate < tomorrow
+        } else if (selectedPeriod === 'week') {
+          const weekStart = new Date(today)
+          weekStart.setDate(today.getDate() - today.getDay())
+          return matchDate >= weekStart
+        } else if (selectedPeriod === 'month') {
+          return matchDate.getMonth() === today.getMonth() && 
+                 matchDate.getFullYear() === today.getFullYear()
+        }
+        
+        return true
+      })
+      .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime())
+  }, [matches, selectedLeague, selectedStatus, selectedPeriod])
 
   const getPredictionBadge = (match: Match) => {
     if (match.matchStatus !== 'FINISHED') return null
