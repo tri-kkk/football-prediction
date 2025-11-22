@@ -64,51 +64,98 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ 필터링된 경기 수:', liveMatches.length)
 
-    // 한글 팀명 및 추가 정보 추가
-    const matchesWithKorean = liveMatches.map((match: any) => {
-      // 리그 코드 찾기 (역매핑)
-      const leagueCode = Object.keys(LEAGUE_IDS).find(
-        key => LEAGUE_IDS[key] === match.league.id
-      ) || 'UNKNOWN'
+    // 각 경기에 대해 상세 정보 추가로 조회
+    const matchesWithDetails = await Promise.all(
+      liveMatches.map(async (match: any) => {
+        // 리그 코드 찾기 (역매핑)
+        const leagueCode = Object.keys(LEAGUE_IDS).find(
+          key => LEAGUE_IDS[key] === match.league.id
+        ) || 'UNKNOWN'
 
-      return {
-        id: match.fixture.id,
-        leagueCode: leagueCode,
-        league: match.league.name,
-        leagueLogo: match.league.logo,
-        country: match.league.country,
-        
-        // 경기 시간
-        date: match.fixture.date,
-        timestamp: match.fixture.timestamp,
-        
-        // 경기 상태
-        status: match.fixture.status.short, // 'LIVE', '1H', '2H', 'HT', 'ET', 'P', 'FT' 등
-        statusLong: match.fixture.status.long,
-        elapsed: match.fixture.status.elapsed, // 진행 시간 (분)
-        
-        // 팀 정보
-        homeTeam: match.teams.home.name,
-        awayTeam: match.teams.away.name,
-        homeTeamKR: translateTeamName(match.teams.home.name),
-        awayTeamKR: translateTeamName(match.teams.away.name),
-        homeCrest: match.teams.home.logo,
-        awayCrest: match.teams.away.logo,
-        
-        // 현재 스코어
-        homeScore: match.goals.home,
-        awayScore: match.goals.away,
-        
-        // 하프타임 스코어
-        halftimeHomeScore: match.score.halftime.home,
-        halftimeAwayScore: match.score.halftime.away
-      }
-    })
+        // 🆕 경기 이벤트 & 통계 조회
+        let events: any[] = []
+        let stats: any = null
+
+        try {
+          // 경기 이벤트 조회 (골, 카드, 교체)
+          const eventsResponse = await fetch(
+            `https://v3.football.api-sports.io/fixtures/events?fixture=${match.fixture.id}`,
+            {
+              headers: {
+                'x-rapidapi-key': apiKey,
+                'x-rapidapi-host': 'v3.football.api-sports.io'
+              }
+            }
+          )
+          
+          if (eventsResponse.ok) {
+            const eventsData = await eventsResponse.json()
+            events = processEvents(eventsData.response || [])
+          }
+
+          // 경기 통계 조회 (점유율, 슈팅 등)
+          const statsResponse = await fetch(
+            `https://v3.football.api-sports.io/fixtures/statistics?fixture=${match.fixture.id}`,
+            {
+              headers: {
+                'x-rapidapi-key': apiKey,
+                'x-rapidapi-host': 'v3.football.api-sports.io'
+              }
+            }
+          )
+          
+          if (statsResponse.ok) {
+            const statsData = await statsResponse.json()
+            stats = processStats(statsData.response || [])
+          }
+        } catch (error) {
+          console.error(`❌ 경기 ${match.fixture.id} 상세 정보 조회 실패:`, error)
+        }
+
+        return {
+          id: match.fixture.id,
+          fixtureId: match.fixture.id, // ✅ 추가!
+          leagueCode: leagueCode,
+          league: match.league.name,
+          leagueLogo: match.league.logo,
+          country: match.league.country,
+          
+          // 경기 시간
+          date: match.fixture.date,
+          timestamp: match.fixture.timestamp,
+          
+          // 경기 상태
+          status: match.fixture.status.short,
+          statusLong: match.fixture.status.long,
+          elapsed: match.fixture.status.elapsed,
+          
+          // 팀 정보
+          homeTeam: match.teams.home.name,
+          awayTeam: match.teams.away.name,
+          homeTeamKR: translateTeamName(match.teams.home.name),
+          awayTeamKR: translateTeamName(match.teams.away.name),
+          homeCrest: match.teams.home.logo,
+          awayCrest: match.teams.away.logo,
+          
+          // 현재 스코어
+          homeScore: match.goals.home,
+          awayScore: match.goals.away,
+          
+          // 하프타임 스코어
+          halftimeHomeScore: match.score.halftime.home,
+          halftimeAwayScore: match.score.halftime.away,
+
+          // 🆕 경기 이벤트 & 통계
+          events: events.length > 0 ? events : undefined,
+          stats: stats
+        }
+      })
+    )
 
     return NextResponse.json({
       success: true,
-      count: matchesWithKorean.length,
-      matches: matchesWithKorean,
+      count: matchesWithDetails.length,
+      matches: matchesWithDetails,
       timestamp: new Date().toISOString()
     })
 
@@ -124,14 +171,60 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 팀명 번역 함수 (teamLogos.ts의 TEAM_NAME_KR 활용)
+// 🆕 이벤트 처리 함수
+function processEvents(apiEvents: any[]): any[] {
+  return apiEvents
+    .filter(event => {
+      // 주요 이벤트만 필터링 (골, 카드, 교체)
+      return ['Goal', 'Card', 'subst'].includes(event.type)
+    })
+    .map(event => ({
+      time: event.time.elapsed,
+      type: event.type === 'Goal' ? 'goal' : 
+            event.type === 'Card' ? 'card' : 'subst',
+      team: event.team.id === event.team.id ? 'home' : 'away', // 간단히 처리
+      player: event.player.name,
+      detail: event.detail || event.comments || undefined
+    }))
+}
+
+// 🆕 통계 처리 함수
+function processStats(apiStats: any[]): any {
+  if (apiStats.length !== 2) return null
+
+  const homeStats = apiStats[0]
+  const awayStats = apiStats[1]
+
+  const getStat = (statName: string) => {
+    const homeStat = homeStats.statistics.find((s: any) => s.type === statName)
+    const awayStat = awayStats.statistics.find((s: any) => s.type === statName)
+    
+    return {
+      home: parseInt(homeStat?.value || '0'),
+      away: parseInt(awayStat?.value || '0')
+    }
+  }
+
+  return {
+    shotsOnGoal: getStat('Shots on Goal'),
+    shotsOffGoal: getStat('Shots off Goal'),
+    possession: {
+      home: parseInt(homeStats.statistics.find((s: any) => s.type === 'Ball Possession')?.value || '50'),
+      away: parseInt(awayStats.statistics.find((s: any) => s.type === 'Ball Possession')?.value || '50')
+    },
+    corners: getStat('Corner Kicks'),
+    offsides: getStat('Offsides'),
+    fouls: getStat('Fouls'),
+    yellowCards: getStat('Yellow Cards'),
+    redCards: getStat('Red Cards')
+  }
+}
+
+// 팀명 번역 함수
 function translateTeamName(englishName: string): string {
-  // 먼저 TEAM_NAME_KR 객체에서 검색
   if (TEAM_NAME_KR[englishName]) {
     return TEAM_NAME_KR[englishName]
   }
-  
-  // 없으면 영문 그대로 반환
   return englishName
 }
 
@@ -142,6 +235,7 @@ function generateTestData() {
   const testMatches = [
     {
       id: 1234567,
+      fixtureId: 1234567, // ✅ 추가!
       leagueCode: 'PL',
       league: 'Premier League',
       leagueLogo: 'https://media.api-sports.io/football/leagues/39.png',
@@ -160,10 +254,53 @@ function generateTestData() {
       homeScore: 2,
       awayScore: 1,
       halftimeHomeScore: 1,
-      halftimeAwayScore: 0
+      halftimeAwayScore: 0,
+      // 🆕 이벤트 추가
+      events: [
+        {
+          time: 23,
+          type: 'goal',
+          team: 'home',
+          player: 'Erling Haaland',
+          detail: 'Normal Goal'
+        },
+        {
+          time: 45,
+          type: 'card',
+          team: 'away',
+          player: 'Virgil van Dijk',
+          detail: 'Yellow Card'
+        },
+        {
+          time: 56,
+          type: 'goal',
+          team: 'away',
+          player: 'Mohamed Salah',
+          detail: 'Penalty'
+        },
+        {
+          time: 63,
+          type: 'goal',
+          team: 'home',
+          player: 'Kevin De Bruyne',
+          detail: 'Normal Goal'
+        }
+      ],
+      // 🆕 통계 추가
+      stats: {
+        shotsOnGoal: { home: 8, away: 5 },
+        shotsOffGoal: { home: 4, away: 3 },
+        possession: { home: 58, away: 42 },
+        corners: { home: 7, away: 4 },
+        offsides: { home: 2, away: 1 },
+        fouls: { home: 9, away: 12 },
+        yellowCards: { home: 1, away: 2 },
+        redCards: { home: 0, away: 0 }
+      }
     },
     {
       id: 1234568,
+      fixtureId: 1234568,
       leagueCode: 'PD',
       league: 'La Liga',
       leagueLogo: 'https://media.api-sports.io/football/leagues/140.png',
@@ -182,73 +319,18 @@ function generateTestData() {
       homeScore: 0,
       awayScore: 0,
       halftimeHomeScore: null,
-      halftimeAwayScore: null
-    },
-    {
-      id: 1234569,
-      leagueCode: 'BL1',
-      league: 'Bundesliga',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/78.png',
-      country: 'Germany',
-      date: now.toISOString(),
-      timestamp: Math.floor(now.getTime() / 1000),
-      status: 'HT',
-      statusLong: 'Halftime',
-      elapsed: 45,
-      homeTeam: 'Bayern Munich',
-      awayTeam: 'Borussia Dortmund',
-      homeTeamKR: '바이에른 뮌헨',
-      awayTeamKR: '보루시아 도르트문트',
-      homeCrest: 'https://media.api-sports.io/football/teams/157.png',
-      awayCrest: 'https://media.api-sports.io/football/teams/165.png',
-      homeScore: 1,
-      awayScore: 1,
-      halftimeHomeScore: 1,
-      halftimeAwayScore: 1
-    },
-    {
-      id: 1234570,
-      leagueCode: 'CL',
-      league: 'Champions League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/2.png',
-      country: 'Europe',
-      date: now.toISOString(),
-      timestamp: Math.floor(now.getTime() / 1000),
-      status: '2H',
-      statusLong: 'Second Half',
-      elapsed: 78,
-      homeTeam: 'Inter',
-      awayTeam: 'AC Milan',
-      homeTeamKR: '인테르',
-      awayTeamKR: 'AC 밀란',
-      homeCrest: 'https://media.api-sports.io/football/teams/505.png',
-      awayCrest: 'https://media.api-sports.io/football/teams/489.png',
-      homeScore: 3,
-      awayScore: 2,
-      halftimeHomeScore: 2,
-      halftimeAwayScore: 1
-    },
-    {
-      id: 1234571,
-      leagueCode: 'FL1',
-      league: 'Ligue 1',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/61.png',
-      country: 'France',
-      date: now.toISOString(),
-      timestamp: Math.floor(now.getTime() / 1000),
-      status: '1H',
-      statusLong: 'First Half',
-      elapsed: 12,
-      homeTeam: 'Paris Saint Germain',
-      awayTeam: 'Marseille',
-      homeTeamKR: '파리 생제르맹',
-      awayTeamKR: '마르세유',
-      homeCrest: 'https://media.api-sports.io/football/teams/85.png',
-      awayCrest: 'https://media.api-sports.io/football/teams/79.png',
-      homeScore: 0,
-      awayScore: 1,
-      halftimeHomeScore: null,
-      halftimeAwayScore: null
+      halftimeAwayScore: null,
+      events: [],
+      stats: {
+        shotsOnGoal: { home: 2, away: 3 },
+        shotsOffGoal: { home: 1, away: 2 },
+        possession: { home: 52, away: 48 },
+        corners: { home: 3, away: 2 },
+        offsides: { home: 1, away: 0 },
+        fouls: { home: 4, away: 5 },
+        yellowCards: { home: 0, away: 1 },
+        redCards: { home: 0, away: 0 }
+      }
     }
   ]
 
