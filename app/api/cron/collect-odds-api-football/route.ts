@@ -284,9 +284,44 @@ export async function POST(request: Request) {
 
             const normalized = normalizePercentages(homePercent, drawPercent, awayPercent)
 
-            // 🔥 스코어 예측 계산
-            const avgHomeGoals = normalized.home > 50 ? 1.5 : normalized.home > 40 ? 1.3 : 1.0
-            const avgAwayGoals = normalized.away > 50 ? 1.5 : normalized.away > 40 ? 1.3 : 1.0
+            // 🔥 MatchPrediction과 동일한 득점 계산 로직
+            let avgHomeGoals = 1.0
+            let avgAwayGoals = 1.0
+            
+            // 홈팀 득점 예상
+            if (normalized.home > 60) {
+              avgHomeGoals = 2.0
+            } else if (normalized.home > 50) {
+              avgHomeGoals = 1.7
+            } else if (normalized.home > 40) {
+              avgHomeGoals = 1.4
+            } else if (normalized.home > 30) {
+              avgHomeGoals = 1.1
+            } else {
+              avgHomeGoals = 0.8
+            }
+            
+            // 원정팀 득점 예상
+            if (normalized.away > 60) {
+              avgAwayGoals = 2.0
+            } else if (normalized.away > 50) {
+              avgAwayGoals = 1.7
+            } else if (normalized.away > 40) {
+              avgAwayGoals = 1.4
+            } else if (normalized.away > 30) {
+              avgAwayGoals = 1.1
+            } else {
+              avgAwayGoals = 0.8
+            }
+            
+            // 무승부 확률이 높으면 양팀 득점을 비슷하게 조정
+            if (normalized.draw > 35) {
+              const avg = (avgHomeGoals + avgAwayGoals) / 2
+              avgHomeGoals = avg
+              avgAwayGoals = avg
+            }
+            
+            console.log(`📊 승률 기반 득점: Home ${avgHomeGoals.toFixed(1)} - Away ${avgAwayGoals.toFixed(1)} (${normalized.home.toFixed(1)}% / ${normalized.draw.toFixed(1)}% / ${normalized.away.toFixed(1)}%)`)
             
             const predictedScore = calculateRealisticScore(
               avgHomeGoals,

@@ -189,8 +189,22 @@ export default function ResultsPage() {
         finishedMatches = resultsData.matches.map((match: any) => parseMatch(match, true))
       }
 
-      // 🔥 수정 1: 최신 경기가 위로 (오름차순 정렬)
-      const allMatches = [...scheduledMatches, ...finishedMatches].sort((a, b) => 
+
+      // 🔥 중복 제거: Map 사용 (종료 경기 우선)
+      const matchMap = new Map<string, Match>()
+      
+      // 예정 경기 추가
+      scheduledMatches.forEach(match => {
+        matchMap.set(String(match.id), match)
+      })
+      
+      // 종료 경기로 덮어쓰기 (우선)
+      finishedMatches.forEach(match => {
+        matchMap.set(String(match.id), match)
+      })
+      
+      // 배열로 변환 및 정렬
+      const allMatches = Array.from(matchMap.values()).sort((a, b) => 
         new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()
       )
       
@@ -234,11 +248,45 @@ export default function ResultsPage() {
 
     if (match.predicted_score_home !== null && match.predicted_score_home !== undefined &&
         match.predicted_score_away !== null && match.predicted_score_away !== undefined) {
+      // DB에 저장된 스코어 사용 (Cron에서 계산한 값)
       predictedScoreHome = match.predicted_score_home
       predictedScoreAway = match.predicted_score_away
     } else {
-      const avgHomeGoals = homeProb > 50 ? 1.5 : homeProb > 40 ? 1.3 : 1.0
-      const avgAwayGoals = awayProb > 50 ? 1.5 : awayProb > 40 ? 1.3 : 1.0
+      // DB에 없으면 MatchPrediction과 동일한 방식으로 계산
+      // 승률 기반 득점 예상 (MatchPrediction의 goals 데이터 역할)
+      let avgHomeGoals = 1.0
+      let avgAwayGoals = 1.0
+      
+      if (homeProb > 60) {
+        avgHomeGoals = 2.0
+      } else if (homeProb > 50) {
+        avgHomeGoals = 1.7
+      } else if (homeProb > 40) {
+        avgHomeGoals = 1.4
+      } else if (homeProb > 30) {
+        avgHomeGoals = 1.1
+      } else {
+        avgHomeGoals = 0.8
+      }
+      
+      if (awayProb > 60) {
+        avgAwayGoals = 2.0
+      } else if (awayProb > 50) {
+        avgAwayGoals = 1.7
+      } else if (awayProb > 40) {
+        avgAwayGoals = 1.4
+      } else if (awayProb > 30) {
+        avgAwayGoals = 1.1
+      } else {
+        avgAwayGoals = 0.8
+      }
+      
+      // 무승부 확률 높으면 조정
+      if (drawProb > 35) {
+        const avg = (avgHomeGoals + avgAwayGoals) / 2
+        avgHomeGoals = avg
+        avgAwayGoals = avg
+      }
       
       const calculated = calculateRealisticScore(
         avgHomeGoals,
