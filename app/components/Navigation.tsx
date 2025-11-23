@@ -13,6 +13,7 @@ interface MenuItem {
   icon: string
   badge?: string
   disabled?: boolean
+  hidden?: boolean  // 추가
 }
 
 const menuItems: MenuItem[] = [
@@ -23,8 +24,8 @@ const menuItems: MenuItem[] = [
     icon: '/preview.svg'
   },
   { 
-    labelKo: '경기 일정',
-    labelEn: 'Schedule',
+    labelKo: '경기 결과',
+    labelEn: 'Results',
     href: '/results', 
     icon: '/event.svg'
   },
@@ -32,7 +33,8 @@ const menuItems: MenuItem[] = [
     labelKo: '대시보드',
     labelEn: 'Dashboard',
     href: '/dashboard', 
-    icon: '/dashboard.svg'
+    icon: '/dashboard.svg',
+    hidden: true  // 숨김 처리
   },
   { 
     labelKo: '아티클',
@@ -47,11 +49,14 @@ export default function Navigation() {
   const { language } = useLanguage()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // 숨김 처리된 메뉴 필터링
+  const visibleMenuItems = menuItems.filter(item => !item.hidden)
+
   return (
     <>
       {/* Desktop Navigation */}
       <nav className="hidden md:flex items-center gap-1">
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const isActive = pathname === item.href
           const isDisabled = item.disabled
           
@@ -117,7 +122,7 @@ export default function Navigation() {
         <div className="md:hidden absolute top-full left-0 right-0 bg-[#0f0f0f] border-t border-gray-800 shadow-2xl z-50">
           <div className="container mx-auto px-4 py-3">
             <div className="flex flex-col gap-1">
-              {menuItems.map((item) => {
+              {visibleMenuItems.map((item) => {
                 const isActive = pathname === item.href
                 const isDisabled = item.disabled
                 
