@@ -1,638 +1,702 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { useLanguage } from '../contexts/LanguageContext'
-import { getTeamLogo, TEAM_NAME_KR } from '../teamLogos'
 
-type MatchStatus = 'SCHEDULED' | 'LIVE' | 'FINISHED'
-
-interface Match {
-  id: number | string
-  league: string
-  homeTeam: string
-  awayTeam: string
-  homeTeamKR?: string
-  awayTeamKR?: string
-  homeCrest: string
-  awayCrest: string
-  matchDate: string
-  time: string
-  predictedWinner: 'home' | 'away' | 'draw'
-  predictedScoreHome: number
-  predictedScoreAway: number
-  predictedHomeProbability: number
-  predictedDrawProbability: number
-  predictedAwayProbability: number
-  finalScoreHome?: number
-  finalScoreAway?: number
-  matchStatus: MatchStatus
-  isCorrect?: boolean
-  predictionType?: 'exact' | 'winner_only' | 'wrong'
-}
-
-interface Stats {
-  total: number
-  scheduled: number
-  live: number
-  finished: number
-  correct: number
-  accuracy: number
-}
-
+// 🏆 리그 정보
 const LEAGUES = [
-  { code: 'ALL', name: '전체', nameEn: 'All' },
-  { code: 'PL', name: '프리미어리그', nameEn: 'Premier League' },
-  { code: 'PD', name: '라리가', nameEn: 'La Liga' },
-  { code: 'BL1', name: '분데스리가', nameEn: 'Bundesliga' },
-  { code: 'SA', name: '세리에A', nameEn: 'Serie A' },
-  { code: 'FL1', name: '리그1', nameEn: 'Ligue 1' },
-  { code: 'CL', name: '챔피언스리그', nameEn: 'Champions League' },
+  { 
+    code: 'ALL', 
+    nameKo: '전체',
+    nameEn: 'All Leagues',
+    logo: '🌍',
+    isEmoji: true 
+  },
+  { 
+    code: 'CL', 
+    nameKo: '챔스',
+    nameEn: 'Champions League',
+    logo: 'https://media.api-sports.io/football/leagues/2.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'EL', 
+    nameKo: '유로파',
+    nameEn: 'Europa League',
+    logo: 'https://media.api-sports.io/football/leagues/3.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'UECL', 
+    nameKo: '컨퍼런스',
+    nameEn: 'UEFA Conference League',
+    logo: 'https://media.api-sports.io/football/leagues/848.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'UNL', 
+    nameKo: '네이션스',
+    nameEn: 'UEFA Nations League',
+    logo: 'https://media.api-sports.io/football/leagues/5.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'PL', 
+    nameKo: 'EPL',
+    nameEn: 'Premier League',
+    logo: 'https://media.api-sports.io/football/leagues/39.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'ELC', 
+    nameKo: '챔피언십',
+    nameEn: 'Championship',
+    logo: 'https://media.api-sports.io/football/leagues/40.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'PD', 
+    nameKo: '라리가',
+    nameEn: 'La Liga',
+    logo: 'https://media.api-sports.io/football/leagues/140.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'BL1', 
+    nameKo: '분데스',
+    nameEn: 'Bundesliga',
+    logo: 'https://media.api-sports.io/football/leagues/78.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'SA', 
+    nameKo: '세리에',
+    nameEn: 'Serie A',
+    logo: 'https://media.api-sports.io/football/leagues/135.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'FL1', 
+    nameKo: '리그1',
+    nameEn: 'Ligue 1',
+    logo: 'https://media.api-sports.io/football/leagues/61.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'PPL', 
+    nameKo: '포르투갈',
+    nameEn: 'Primeira Liga',
+    logo: 'https://media.api-sports.io/football/leagues/94.png',
+    isEmoji: false 
+  },
+  { 
+    code: 'DED', 
+    nameKo: '네덜란드',
+    nameEn: 'Eredivisie',
+    logo: 'https://media.api-sports.io/football/leagues/88.png',
+    isEmoji: false 
+  },
 ]
 
-// 🔥 메인 페이지와 동일한 스코어 계산 로직
-function calculateRealisticScore(
-  avgHome: number, 
-  avgAway: number, 
-  homeWinPercent: number, 
-  drawPercent: number, 
-  awayWinPercent: number
-): { home: number; away: number } {
-  
-  if (avgHome < 0 || avgAway < 0 || isNaN(avgHome) || isNaN(avgAway)) {
-    const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
-    
-    if (maxPercent === homeWinPercent) {
-      if (homeWinPercent > 50) return { home: 2, away: 0 }
-      if (homeWinPercent > 40) return { home: 2, away: 1 }
-      return { home: 1, away: 0 }
-    } else if (maxPercent === awayWinPercent) {
-      if (awayWinPercent > 50) return { home: 0, away: 2 }
-      if (awayWinPercent > 40) return { home: 1, away: 2 }
-      return { home: 0, away: 1 }
-    } else {
-      return { home: 1, away: 1 }
-    }
+interface Match {
+  match_id: string
+  home_team: string
+  away_team: string
+  home_crest?: string
+  away_crest?: string
+  match_date: string
+  league: string
+  final_score_home: number
+  final_score_away: number
+  statistics?: {
+    shots_on_goal_home?: number
+    shots_on_goal_away?: number
+    shots_total_home?: number
+    shots_total_away?: number
+    possession_home?: number
+    possession_away?: number
+    passes_home?: number
+    passes_away?: number
+    pass_accuracy_home?: number
+    pass_accuracy_away?: number
+    fouls_home?: number
+    fouls_away?: number
+    yellow_cards_home?: number
+    yellow_cards_away?: number
+    red_cards_home?: number
+    red_cards_away?: number
+    offsides_home?: number
+    offsides_away?: number
+    corners_home?: number
+    corners_away?: number
   }
-  
-  let homeGoals = Math.floor(avgHome)
-  let awayGoals = Math.floor(avgAway)
-  
-  const homeDecimal = avgHome - homeGoals
-  const awayDecimal = avgAway - awayGoals
-  
-  const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
-  
-  if (maxPercent === homeWinPercent) {
-    if (homeDecimal > 0.6) homeGoals += 1
-    if (homeWinPercent > 60 && homeGoals <= awayGoals) {
-      homeGoals = awayGoals + 1
-    }
-  } else if (maxPercent === awayWinPercent) {
-    if (awayDecimal > 0.6) awayGoals += 1
-    if (awayWinPercent > 60 && awayGoals <= homeGoals) {
-      awayGoals = homeGoals + 1
-    }
-  } else {
-    if (drawPercent > 35) {
-      const avg = (homeGoals + awayGoals) / 2
-      homeGoals = Math.round(avg)
-      awayGoals = Math.round(avg)
-    }
-  }
-  
-  const totalGoals = homeGoals + awayGoals
-  
-  if (totalGoals > 5) {
-    const scale = 4 / totalGoals
-    homeGoals = Math.round(homeGoals * scale)
-    awayGoals = Math.round(awayGoals * scale)
-  }
-  
-  if (totalGoals === 0) {
-    if (homeWinPercent > awayWinPercent) {
-      homeGoals = 1
-    } else if (awayWinPercent > homeWinPercent) {
-      awayGoals = 1
-    } else {
-      homeGoals = 1
-      awayGoals = 1
-    }
-  }
-  
-  const finalHome = homeGoals
-  const finalAway = awayGoals
-  
-  if (homeWinPercent > awayWinPercent + 15 && finalHome <= finalAway) {
-    return { home: finalAway + 1, away: finalAway }
-  }
-  if (awayWinPercent > homeWinPercent + 15 && finalAway <= finalHome) {
-    return { home: finalHome, away: finalHome + 1 }
-  }
-  
-  return { home: finalHome, away: finalAway }
 }
 
-export default function ResultsPage() {
-  const { language } = useLanguage()
-  const [selectedLeague, setSelectedLeague] = useState('ALL')
-  const [selectedStatus, setSelectedStatus] = useState<'ALL' | MatchStatus>('ALL')
-  const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month' | 'all'>('week')
+export default function MatchResultsPage() {
+  const { t, language: currentLanguage } = useLanguage()
   const [matches, setMatches] = useState<Match[]>([])
-  const [stats, setStats] = useState<Stats>({
-    total: 0,
-    scheduled: 0,
-    live: 0,
-    finished: 0,
-    correct: 0,
-    accuracy: 0
-  })
   const [loading, setLoading] = useState(true)
+  const [selectedLeague, setSelectedLeague] = useState<string>('ALL')
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('week')
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
 
+  // 경기 데이터 로드
   useEffect(() => {
-    fetchMatches()
-    const interval = setInterval(fetchMatches, 30000)
-    return () => clearInterval(interval)
+    loadMatches()
   }, [selectedLeague, selectedPeriod])
 
-  const fetchMatches = async () => {
-    setLoading(true)
+  const loadMatches = async () => {
     try {
-      let scheduledMatches: Match[] = []
-      
-      if (selectedLeague === 'ALL') {
-        const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'CL']
-        const promises = leagueCodes.map(code => 
-          fetch(`/api/odds-from-db?league=${code}`).then(r => r.json())
-        )
-        const results = await Promise.all(promises)
-        
-        results.forEach((data) => {
-          if (data.success && data.data) {
-            const matches = data.data.map((match: any) => parseMatch(match))
-            scheduledMatches.push(...matches)
-          }
-        })
-      } else {
-        const response = await fetch(`/api/odds-from-db?league=${selectedLeague}`)
-        const data = await response.json()
-        
-        if (data.success && data.data) {
-          scheduledMatches = data.data.map((match: any) => parseMatch(match))
-        }
-      }
-
-      const resultsResponse = await fetch(`/api/match-results?league=${selectedLeague}&period=${selectedPeriod}`)
-      const resultsData = await resultsResponse.json()
-      
-      let finishedMatches: Match[] = []
-      if (resultsData.success && resultsData.matches) {
-        finishedMatches = resultsData.matches.map((match: any) => parseMatch(match, true))
-      }
-
-
-      // 🔥 중복 제거: Map 사용 (종료 경기 우선)
-      const matchMap = new Map<string, Match>()
-      
-      // 예정 경기 추가
-      scheduledMatches.forEach(match => {
-        matchMap.set(String(match.id), match)
-      })
-      
-      // 종료 경기로 덮어쓰기 (우선)
-      finishedMatches.forEach(match => {
-        matchMap.set(String(match.id), match)
-      })
-      
-      // 배열로 변환 및 정렬
-      const allMatches = Array.from(matchMap.values()).sort((a, b) => 
-        new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()
+      setLoading(true)
+      const response = await fetch(
+        `/api/match-results?league=${selectedLeague}&period=${selectedPeriod}&stats=true`
       )
       
-      setMatches(allMatches)
+      if (!response.ok) {
+        throw new Error('Failed to fetch match results')
+      }
       
-      const total = allMatches.length
-      const scheduled = scheduledMatches.length
-      const live = 0
-      const finished = finishedMatches.length
-      const correct = finishedMatches.filter(m => m.isCorrect).length
-      const accuracy = finished > 0 ? Math.round((correct / finished) * 100) : 0
-      
-      setStats({ total, scheduled, live, finished, correct, accuracy })
-      
+      const data = await response.json()
+console.log('🔍 Received data:', data)
+console.log('🔍 data.success:', data.success)
+console.log('🔍 data.matches:', data.matches)
+console.log('🔍 data.count:', data.count)
+
+if (data.success) {
+  const matchesArray = data.matches || []
+  console.log('🔍 Setting matches array:', matchesArray)
+  console.log('🔍 Array length:', matchesArray.length)
+  setMatches(matchesArray)
+  console.log(`✅ Loaded ${data.count} match results`)
+} else {
+        console.error('❌ API returned error:', data.error)
+        setMatches([])
+      }
     } catch (error) {
-      console.error('❌ 데이터 로드 실패:', error)
+      console.error('❌ Failed to load matches:', error)
+      setMatches([])
     } finally {
       setLoading(false)
     }
   }
 
-  const parseMatch = (match: any, isFinished: boolean = false): Match => {
-    let matchDate = match.commence_time || match.match_date || match.matchDate || new Date().toISOString()
-    
-    if (typeof matchDate === 'string' && matchDate.includes(':00:00:00')) {
-      matchDate = matchDate.replace(':00:00:00', ':00Z')
+  // 필터링된 경기 목록
+  const filteredMatches = matches.filter(match => 
+    selectedLeague === 'ALL' || match.league === selectedLeague
+  )
+
+  // 날짜순 정렬 (최신순)
+  filteredMatches.sort((a, b) => 
+    new Date(b.match_date).getTime() - new Date(a.match_date).getTime()
+  )
+
+  // 리그별 그룹화
+  const groupedMatches = filteredMatches.reduce((acc, match) => {
+    const leagueName = getLeagueName(match.league, currentLanguage)
+    if (!acc[leagueName]) {
+      acc[leagueName] = []
     }
+    acc[leagueName].push(match)
+    return acc
+  }, {} as Record<string, Match[]>)
 
-    const homeProb = match.home_probability || match.homeWinProbability || 0
-    const drawProb = match.draw_probability || match.drawProbability || 0
-    const awayProb = match.away_probability || match.awayWinProbability || 0
+  // 각 리그 내에서도 날짜순 정렬
+  Object.keys(groupedMatches).forEach(leagueName => {
+    groupedMatches[leagueName].sort((a, b) => 
+      new Date(b.match_date).getTime() - new Date(a.match_date).getTime()
+    )
+  })
 
-    let predictedWinner: 'home' | 'away' | 'draw' = 'draw'
-    const maxProb = Math.max(homeProb, drawProb, awayProb)
-    if (maxProb === homeProb) predictedWinner = 'home'
-    else if (maxProb === awayProb) predictedWinner = 'away'
-
-    // 🔥 핵심 수정: DB에 저장된 predicted_score 우선 사용
-    let predictedScoreHome: number
-    let predictedScoreAway: number
-
-    if (match.predicted_score_home !== null && match.predicted_score_home !== undefined &&
-        match.predicted_score_away !== null && match.predicted_score_away !== undefined) {
-      // DB에 저장된 스코어 사용 (Cron에서 계산한 값)
-      predictedScoreHome = match.predicted_score_home
-      predictedScoreAway = match.predicted_score_away
-    } else {
-      // DB에 없으면 MatchPrediction과 동일한 방식으로 계산
-      // 승률 기반 득점 예상 (MatchPrediction의 goals 데이터 역할)
-      let avgHomeGoals = 1.0
-      let avgAwayGoals = 1.0
-      
-      if (homeProb > 60) {
-        avgHomeGoals = 2.0
-      } else if (homeProb > 50) {
-        avgHomeGoals = 1.7
-      } else if (homeProb > 40) {
-        avgHomeGoals = 1.4
-      } else if (homeProb > 30) {
-        avgHomeGoals = 1.1
-      } else {
-        avgHomeGoals = 0.8
-      }
-      
-      if (awayProb > 60) {
-        avgAwayGoals = 2.0
-      } else if (awayProb > 50) {
-        avgAwayGoals = 1.7
-      } else if (awayProb > 40) {
-        avgAwayGoals = 1.4
-      } else if (awayProb > 30) {
-        avgAwayGoals = 1.1
-      } else {
-        avgAwayGoals = 0.8
-      }
-      
-      // 무승부 확률 높으면 조정
-      if (drawProb > 35) {
-        const avg = (avgHomeGoals + avgAwayGoals) / 2
-        avgHomeGoals = avg
-        avgAwayGoals = avg
-      }
-      
-      const calculated = calculateRealisticScore(
-        avgHomeGoals,
-        avgAwayGoals,
-        homeProb,
-        drawProb,
-        awayProb
-      )
-      predictedScoreHome = calculated.home
-      predictedScoreAway = calculated.away
-    }
-
-    return {
-      id: match.match_id || match.id || Math.random().toString(),
-      league: match.league_code || match.league || 'Unknown',
-      homeTeam: match.home_team || match.homeTeam || 'Home Team',
-      awayTeam: match.away_team || match.awayTeam || 'Away Team',
-      homeTeamKR: TEAM_NAME_KR[match.home_team || match.homeTeam] || undefined,
-      awayTeamKR: TEAM_NAME_KR[match.away_team || match.awayTeam] || undefined,
-      // 🔥 수정 2: DB 로고 우선 사용
-      homeCrest: match.home_team_logo || getTeamLogo(match.home_team || match.homeTeam) || '/default-logo.png',
-      awayCrest: match.away_team_logo || getTeamLogo(match.away_team || match.awayTeam) || '/default-logo.png',
-      matchDate: matchDate,
-      time: new Date(matchDate).toLocaleString('ko-KR', {
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Asia/Seoul'
-      }),
-      predictedWinner,
-      predictedScoreHome,
-      predictedScoreAway,
-      predictedHomeProbability: homeProb,
-      predictedDrawProbability: drawProb,
-      predictedAwayProbability: awayProb,
-      finalScoreHome: isFinished ? (match.final_score_home || 0) : undefined,
-      finalScoreAway: isFinished ? (match.final_score_away || 0) : undefined,
-      matchStatus: isFinished ? 'FINISHED' : 'SCHEDULED',
-      isCorrect: isFinished ? (match.is_correct || false) : undefined,
-      predictionType: isFinished ? (match.prediction_type || 'wrong') : undefined
-    }
+  function getLeagueName(code: string, lang: string): string {
+    const league = LEAGUES.find(l => l.code === code)
+    return league ? (lang === 'ko' ? league.nameKo : league.nameEn) : code
   }
 
-  const filteredMatches = useMemo(() => {
-    const now = new Date()
+  function formatDate(dateString: string): string {
+    const date = new Date(dateString)
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const hours = date.getHours()
+    const minutes = date.getMinutes().toString().padStart(2, '0')
     
-    return matches
-      .map(match => {
-        // 🔥 추가: 경기 시작 시간이 2시간 이상 지났으면 자동으로 종료로 간주
-        const matchTime = new Date(match.matchDate)
-        const hoursSinceMatch = (now.getTime() - matchTime.getTime()) / (1000 * 60 * 60)
-        
-        // 경기 시작 2시간 지났으면 강제로 FINISHED 상태로 변경
-        if (hoursSinceMatch > 2 && match.matchStatus === 'SCHEDULED') {
-          return { ...match, matchStatus: 'FINISHED' as MatchStatus }
-        }
-        
-        return match
-      })
-      .filter(match => {
-        // 리그 필터
-        if (selectedLeague !== 'ALL' && match.league !== selectedLeague) {
-          return false
-        }
-        
-        // 상태 필터
-        if (selectedStatus !== 'ALL' && match.matchStatus !== selectedStatus) {
-          return false
-        }
-        
-        // 기간 필터
-        const matchDate = new Date(match.matchDate)
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        
-        if (selectedPeriod === 'today') {
-          const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
-          return matchDate >= today && matchDate < tomorrow
-        } else if (selectedPeriod === 'week') {
-          const weekStart = new Date(today)
-          weekStart.setDate(today.getDate() - today.getDay())
-          return matchDate >= weekStart
-        } else if (selectedPeriod === 'month') {
-          return matchDate.getMonth() === today.getMonth() && 
-                 matchDate.getFullYear() === today.getFullYear()
-        }
-        
-        return true
-      })
-      .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime())
-  }, [matches, selectedLeague, selectedStatus, selectedPeriod])
-
-  const getPredictionBadge = (match: Match) => {
-    if (match.matchStatus !== 'FINISHED') return null
-    if (match.predictionType === 'exact') {
-      return { text: language === 'ko' ? '완벽' : 'Exact', icon: '🎯', color: 'bg-green-500' }
-    } else if (match.predictionType === 'winner_only') {
-      return { text: language === 'ko' ? '승부' : 'Winner', icon: '✅', color: 'bg-yellow-500' }
-    } else {
-      return { text: language === 'ko' ? '실패' : 'Wrong', icon: '❌', color: 'bg-red-500' }
+    // 오늘 날짜인지 확인
+    const today = new Date()
+    const isToday = date.getDate() === today.getDate() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getFullYear() === today.getFullYear()
+    
+    if (isToday) {
+      return `${hours}:${minutes}`
     }
+    
+    return `${month}/${day}`
   }
 
-  const getStatusBadge = (status: MatchStatus) => {
-    switch (status) {
-      case 'LIVE':
-        return { text: language === 'ko' ? '진행 중' : 'LIVE', color: 'bg-red-500 animate-pulse', icon: '🔴' }
-      case 'SCHEDULED':
-        return { text: language === 'ko' ? '예정' : 'Scheduled', color: 'bg-blue-500', icon: '📅' }
-      case 'FINISHED':
-        return { text: language === 'ko' ? '종료' : 'Finished', color: 'bg-gray-600', icon: '✅' }
-    }
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0f0f0f] text-white pb-20 md:pb-0">
+        <div className="max-w-7xl mx-auto flex">
+          {/* 좌측 사이드바 스켈레톤 (데스크탑) */}
+          <aside className="hidden md:block w-64 min-h-screen bg-[#1a1a1a] border-r border-gray-800 sticky top-0">
+            <div className="p-4 space-y-6">
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-800 rounded w-20 animate-pulse"></div>
+                <div className="space-y-1">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="h-10 bg-gray-800 rounded animate-pulse"></div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-800 rounded w-16 animate-pulse"></div>
+                <div className="space-y-1">
+                  {[1,2,3,4,5].map(i => (
+                    <div key={i} className="h-10 bg-gray-800 rounded animate-pulse"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* 메인 컨텐츠 */}
+          <main className="flex-1">
+            <div className="px-4 py-8 space-y-4">
+              {[1,2,3].map(i => (
+                <div key={i} className="bg-[#1a1a1a] rounded-lg p-4 animate-pulse">
+                  <div className="h-4 bg-gray-800 rounded w-24 mb-4"></div>
+                  <div className="space-y-3">
+                    <div className="h-6 bg-gray-800 rounded"></div>
+                    <div className="h-6 bg-gray-800 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </main>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white pb-20 md:pb-0">
-      <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-            </div> 
-        <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
-            {LEAGUES.map(league => (
-              <button
-                key={league.code}
-                onClick={() => setSelectedLeague(league.code)}
-                className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium transition-all ${
-                  selectedLeague === league.code
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                {language === 'ko' ? league.name : league.nameEn}
-              </button>
-            ))}
+    <div className="min-h-screen bg-[#0f0f0f] text-white pb-20 md:pb-0">
+      {/* 중앙 컨테이너 */}
+      <div className="max-w-7xl mx-auto flex">
+        {/* 좌측 사이드바 (데스크탑만) */}
+        <aside className="hidden md:block w-64 min-h-screen bg-[#1a1a1a] border-r border-gray-800 sticky top-0 overflow-y-auto">
+          <div className="p-4">
+            {/* 기간 필터 */}
+            <div className="mb-6">
+              <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">
+                {currentLanguage === 'ko' ? '기간' : 'Period'}
+              </h3>
+              <div className="space-y-1">
+                {[
+                  { value: 'today', labelKo: '오늘', labelEn: 'Today' },
+                  { value: 'week', labelKo: '최근 7일', labelEn: 'Last 7 days' },
+                  { value: 'month', labelKo: '최근 30일', labelEn: 'Last 30 days' },
+                ].map(period => (
+                  <button
+                    key={period.value}
+                    onClick={() => setSelectedPeriod(period.value)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                      selectedPeriod === period.value
+                        ? 'bg-white text-black font-medium'
+                        : 'text-gray-400 hover:bg-[#252525] hover:text-white'
+                    }`}
+                  >
+                    {currentLanguage === 'ko' ? period.labelKo : period.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 리그 필터 */}
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">
+                {currentLanguage === 'ko' ? '리그' : 'Leagues'}
+              </h3>
+              <div className="space-y-1">
+                {LEAGUES.map(league => (
+                  <button
+                    key={league.code}
+                    onClick={() => setSelectedLeague(league.code)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+                      selectedLeague === league.code
+                        ? 'bg-white text-black font-medium'
+                        : 'text-gray-400 hover:bg-[#252525] hover:text-white'
+                    }`}
+                  >
+                    {league.isEmoji ? (
+                      <span className="text-base">{league.logo}</span>
+                    ) : (
+                      <Image 
+                        src={league.logo} 
+                        alt={league.nameEn}
+                        width={20}
+                        height={20}
+                        className="w-5 h-5"
+                      />
+                    )}
+                    <span>{currentLanguage === 'ko' ? league.nameKo : league.nameEn}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* 메인 컨텐츠 */}
+        <main className="flex-1 min-h-screen">
+          {/* 헤더 (데스크탑) */}
+          <div className="hidden md:block sticky top-0 bg-[#0f0f0f] z-50 border-b border-gray-800">
+            <div className="px-6 py-4">
+              <h1 className="text-xl font-bold">
+                {currentLanguage === 'ko' ? '경기 결과' : 'Match Results'}
+              </h1>
+            </div>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
-            {[
-              { value: 'today' as const, labelKo: '오늘', labelEn: 'Today', icon: '📅' },
-              { value: 'week' as const, labelKo: '이번주', labelEn: 'This Week', icon: '📆' },
-              { value: 'month' as const, labelKo: '이번달', labelEn: 'This Month', icon: '📊' },
-              { value: 'all' as const, labelKo: '전체', labelEn: 'All Time', icon: '🗓️' }
-            ].map(period => (
-              <button
-                key={period.value}
-                onClick={() => setSelectedPeriod(period.value)}
-                className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                  selectedPeriod === period.value
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                <span>{period.icon}</span>
-                <span>{language === 'ko' ? period.labelKo : period.labelEn}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            {(['ALL', 'SCHEDULED', 'LIVE', 'FINISHED'] as const).map(status => (
-              <button
-                key={status}
-                onClick={() => setSelectedStatus(status)}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedStatus === status
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                {status === 'ALL' && (language === 'ko' ? '전체' : 'All')}
-                {status === 'SCHEDULED' && (language === 'ko' ? '📅 예정' : '📅 Scheduled')}
-                {status === 'LIVE' && (language === 'ko' ? '🔴 LIVE' : '🔴 LIVE')}
-                {status === 'FINISHED' && (language === 'ko' ? '✅ 종료' : '✅ Finished')}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {loading ? (
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            <p className="mt-4 text-gray-400">{language === 'ko' ? '로딩 중...' : 'Loading...'}</p>
-          </div>
-        ) : filteredMatches.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">📭</div>
-            <p className="text-xl text-gray-400">
-              {language === 'ko' ? '경기가 없습니다' : 'No matches found'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMatches.map(match => {
-              const statusBadge = getStatusBadge(match.matchStatus)
-              const predictionBadge = getPredictionBadge(match)
+          {/* 헤더 (모바일만) */}
+          <div className="md:hidden sticky top-0 bg-[#0f0f0f] z-50">
+            <div className="px-4 py-3 flex items-center justify-between border-b border-gray-800">
+              <h1 className="text-lg font-bold">
+                {currentLanguage === 'ko' ? '경기 결과' : 'Match Results'}
+              </h1>
               
-              return (
-                <div
-                  key={match.id}
-                  className="bg-[#1a1a1a] rounded-xl p-4 border border-gray-800 hover:border-gray-700 transition-all"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-sm text-gray-400">{match.league}</div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">{match.time}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${statusBadge.color} text-white font-bold`}>
-                        {statusBadge.icon} {statusBadge.text}
-                      </span>
-                      {predictionBadge && (
-                        <span className={`text-xs px-2 py-1 rounded-full ${predictionBadge.color} text-white font-bold`}>
-                          {predictionBadge.icon} {predictionBadge.text}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+              {/* 기간 필터 */}
+              <div className="flex gap-1.5">
+                {[
+                  { value: 'today', labelKo: '오늘', labelEn: 'Today' },
+                  { value: 'week', labelKo: '7일', labelEn: '7D' },
+                  { value: 'month', labelKo: '30일', labelEn: '30D' },
+                ].map(period => (
+                  <button
+                    key={period.value}
+                    onClick={() => setSelectedPeriod(period.value)}
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+                      selectedPeriod === period.value
+                        ? 'bg-white text-black'
+                        : 'bg-transparent text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    {currentLanguage === 'ko' ? period.labelKo : period.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
-                          <img 
-                            src={match.homeCrest} 
-                            alt={match.homeTeam} 
-                            className="w-6 h-6 object-contain"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = 'none'
-                            }}
-                          />
+            {/* 리그 필터 - 가로 스크롤 (모바일) */}
+            <div className="overflow-x-auto scrollbar-hide border-b border-gray-800">
+              <div className="flex gap-2 px-4 py-3 min-w-max">
+                {LEAGUES.map(league => (
+                  <button
+                    key={league.code}
+                    onClick={() => setSelectedLeague(league.code)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${
+                      selectedLeague === league.code
+                        ? 'bg-white text-black'
+                        : 'bg-[#1a1a1a] text-gray-400 hover:bg-[#252525]'
+                    }`}
+                  >
+                    {league.isEmoji ? (
+                      <span className="text-sm">{league.logo}</span>
+                    ) : (
+                      <Image 
+                        src={league.logo} 
+                        alt={league.nameEn}
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
+                    )}
+                    <span className="text-xs font-medium">
+                      {currentLanguage === 'ko' ? league.nameKo : league.nameEn}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 경기 목록 */}
+          <div className="px-4 py-4 space-y-4">
+        {Object.entries(groupedMatches).map(([leagueName, leagueMatches]) => (
+          <div key={leagueName}>
+            {/* 리그 헤더 */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex-1 h-px bg-gray-800"></div>
+              <h2 className="text-xs font-bold text-gray-400 uppercase px-2">
+                {leagueName}
+              </h2>
+              <div className="flex-1 h-px bg-gray-800"></div>
+            </div>
+
+            {/* 경기 카드들 */}
+            <div className="space-y-2">
+              {leagueMatches.map(match => {
+                const homeWin = match.final_score_home > match.final_score_away
+                const awayWin = match.final_score_away > match.final_score_home
+                const isExpanded = expandedMatch === match.match_id
+                const hasStats = match.statistics && Object.keys(match.statistics).length > 0
+
+                return (
+                  <div
+                    key={match.match_id}
+                    className="bg-[#1a1a1a] rounded-lg overflow-hidden border border-gray-800/50"
+                  >
+                    {/* 경기 정보 */}
+                    <div 
+                      className="p-4 cursor-pointer"
+                      onClick={() => setExpandedMatch(isExpanded ? null : match.match_id)}
+                    >
+                      {/* 날짜 */}
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs text-gray-500 font-medium">
+                          {formatDate(match.match_date)}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-600">FT</span>
+                          {hasStats && (
+                            <span className="text-[10px] text-gray-500">
+                              {isExpanded ? '▲' : '▼'}
+                            </span>
+                          )}
                         </div>
-                        <span className="font-medium">
-                          {language === 'ko' && match.homeTeamKR ? match.homeTeamKR : match.homeTeam}
+                      </div>
+
+                      {/* 홈팀 */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3 flex-1">
+                          {match.home_crest ? (
+                            <Image 
+                              src={match.home_crest} 
+                              alt={match.home_team}
+                              width={28}
+                              height={28}
+                              className="w-7 h-7 object-contain"
+                            />
+                          ) : (
+                            <div className="w-7 h-7 flex items-center justify-center">
+                              ⚽
+                            </div>
+                          )}
+                          <span className={`text-sm font-medium ${
+                            homeWin ? 'text-white' : 'text-gray-400'
+                          }`}>
+                            {match.home_team}
+                          </span>
+                        </div>
+                        <span className={`text-2xl font-black ${
+                          homeWin ? 'text-white' : 'text-gray-500'
+                        }`}>
+                          {match.final_score_home}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {match.matchStatus === 'FINISHED' && (
-                          <div className="text-2xl font-black text-green-400">
-                            {match.finalScoreHome}
+
+                      {/* 원정팀 */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 flex-1">
+                          {match.away_crest ? (
+                            <Image 
+                              src={match.away_crest} 
+                              alt={match.away_team}
+                              width={28}
+                              height={28}
+                              className="w-7 h-7 object-contain"
+                            />
+                          ) : (
+                            <div className="w-7 h-7 flex items-center justify-center">
+                              ⚽
+                            </div>
+                          )}
+                          <span className={`text-sm font-medium ${
+                            awayWin ? 'text-white' : 'text-gray-400'
+                          }`}>
+                            {match.away_team}
+                          </span>
+                        </div>
+                        <span className={`text-2xl font-black ${
+                          awayWin ? 'text-white' : 'text-gray-500'
+                        }`}>
+                          {match.final_score_away}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 확장 영역 - 경기 통계 */}
+                    {isExpanded && (
+                      <div className="bg-[#151515] px-4 pb-4 border-t border-gray-800">
+                        {hasStats ? (
+                          <div className="py-3">
+                            <h3 className="text-xs font-bold text-gray-400 mb-3">
+                              {currentLanguage === 'ko' ? '경기 통계' : 'Match Stats'}
+                            </h3>
+                            
+                            <div className="space-y-3">
+                            {/* 점유율 */}
+                            {match.statistics?.possession_home !== undefined && (
+                              <div>
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                  <span className="text-white font-medium">
+                                    {match.statistics.possession_home}%
+                                  </span>
+                                  <span className="text-gray-400">
+                                    {currentLanguage === 'ko' ? '점유율' : 'Possession'}
+                                  </span>
+                                  <span className="text-white font-medium">
+                                    {match.statistics.possession_away}%
+                                  </span>
+                                </div>
+                                <div className="flex h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                  <div 
+                                    className="bg-blue-500"
+                                    style={{ width: `${match.statistics.possession_home}%` }}
+                                  />
+                                  <div 
+                                    className="bg-red-500"
+                                    style={{ width: `${match.statistics.possession_away}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 슈팅 */}
+                            {match.statistics?.shots_total_home !== undefined && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-white font-medium">
+                                  {match.statistics.shots_total_home}
+                                </span>
+                                <span className="text-gray-400">
+                                  {currentLanguage === 'ko' ? '슈팅' : 'Shots'}
+                                </span>
+                                <span className="text-white font-medium">
+                                  {match.statistics.shots_total_away}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 유효슈팅 */}
+                            {match.statistics?.shots_on_goal_home !== undefined && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-white font-medium">
+                                  {match.statistics.shots_on_goal_home}
+                                </span>
+                                <span className="text-gray-400">
+                                  {currentLanguage === 'ko' ? '유효슈팅' : 'Shots on Target'}
+                                </span>
+                                <span className="text-white font-medium">
+                                  {match.statistics.shots_on_goal_away}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 패스 정확도 */}
+                            {match.statistics?.pass_accuracy_home !== undefined && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-white font-medium">
+                                  {match.statistics.pass_accuracy_home}%
+                                </span>
+                                <span className="text-gray-400">
+                                  {currentLanguage === 'ko' ? '패스 정확도' : 'Pass Accuracy'}
+                                </span>
+                                <span className="text-white font-medium">
+                                  {match.statistics.pass_accuracy_away}%
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 코너킥 */}
+                            {match.statistics?.corners_home !== undefined && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-white font-medium">
+                                  {match.statistics.corners_home}
+                                </span>
+                                <span className="text-gray-400">
+                                  {currentLanguage === 'ko' ? '코너킥' : 'Corners'}
+                                </span>
+                                <span className="text-white font-medium">
+                                  {match.statistics.corners_away}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 파울 */}
+                            {match.statistics?.fouls_home !== undefined && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-white font-medium">
+                                  {match.statistics.fouls_home}
+                                </span>
+                                <span className="text-gray-400">
+                                  {currentLanguage === 'ko' ? '파울' : 'Fouls'}
+                                </span>
+                                <span className="text-white font-medium">
+                                  {match.statistics.fouls_away}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 옐로카드 */}
+                            {match.statistics?.yellow_cards_home !== undefined && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-yellow-400 font-medium">
+                                  {match.statistics.yellow_cards_home}
+                                </span>
+                                <span className="text-gray-400">
+                                  {currentLanguage === 'ko' ? '옐로카드' : 'Yellow Cards'}
+                                </span>
+                                <span className="text-yellow-400 font-medium">
+                                  {match.statistics.yellow_cards_away}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 오프사이드 */}
+                            {match.statistics?.offsides_home !== undefined && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-white font-medium">
+                                  {match.statistics.offsides_home}
+                                </span>
+                                <span className="text-gray-400">
+                                  {currentLanguage === 'ko' ? '오프사이드' : 'Offsides'}
+                                </span>
+                                <span className="text-white font-medium">
+                                  {match.statistics.offsides_away}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        ) : (
+                          <div className="py-8 text-center">
+                            <div className="text-gray-500 text-xs">
+                              {currentLanguage === 'ko' 
+                                ? '경기 통계를 불러올 수 없습니다' 
+                                : 'Statistics not available'}
+                            </div>
                           </div>
                         )}
-                        <div className={`text-xl font-bold ${
-                          match.matchStatus === 'FINISHED' ? 'text-gray-500 line-through' : 'text-blue-400'
-                        }`}>
-                          {match.predictedScoreHome}
-                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
-                          <img 
-                            src={match.awayCrest} 
-                            alt={match.awayTeam} 
-                            className="w-6 h-6 object-contain"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = 'none'
-                            }}
-                          />
-                        </div>
-                        <span className="font-medium">
-                          {language === 'ko' && match.awayTeamKR ? match.awayTeamKR : match.awayTeam}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {match.matchStatus === 'FINISHED' && (
-                          <div className="text-2xl font-black text-green-400">
-                            {match.finalScoreAway}
-                          </div>
-                        )}
-                        <div className={`text-xl font-bold ${
-                          match.matchStatus === 'FINISHED' ? 'text-gray-500 line-through' : 'text-red-400'
-                        }`}>
-                          {match.predictedScoreAway}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
 
-                  {match.matchStatus === 'SCHEDULED' && (
-                    <div className="mt-3 pt-3 border-t border-gray-800">
-                      <div className="text-xs text-gray-500 mb-1">승률 {language === 'ko' ? '예측' : 'Prediction'}</div>
-                      <div className="flex gap-2 text-xs">
-                        <div className="flex-1 text-center">
-                          <div className="text-blue-400 font-bold">{match.predictedHomeProbability.toFixed(0)}%</div>
-                          <div className="text-gray-500">{language === 'ko' ? '홈' : 'Home'}</div>
-                        </div>
-                        <div className="flex-1 text-center">
-                          <div className="text-gray-400 font-bold">{match.predictedDrawProbability.toFixed(0)}%</div>
-                          <div className="text-gray-500">{language === 'ko' ? '무' : 'Draw'}</div>
-                        </div>
-                        <div className="flex-1 text-center">
-                          <div className="text-red-400 font-bold">{match.predictedAwayProbability.toFixed(0)}%</div>
-                          <div className="text-gray-500">{language === 'ko' ? '원정' : 'Away'}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {match.matchStatus === 'FINISHED' && (
-                    <div className="mt-3 pt-3 border-t border-gray-800 space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-500">{language === 'ko' ? '예측 스코어' : 'Predicted'}</span>
-                        <span className="text-gray-400 font-mono">
-                          {match.predictedScoreHome} - {match.predictedScoreAway}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-500">{language === 'ko' ? '실제 스코어' : 'Actual'}</span>
-                        <span className="text-green-400 font-mono font-bold">
-                          {match.finalScoreHome} - {match.finalScoreAway}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-500">{language === 'ko' ? '예측 확률' : 'Win Probability'}</span>
-                        <span className="text-gray-400">
-                          {match.predictedWinner === 'home' 
-                            ? `${match.predictedHomeProbability.toFixed(0)}% (${language === 'ko' ? '홈승' : 'Home'})`
-                            : match.predictedWinner === 'away' 
-                            ? `${match.predictedAwayProbability.toFixed(0)}% (${language === 'ko' ? '원정승' : 'Away'})`
-                            : `${match.predictedDrawProbability.toFixed(0)}% (${language === 'ko' ? '무승부' : 'Draw'})`
-                          }
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+        {/* 경기 없음 */}
+        {filteredMatches.length === 0 && (
+          <div className="text-center py-12 text-gray-500">
+            {currentLanguage === 'ko' 
+              ? '표시할 경기 결과가 없습니다'
+              : 'No match results available'
+            }
           </div>
         )}
+          </div>
+        </main>
       </div>
-
-      <style jsx global>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   )
 }
