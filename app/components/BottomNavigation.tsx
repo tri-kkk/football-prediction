@@ -13,32 +13,39 @@ export default function MobileBottomNav() {
       href: '/',
       icon: '/preview.svg',
       labelKo: '프리뷰',
-      labelEn: 'Preview'
+      labelEn: 'Preview',
+      hidden: false
     },
     {
       href: '/results',
       icon: '/event.svg',
-      labelKo: '경기 일정',
-      labelEn: 'Schedule'
+      labelKo: '경기 결과',
+      labelEn: 'Results',
+      hidden: false
     },
     {
       href: '/dashboard',
       icon: '/dashboard.svg',
       labelKo: '대시보드',
-      labelEn: 'Dashboard'
+      labelEn: 'Dashboard',
+      hidden: true  // 숨김 처리
     },
     {
       href: '/blog',
       icon: '/article.svg',
       labelKo: '아티클',
-      labelEn: 'Article'
+      labelEn: 'Article',
+      hidden: false
     }
   ]
 
+  // 숨김 처리된 메뉴 필터링
+  const visibleNavItems = navItems.filter(item => !item.hidden)
+
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0f0f0f] border-t border-gray-800 z-50 safe-area-bottom">
-      <div className="grid grid-cols-4 gap-1 px-2 py-3">
-        {navItems.map((item) => {
+      <div className={`grid gap-1 px-2 py-3`} style={{ gridTemplateColumns: `repeat(${visibleNavItems.length}, 1fr)` }}>
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href
           
           return (

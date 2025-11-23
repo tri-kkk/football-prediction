@@ -347,10 +347,10 @@ if (data.success) {
         </aside>
 
         {/* 메인 컨텐츠 */}
-        <main className="flex-1 min-h-screen">
+        <main className="flex-1 w-full md:min-h-screen">
           {/* 헤더 (데스크탑) */}
           <div className="hidden md:block sticky top-0 bg-[#0f0f0f] z-50 border-b border-gray-800">
-            <div className="px-6 py-4">
+            <div className="px-4 md:px-6 py-4">
               <h1 className="text-xl font-bold">
                 {currentLanguage === 'ko' ? '경기 결과' : 'Match Results'}
               </h1>
@@ -420,7 +420,7 @@ if (data.success) {
           </div>
 
           {/* 경기 목록 */}
-          <div className="px-4 py-4 space-y-4">
+          <div className="px-3 md:px-4 py-4 space-y-4">
         {Object.entries(groupedMatches).map(([leagueName, leagueMatches]) => (
           <div key={leagueName}>
             {/* 리그 헤더 */}
