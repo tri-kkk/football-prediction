@@ -1881,333 +1881,337 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      {paginatedMatches.map((match, index) => {
-              const currentTrend = trendData[match.id]
-              const latestTrend = currentTrend?.[currentTrend.length - 1]
-              const previousTrend = currentTrend?.[currentTrend.length - 2]
-              
-              // 표시할 확률 (트렌드 최신값 또는 DB의 초기값)
-              const displayHomeProb = latestTrend ? latestTrend.homeWinProbability : (match.homeWinRate || 33.3)
-              const displayDrawProb = latestTrend ? latestTrend.drawProbability : (match.drawRate || 33.3)
-              const displayAwayProb = latestTrend ? latestTrend.awayWinProbability : (match.awayWinRate || 33.3)
-              
-              const homeChange = latestTrend && previousTrend 
-                ? latestTrend.homeWinProbability - previousTrend.homeWinProbability
-                : 0
-              const awayChange = latestTrend && previousTrend 
-                ? latestTrend.awayWinProbability - previousTrend.awayWinProbability
-                : 0
-              
-              return (
-                <React.Fragment key={match.id}>
-                  <div id={`match-card-${match.id}`}>
-                  {/* 경기 카드 - 가로 배치 */}
-                  <div
+                      {/* ━━━━━━ FotMob 스타일: 리그별 그룹화 ━━━━━━ */}
+                      {(() => {
+                        // 리그별로 경기 그룹화
+                        const matchesByLeague: { [key: string]: typeof paginatedMatches } = {}
+                        paginatedMatches.forEach(match => {
+                          const code = match.leagueCode || 'OTHER'
+                          if (!matchesByLeague[code]) matchesByLeague[code] = []
+                          matchesByLeague[code].push(match)
+                        })
+
+                        // LEAGUES 순서대로 정렬
+                        const orderedLeagues = LEAGUES
+                          .filter(l => l.code !== 'ALL' && matchesByLeague[l.code])
+                          .map(l => l.code)
+                        Object.keys(matchesByLeague).forEach(code => {
+                          if (!orderedLeagues.includes(code)) orderedLeagues.push(code)
+                        })
+
+                        return orderedLeagues.map(leagueCode => {
+                          const leagueMatches = matchesByLeague[leagueCode]
+                          const league = LEAGUES.find(l => l.code === leagueCode)
+
+                          return (
+                            <div 
+                              key={leagueCode} 
+                              className={`rounded-xl overflow-hidden mb-4 ${
+                                darkMode ? 'bg-[#111]' : 'bg-white shadow-sm border border-gray-100'
+                              }`}
+                            >
+                              {/* 리그 헤더 */}
+                              <div className={`flex items-center gap-3 px-4 py-3 ${
+                                darkMode ? 'bg-[#0a0a0a]' : 'bg-gray-50'
+                              }`}>
+                                {league?.isEmoji ? (
+                                  <span className="text-xl">{league.logo}</span>
+                                ) : (
+                                  <div className="w-6 h-6 bg-white rounded flex items-center justify-center p-0.5">
+                                    <img 
+                                      src={league?.logo || getLeagueLogo(leagueCode)} 
+                                      alt={leagueCode}
+                                      className="w-full h-full object-contain"
+                                    />
+                                  </div>
+                                )}
+                                <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  {getLeagueName(leagueCode, currentLanguage)}
+                                </span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                  darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'
+                                }`}>
+                                  {leagueMatches.length}
+                                </span>
+                              </div>
+
+                              {/* 경기 목록 */}
+                              <div className={`divide-y ${darkMode ? 'divide-gray-900' : 'divide-gray-100'}`}>
+                                {leagueMatches.map((match) => {
+                                  const currentTrend = trendData[match.id]
+                                  const latestTrend = currentTrend?.[currentTrend.length - 1]
+                                  const previousTrend = currentTrend?.[currentTrend.length - 2]
+                                  
+                                  const displayHomeProb = latestTrend ? latestTrend.homeWinProbability : (match.homeWinRate || 33.3)
+                                  const displayDrawProb = latestTrend ? latestTrend.drawProbability : (match.drawRate || 33.3)
+                                  const displayAwayProb = latestTrend ? latestTrend.awayWinProbability : (match.awayWinRate || 33.3)
+                                  
+                                  const homeChange = latestTrend && previousTrend 
+                                    ? latestTrend.homeWinProbability - previousTrend.homeWinProbability : 0
+                                  const awayChange = latestTrend && previousTrend 
+                                    ? latestTrend.awayWinProbability - previousTrend.awayWinProbability : 0
+
+                                  const homeTeamName = currentLanguage === 'ko' ? (match.homeTeamKR || match.homeTeam) : match.homeTeam
+                                  const awayTeamName = currentLanguage === 'ko' ? (match.awayTeamKR || match.awayTeam) : match.awayTeam
+                                  const truncate = (name: string, max: number) => name.length > max ? name.substring(0, max) + '...' : name
+                                  const isExpanded = expandedMatchId === match.id
+
+                                  return (
+                                    <div 
+                                      key={match.id}
+                                      id={`match-card-${match.id}`}
+                                      className={`transition-all duration-300 ${
+                                        isExpanded ? 'bg-[#0d1f0d]' : ''
+                                      }`}
+                                    >
+                                      {/* ━━━ 경기 행 (클릭 가능) ━━━ */}
+                                      <div 
+                                        onClick={() => handleMatchClick(match)}
+                                        className={`flex items-center cursor-pointer px-3 py-3 md:px-4 ${
+                                          darkMode ? 'hover:bg-[#1a1a1a]' : 'hover:bg-gray-50'
+                                        } ${isExpanded ? '!bg-[#0d1f0d]' : ''}`}
+                                      >
+                                        {/* 시간 + 날짜 */}
+                                        <div className="w-16 md:w-20 flex-shrink-0">
+                                          <div className={`text-sm md:text-base font-bold tabular-nums ${
+                                            isExpanded ? 'text-emerald-400' : darkMode ? 'text-gray-400' : 'text-gray-600'
+                                          }`}>
+                                            {formatTime(match.utcDate)}
+                                          </div>
+                                          <div className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+                                            {formatDate(match.utcDate, currentLanguage)}
+                                          </div>
+                                        </div>
+
+                                        {/* 홈팀 */}
+                                        <div className="flex-1 flex items-center justify-end gap-2 min-w-0 pr-2">
+                                          <span className={`text-sm md:text-base font-medium truncate text-right ${
+                                            darkMode ? 'text-white' : 'text-gray-900'
+                                          }`}>
+                                            {truncate(homeTeamName, 12)}
+                                          </span>
+                                          <img 
+                                            src={match.homeCrest} 
+                                            alt={match.homeTeam}
+                                            className="w-7 h-7 md:w-8 md:h-8 object-contain flex-shrink-0"
+                                            onError={(e) => {
+                                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="%23333"/></svg>'
+                                            }}
+                                          />
+                                        </div>
+
+                                        {/* VS */}
+                                        <div className="w-20 md:w-24 flex-shrink-0 flex justify-center">
+                                          <div className={`text-xs font-bold px-3 py-1 rounded ${
+                                            isExpanded 
+                                              ? 'bg-emerald-500/20 text-emerald-400' 
+                                              : darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-500'
+                                          }`}>
+                                            VS
+                                          </div>
+                                        </div>
+
+                                        {/* 원정팀 */}
+                                        <div className="flex-1 flex items-center justify-start gap-2 min-w-0 pl-2">
+                                          <img 
+                                            src={match.awayCrest} 
+                                            alt={match.awayTeam}
+                                            className="w-7 h-7 md:w-8 md:h-8 object-contain flex-shrink-0"
+                                            onError={(e) => {
+                                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="%23333"/></svg>'
+                                            }}
+                                          />
+                                          <span className={`text-sm md:text-base font-medium truncate ${
+                                            darkMode ? 'text-white' : 'text-gray-900'
+                                          }`}>
+                                            {truncate(awayTeamName, 12)}
+                                          </span>
+                                        </div>
+
+                                        {/* 확장 화살표 */}
+                                        <div className="w-6 flex-shrink-0 flex justify-end">
+                                          <svg 
+                                            className={`w-4 h-4 transition-transform duration-300 ${
+                                              isExpanded ? 'rotate-180 text-emerald-400' : darkMode ? 'text-gray-600' : 'text-gray-400'
+                                            }`}
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                          >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                          </svg>
+                                        </div>
+                                      </div>
+
+                                      {/* ━━━ 확장된 상세 정보 ━━━ */}
+                                      {isExpanded && (
+                                        <div className="border-t border-emerald-900/30 animate-fadeIn">
+                                          {/* 승률 바 */}
+                                          <div className="px-4 py-4">
+                                            <div className="flex h-2 rounded-full overflow-hidden bg-gray-900 mb-3">
+                                              <div className="bg-blue-500 transition-all duration-500" style={{ width: `${displayHomeProb}%` }} />
+                                              <div className="bg-gray-600 transition-all duration-500" style={{ width: `${displayDrawProb}%` }} />
+                                              <div className="bg-red-500 transition-all duration-500" style={{ width: `${displayAwayProb}%` }} />
+                                            </div>
+
+                                            <div className="flex items-center justify-between text-sm">
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-blue-400 font-bold">{Math.round(displayHomeProb)}%</span>
+                                                {homeChange !== 0 && (
+                                                  <span className={`text-xs ${homeChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                    {homeChange > 0 ? '↑' : '↓'}{Math.abs(homeChange).toFixed(1)}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <span className="text-gray-500 font-medium">{Math.round(displayDrawProb)}%</span>
+                                              <div className="flex items-center gap-2">
+                                                {awayChange !== 0 && (
+                                                  <span className={`text-xs ${awayChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                    {awayChange > 0 ? '↑' : '↓'}{Math.abs(awayChange).toFixed(1)}
+                                                  </span>
+                                                )}
+                                                <span className="text-red-400 font-bold">{Math.round(displayAwayProb)}%</span>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs text-gray-600 mt-1">
+                                              <span>{currentLanguage === 'ko' ? '홈 승' : 'Home'}</span>
+                                              <span>{currentLanguage === 'ko' ? '무승부' : 'Draw'}</span>
+                                              <span>{currentLanguage === 'ko' ? '원정 승' : 'Away'}</span>
+                                            </div>
+                                          </div>
+
+                                          {/* 액션 버튼 */}
+                                          <div className="flex gap-2 px-4 pb-4">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                setSelectedMatchForLineup(match)
+                                                setLineupModalOpen(true)
+                                              }}
+                                              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all"
+                                            >
+                                              <span>⚽</span>
+                                              <span>{currentLanguage === 'ko' ? '라인업' : 'Lineup'}</span>
+                                            </button>
+                                          </div>
+
+                                          {/* AI 경기 예측 분석 */}
+                                          <div className="border-t border-emerald-900/30">
+                                            <MatchPrediction
+                                              fixtureId={match.id}
+                                              homeTeam={match.homeTeam}
+                                              awayTeam={match.awayTeam}
+                                              homeTeamKR={match.homeTeamKR}
+                                              awayTeamKR={match.awayTeamKR}
+                                              homeTeamId={match.home_team_id}
+                                              awayTeamId={match.away_team_id}
+                                              trendData={trendData[match.id] || []}
+                                              darkMode={darkMode}
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })
+                      })()}
+            
+            {/* 페이지네이션 - 모던 스타일 */}
+            {totalPages > 1 && (
+              <div className="flex flex-col items-center gap-4 mt-10 mb-6">
+                {/* 페이지 정보 - 상단 */}
+                <div className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                  <span className="text-emerald-500 font-bold">{totalMatches}</span>
+                  {currentLanguage === 'ko' ? ' 경기 중 ' : ' matches • '}
+                  <span className="font-medium">{currentPage}</span>
+                  <span className="mx-1">/</span>
+                  <span>{totalPages}</span>
+                  {currentLanguage === 'ko' ? ' 페이지' : ''}
+                </div>
+
+                {/* 페이지 버튼들 */}
+                <div className="flex items-center gap-1">
+                  {/* 이전 버튼 */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
                     className={`
-                      relative rounded-2xl transition-all duration-200
-                      ${darkMode 
-                        ? 'bg-[#1a1a1a] border border-gray-800' 
-                        : 'bg-white border border-gray-200'
+                      w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200
+                      ${currentPage === 1
+                        ? 'text-gray-600 cursor-not-allowed'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
                       }
                     `}
                   >
-                    {/* 상단: 리그 정보 + 날짜/시간 + H2H 버튼 */}
-                    <div className={`flex items-center justify-between gap-3 px-4 pt-4 pb-3 border-b ${
-                      darkMode ? 'border-gray-800' : 'border-gray-200'
-                    }`}>
-                      {/* 왼쪽: 리그 정보 + 날짜/시간 */}
-                      <div className="flex items-center gap-3">
-                        {/* 리그 국기 이미지 */}
-                        {(() => {
-                          const flag = getLeagueFlag(match.leagueCode)
-                          if (flag.isEmoji) {
-                            return <span className="text-xl">{flag.url}</span>
-                          } else {
-                            return (
-                              <img 
-                                src={flag.url} 
-                                alt={match.league}
-                                className="w-6 h-6 object-contain"
-                              />
-                            )
-                          }
-                        })()}
-                        
-                        {/* 리그명 - 모바일 숨김 */}
-                        <span className={`hidden md:inline text-base font-bold ${
-                          darkMode ? 'text-white' : 'text-black'
-                        }`}>
-                          {getLeagueName(match.leagueCode, currentLanguage)}
-                        </span>
-                        
-                        {/* 구분선 - 모바일 숨김 */}
-                        <span className={`hidden md:inline text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
-                        
-                        {/* 날짜 */}
-                        <span className={`text-sm font-semibold ${
-                          darkMode ? 'text-gray-300' : 'text-gray-700'
-                        }`}>
-                          {formatDate(match.utcDate, currentLanguage)}
-                        </span>
-                        
-                        {/* 구분선 */}
-                        <span className={`text-base ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>|</span>
-                        
-                        {/* 시간 */}
-                        <span className={`text-lg font-bold ${
-                          darkMode ? 'text-white' : 'text-gray-900'
-                        }`}>
-                          {formatTime(match.utcDate)}
-                        </span>
-                      </div>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  
+                  {/* 페이지 번호들 */}
+                  <div className="flex items-center">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                      const isActive = currentPage === page
+                      const isNear = page >= currentPage - 1 && page <= currentPage + 1
+                      const isEdge = page === 1 || page === totalPages
+                      const showDots = page === currentPage - 2 || page === currentPage + 2
 
-                      {/* 오른쪽: 라인업 버튼 + 상대전적 버튼 */}
-                      <div className="flex items-center gap-2">
-                        {/* 🆕 라인업 보기 버튼 - 항상 표시, 발표 여부에 따라 스타일 변경 */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedMatchForLineup(match)
-                            setLineupModalOpen(true)
-                          }}
-                          disabled={false}
-                          className="relative flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all shadow-sm bg-green-600 hover:bg-green-700 text-white border border-green-500 hover:scale-105 active:scale-95 cursor-pointer"
-                          title="라인업 보기"
-                        >
-                          
-                          {/* 아이콘 */}
-                          <span>⚽</span>
-                          
-                          {/* 텍스트 */}
-                          <span className="hidden sm:inline">
-                            {currentLanguage === 'ko' ? '라인업' : 'Lineup'}
+                      if (isEdge || isNear) {
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`
+                              w-10 h-10 rounded-full font-medium text-sm transition-all duration-200
+                              ${isActive
+                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-110'
+                                : darkMode
+                                  ? 'text-gray-400 hover:text-white hover:bg-gray-800'
+                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                              }
+                            `}
+                          >
+                            {page}
+                          </button>
+                        )
+                      } else if (showDots) {
+                        return (
+                          <span key={page} className="w-8 text-center text-gray-600 text-sm">
+                            •••
                           </span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 메인 콘텐츠 영역 */}
-                    <div className="p-4">
-                      {/* 팀 대결 - 중앙 집중 */}
-                      <div className="flex flex-col items-center gap-3 mb-6">
-                        {/* 엠블럼 + 팀명 + VS - 한 줄 */}
-                        <div className="flex items-center justify-center gap-3">
-                          {/* 홈팀 */}
-                          <div className="flex items-center gap-2">
-                            <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {currentLanguage === 'ko' ? (match.homeTeamKR || match.homeTeam) : match.homeTeam}
-                            </span>
-                            <div className="w-18 h-18 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
-                              <img src={match.homeCrest} alt={match.homeTeam} className="w-14 h-14 object-contain" />
-                            </div>
-                          </div>
-                          
-                          {/* VS 배지 */}
-                          <div className={`px-3 py-1 rounded-lg text-xs font-black ${
-                            darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            VS
-                          </div>
-                          
-                          {/* 원정팀 */}
-                          <div className="flex items-center gap-2">
-                            <div className="w-18 h-18 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
-                              <img src={match.awayCrest} alt={match.awayTeam} className="w-14 h-14 object-contain" />
-                            </div>
-                            <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {currentLanguage === 'ko' ? (match.awayTeamKR || match.awayTeam) : match.awayTeam}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 승률 표시 - 프로그레스 바 포함 */}
-                      <div className="grid grid-cols-3 gap-3">
-                        {/* 홈팀 승률 */}
-                        <div className="relative overflow-hidden rounded-xl py-2 px-3 bg-[#0f0f0f]">
-                          {/* 프로그레스 바 */}
-                          <div 
-                            className="absolute bottom-0 left-0 h-1 transition-all duration-500 bg-blue-500"
-                            style={{ 
-                              width: `${displayHomeProb}%` 
-                            }}
-                          ></div>
-                          
-                          <div className="relative z-10 flex flex-col items-center">
-                            <div className="text-xs font-medium mb-1 text-gray-500">
-                              홈
-                            </div>
-                            <div className={`text-2xl md:text-4xl font-black transition-all duration-500 ${
-                              darkMode ? 'text-white' : 'text-black'
-                            } ${homeChange > 0 ? 'animate-pulse' : ''}`}>
-                              {Math.round(displayHomeProb)}%
-                            </div>
-                            <div className="h-5 mt-1">
-                              {homeChange !== 0 && (
-                                <div className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-black animate-bounce ${
-                                  homeChange > 0 
-                                    ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
-                                    : 'bg-red-500/20 text-red-400 border border-red-500/50'
-                                }`}>
-                                  {homeChange > 0 ? '▲' : '▼'} {Math.abs(homeChange).toFixed(1)}%
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 무승부 */}
-                        <div className="relative overflow-hidden rounded-xl py-2 px-3 bg-[#0f0f0f]">
-                          {/* 프로그레스 바 */}
-                          <div 
-                            className="absolute bottom-0 left-0 h-1 transition-all duration-500 bg-gray-600"
-                            style={{ 
-                              width: `${displayDrawProb}%` 
-                            }}
-                          ></div>
-                          
-                          <div className="relative z-10 flex flex-col items-center">
-                            <div className="text-xs font-medium mb-1 text-gray-500">
-                              무승부
-                            </div>
-                            <div className="text-2xl md:text-4xl font-black text-gray-400">
-                              {Math.round(displayDrawProb)}%
-                            </div>
-                            <div className="h-4 mt-1"></div>
-                          </div>
-                        </div>
-
-                        {/* 원정팀 승률 */}
-                        <div className="relative overflow-hidden rounded-xl py-2 px-3 bg-[#0f0f0f]">
-                          {/* 프로그레스 바 */}
-                          <div 
-                            className="absolute bottom-0 left-0 h-1 transition-all duration-500 bg-red-500"
-                            style={{ 
-                              width: `${displayAwayProb}%` 
-                            }}
-                          ></div>
-                          
-                          <div className="relative z-10 flex flex-col items-center">
-                            <div className="text-xs font-medium mb-1 text-gray-500">
-                              원정
-                            </div>
-                            <div className={`text-2xl md:text-4xl font-black transition-all duration-500 text-white ${
-                              awayChange > 0 ? 'animate-pulse' : ''
-                            }`}>
-                              {Math.round(displayAwayProb)}%
-                            </div>
-                            <div className="h-5 mt-1">
-                              {awayChange !== 0 && (
-                                <div className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-black animate-bounce ${
-                                  awayChange > 0 
-                                    ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
-                                    : 'bg-red-500/20 text-red-400 border border-red-500/50'
-                                }`}>
-                                  {awayChange > 0 ? '▲' : '▼'} {Math.abs(awayChange).toFixed(1)}%
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* AI 경기 예측 분석 */}
-                      <MatchPrediction
-                        fixtureId={match.id}
-                        homeTeam={match.homeTeam}
-                        awayTeam={match.awayTeam}
-                        homeTeamKR={match.homeTeamKR}     // ✅ 한글 팀명
-                        awayTeamKR={match.awayTeamKR}     // ✅ 한글 팀명
-                        homeTeamId={match.home_team_id}
-                        awayTeamId={match.away_team_id}
-                        trendData={trendData[match.id] || []}  // 🆕 트렌드 데이터 전달
-                        darkMode={darkMode}
-                      />
-                      
-                    </div>
+                        )
+                      }
+                      return null
+                    })}
                   </div>
 
+                  {/* 다음 버튼 */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`
+                      w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200
+                      ${currentPage === totalPages
+                        ? 'text-gray-600 cursor-not-allowed'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                      }
+                    `}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                 </div>
-              </React.Fragment>
-              )
-            })}
-            
-            {/* 페이지네이션 */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    currentPage === 1
-                      ? darkMode 
-                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : darkMode
-                        ? 'bg-gray-800 text-white hover:bg-gray-700'
-                        : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                  }`}
-                >
-                  {currentLanguage === 'ko' ? '이전' : 'Previous'}
-                </button>
-                
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
-                    // 현재 페이지 근처만 표시
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`w-10 h-10 rounded-lg font-medium transition-all ${
-                            currentPage === page
-                              ? darkMode
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-blue-500 text-white'
-                              : darkMode
-                                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      )
-                    } else if (
-                      page === currentPage - 2 ||
-                      page === currentPage + 2
-                    ) {
-                      return <span key={page} className="text-gray-500">...</span>
-                    }
-                    return null
-                  })}
+
+                {/* 프로그레스 바 */}
+                <div className="w-48 h-1 bg-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-300"
+                    style={{ width: `${(currentPage / totalPages) * 100}%` }}
+                  />
                 </div>
-                
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    currentPage === totalPages
-                      ? darkMode 
-                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : darkMode
-                        ? 'bg-gray-800 text-white hover:bg-gray-700'
-                        : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                  }`}
-                >
-                  {currentLanguage === 'ko' ? '다음' : 'Next'}
-                </button>
-                
-                <span className={`ml-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {currentLanguage === 'ko' 
-                    ? `${currentPage} / ${totalPages} 페이지 (총 ${totalMatches}경기)`
-                    : `Page ${currentPage} / ${totalPages} (${totalMatches} matches)`
-                  }
-                </span>
               </div>
             )}
             </>
