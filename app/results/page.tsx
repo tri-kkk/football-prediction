@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useLanguage } from '../contexts/LanguageContext'
+import { TEAM_NAME_KR } from '../teamLogos'
 
 // 🏆 리그 정보
 const LEAGUES = [
@@ -136,21 +137,28 @@ interface Match {
 export default function MatchResultsPage() {
   const { t, language: currentLanguage } = useLanguage()
   const [matches, setMatches] = useState<Match[]>([])
+  const [allMatches, setAllMatches] = useState<Match[]>([]) // 전체 데이터 저장
   const [loading, setLoading] = useState(true)
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL')
   const [selectedPeriod, setSelectedPeriod] = useState<string>('week')
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
 
-  // 경기 데이터 로드
+  // 경기 데이터 로드 (최초 1회만)
   useEffect(() => {
     loadMatches()
-  }, [selectedLeague, selectedPeriod])
+  }, [])
+
+  // 필터링 (클라이언트 사이드)
+  useEffect(() => {
+    filterMatches()
+  }, [selectedLeague, selectedPeriod, allMatches])
 
   const loadMatches = async () => {
     try {
       setLoading(true)
+      // 전체 데이터 한번에 로드 (최근 30일)
       const response = await fetch(
-        `/api/match-results?league=${selectedLeague}&period=${selectedPeriod}&stats=true`
+        `/api/match-results?league=ALL&period=month&stats=true`
       )
       
       if (!response.ok) {
@@ -167,18 +175,56 @@ if (data.success) {
   const matchesArray = data.matches || []
   console.log('🔍 Setting matches array:', matchesArray)
   console.log('🔍 Array length:', matchesArray.length)
-  setMatches(matchesArray)
+  setAllMatches(matchesArray) // 전체 데이터 저장
   console.log(`✅ Loaded ${data.count} match results`)
 } else {
         console.error('❌ API returned error:', data.error)
-        setMatches([])
+        setAllMatches([])
       }
     } catch (error) {
       console.error('❌ Failed to load matches:', error)
-      setMatches([])
+      setAllMatches([])
     } finally {
       setLoading(false)
     }
+  }
+
+  // 클라이언트 사이드 필터링
+  const filterMatches = () => {
+    let filtered = allMatches
+
+    // 리그 필터
+    if (selectedLeague !== 'ALL') {
+      filtered = filtered.filter(match => match.league === selectedLeague)
+    }
+
+    // 기간 필터
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    
+    if (selectedPeriod === 'today') {
+      filtered = filtered.filter(match => {
+        const matchDate = new Date(match.match_date)
+        const matchDay = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate())
+        return matchDay.getTime() === today.getTime()
+      })
+    } else if (selectedPeriod === 'week') {
+      const weekAgo = new Date(today)
+      weekAgo.setDate(weekAgo.getDate() - 7)
+      filtered = filtered.filter(match => {
+        const matchDate = new Date(match.match_date)
+        return matchDate >= weekAgo && matchDate <= now
+      })
+    } else if (selectedPeriod === 'month') {
+      const monthAgo = new Date(today)
+      monthAgo.setDate(monthAgo.getDate() - 30)
+      filtered = filtered.filter(match => {
+        const matchDate = new Date(match.match_date)
+        return matchDate >= monthAgo && matchDate <= now
+      })
+    }
+
+    setMatches(filtered)
   }
 
   // 필터링된 경기 목록
@@ -207,6 +253,11 @@ if (data.success) {
       new Date(b.match_date).getTime() - new Date(a.match_date).getTime()
     )
   })
+
+  function translateTeamName(englishName: string, language: string): string {
+    if (language !== 'ko') return englishName
+    return TEAM_NAME_KR[englishName] || englishName
+  }
 
   function getLeagueName(code: string, lang: string): string {
     const league = LEAGUES.find(l => l.code === code)
@@ -301,8 +352,8 @@ if (data.success) {
                     onClick={() => setSelectedPeriod(period.value)}
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
                       selectedPeriod === period.value
-                        ? 'bg-white text-black font-medium'
-                        : 'text-gray-400 hover:bg-[#252525] hover:text-white'
+                        ? 'bg-[#A3FF4C] text-gray-900 font-medium'
+                        : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
                     }`}
                   >
                     {currentLanguage === 'ko' ? period.labelKo : period.labelEn}
@@ -323,8 +374,8 @@ if (data.success) {
                     onClick={() => setSelectedLeague(league.code)}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
                       selectedLeague === league.code
-                        ? 'bg-white text-black font-medium'
-                        : 'text-gray-400 hover:bg-[#252525] hover:text-white'
+                        ? 'bg-[#A3FF4C] text-gray-900 font-medium'
+                        : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
                     }`}
                   >
                     {league.isEmoji ? (
@@ -484,7 +535,7 @@ if (data.success) {
                           <span className={`text-sm font-medium ${
                             homeWin ? 'text-white' : 'text-gray-400'
                           }`}>
-                            {match.home_team}
+                            {translateTeamName(match.home_team, currentLanguage)}
                           </span>
                         </div>
                         <span className={`text-2xl font-black ${
@@ -513,7 +564,7 @@ if (data.success) {
                           <span className={`text-sm font-medium ${
                             awayWin ? 'text-white' : 'text-gray-400'
                           }`}>
-                            {match.away_team}
+                            {translateTeamName(match.away_team, currentLanguage)}
                           </span>
                         </div>
                         <span className={`text-2xl font-black ${
