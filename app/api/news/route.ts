@@ -18,197 +18,12 @@ interface NewsArticle {
 
 // 다양한 축구 관련 이미지
 const defaultImages = [
-  'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&h=800&fit=crop', // 축구공
-  'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&h=800&fit=crop', // 경기장
-  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&h=800&fit=crop', // 골대
-  'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&h=800&fit=crop', // 잔디
-  'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=800&h=800&fit=crop', // 트로피
+  'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=800&h=800&fit=crop',
 ]
-
-// 1. r/soccer (메인 축구 서브레딧)
-async function fetchRedditSoccer(): Promise<NewsArticle[]> {
-  try {
-    console.log('📰 Fetching r/soccer...')
-    
-    const response = await fetch(
-      'https://www.reddit.com/r/soccer/hot.json?limit=50',
-      { 
-        next: { revalidate: 300 },
-        headers: { 'User-Agent': 'TrendSoccer/1.0' }
-      }
-    )
-    
-    if (!response.ok) return []
-    
-    const data = await response.json()
-    if (!data.data?.children) return []
-    
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied && !post.is_self) // 고정글, 텍스트만 제외
-    
-    console.log(`✅ r/soccer: ${posts.length} posts`)
-    
-    return posts.slice(0, 20).map((post: any, index: number) => 
-      createArticleFromPost(post, 'r/soccer', index)
-    )
-  } catch (error) {
-    console.error('❌ r/soccer error:', error)
-    return []
-  }
-}
-
-// 2. r/PremierLeague (프리미어리그)
-async function fetchRedditPremierLeague(): Promise<NewsArticle[]> {
-  try {
-    console.log('📰 Fetching r/PremierLeague...')
-    
-    const response = await fetch(
-      'https://www.reddit.com/r/PremierLeague/hot.json?limit=30',
-      { 
-        next: { revalidate: 300 },
-        headers: { 'User-Agent': 'TrendSoccer/1.0' }
-      }
-    )
-    
-    if (!response.ok) return []
-    
-    const data = await response.json()
-    if (!data.data?.children) return []
-    
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied && !post.is_self)
-    
-    console.log(`✅ r/PremierLeague: ${posts.length} posts`)
-    
-    return posts.slice(0, 15).map((post: any, index: number) => {
-      const article = createArticleFromPost(post, 'r/PremierLeague', index)
-      article.league = '프리미어리그'
-      if (!article.tags.includes('프리미어리그')) {
-        article.tags.push('프리미어리그')
-      }
-      return article
-    })
-  } catch (error) {
-    console.error('❌ r/PremierLeague error:', error)
-    return []
-  }
-}
-
-// 3. r/LaLiga (라리가)
-async function fetchRedditLaLiga(): Promise<NewsArticle[]> {
-  try {
-    console.log('📰 Fetching r/LaLiga...')
-    
-    const response = await fetch(
-      'https://www.reddit.com/r/LaLiga/hot.json?limit=20',
-      { 
-        next: { revalidate: 300 },
-        headers: { 'User-Agent': 'TrendSoccer/1.0' }
-      }
-    )
-    
-    if (!response.ok) return []
-    
-    const data = await response.json()
-    if (!data.data?.children) return []
-    
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied && !post.is_self)
-    
-    console.log(`✅ r/LaLiga: ${posts.length} posts`)
-    
-    return posts.slice(0, 10).map((post: any, index: number) => {
-      const article = createArticleFromPost(post, 'r/LaLiga', index)
-      article.league = '라리가'
-      if (!article.tags.includes('라리가')) {
-        article.tags.push('라리가')
-      }
-      return article
-    })
-  } catch (error) {
-    console.error('❌ r/LaLiga error:', error)
-    return []
-  }
-}
-
-// 4. r/Bundesliga (분데스리가)
-async function fetchRedditBundesliga(): Promise<NewsArticle[]> {
-  try {
-    console.log('📰 Fetching r/Bundesliga...')
-    
-    const response = await fetch(
-      'https://www.reddit.com/r/Bundesliga/hot.json?limit=20',
-      { 
-        next: { revalidate: 300 },
-        headers: { 'User-Agent': 'TrendSoccer/1.0' }
-      }
-    )
-    
-    if (!response.ok) return []
-    
-    const data = await response.json()
-    if (!data.data?.children) return []
-    
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied && !post.is_self)
-    
-    console.log(`✅ r/Bundesliga: ${posts.length} posts`)
-    
-    return posts.slice(0, 10).map((post: any, index: number) => {
-      const article = createArticleFromPost(post, 'r/Bundesliga', index)
-      article.league = '분데스리가'
-      if (!article.tags.includes('분데스리가')) {
-        article.tags.push('분데스리가')
-      }
-      return article
-    })
-  } catch (error) {
-    console.error('❌ r/Bundesliga error:', error)
-    return []
-  }
-}
-
-// 5. r/footballhighlights (하이라이트)
-async function fetchRedditHighlights(): Promise<NewsArticle[]> {
-  try {
-    console.log('📰 Fetching r/footballhighlights...')
-    
-    const response = await fetch(
-      'https://www.reddit.com/r/footballhighlights/hot.json?limit=20',
-      { 
-        next: { revalidate: 300 },
-        headers: { 'User-Agent': 'TrendSoccer/1.0' }
-      }
-    )
-    
-    if (!response.ok) return []
-    
-    const data = await response.json()
-    if (!data.data?.children) return []
-    
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied)
-    
-    console.log(`✅ r/footballhighlights: ${posts.length} posts`)
-    
-    return posts.slice(0, 10).map((post: any, index: number) => {
-      const article = createArticleFromPost(post, 'r/footballhighlights', index)
-      article.category = '경기'
-      if (!article.tags.includes('하이라이트')) {
-        article.tags.push('하이라이트')
-      }
-      return article
-    })
-  } catch (error) {
-    console.error('❌ r/footballhighlights error:', error)
-    return []
-  }
-}
 
 // Reddit 포스트를 NewsArticle로 변환
 function createArticleFromPost(post: any, source: string, index: number): NewsArticle {
@@ -230,7 +45,6 @@ function createArticleFromPost(post: any, source: string, index: number): NewsAr
     imageUrl = post.url
   }
   
-  // 이미지 없으면 기본 이미지 (다양하게)
   if (!imageUrl) {
     imageUrl = defaultImages[index % defaultImages.length]
   }
@@ -303,7 +117,6 @@ function createArticleFromPost(post: any, source: string, index: number): NewsAr
     category = '분석'
   }
   
-  // summary 생성
   let summary = post.selftext || title
   if (summary.length > 200) {
     summary = summary.substring(0, 200) + '...'
@@ -327,6 +140,201 @@ function createArticleFromPost(post: any, source: string, index: number): NewsAr
   }
 }
 
+// 1. r/soccer
+async function fetchRedditSoccer(): Promise<NewsArticle[]> {
+  try {
+    console.log('📰 Fetching r/soccer...')
+    
+    const response = await fetch(
+      'https://www.reddit.com/r/soccer/hot.json?limit=50',
+      { 
+        next: { revalidate: 300 },
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      }
+    )
+    
+    console.log('r/soccer response status:', response.status)
+    
+    if (!response.ok) {
+      console.error('❌ r/soccer error:', response.status, response.statusText)
+      return []
+    }
+    
+    const data = await response.json()
+    console.log('r/soccer data received:', !!data.data?.children)
+    
+    if (!data.data?.children) {
+      console.log('⚠️ r/soccer: No data.children')
+      return []
+    }
+    
+    const posts = data.data.children
+      .map((child: any) => child.data)
+      .filter((post: any) => !post.stickied && !post.is_self)
+    
+    console.log(`✅ r/soccer: ${posts.length} posts`)
+    
+    return posts.slice(0, 20).map((post: any, index: number) => 
+      createArticleFromPost(post, 'r/soccer', index)
+    )
+  } catch (error) {
+    console.error('❌ r/soccer fetch error:', error)
+    return []
+  }
+}
+
+// 2. r/PremierLeague
+async function fetchRedditPremierLeague(): Promise<NewsArticle[]> {
+  try {
+    console.log('📰 Fetching r/PremierLeague...')
+    
+    const response = await fetch(
+      'https://www.reddit.com/r/PremierLeague/hot.json?limit=30',
+      { 
+        next: { revalidate: 300 },
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      }
+    )
+    
+    console.log('r/PremierLeague response status:', response.status)
+    
+    if (!response.ok) {
+      console.error('❌ r/PremierLeague error:', response.status)
+      return []
+    }
+    
+    const data = await response.json()
+    if (!data.data?.children) return []
+    
+    const posts = data.data.children
+      .map((child: any) => child.data)
+      .filter((post: any) => !post.stickied && !post.is_self)
+    
+    console.log(`✅ r/PremierLeague: ${posts.length} posts`)
+    
+    return posts.slice(0, 15).map((post: any, index: number) => {
+      const article = createArticleFromPost(post, 'r/PremierLeague', index)
+      article.league = '프리미어리그'
+      if (!article.tags.includes('프리미어리그')) {
+        article.tags.push('프리미어리그')
+      }
+      return article
+    })
+  } catch (error) {
+    console.error('❌ r/PremierLeague error:', error)
+    return []
+  }
+}
+
+// 3. r/LaLiga
+async function fetchRedditLaLiga(): Promise<NewsArticle[]> {
+  try {
+    const response = await fetch(
+      'https://www.reddit.com/r/LaLiga/hot.json?limit=20',
+      { 
+        next: { revalidate: 300 },
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }
+    )
+    
+    if (!response.ok) return []
+    const data = await response.json()
+    if (!data.data?.children) return []
+    
+    const posts = data.data.children
+      .map((child: any) => child.data)
+      .filter((post: any) => !post.stickied && !post.is_self)
+    
+    console.log(`✅ r/LaLiga: ${posts.length} posts`)
+    
+    return posts.slice(0, 10).map((post: any, index: number) => {
+      const article = createArticleFromPost(post, 'r/LaLiga', index)
+      article.league = '라리가'
+      if (!article.tags.includes('라리가')) {
+        article.tags.push('라리가')
+      }
+      return article
+    })
+  } catch (error) {
+    console.error('❌ r/LaLiga error:', error)
+    return []
+  }
+}
+
+// 4. r/Bundesliga
+async function fetchRedditBundesliga(): Promise<NewsArticle[]> {
+  try {
+    const response = await fetch(
+      'https://www.reddit.com/r/Bundesliga/hot.json?limit=20',
+      { 
+        next: { revalidate: 300 },
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }
+    )
+    
+    if (!response.ok) return []
+    const data = await response.json()
+    if (!data.data?.children) return []
+    
+    const posts = data.data.children
+      .map((child: any) => child.data)
+      .filter((post: any) => !post.stickied && !post.is_self)
+    
+    console.log(`✅ r/Bundesliga: ${posts.length} posts`)
+    
+    return posts.slice(0, 10).map((post: any, index: number) => {
+      const article = createArticleFromPost(post, 'r/Bundesliga', index)
+      article.league = '분데스리가'
+      if (!article.tags.includes('분데스리가')) {
+        article.tags.push('분데스리가')
+      }
+      return article
+    })
+  } catch (error) {
+    console.error('❌ r/Bundesliga error:', error)
+    return []
+  }
+}
+
+// 5. r/footballhighlights
+async function fetchRedditHighlights(): Promise<NewsArticle[]> {
+  try {
+    const response = await fetch(
+      'https://www.reddit.com/r/footballhighlights/hot.json?limit=20',
+      { 
+        next: { revalidate: 300 },
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }
+    )
+    
+    if (!response.ok) return []
+    const data = await response.json()
+    if (!data.data?.children) return []
+    
+    const posts = data.data.children
+      .map((child: any) => child.data)
+      .filter((post: any) => !post.stickied)
+    
+    console.log(`✅ r/footballhighlights: ${posts.length} posts`)
+    
+    return posts.slice(0, 10).map((post: any, index: number) => {
+      const article = createArticleFromPost(post, 'r/footballhighlights', index)
+      article.category = '경기'
+      if (!article.tags.includes('하이라이트')) {
+        article.tags.push('하이라이트')
+      }
+      return article
+    })
+  } catch (error) {
+    console.error('❌ r/footballhighlights error:', error)
+    return []
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -335,9 +343,9 @@ export async function GET(request: NextRequest) {
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('⚽ Fetching from Reddit (5개 채널)...')
+    console.log('Environment:', process.env.NODE_ENV)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     
-    // 5개 서브레딧에서 병렬로 가져오기
     const [
       soccerPosts,
       plPosts,
@@ -359,7 +367,6 @@ export async function GET(request: NextRequest) {
     console.log(`✅ r/Bundesliga: ${bundesligaPosts.length}`)
     console.log(`✅ r/footballhighlights: ${highlightPosts.length}`)
     
-    // 합치기
     let allArticles = [
       ...soccerPosts,
       ...plPosts,
@@ -368,11 +375,10 @@ export async function GET(request: NextRequest) {
       ...highlightPosts
     ]
     
-    const totalBeforeDedup = allArticles.length
-    console.log(`\n📦 Total fetched: ${totalBeforeDedup} posts`)
+    console.log(`\n📦 Total fetched: ${allArticles.length} posts`)
     
     if (allArticles.length === 0) {
-      console.log('⚠️ No posts found')
+      console.log('⚠️ WARNING: No articles fetched from any source!')
       return NextResponse.json({
         articles: [],
         hasMore: false,
@@ -380,11 +386,11 @@ export async function GET(request: NextRequest) {
         page,
         limit,
         sources: {
-          soccer: 0,
-          pl: 0,
-          laliga: 0,
-          bundesliga: 0,
-          highlights: 0
+          soccer: soccerPosts.length,
+          pl: plPosts.length,
+          laliga: laligaPosts.length,
+          bundesliga: bundesligaPosts.length,
+          highlights: highlightPosts.length
         }
       })
     }
@@ -432,6 +438,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('\n❌ API Error:', error)
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
     
     return NextResponse.json({
       articles: [],
@@ -440,6 +447,7 @@ export async function GET(request: NextRequest) {
       page: 1,
       limit: 10,
       error: 'Failed to fetch from Reddit',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
       sources: {
         soccer: 0,
         pl: 0,
