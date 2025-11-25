@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface BlogPost {
   id: number
@@ -17,13 +18,14 @@ interface BlogPost {
 }
 
 const categories = [
-  { value: 'all', label: '전체', emoji: '📚' },
-  { value: 'weekly', label: '주간 분석', emoji: '📊' },
-  { value: 'preview', label: '경기 프리뷰', emoji: '🔮' },
-  { value: 'analysis', label: '심층 분석', emoji: '🎯' },
+  { value: 'all', labelKo: '전체', labelEn: 'All', emoji: '⚽' },
+  { value: 'weekly', labelKo: '주간 분석', labelEn: 'Weekly', emoji: '📊' },
+  { value: 'preview', labelKo: '경기 프리뷰', labelEn: 'Preview', emoji: '🎯' },
+  { value: 'analysis', labelKo: '심층 분석', labelEn: 'Analysis', emoji: '🔍' },
 ]
 
 export default function BlogPage() {
+  const { language: currentLanguage } = useLanguage()
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -74,12 +76,12 @@ export default function BlogPage() {
                 onClick={() => setSelectedCategory(cat.value)}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-lg whitespace-nowrap transition-all font-medium ${
                   selectedCategory === cat.value
-                    ? 'bg-blue-500 text-white shadow-md scale-105'
+                    ? 'bg-[#A3FF4C] text-gray-900 shadow-lg'
                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
                 }`}
               >
                 <span className="text-lg">{cat.emoji}</span>
-                <span>{cat.label}</span>
+                <span>{currentLanguage === 'ko' ? cat.labelKo : cat.labelEn}</span>
               </button>
             ))}
           </div>
@@ -92,12 +94,12 @@ export default function BlogPage() {
                 onClick={() => setSelectedCategory(cat.value)}
                 className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg transition-all ${
                   selectedCategory === cat.value
-                    ? 'bg-blue-500 text-white shadow-md'
+                    ? 'bg-[#A3FF4C] text-gray-900 shadow-lg'
                     : 'bg-gray-800 text-gray-300 active:bg-gray-700'
                 }`}
               >
                 <span className="text-2xl">{cat.emoji}</span>
-                <span className="text-xs font-medium">{cat.label}</span>
+                <span className="text-xs font-medium">{currentLanguage === 'ko' ? cat.labelKo : cat.labelEn}</span>
               </button>
             ))}
           </div>
@@ -107,7 +109,7 @@ export default function BlogPage() {
       {/* 로딩 상태 */}
       {loading && (
         <div className="max-w-6xl mx-auto px-4 py-20 text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-700 border-t-blue-500"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-700 border-t-[#A3FF4C]"></div>
           <p className="mt-4 text-gray-400">로딩 중...</p>
         </div>
       )}
@@ -123,7 +125,7 @@ export default function BlogPage() {
                   href={`/blog/${post.slug}`}
                   className="group"
                 >
-                  <article className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-blue-500 transition-all duration-300 h-full flex flex-col">
+                  <article className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-[#A3FF4C] transition-all duration-300 h-full flex flex-col">
                     {/* 커버 이미지 */}
                     {post.cover_image && (
                       <div className="aspect-video bg-gray-800 relative overflow-hidden">
@@ -134,8 +136,11 @@ export default function BlogPage() {
                         />
                         {/* 카테고리 배지 */}
                         <div className="absolute top-3 left-3">
-                          <span className="px-3 py-1 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-full">
-                            {categories.find(c => c.value === post.category)?.label || post.category}
+                          <span className="px-3 py-1 bg-[#A3FF4C]/90 backdrop-blur-sm text-gray-900 text-xs font-bold rounded-full">
+                            {currentLanguage === 'ko' 
+                              ? categories.find(c => c.value === post.category)?.labelKo 
+                              : categories.find(c => c.value === post.category)?.labelEn
+                            }
                           </span>
                         </div>
                       </div>
@@ -143,7 +148,7 @@ export default function BlogPage() {
 
                     <div className="p-5 flex-1 flex flex-col">
                       {/* 제목 */}
-                      <h2 className="text-xl font-bold mb-3 group-hover:text-blue-400 transition line-clamp-2">
+                      <h2 className="text-xl font-bold mb-3 group-hover:text-[#A3FF4C] transition line-clamp-2">
                         {post.title_kr}
                       </h2>
 
