@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as cheerio from 'cheerio'
 
-// 뉴스 타입 정의
 interface NewsArticle {
   id: string
   title: string
@@ -16,321 +16,190 @@ interface NewsArticle {
   likes: number
 }
 
-// 다양한 축구 관련 이미지
 const defaultImages = [
+  // 축구공
   'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1606925797300-0b35e9d1794e?w=800&h=800&fit=crop',
+  // 경기장
   'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&h=800&fit=crop',
+  // 골대
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&h=800&fit=crop',
+  // 선수들
   'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=800&h=800&fit=crop',
+  // 트로피
   'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1565699894576-e90d70e2e8ab?w=800&h=800&fit=crop',
+  // 팬들
+  'https://images.unsplash.com/photo-1577223625816-7546f14d3957?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1574068468668-a05a11f871da?w=800&h=800&fit=crop',
+  // 경기 중
+  'https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1551958219-acbc608c6377?w=800&h=800&fit=crop',
+  // 축구화
+  'https://images.unsplash.com/photo-1511886929837-354d827aae26?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1552667466-07770ae110d0?w=800&h=800&fit=crop',
+  // 훈련
+  'https://images.unsplash.com/photo-1592656094267-764a45160876?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=800&h=800&fit=crop',
+  // 코너킥
+  'https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800&h=800&fit=crop',
+  'https://images.unsplash.com/photo-1526259704358-7ac29e5d6a3a?w=800&h=800&fit=crop',
 ]
 
-// Reddit 포스트를 NewsArticle로 변환
-function createArticleFromPost(post: any, source: string, index: number): NewsArticle {
-  const title = post.title || ''
-  const titleLower = title.toLowerCase()
-  
-  // 이미지 추출
-  let imageUrl = ''
-  
-  if (post.preview?.images?.[0]) {
-    imageUrl = post.preview.images[0].source.url.replace(/&amp;/g, '&')
-  } else if (post.thumbnail && 
-             post.thumbnail !== 'self' && 
-             post.thumbnail !== 'default' &&
-             post.thumbnail !== 'nsfw' &&
-             post.thumbnail.startsWith('http')) {
-    imageUrl = post.thumbnail
-  } else if (post.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-    imageUrl = post.url
-  }
-  
-  if (!imageUrl) {
-    imageUrl = defaultImages[index % defaultImages.length]
-  }
-  
-  // 리그 감지
-  let league = '해외축구'
-  let tags: string[] = []
-  let category = '뉴스'
-  
-  // 한국 선수
-  if (titleLower.includes('son') || titleLower.includes('heung-min')) {
-    league = '프리미어리그'
-    tags.push('손흥민', '토트넘')
-  } else if (titleLower.includes('lee kang') || titleLower.includes('kang-in')) {
-    league = '리그1'
-    tags.push('이강인', 'PSG')
-  } else if (titleLower.includes('kim min') || titleLower.includes('min-jae')) {
-    league = '분데스리가'
-    tags.push('김민재', '바이에른')
-  }
-  
-  // 리그 감지
-  if (titleLower.includes('premier league') || titleLower.includes('epl')) {
-    league = '프리미어리그'
-    tags.push('프리미어리그')
-  } else if (titleLower.includes('la liga')) {
-    league = '라리가'
-    tags.push('라리가')
-  } else if (titleLower.includes('bundesliga')) {
-    league = '분데스리가'
-    tags.push('분데스리가')
-  } else if (titleLower.includes('serie a')) {
-    league = '세리에A'
-    tags.push('세리에A')
-  } else if (titleLower.includes('champions league') || titleLower.includes('ucl')) {
-    league = '챔피언스리그'
-    tags.push('챔피언스리그')
-  } else if (titleLower.includes('ligue 1')) {
-    league = '리그1'
-    tags.push('리그1')
-  }
-  
-  // 팀 감지
-  const teams = [
-    'Manchester United', 'Manchester City', 'Liverpool', 'Chelsea', 'Arsenal', 'Tottenham',
-    'Real Madrid', 'Barcelona', 'Atletico Madrid',
-    'Bayern Munich', 'Borussia Dortmund',
-    'Juventus', 'Inter Milan', 'AC Milan',
-    'PSG', 'Paris'
-  ]
-  teams.forEach(team => {
-    if (titleLower.includes(team.toLowerCase())) {
-      const shortName = team.split(' ')[0]
-      if (!tags.includes(shortName)) {
-        tags.push(shortName)
-      }
-    }
-  })
-  
-  // 카테고리 감지
-  if (titleLower.includes('goal') || titleLower.includes('score')) {
-    category = '경기'
-    tags.push('골')
-  } else if (titleLower.includes('transfer') || titleLower.includes('sign')) {
-    category = '이적'
-    tags.push('이적')
-  } else if (titleLower.includes('interview')) {
-    category = '인터뷰'
-  } else if (titleLower.includes('analysis') || titleLower.includes('tactical')) {
-    category = '분석'
-  }
-  
-  let summary = post.selftext || title
-  if (summary.length > 200) {
-    summary = summary.substring(0, 200) + '...'
-  }
-  
-  const score = post.score || 0
-  
-  return {
-    id: `reddit-${post.id}`,
-    title,
-    summary,
-    content: post.selftext || summary,
-    imageUrl,
-    category,
-    league,
-    author: post.author ? `u/${post.author}` : source,
-    publishedAt: new Date(post.created_utc * 1000).toISOString(),
-    tags: tags.length > 0 ? tags : ['축구'],
-    views: score * 10,
-    likes: score,
-  }
-}
-
-// 1. r/soccer
-async function fetchRedditSoccer(): Promise<NewsArticle[]> {
+async function fetchRSSFeed(url: string, source: string): Promise<NewsArticle[]> {
   try {
-    console.log('📰 Fetching r/soccer...')
+    console.log(`📰 Fetching ${source}...`)
     
-    const response = await fetch(
-      'https://www.reddit.com/r/soccer/hot.json?limit=50',
-      { 
-        next: { revalidate: 300 },
-        headers: { 
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
+    const response = await fetch(url, {
+      next: { revalidate: 300 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
-    )
-    
-    console.log('r/soccer response status:', response.status)
+    })
     
     if (!response.ok) {
-      console.error('❌ r/soccer error:', response.status, response.statusText)
+      console.log(`⚠️ ${source} failed:`, response.status)
       return []
     }
     
-    const data = await response.json()
-    console.log('r/soccer data received:', !!data.data?.children)
+    const xmlText = await response.text()
+    const $ = cheerio.load(xmlText, { xmlMode: true })
     
-    if (!data.data?.children) {
-      console.log('⚠️ r/soccer: No data.children')
-      return []
-    }
+    const articles: NewsArticle[] = []
     
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied && !post.is_self)
-    
-    console.log(`✅ r/soccer: ${posts.length} posts`)
-    
-    return posts.slice(0, 20).map((post: any, index: number) => 
-      createArticleFromPost(post, 'r/soccer', index)
-    )
-  } catch (error) {
-    console.error('❌ r/soccer fetch error:', error)
-    return []
-  }
-}
-
-// 2. r/PremierLeague
-async function fetchRedditPremierLeague(): Promise<NewsArticle[]> {
-  try {
-    console.log('📰 Fetching r/PremierLeague...')
-    
-    const response = await fetch(
-      'https://www.reddit.com/r/PremierLeague/hot.json?limit=30',
-      { 
-        next: { revalidate: 300 },
-        headers: { 
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    $('item').each((index, element) => {
+      if (index >= 20) return false // 최대 20개
+      
+      const title = $(element).find('title').text()
+      const link = $(element).find('link').text()
+      const description = $(element).find('description').text()
+      const pubDate = $(element).find('pubDate').text()
+      
+      // 이미지 추출 (여러 방법 시도)
+      let imageUrl = ''
+      
+      // 1. media:content 태그
+      const mediaContent = $(element).find('media\\:content, content')
+      if (mediaContent.length) {
+        imageUrl = mediaContent.attr('url') || mediaContent.attr('src') || ''
+      }
+      
+      // 2. media:thumbnail 태그
+      if (!imageUrl) {
+        const mediaThumbnail = $(element).find('media\\:thumbnail, thumbnail')
+        if (mediaThumbnail.length) {
+          imageUrl = mediaThumbnail.attr('url') || mediaThumbnail.attr('src') || ''
         }
       }
-    )
-    
-    console.log('r/PremierLeague response status:', response.status)
-    
-    if (!response.ok) {
-      console.error('❌ r/PremierLeague error:', response.status)
-      return []
-    }
-    
-    const data = await response.json()
-    if (!data.data?.children) return []
-    
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied && !post.is_self)
-    
-    console.log(`✅ r/PremierLeague: ${posts.length} posts`)
-    
-    return posts.slice(0, 15).map((post: any, index: number) => {
-      const article = createArticleFromPost(post, 'r/PremierLeague', index)
-      article.league = '프리미어리그'
-      if (!article.tags.includes('프리미어리그')) {
-        article.tags.push('프리미어리그')
+      
+      // 3. enclosure 태그
+      if (!imageUrl) {
+        const enclosure = $(element).find('enclosure')
+        if (enclosure.length && enclosure.attr('type')?.includes('image')) {
+          imageUrl = enclosure.attr('url') || ''
+        }
       }
-      return article
+      
+      // 4. description 내부 img 태그 찾기
+      if (!imageUrl && description) {
+        const imgMatch = description.match(/<img[^>]+src="([^">]+)"/i)
+        if (imgMatch && imgMatch[1]) {
+          imageUrl = imgMatch[1]
+        }
+      }
+      
+      // 5. content:encoded에서 이미지 추출
+      if (!imageUrl) {
+        const contentEncoded = $(element).find('content\\:encoded, encoded').text()
+        if (contentEncoded) {
+          const imgMatch = contentEncoded.match(/<img[^>]+src="([^">]+)"/i)
+          if (imgMatch && imgMatch[1]) {
+            imageUrl = imgMatch[1]
+          }
+        }
+      }
+      
+      // 6. 그래도 없으면 다양한 기본 이미지 사용
+      if (!imageUrl) {
+        // 기사마다 다른 이미지 (title 기반)
+        const titleHash = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        imageUrl = defaultImages[titleHash % defaultImages.length]
+      }
+      
+      const titleLower = title.toLowerCase()
+      
+      // 리그 감지
+      let league = '해외축구'
+      let tags: string[] = []
+      
+      if (titleLower.includes('premier league') || titleLower.includes('epl') ||
+          titleLower.includes('manchester') || titleLower.includes('liverpool') ||
+          titleLower.includes('chelsea') || titleLower.includes('arsenal') ||
+          titleLower.includes('tottenham')) {
+        league = '프리미어리그'
+        tags.push('프리미어리그')
+      } else if (titleLower.includes('la liga') || titleLower.includes('barcelona') ||
+                 titleLower.includes('real madrid')) {
+        league = '라리가'
+        tags.push('라리가')
+      } else if (titleLower.includes('bundesliga') || titleLower.includes('bayern')) {
+        league = '분데스리가'
+        tags.push('분데스리가')
+      } else if (titleLower.includes('serie a') || titleLower.includes('juventus')) {
+        league = '세리에A'
+        tags.push('세리에A')
+      } else if (titleLower.includes('champions league') || titleLower.includes('ucl')) {
+        league = '챔피언스리그'
+        tags.push('챔피언스리그')
+      }
+      
+      // 한국 선수
+      if (titleLower.includes('son') || titleLower.includes('heung-min')) {
+        tags.push('손흥민')
+        if (league === '해외축구') league = '프리미어리그'
+      } else if (titleLower.includes('lee kang') || titleLower.includes('kang-in')) {
+        tags.push('이강인')
+        if (league === '해외축구') league = '리그1'
+      } else if (titleLower.includes('kim min') || titleLower.includes('min-jae')) {
+        tags.push('김민재')
+        if (league === '해외축구') league = '분데스리가'
+      }
+      
+      let category = '뉴스'
+      if (titleLower.includes('transfer') || titleLower.includes('sign')) {
+        category = '이적'
+      } else if (titleLower.includes('goal') || titleLower.includes('win') ||
+                 titleLower.includes('lose') || titleLower.includes('draw')) {
+        category = '경기'
+      } else if (titleLower.includes('interview')) {
+        category = '인터뷰'
+      } else if (titleLower.includes('analysis') || titleLower.includes('tactical')) {
+        category = '분석'
+      }
+      
+      articles.push({
+        id: `${source}-${index}-${Date.now()}`,
+        title: title,
+        summary: description.replace(/<[^>]*>/g, '').substring(0, 200),
+        content: description.replace(/<[^>]*>/g, ''),
+        imageUrl,
+        category,
+        league,
+        author: source,
+        publishedAt: new Date(pubDate || Date.now()).toISOString(),
+        tags: tags.length > 0 ? tags : ['축구'],
+        views: Math.floor(Math.random() * 15000) + 5000,
+        likes: Math.floor(Math.random() * 1500) + 500,
+      })
     })
+    
+    console.log(`✅ ${source}: ${articles.length} articles`)
+    return articles
   } catch (error) {
-    console.error('❌ r/PremierLeague error:', error)
-    return []
-  }
-}
-
-// 3. r/LaLiga
-async function fetchRedditLaLiga(): Promise<NewsArticle[]> {
-  try {
-    const response = await fetch(
-      'https://www.reddit.com/r/LaLiga/hot.json?limit=20',
-      { 
-        next: { revalidate: 300 },
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }
-    )
-    
-    if (!response.ok) return []
-    const data = await response.json()
-    if (!data.data?.children) return []
-    
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied && !post.is_self)
-    
-    console.log(`✅ r/LaLiga: ${posts.length} posts`)
-    
-    return posts.slice(0, 10).map((post: any, index: number) => {
-      const article = createArticleFromPost(post, 'r/LaLiga', index)
-      article.league = '라리가'
-      if (!article.tags.includes('라리가')) {
-        article.tags.push('라리가')
-      }
-      return article
-    })
-  } catch (error) {
-    console.error('❌ r/LaLiga error:', error)
-    return []
-  }
-}
-
-// 4. r/Bundesliga
-async function fetchRedditBundesliga(): Promise<NewsArticle[]> {
-  try {
-    const response = await fetch(
-      'https://www.reddit.com/r/Bundesliga/hot.json?limit=20',
-      { 
-        next: { revalidate: 300 },
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }
-    )
-    
-    if (!response.ok) return []
-    const data = await response.json()
-    if (!data.data?.children) return []
-    
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied && !post.is_self)
-    
-    console.log(`✅ r/Bundesliga: ${posts.length} posts`)
-    
-    return posts.slice(0, 10).map((post: any, index: number) => {
-      const article = createArticleFromPost(post, 'r/Bundesliga', index)
-      article.league = '분데스리가'
-      if (!article.tags.includes('분데스리가')) {
-        article.tags.push('분데스리가')
-      }
-      return article
-    })
-  } catch (error) {
-    console.error('❌ r/Bundesliga error:', error)
-    return []
-  }
-}
-
-// 5. r/footballhighlights
-async function fetchRedditHighlights(): Promise<NewsArticle[]> {
-  try {
-    const response = await fetch(
-      'https://www.reddit.com/r/footballhighlights/hot.json?limit=20',
-      { 
-        next: { revalidate: 300 },
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }
-    )
-    
-    if (!response.ok) return []
-    const data = await response.json()
-    if (!data.data?.children) return []
-    
-    const posts = data.data.children
-      .map((child: any) => child.data)
-      .filter((post: any) => !post.stickied)
-    
-    console.log(`✅ r/footballhighlights: ${posts.length} posts`)
-    
-    return posts.slice(0, 10).map((post: any, index: number) => {
-      const article = createArticleFromPost(post, 'r/footballhighlights', index)
-      article.category = '경기'
-      if (!article.tags.includes('하이라이트')) {
-        article.tags.push('하이라이트')
-      }
-      return article
-    })
-  } catch (error) {
-    console.error('❌ r/footballhighlights error:', error)
+    console.error(`❌ ${source} error:`, error)
     return []
   }
 }
@@ -342,43 +211,28 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('⚽ Fetching from Reddit (5개 채널)...')
-    console.log('Environment:', process.env.NODE_ENV)
+    console.log('⚽ Fetching RSS Feeds...')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     
-    const [
-      soccerPosts,
-      plPosts,
-      laligaPosts,
-      bundesligaPosts,
-      highlightPosts
-    ] = await Promise.all([
-      fetchRedditSoccer(),
-      fetchRedditPremierLeague(),
-      fetchRedditLaLiga(),
-      fetchRedditBundesliga(),
-      fetchRedditHighlights()
+    // 신뢰할 수 있는 RSS 피드 소스
+    const [goalArticles, bbcArticles, skySportsArticles, espnArticles] = await Promise.all([
+      fetchRSSFeed('https://www.goal.com/feeds/news?fmt=rss&amp;ICID=HP', 'Goal.com'),
+      fetchRSSFeed('https://feeds.bbci.co.uk/sport/football/rss.xml', 'BBC Sport'),
+      fetchRSSFeed('https://www.skysports.com/rss/12040', 'Sky Sports'),
+      fetchRSSFeed('https://www.espn.com/espn/rss/soccer/news', 'ESPN')
     ])
     
     console.log('\n📊 Summary:')
-    console.log(`✅ r/soccer: ${soccerPosts.length}`)
-    console.log(`✅ r/PremierLeague: ${plPosts.length}`)
-    console.log(`✅ r/LaLiga: ${laligaPosts.length}`)
-    console.log(`✅ r/Bundesliga: ${bundesligaPosts.length}`)
-    console.log(`✅ r/footballhighlights: ${highlightPosts.length}`)
+    console.log(`✅ Goal.com: ${goalArticles.length}`)
+    console.log(`✅ BBC Sport: ${bbcArticles.length}`)
+    console.log(`✅ Sky Sports: ${skySportsArticles.length}`)
+    console.log(`✅ ESPN: ${espnArticles.length}`)
     
-    let allArticles = [
-      ...soccerPosts,
-      ...plPosts,
-      ...laligaPosts,
-      ...bundesligaPosts,
-      ...highlightPosts
-    ]
+    let allArticles = [...goalArticles, ...bbcArticles, ...skySportsArticles, ...espnArticles]
     
-    console.log(`\n📦 Total fetched: ${allArticles.length} posts`)
+    console.log(`\n📦 Total: ${allArticles.length} articles`)
     
     if (allArticles.length === 0) {
-      console.log('⚠️ WARNING: No articles fetched from any source!')
       return NextResponse.json({
         articles: [],
         hasMore: false,
@@ -386,40 +240,36 @@ export async function GET(request: NextRequest) {
         page,
         limit,
         sources: {
-          soccer: soccerPosts.length,
-          pl: plPosts.length,
-          laliga: laligaPosts.length,
-          bundesliga: bundesligaPosts.length,
-          highlights: highlightPosts.length
+          goal: 0,
+          bbc: 0,
+          sky: 0,
+          espn: 0
         }
       })
     }
+    
+    // 중복 제거
+    const seenTitles = new Set<string>()
+    allArticles = allArticles.filter(article => {
+      const titleKey = article.title.toLowerCase().substring(0, 50)
+      if (seenTitles.has(titleKey)) return false
+      seenTitles.add(titleKey)
+      return true
+    })
+    
+    console.log(`🔍 After dedup: ${allArticles.length} unique`)
     
     // 날짜순 정렬
     allArticles.sort((a, b) => 
       new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     )
     
-    // 중복 제거
-    const seenTitles = new Set<string>()
-    allArticles = allArticles.filter(article => {
-      const titleKey = article.title.toLowerCase().substring(0, 50)
-      if (seenTitles.has(titleKey)) {
-        return false
-      }
-      seenTitles.add(titleKey)
-      return true
-    })
-    
-    console.log(`🔍 After dedup: ${allArticles.length} unique posts`)
-    
-    // 페이지네이션
     const startIndex = (page - 1) * limit
     const endIndex = startIndex + limit
     const paginatedNews = allArticles.slice(startIndex, endIndex)
     const hasMore = endIndex < allArticles.length
     
-    console.log(`\n📄 Page ${page}: ${paginatedNews.length} articles (${allArticles.length} total)`)
+    console.log(`📄 Page ${page}: ${paginatedNews.length} articles`)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')
     
     return NextResponse.json({
@@ -429,16 +279,14 @@ export async function GET(request: NextRequest) {
       page,
       limit,
       sources: {
-        soccer: soccerPosts.length,
-        pl: plPosts.length,
-        laliga: laligaPosts.length,
-        bundesliga: bundesligaPosts.length,
-        highlights: highlightPosts.length
+        goal: goalArticles.length,
+        bbc: bbcArticles.length,
+        sky: skySportsArticles.length,
+        espn: espnArticles.length
       }
     })
   } catch (error) {
-    console.error('\n❌ API Error:', error)
-    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
+    console.error('❌ API Error:', error)
     
     return NextResponse.json({
       articles: [],
@@ -446,14 +294,12 @@ export async function GET(request: NextRequest) {
       total: 0,
       page: 1,
       limit: 10,
-      error: 'Failed to fetch from Reddit',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Failed to fetch',
       sources: {
-        soccer: 0,
-        pl: 0,
-        laliga: 0,
-        bundesliga: 0,
-        highlights: 0
+        goal: 0,
+        bbc: 0,
+        sky: 0,
+        espn: 0
       }
     })
   }
