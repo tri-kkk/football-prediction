@@ -1,25 +1,3 @@
-/**
- * Collect Highlights Cron Job
- * GET /api/cron/collect-highlights
- * 
- * TheSportsDB API에서 YouTube 하이라이트를 수집하여 Supabase에 저장
- * 
- * 실행 주기: 6시간마다 (하루 4회)
- * - 00:00, 06:00, 12:00, 18:00
- * 
- * Supabase Cron 설정:
- * SELECT cron.schedule(
- *   'collect-highlights',
- *   '0 */6 * * *',
- *   $$
- *   SELECT net.http_post(
- *     url := 'https://trendsoccer.com/api/cron/collect-highlights',
- *     headers := '{"Content-Type": "application/json"}'::jsonb
- *   ) AS request_id;
- *   $$
- * );
- */
-
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
