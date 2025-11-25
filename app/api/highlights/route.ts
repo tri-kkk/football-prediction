@@ -1,124 +1,139 @@
-/**
- * Match Highlights API
- * GET /api/highlights
- * 
- * Query Parameters:
- * - league: 리그 코드 (PL, PD, BL1, SA, FL1, CL, etc.)
- * - team: 팀 이름 (home_team 또는 away_team)
- * - date: 날짜 (YYYY-MM-DD)
- * - limit: 결과 개수 (기본: 20, 최대: 50)
- * - offset: 페이지네이션 오프셋 (기본: 0)
- */
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const runtime = 'nodejs'
 
-interface HighlightResponse {
-  highlights: Highlight[]
-  total: number
-  page: number
-  limit: number
-}
-
-interface Highlight {
-  id: number
-  homeTeam: string
-  awayTeam: string
-  league: string
-  matchDate: string
-  youtubeUrl: string
-  youtubeId: string
-  thumbnailUrl: string
-  videoTitle: string
-  views: number
-  duration: number
-  createdAt: string
-}
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const league = searchParams.get('league')
-    const team = searchParams.get('team')
-    const date = searchParams.get('date')
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50)
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const { searchParams } = new URL(request.url)
+    const limit = parseInt(searchParams.get('limit') || '8')
 
-    console.log('🎬 Fetching highlights:', { league, team, date, limit, offset })
-
-    // 기본 쿼리
-    let query = supabase
-      .from('match_highlights')
-      .select('*', { count: 'exact' })
-
-    // 필터 적용
-    if (league && league !== 'ALL') {
-      query = query.eq('league', league)
+    // 주요 리그 (실제 DB의 모든 변형 포함!)
+    const leagueGroups = {
+      'Premier League': ['Premier League', 'English Premier League'],
+      'La Liga': ['La Liga', 'Spanish La Liga'],
+      'Bundesliga': ['Bundesliga', 'German Bundesliga'],
+      'Serie A': ['Serie A', 'Italian Serie A'],
+      'Ligue 1': ['Ligue 1', 'French Ligue 1'],
+      'Champions League': ['Champions League', 'UEFA Champions League'],
     }
 
-    if (team) {
-      query = query.or(`home_team.ilike.%${team}%,away_team.ilike.%${team}%`)
-    }
-
-    if (date) {
-      query = query.eq('match_date', date)
-    }
-
-    // 정렬 및 페이지네이션
-    query = query
-      .order('match_date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
-
-    const { data, error, count } = await query
-
-    if (error) {
-      console.error('❌ Supabase error:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch highlights', details: error.message },
-        { status: 500 }
-      )
-    }
-
-    // 데이터 변환
-    const highlights: Highlight[] = (data || []).map((row) => ({
-      id: row.id,
-      homeTeam: row.home_team,
-      awayTeam: row.away_team,
-      league: row.league,
-      matchDate: row.match_date,
-      youtubeUrl: row.youtube_url,
-      youtubeId: row.youtube_id,
-      thumbnailUrl: row.thumbnail_url,
-      videoTitle: row.video_title,
-      views: row.views || 0,
-      duration: row.duration || 0,
-      createdAt: row.created_at,
-    }))
-
-    console.log(`✅ Found ${highlights.length} highlights (total: ${count})`)
-
-    const response: HighlightResponse = {
-      highlights,
-      total: count || 0,
-      page: Math.floor(offset / limit) + 1,
-      limit,
-    }
-
-    return NextResponse.json(response)
-  } catch (error) {
-    console.error('❌ Unexpected error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: String(error) },
-      { status: 500 }
+    // 모든 하이라이트를 한 번에 가져오기
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_highlights?select=*&order=created_at.desc&limit=100`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY || '',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
     )
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch from Supabase')
+    }
+
+    const allData = await response.json()
+
+    // 주요 리그만 필터링
+    const majorLeagueNames = Object.values(leagueGroups).flat()
+    const filteredData = allData.filter((item: any) => 
+      majorLeagueNames.includes(item.league)
+    )
+
+    console.log('📊 전체:', allData.length, '| 필터링:', filteredData.length)
+
+    // 리그별로 그룹화
+    const byLeague: { [key: string]: any[] } = {}
+    
+    filteredData.forEach((item: any) => {
+      // 리그명 통일 (English Premier League → Premier League)
+      let normalizedLeague = item.league
+      for (const [key, variants] of Object.entries(leagueGroups)) {
+        if (variants.includes(item.league)) {
+          normalizedLeague = key
+          break
+        }
+      }
+      
+      if (!byLeague[normalizedLeague]) {
+        byLeague[normalizedLeague] = []
+      }
+      byLeague[normalizedLeague].push(item)
+    })
+
+    // 각 리그에서 최대 2개씩 선택 (경기 날짜 최신순)
+    const selected: any[] = []
+    Object.keys(leagueGroups).forEach(leagueName => {
+      const items = (byLeague[leagueName] || [])
+        .sort((a, b) => {
+          const dateA = new Date(a.match_date || a.created_at)
+          const dateB = new Date(b.match_date || b.created_at)
+          return dateB.getTime() - dateA.getTime()
+        })
+      selected.push(...items.slice(0, 2))
+    })
+
+    // 경기 날짜 기준 최신순으로 정렬 후 limit만큼
+    const sortedHighlights = selected
+      .sort((a, b) => {
+        const dateA = new Date(a.match_date || a.created_at)
+        const dateB = new Date(b.match_date || b.created_at)
+        return dateB.getTime() - dateA.getTime()  // 최신순 (내림차순)
+      })
+      .slice(0, limit)
+
+    // 필드명 변환 + 리그명 통일
+    const highlights = sortedHighlights.map((item: any) => {
+      // 리그명 통일
+      let normalizedLeague = item.league
+      for (const [key, variants] of Object.entries(leagueGroups)) {
+        if (variants.includes(item.league)) {
+          normalizedLeague = key
+          break
+        }
+      }
+
+      return {
+        id: item.id,
+        matchId: item.match_id,
+        homeTeam: item.home_team,
+        awayTeam: item.away_team,
+        league: normalizedLeague,  // 통일된 이름
+        matchDate: item.match_date,
+        youtubeUrl: item.youtube_url,
+        youtubeId: item.youtube_id,
+        thumbnailUrl: item.thumbnail_url,
+        videoTitle: item.video_title,
+      }
+    })
+
+    console.log('✅ 하이라이트 API:', highlights.length, '개')
+    console.log('📊 리그 분포:', highlights.reduce((acc: any, h: any) => {
+      acc[h.league] = (acc[h.league] || 0) + 1
+      return acc
+    }, {}))
+    console.log('📅 날짜 순서:', highlights.map(h => 
+      `${h.homeTeam.split(' ')[0]} vs ${h.awayTeam.split(' ')[0]} (${h.matchDate})`
+    ))
+    
+    return NextResponse.json({
+      success: true,
+      highlights,
+      total: highlights.length,
+    })
+
+  } catch (error: any) {
+    console.error('❌ Highlights API 에러:', error)
+    
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+      highlights: [],
+      total: 0,
+    }, { status: 500 })
   }
 }

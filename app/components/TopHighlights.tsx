@@ -9,8 +9,9 @@ interface Highlight {
   awayTeam: string
   league: string
   matchDate: string
+  youtubeUrl: string      // ⭐ 추가!
   youtubeId: string
-  youtube_url: string
+  youtube_url: string     // fallback
   thumbnailUrl: string
   videoTitle: string
 }
@@ -30,13 +31,14 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
   const fetchHighlights = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/highlights?limit=12')
+      const response = await fetch('/api/highlights?limit=8')
       
       if (!response.ok) {
         throw new Error('Failed to fetch highlights')
       }
 
       const data = await response.json()
+      console.log('🎬 하이라이트 데이터:', data.highlights?.[0]) // 디버깅용
       setHighlights(data.highlights || [])
     } catch (error) {
       console.error('Error fetching highlights:', error)
@@ -54,11 +56,11 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
         </div>
         
         {/* 모바일: 수평 스크롤 / PC: 그리드 */}
-        <div className="lg:grid lg:grid-cols-8 lg:gap-2 flex lg:flex-none overflow-x-auto gap-3 pb-2 scrollbar-hide">
+        <div className="lg:grid lg:grid-cols-8 lg:gap-2 flex flex-nowrap lg:flex-none overflow-x-auto gap-2.5 pb-2 scrollbar-hide">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <div 
               key={i}
-              className={`rounded overflow-hidden animate-pulse flex-shrink-0 w-[140px] lg:w-auto ${
+              className={`rounded overflow-hidden animate-pulse flex-shrink-0 w-[160px] lg:w-auto ${
                 darkMode ? 'bg-slate-800' : 'bg-gray-200'
               }`}
             >
@@ -88,14 +90,23 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
 
       {/* 하이라이트 그리드 
           모바일: 한 줄 수평 스크롤
-          PC: 8열 그리드
+          PC: 8열 그리드 (8개)
       */}
-      <div className="lg:grid lg:grid-cols-8 lg:gap-2 flex lg:flex-none overflow-x-auto gap-3 pb-2 scrollbar-hide">
+      <div className="lg:grid lg:grid-cols-8 lg:gap-2 flex flex-nowrap lg:flex-none overflow-x-auto gap-2.5 pb-2 scrollbar-hide">
         {highlights.map((highlight) => (
           <div
             key={highlight.id}
-            onClick={() => window.open(highlight.youtube_url, '_blank')}
-            className={`group cursor-pointer rounded overflow-hidden transition-all hover:scale-105 hover:shadow-lg flex-shrink-0 w-[140px] lg:w-auto ${
+            onClick={() => {
+              // 여러 필드명 시도 (camelCase, snake_case)
+              const youtubeUrl = 
+                highlight.youtubeUrl || 
+                highlight.youtube_url || 
+                `https://www.youtube.com/watch?v=${highlight.youtubeId}`
+              
+              console.log('🎬 클릭:', youtubeUrl)
+              window.open(youtubeUrl, '_blank')
+            }}
+            className={`group cursor-pointer rounded overflow-hidden transition-all hover:scale-105 hover:shadow-lg flex-shrink-0 w-[160px] lg:w-auto ${
               darkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white hover:bg-gray-50'
             }`}
           >
@@ -145,11 +156,13 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
         ))}
       </div>
 
-      {/* CSS: 스크롤바 숨기기 */}
+      {/* CSS: 스크롤바 숨기기 + 부드러운 스크롤 */}
       <style jsx>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+          scroll-behavior: smooth;
         }
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
