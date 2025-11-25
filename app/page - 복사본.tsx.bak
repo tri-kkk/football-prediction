@@ -1631,45 +1631,49 @@ export default function Home() {
               <div className={`rounded-2xl p-4 ${
                 darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
               }`}>
-                <h2 className={`text-lg font-bold mb-4 ${
-                  darkMode ? 'text-white' : 'text-gray-900'
+                <h2 className={`text-sm font-bold mb-3 px-4 ${
+                  darkMode ? 'text-gray-500' : 'text-gray-500'
                 }`}>
-                  {currentLanguage === 'ko' ? '인기 리그' : 'Popular Leagues'}
+                  {currentLanguage === 'ko' ? '리그 선택' : 'SELECT LEAGUE'}
                 </h2>
-                <nav className="space-y-2">
+                <nav className="space-y-1">
                   {LEAGUES
                     .filter(league => LEAGUES_WITH_ODDS.includes(league.code))
-                    .map((league) => (
-                    <button
-                      key={league.code}
-                      onClick={() => setSelectedLeague(league.code)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-left ${
-                        selectedLeague === league.code
-                          ? darkMode 
-                            ? 'bg-white text-black shadow-lg'
-                            : 'bg-black text-white shadow-lg'
-                          : darkMode
-                            ? 'text-gray-300 hover:bg-gray-800'
-                            : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      {league.isEmoji ? (
-                        <span className="text-2xl">{league.logo}</span>
-                      ) : (
-                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1 flex-shrink-0">
-                          <img 
-                            src={league.logo} 
-                            alt={league.name}
-                            className="w-full h-full object-contain"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        </div>
-                      )}
-                      <span className="text-sm">{currentLanguage === 'ko' ? league.name : league.nameEn}</span>
-                    </button>
-                  ))}
+                    .map((league) => {
+                      return (
+                        <button
+                          key={league.code}
+                          onClick={() => setSelectedLeague(league.code)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all text-left group ${
+                            selectedLeague === league.code
+                              ? 'bg-[#A3FF4C] text-gray-900'
+                              : darkMode
+                                ? 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
+                                : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {league.isEmoji ? (
+                            <span className="text-xl">{league.logo}</span>
+                          ) : (
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center p-1 flex-shrink-0 ${
+                              selectedLeague === league.code ? 'bg-white/90' : 'bg-white'
+                            }`}>
+                              <img 
+                                src={league.logo} 
+                                alt={league.name}
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            </div>
+                          )}
+                          <span className="text-sm flex-1 truncate">
+                            {currentLanguage === 'ko' ? league.name : league.nameEn}
+                          </span>
+                        </button>
+                      )
+                    })}
                 </nav>
               </div>
 
@@ -1742,35 +1746,135 @@ export default function Home() {
               </div>
             </div>
 
-        {/* 날짜 필터 */}
-        <div className="mb-6">
-          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2 px-2">
-            {[
-              { value: 'today', labelKo: '오늘', labelEn: 'Today' },
-              { value: 'tomorrow', labelKo: '내일', labelEn: 'Tomorrow' },
-              { value: 'week', labelKo: '이번 주', labelEn: 'This Week' },
-              { value: 'upcoming', labelKo: '다가오는 경기', labelEn: 'Upcoming' }
-            ].map((date) => (
-              <button
-                key={date.value}
-                onClick={() => {
-                  setSelectedDate(date.value)
-                  setCurrentPage(1) // 날짜 변경 시 1페이지로 리셋
-                  setShowFallbackBanner(false) // 배너 숨김
+        {/* 날짜 필터 - 글로벌 스탠다드 */}
+        <div className="mb-8">
+          <div className="max-w-3xl mx-auto">
+            {/* 세그먼트 컨트롤 */}
+            <div className={`
+              relative p-1 rounded-xl backdrop-blur-sm
+              ${darkMode 
+                ? 'bg-gray-900/50 border border-gray-800' 
+                : 'bg-gray-100 border border-gray-200'
+              }
+            `}>
+              {/* 슬라이딩 배경 */}
+              <div 
+                className="absolute top-1 bottom-1 rounded-lg bg-[#A3FF4C] transition-all duration-300 ease-out"
+                style={{
+                  left: `${
+                    selectedDate === 'today' ? '0.25rem' :
+                    selectedDate === 'tomorrow' ? 'calc(25% + 0.25rem)' :
+                    selectedDate === 'week' ? 'calc(50% + 0.25rem)' :
+                    'calc(75% + 0.25rem)'
+                  }`,
+                  width: 'calc(25% - 0.5rem)'
                 }}
-                className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                  selectedDate === date.value
-                    ? darkMode 
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'bg-blue-500 text-white shadow-lg'
-                    : darkMode
-                      ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-                }`}
-              >
-                {currentLanguage === 'ko' ? date.labelKo : date.labelEn}
-              </button>
-            ))}
+              />
+
+              {/* 버튼들 */}
+              <div className="relative grid grid-cols-4 gap-1">
+                {[
+                  { value: 'today', labelKo: '오늘', labelEn: 'Today' },
+                  { value: 'tomorrow', labelKo: '내일', labelEn: 'Tomorrow' },
+                  { value: 'week', labelKo: '이번 주', labelEn: 'This Week' },
+                  { value: 'upcoming', labelKo: '전체', labelEn: 'All Matches' }
+                ].map((date) => {
+                  const isActive = selectedDate === date.value
+                  
+                  // 경기 수 계산
+                  const matchCount = (() => {
+                    const now = new Date()
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+                    const tomorrow = new Date(today)
+                    tomorrow.setDate(tomorrow.getDate() + 1)
+                    const weekEnd = new Date(today)
+                    weekEnd.setDate(weekEnd.getDate() + 7)
+                    
+                    return matches.filter(match => {
+                      const matchDate = new Date(match.utcDate)
+                      if (date.value === 'today') {
+                        return matchDate >= today && matchDate < tomorrow
+                      } else if (date.value === 'tomorrow') {
+                        const dayAfter = new Date(tomorrow)
+                        dayAfter.setDate(dayAfter.getDate() + 1)
+                        return matchDate >= tomorrow && matchDate < dayAfter
+                      } else if (date.value === 'week') {
+                        return matchDate >= today && matchDate < weekEnd
+                      }
+                      return true
+                    }).length
+                  })()
+
+                  return (
+                    <button
+                      key={date.value}
+                      onClick={() => {
+                        setSelectedDate(date.value)
+                        setCurrentPage(1)
+                        setShowFallbackBanner(false)
+                      }}
+                      className="relative py-3 px-2 rounded-lg transition-all duration-200 z-10"
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        {/* 라벨 */}
+                        <span className={`
+                          text-xs md:text-sm font-semibold transition-colors
+                          ${isActive 
+                            ? 'text-gray-900' 
+                            : darkMode ? 'text-gray-400' : 'text-gray-600'
+                          }
+                        `}>
+                          {currentLanguage === 'ko' ? date.labelKo : date.labelEn}
+                        </span>
+                        
+                        {/* 경기 수 */}
+                        <span className={`
+                          text-[10px] md:text-xs font-bold tabular-nums
+                          ${isActive 
+                            ? 'text-gray-800' 
+                            : darkMode ? 'text-gray-600' : 'text-gray-400'
+                          }
+                        `}>
+                          {matchCount} {currentLanguage === 'ko' ? '경기' : 'matches'}
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 날짜 정보 표시 (선택사항) */}
+            <div className="flex items-center justify-center gap-2 mt-3 text-xs text-gray-500">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>
+                {(() => {
+                  const now = new Date()
+                  const options: Intl.DateTimeFormatOptions = { 
+                    month: 'short', 
+                    day: 'numeric',
+                    timeZone: 'Asia/Seoul'
+                  }
+                  const today = now.toLocaleDateString(currentLanguage === 'ko' ? 'ko-KR' : 'en-US', options)
+                  
+                  if (selectedDate === 'today') {
+                    return currentLanguage === 'ko' ? `${today} 경기` : `Matches on ${today}`
+                  } else if (selectedDate === 'tomorrow') {
+                    const tomorrow = new Date(now)
+                    tomorrow.setDate(tomorrow.getDate() + 1)
+                    const tomorrowStr = tomorrow.toLocaleDateString(currentLanguage === 'ko' ? 'ko-KR' : 'en-US', options)
+                    return currentLanguage === 'ko' ? `${tomorrowStr} 경기` : `Matches on ${tomorrowStr}`
+                  } else if (selectedDate === 'week') {
+                    return currentLanguage === 'ko' ? '다음 7일간의 경기' : 'Next 7 days'
+                  } else {
+                    return currentLanguage === 'ko' ? '모든 예정된 경기' : 'All upcoming matches'
+                  }
+                })()}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -1974,7 +2078,7 @@ export default function Home() {
                                         {/* 시간 + 날짜 */}
                                         <div className="w-16 md:w-20 flex-shrink-0">
                                           <div className={`text-sm md:text-base font-bold tabular-nums ${
-                                            isExpanded ? 'text-emerald-400' : darkMode ? 'text-gray-400' : 'text-gray-600'
+                                            isExpanded ? 'text-[#A3FF4C]' : darkMode ? 'text-gray-400' : 'text-gray-600'
                                           }`}>
                                             {formatTime(match.utcDate)}
                                           </div>
@@ -2004,7 +2108,7 @@ export default function Home() {
                                         <div className="w-20 md:w-24 flex-shrink-0 flex justify-center">
                                           <div className={`text-xs font-bold px-3 py-1 rounded ${
                                             isExpanded 
-                                              ? 'bg-emerald-500/20 text-emerald-400' 
+                                              ? 'bg-[#A3FF4C]/20 text-[#A3FF4C] border border-[#A3FF4C]/30' 
                                               : darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-500'
                                           }`}>
                                             VS
@@ -2032,7 +2136,7 @@ export default function Home() {
                                         <div className="w-6 flex-shrink-0 flex justify-end">
                                           <svg 
                                             className={`w-4 h-4 transition-transform duration-300 ${
-                                              isExpanded ? 'rotate-180 text-emerald-400' : darkMode ? 'text-gray-600' : 'text-gray-400'
+                                              isExpanded ? 'rotate-180 text-[#A3FF4C]' : darkMode ? 'text-gray-600' : 'text-gray-400'
                                             }`}
                                             fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                           >
@@ -2043,7 +2147,7 @@ export default function Home() {
 
                                       {/* ━━━ 확장된 상세 정보 ━━━ */}
                                       {isExpanded && (
-                                        <div className="border-t border-emerald-900/30 animate-fadeIn">
+                                        <div className="border-t border-[#A3FF4C]/20 animate-fadeIn">
                                           {/* 승률 바 */}
                                           <div className="px-4 py-4">
                                             <div className="flex h-2 rounded-full overflow-hidden bg-gray-900 mb-3">
@@ -2086,7 +2190,7 @@ export default function Home() {
                                                 setSelectedMatchForLineup(match)
                                                 setLineupModalOpen(true)
                                               }}
-                                              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all"
+                                              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#A3FF4C] hover:bg-[#92FF3A] text-gray-900 text-sm font-semibold transition-all"
                                             >
                                               <span>⚽</span>
                                               <span>{currentLanguage === 'ko' ? '라인업' : 'Lineup'}</span>
@@ -2094,7 +2198,7 @@ export default function Home() {
                                           </div>
 
                                           {/* AI 경기 예측 분석 */}
-                                          <div className="border-t border-emerald-900/30">
+                                          <div className="border-t border-[#A3FF4C]/20">
                                             <MatchPrediction
                                               fixtureId={match.id}
                                               homeTeam={match.homeTeam}
@@ -2123,7 +2227,7 @@ export default function Home() {
               <div className="flex flex-col items-center gap-4 mt-10 mb-6">
                 {/* 페이지 정보 - 상단 */}
                 <div className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                  <span className="text-emerald-500 font-bold">{totalMatches}</span>
+                  <span className="text-[#A3FF4C] font-bold">{totalMatches}</span>
                   {currentLanguage === 'ko' ? ' 경기 중 ' : ' matches • '}
                   <span className="font-medium">{currentPage}</span>
                   <span className="mx-1">/</span>
@@ -2166,7 +2270,7 @@ export default function Home() {
                             className={`
                               w-10 h-10 rounded-full font-medium text-sm transition-all duration-200
                               ${isActive
-                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-110'
+                                ? 'bg-[#A3FF4C] text-gray-900 scale-110'
                                 : darkMode
                                   ? 'text-gray-400 hover:text-white hover:bg-gray-800'
                                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -2208,7 +2312,7 @@ export default function Home() {
                 {/* 프로그레스 바 */}
                 <div className="w-48 h-1 bg-gray-800 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-300"
+                    className="h-full bg-gradient-to-r from-[#A3FF4C] to-[#62F4FF] rounded-full transition-all duration-300"
                     style={{ width: `${(currentPage / totalPages) * 100}%` }}
                   />
                 </div>
@@ -2308,13 +2412,14 @@ export default function Home() {
                 </div>
 
                 {/* 테이블 헤더 */}
-                <div className={`px-4 py-2 flex items-center text-xs font-semibold ${
-                  darkMode ? 'text-gray-500 bg-[#0f0f0f]' : 'text-gray-600 bg-gray-50'
+                <div className={`px-4 py-3 flex items-center text-xs font-bold tracking-wide ${
+                  darkMode ? 'text-gray-500 bg-[#0f0f0f] border-b border-gray-800' : 'text-gray-500 bg-gray-50 border-b border-gray-200'
                 }`}>
                   <div className="w-8">#</div>
-                  <div className="flex-1">{currentLanguage === 'ko' ? '경기' : 'Matches'}</div>
-                  <div className="w-12 text-center">=</div>
-                  <div className="w-12 text-right">{currentLanguage === 'ko' ? '승점' : 'Pts'}</div>
+                  <div className="flex-1">{currentLanguage === 'ko' ? '팀명' : 'TEAM'}</div>
+                  <div className="w-12 text-center">{currentLanguage === 'ko' ? '경기' : 'MP'}</div>
+                  <div className="w-12 text-center">{currentLanguage === 'ko' ? '득실' : 'GD'}</div>
+                  <div className="w-12 text-right">{currentLanguage === 'ko' ? '승점' : 'PTS'}</div>
                 </div>
 
                 {/* 순위표 내용 */}
@@ -2432,13 +2537,14 @@ export default function Home() {
                 </div>
 
                 {/* 테이블 헤더 */}
-                <div className={`px-4 py-2 flex items-center text-xs font-semibold ${
-                  darkMode ? 'text-gray-500 bg-[#0f0f0f]' : 'text-gray-600 bg-gray-50'
+                <div className={`px-4 py-3 flex items-center text-xs font-bold tracking-wide ${
+                  darkMode ? 'text-gray-500 bg-[#0f0f0f] border-b border-gray-800' : 'text-gray-500 bg-gray-50 border-b border-gray-200'
                 }`}>
                   <div className="w-8">#</div>
-                  <div className="flex-1">{currentLanguage === 'ko' ? '경기' : 'Matches'}</div>
-                  <div className="w-12 text-center">=</div>
-                  <div className="w-12 text-right">{currentLanguage === 'ko' ? '승점' : 'Pts'}</div>
+                  <div className="flex-1">{currentLanguage === 'ko' ? '팀명' : 'TEAM'}</div>
+                  <div className="w-12 text-center">{currentLanguage === 'ko' ? '경기' : 'MP'}</div>
+                  <div className="w-12 text-center">{currentLanguage === 'ko' ? '득실' : 'GD'}</div>
+                  <div className="w-12 text-right">{currentLanguage === 'ko' ? '승점' : 'PTS'}</div>
                 </div>
 
                 {/* 순위표 내용 */}
