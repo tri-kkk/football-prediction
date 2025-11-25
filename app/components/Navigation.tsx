@@ -13,7 +13,7 @@ interface MenuItem {
   icon: string
   badge?: string
   disabled?: boolean
-  hidden?: boolean  // 추가
+  hidden?: boolean
 }
 
 const menuItems: MenuItem[] = [
@@ -41,6 +41,13 @@ const menuItems: MenuItem[] = [
     labelEn: 'Article',
     href: '/blog', 
     icon: '/article.svg'
+  },
+  { 
+    labelKo: '피드',
+    labelEn: 'Feed',
+    href: '/magazine', 
+    icon: 'feed', // inline SVG 사용
+    
   },
 ]
 
@@ -75,13 +82,28 @@ export default function Navigation() {
               onClick={(e) => isDisabled && e.preventDefault()}
             >
               <div className={`relative ${isActive ? 'opacity-100' : 'opacity-60'}`}>
-                <Image 
-                  src={item.icon} 
-                  alt={item.labelEn}
-                  width={20} 
-                  height={20}
-                  className={isActive ? 'brightness-125' : ''}
-                />
+                {item.icon === 'feed' ? (
+                  // Inline RSS Feed SVG with explicit colors
+                  <svg 
+                    width="20" 
+                    height="20" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className={isActive ? 'brightness-125' : ''}
+                  >
+                    <circle cx="6.18" cy="17.82" r="2.18" fill={isActive ? '#ffffff' : '#9ca3af'}/>
+                    <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z" fill={isActive ? '#ffffff' : '#9ca3af'}/>
+                  </svg>
+                ) : (
+                  <Image 
+                    src={item.icon} 
+                    alt={item.labelEn}
+                    width={20} 
+                    height={20}
+                    className={isActive ? 'brightness-125' : ''}
+                  />
+                )}
               </div>
               <span className="text-sm">
                 {language === 'ko' ? item.labelKo : item.labelEn}
@@ -147,13 +169,28 @@ export default function Navigation() {
                     }}
                   >
                     <div className={`relative ${isActive ? 'opacity-100' : 'opacity-60'}`}>
-                      <Image 
-                        src={item.icon} 
-                        alt={item.labelEn}
-                        width={20} 
-                        height={20}
-                        className={isActive ? 'brightness-125' : ''}
-                      />
+                      {item.icon === 'feed' ? (
+                        // Inline RSS Feed SVG with explicit colors
+                        <svg 
+                          width="20" 
+                          height="20" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          className={isActive ? 'brightness-125' : ''}
+                        >
+                          <circle cx="6.18" cy="17.82" r="2.18" fill={isActive ? '#ffffff' : '#d1d5db'}/>
+                          <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z" fill={isActive ? '#ffffff' : '#d1d5db'}/>
+                        </svg>
+                      ) : (
+                        <Image 
+                          src={item.icon} 
+                          alt={item.labelEn}
+                          width={20} 
+                          height={20}
+                          className={isActive ? 'brightness-125' : ''}
+                        />
+                      )}
                     </div>
                     <span className="flex-1">{language === 'ko' ? item.labelKo : item.labelEn}</span>
                     

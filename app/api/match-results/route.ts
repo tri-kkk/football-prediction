@@ -29,6 +29,57 @@ async function getFinishedMatches(leagueId: number, season: number, from: string
   }
 }
 
+// API-Football 통계 가져오기
+async function getMatchStatistics(matchId: string) {
+  try {
+    const response = await fetch(
+      `https://v3.football.api-sports.io/fixtures/statistics?fixture=${matchId}`,
+      {
+        headers: {
+          'x-rapidapi-key': process.env.API_FOOTBALL_KEY!,
+          'x-rapidapi-host': 'v3.football.api-sports.io'
+        }
+      }
+    )
+    
+    if (!response.ok) return null
+    
+    const data = await response.json()
+    if (!data.response || data.response.length < 2) return null
+    
+    const homeStats = data.response[0].statistics
+    const awayStats = data.response[1].statistics
+    
+    // 통계 매핑
+    const findStat = (stats: any[], type: string) => {
+      const stat = stats.find((s: any) => s.type === type)
+      return stat ? stat.value : null
+    }
+    
+    return {
+      shots_total_home: findStat(homeStats, 'Total Shots'),
+      shots_total_away: findStat(awayStats, 'Total Shots'),
+      shots_on_goal_home: findStat(homeStats, 'Shots on Goal'),
+      shots_on_goal_away: findStat(awayStats, 'Shots on Goal'),
+      possession_home: parseInt(findStat(homeStats, 'Ball Possession')?.replace('%', '') || '0'),
+      possession_away: parseInt(findStat(awayStats, 'Ball Possession')?.replace('%', '') || '0'),
+      pass_accuracy_home: parseInt(findStat(homeStats, 'Passes %')?.replace('%', '') || '0'),
+      pass_accuracy_away: parseInt(findStat(awayStats, 'Passes %')?.replace('%', '') || '0'),
+      fouls_home: findStat(homeStats, 'Fouls'),
+      fouls_away: findStat(awayStats, 'Fouls'),
+      yellow_cards_home: findStat(homeStats, 'Yellow Cards'),
+      yellow_cards_away: findStat(awayStats, 'Yellow Cards'),
+      offsides_home: findStat(homeStats, 'Offsides'),
+      offsides_away: findStat(awayStats, 'Offsides'),
+      corners_home: findStat(homeStats, 'Corner Kicks'),
+      corners_away: findStat(awayStats, 'Corner Kicks'),
+    }
+  } catch (error) {
+    console.error('❌ Error fetching statistics:', error)
+    return null
+  }
+}
+
 // 리그 코드 → API-Football ID 매핑
 const LEAGUE_IDS: Record<string, { id: number, season: number }> = {
   'CL': { id: 2, season: 2025 },
@@ -131,13 +182,63 @@ export async function GET(request: NextRequest) {
       new Date(b.match_date).getTime() - new Date(a.match_date).getTime()
     )
     
-    console.log(`✅ Returning ${formattedMatches.length} matches`)
-    console.log(`📦 Sample match:`, formattedMatches[0])
+    // 통계 추가 (요청시)
+    let matches = formattedMatches
+    const includeStats = searchParams.get('stats') === 'true'
+    
+    if (includeStats && matches.length > 0) {
+      console.log(`📈 Fetching statistics for matches...`)
+      
+      // 리그별로 그룹화하여 각 리그에서 최대 10개씩 통계 가져오기
+      const matchesByLeague: Record<string, any[]> = {}
+      formattedMatches.forEach(match => {
+        if (!matchesByLeague[match.league]) {
+          matchesByLeague[match.league] = []
+        }
+        matchesByLeague[match.league].push(match)
+      })
+      
+      // 각 리그에서 최대 10개씩 통계 가져오기
+      const matchesForStats: any[] = []
+      Object.keys(matchesByLeague).forEach(leagueCode => {
+        const leagueMatches = matchesByLeague[leagueCode].slice(0, 10)
+        matchesForStats.push(...leagueMatches)
+      })
+      
+      console.log(`📊 Fetching stats for ${matchesForStats.length} matches across ${Object.keys(matchesByLeague).length} leagues`)
+      
+      // 통계 가져오기
+      const statsMap = new Map()
+      await Promise.all(
+        matchesForStats.map(async (match: any) => {
+          try {
+            const statistics = await getMatchStatistics(match.match_id)
+            if (statistics) {
+              statsMap.set(match.match_id, statistics)
+            }
+          } catch (error) {
+            console.error(`Failed to fetch stats for ${match.match_id}:`, error)
+          }
+        })
+      )
+      
+      // 모든 경기에 통계 매핑
+      matches = formattedMatches.map(match => ({
+        ...match,
+        statistics: statsMap.get(match.match_id) || null
+      }))
+      
+      const statsCount = Array.from(statsMap.values()).filter(s => s).length
+      console.log(`✅ Added statistics to ${statsCount} matches`)
+    }
+    
+    console.log(`✅ Returning ${matches.length} matches`)
+    console.log(`📦 Sample match:`, matches[0])
     
     return NextResponse.json({
       success: true,
-      matches: formattedMatches,
-      count: formattedMatches.length
+      matches,
+      count: matches.length
     })
   } catch (error) {
     console.error('❌ Error in match-results API:', error)
