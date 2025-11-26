@@ -1,0 +1,57 @@
+# Forebet Blog Auto-Publisher
+# 매일 KST 9시 (UTC 0시) 자동 실행
+
+name: Forebet Blog Publisher
+
+on:
+  schedule:
+    # 매일 UTC 0시 = KST 9시
+    - cron: '0 0 * * *'
+  
+  # 수동 실행 가능
+  workflow_dispatch:
+
+jobs:
+  scrape-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: 📦 Install dependencies
+        working-directory: ./scripts/forebet-scraper
+        run: npm install
+      
+      - name: 🔍 Run Scraper
+        working-directory: ./scripts/forebet-scraper
+        run: node scraper.js
+        continue-on-error: false
+      
+      - name: 🤖 Run AI Processor
+        working-directory: ./scripts/forebet-scraper
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node ai-processor.js
+        continue-on-error: false
+      
+      - name: 📤 Upload to Supabase
+        working-directory: ./scripts/forebet-scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node supabase-uploader.js
+      
+      - name: 🧹 Cleanup
+        working-directory: ./scripts/forebet-scraper
+        run: |
+          rm -f scraped-previews.json
+          rm -f processed-previews.json
+      
+      - name: ✅ Done
+        run: echo "Blog posts published successfully!"
