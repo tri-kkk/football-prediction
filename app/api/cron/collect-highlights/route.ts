@@ -1,172 +1,163 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+// TheSportsDB API (무료)
+const THESPORTSDB_API_URL = 'https://www.thesportsdb.com/api/v1/json/3'
 
-const THESPORTSDB_API_KEY = process.env.THESPORTSDB_API_KEY || '166885'
+// Supabase 설정
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// 주요 리그 (축구만)
-const TARGET_LEAGUES: { [key: string]: string } = {
-  'PL': '4328',      // Premier League
-  'PD': '4335',      // La Liga
-  'BL1': '4331',     // Bundesliga
-  'SA': '4332',      // Serie A
-  'FL1': '4334',     // Ligue 1
-  'CL': '4480',      // Champions League
-  'EL': '4481',      // Europa League
+// 주요 리그 ID (TheSportsDB)
+const LEAGUES = [
+  { id: '4328', name: 'English Premier League' },
+  { id: '4335', name: 'Spanish La Liga' },
+  { id: '4331', name: 'German Bundesliga' },
+  { id: '4332', name: 'Italian Serie A' },
+  { id: '4334', name: 'French Ligue 1' },
+  { id: '4480', name: 'UEFA Champions League' },
+]
+
+interface Event {
+  idEvent: string
+  strEvent: string
+  strHomeTeam: string
+  strAwayTeam: string
+  strLeague: string
+  dateEvent: string
+  strVideo?: string
+  strThumb?: string
 }
 
 export async function GET(request: NextRequest) {
+  console.log('🎬 하이라이트 수집 시작...')
   const startTime = Date.now()
   
   try {
-    const stats = {
-      totalMatches: 0,
-      matchesWithVideo: 0,
-      newHighlights: 0,
-      duplicates: 0,
-      errors: 0,
-      leagueStats: {} as { [key: string]: number }
-    }
+    let totalCollected = 0
+    let totalSkipped = 0
+    const results: any[] = []
 
-    console.log('🎬 하이라이트 수집 시작 (2단계 방식)')
-    console.log('🏆 대상 리그:', Object.keys(TARGET_LEAGUES))
-
-    // 각 리그별로 최근 경기 조회
-    for (const [leagueCode, leagueId] of Object.entries(TARGET_LEAGUES)) {
-      console.log(`\n🏆 ${leagueCode} 확인 중...`)
-      stats.leagueStats[leagueCode] = 0
-
+    for (const league of LEAGUES) {
+      console.log(`📊 ${league.name} 수집 중...`)
+      
       try {
-        // ⭐ 리그별 최근 15경기 조회
-        const url = `https://www.thesportsdb.com/api/v1/json/${THESPORTSDB_API_KEY}/eventspastleague.php?id=${leagueId}`
-        
-        const response = await fetch(url)
+        // TheSportsDB에서 최근 경기 결과 가져오기
+        const response = await fetch(
+          `${THESPORTSDB_API_URL}/eventspastleague.php?id=${league.id}`
+        )
         
         if (!response.ok) {
-          console.error(`   ❌ API 호출 실패:`, response.status)
-          stats.errors++
+          console.log(`❌ ${league.name} API 실패: ${response.status}`)
           continue
         }
-
+        
         const data = await response.json()
-        const events = data.events || []
-
-        console.log(`   ✅ ${events.length}개 최근 경기`)
-        stats.totalMatches += events.length
-
-        // 각 경기 처리
-        for (const event of events) {
-          // 필수 필드 확인
-          if (!event.strHomeTeam || !event.strAwayTeam || !event.dateEvent) {
-            continue
-          }
-
-          // YouTube URL 확인
-          if (!event.strVideo) {
-            continue
-          }
-
-          stats.matchesWithVideo++
-
+        const events: Event[] = data.events || []
+        
+        // 하이라이트 있는 경기만 필터링
+        const eventsWithVideo = events.filter(e => e.strVideo && e.strVideo.includes('youtube'))
+        
+        console.log(`  - 전체 경기: ${events.length}, 하이라이트: ${eventsWithVideo.length}`)
+        
+        for (const event of eventsWithVideo.slice(0, 5)) { // 리그당 최대 5개
           // YouTube ID 추출
+          const youtubeUrl = event.strVideo || ''
           let youtubeId = ''
-          const videoUrl = event.strVideo
-
-          if (videoUrl.includes('youtube.com/watch?v=')) {
-            youtubeId = videoUrl.split('v=')[1]?.split('&')[0] || ''
-          } else if (videoUrl.includes('youtu.be/')) {
-            youtubeId = videoUrl.split('youtu.be/')[1]?.split('?')[0] || ''
+          
+          if (youtubeUrl.includes('youtube.com/watch?v=')) {
+            youtubeId = youtubeUrl.split('v=')[1]?.split('&')[0] || ''
+          } else if (youtubeUrl.includes('youtu.be/')) {
+            youtubeId = youtubeUrl.split('youtu.be/')[1]?.split('?')[0] || ''
           }
-
-          if (!youtubeId) {
-            continue
+          
+          if (!youtubeId) continue
+          
+          // 중복 체크
+          const checkResponse = await fetch(
+            `${SUPABASE_URL}/rest/v1/match_highlights?match_id=eq.${event.idEvent}&select=id`,
+            {
+              headers: {
+                'apikey': SUPABASE_SERVICE_KEY || '',
+                'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+              },
+            }
+          )
+          
+          if (checkResponse.ok) {
+            const existing = await checkResponse.json()
+            if (existing.length > 0) {
+              totalSkipped++
+              continue
+            }
           }
-
-          // Supabase 저장
+          
+          // DB에 저장
           const highlightData = {
-            match_id: parseInt(event.idEvent),
-            event_id: event.idEvent,
+            match_id: event.idEvent,
             home_team: event.strHomeTeam,
             away_team: event.strAwayTeam,
-            league: event.strLeague,
+            league: league.name,
             match_date: event.dateEvent,
-            youtube_url: videoUrl,
+            youtube_url: youtubeUrl,
             youtube_id: youtubeId,
-            thumbnail_url: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`,
-            video_title: `${event.strHomeTeam} vs ${event.strAwayTeam} | ${event.strLeague} Highlights`,
-            duration: 0,
-            views: 0,
+            thumbnail_url: `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`,
+            video_title: event.strEvent,
           }
-
-          try {
-            const upsertResponse = await fetch(
-              `${SUPABASE_URL}/rest/v1/match_highlights`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'apikey': SUPABASE_SERVICE_KEY || '',
-                  'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-                  'Prefer': 'resolution=ignore-duplicates',
-                },
-                body: JSON.stringify(highlightData),
-              }
-            )
-
-            if (upsertResponse.status === 201) {
-              stats.newHighlights++
-              stats.leagueStats[leagueCode]++
-              console.log(`   ✅ 신규: ${event.strHomeTeam} vs ${event.strAwayTeam}`)
-            } else if (upsertResponse.ok) {
-              stats.duplicates++
-            } else {
-              const errorText = await upsertResponse.text()
-              console.error(`   ❌ 저장 실패:`, errorText.substring(0, 200))
-              stats.errors++
+          
+          const insertResponse = await fetch(
+            `${SUPABASE_URL}/rest/v1/match_highlights`,
+            {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_SERVICE_KEY || '',
+                'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal',
+              },
+              body: JSON.stringify(highlightData),
             }
-          } catch (dbError: any) {
-            console.error(`   ❌ DB 에러:`, dbError.message)
-            stats.errors++
+          )
+          
+          if (insertResponse.ok) {
+            totalCollected++
+            results.push({
+              match: `${event.strHomeTeam} vs ${event.strAwayTeam}`,
+              league: league.name,
+              date: event.dateEvent,
+            })
           }
         }
-
-        // API 요청 제한 대응
-        await new Promise(resolve => setTimeout(resolve, 700))
-
-      } catch (leagueError: any) {
-        console.error(`   ❌ ${leagueCode} 에러:`, leagueError.message)
-        stats.errors++
+        
+        // API 제한 방지
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+      } catch (error) {
+        console.error(`❌ ${league.name} 에러:`, error)
       }
     }
-
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2)
-
-    console.log('\n📊 최종 통계:')
-    console.log('   총 경기:', stats.totalMatches)
-    console.log('   하이라이트 있음:', stats.matchesWithVideo)
-    console.log('   신규 저장:', stats.newHighlights)
-    console.log('   중복:', stats.duplicates)
-    console.log('   에러:', stats.errors)
-    console.log('\n🏆 리그별 통계:', stats.leagueStats)
-
+    
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1)
+    
+    console.log(`✅ 하이라이트 수집 완료!`)
+    console.log(`   - 새로 수집: ${totalCollected}개`)
+    console.log(`   - 중복 건너뜀: ${totalSkipped}개`)
+    console.log(`   - 소요 시간: ${duration}초`)
+    
     return NextResponse.json({
       success: true,
-      stats,
+      message: `하이라이트 ${totalCollected}개 수집 완료`,
+      collected: totalCollected,
+      skipped: totalSkipped,
       duration: `${duration}s`,
-      timestamp: new Date().toISOString(),
-      message: `${stats.totalMatches}개 경기 확인, ${stats.matchesWithVideo}개 하이라이트, ${stats.newHighlights}개 신규 저장`
+      highlights: results,
     })
-
+    
   } catch (error: any) {
-    console.error('❌ Cron Job 에러:', error)
+    console.error('❌ 하이라이트 수집 실패:', error)
     
     return NextResponse.json({
       success: false,
       error: error.message,
-      duration: `${((Date.now() - startTime) / 1000).toFixed(2)}s`,
     }, { status: 500 })
   }
 }
