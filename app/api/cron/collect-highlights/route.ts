@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// TheSportsDB API (무료)
-const THESPORTSDB_API_URL = 'https://www.thesportsdb.com/api/v1/json/3'
+// TheSportsDB API (유료 키 사용!)
+const THESPORTSDB_API_KEY = process.env.THESPORTSDB_API_KEY || '3'
+const THESPORTSDB_API_URL = `https://www.thesportsdb.com/api/v1/json/${THESPORTSDB_API_KEY}`
 
 // Supabase 설정
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -30,6 +31,7 @@ interface Event {
 
 export async function GET(request: NextRequest) {
   console.log('🎬 하이라이트 수집 시작...')
+  console.log(`🔑 API 키: ${THESPORTSDB_API_KEY === '3' ? '무료(3)' : '유료(***' + THESPORTSDB_API_KEY.slice(-4) + ')'}`)
   const startTime = Date.now()
   
   try {
@@ -184,7 +186,7 @@ export async function GET(request: NextRequest) {
       duration: `${duration}s`,
       highlights: results,
       debug: {
-        note: 'TheSportsDB 무료 API는 strVideo를 제공하지 않을 수 있음 (유료 $9/월 필요)',
+        apiKey: THESPORTSDB_API_KEY === '3' ? '무료(3) - strVideo 미지원!' : '유료 ✅',
         leaguesChecked: LEAGUES.map(l => l.name),
       }
     })
