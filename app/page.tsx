@@ -1588,14 +1588,14 @@ export default function Home() {
         </div>
       </div>
       {/* TOP 하이라이트 섹션 - 승률 배너 아래 */}
-      <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="max-w-7xl mx-auto px-4 py-1">
         <TopHighlights 
           darkMode={darkMode}
         />
       </div>
 
       {/* 트렌드 컨텐츠 영역 */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-3">
         <div className="flex gap-8 relative">
           {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
           <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
