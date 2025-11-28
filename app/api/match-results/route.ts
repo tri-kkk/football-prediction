@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
       // 각 리그에서 최대 10개씩 통계 가져오기
       const matchesForStats: any[] = []
       Object.keys(matchesByLeague).forEach(leagueCode => {
-        const leagueMatches = matchesByLeague[leagueCode].slice(0, 10)
+        const leagueMatches = matchesByLeague[leagueCode].slice(0, 30)
         matchesForStats.push(...leagueMatches)
       })
       
