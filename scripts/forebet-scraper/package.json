@@ -1,6 +1,6 @@
 {
   "name": "forebet-scraper",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Forebet 상세 프리뷰 스크래퍼 + Claude AI 블로그 자동화",
   "scripts": {
     "scrape": "node scraper.js",
@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "puppeteer": "^21.6.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "@anthropic-ai/sdk": "^0.32.0",
     "@supabase/supabase-js": "^2.39.0"
   },

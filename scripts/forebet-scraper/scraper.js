@@ -1,11 +1,13 @@
 /**
- * Forebet Match Preview Scraper v13
- * - TheSportsDB v2 Premium API (더 정확한 썸네일)
- * - X-API-KEY 헤더 인증
- * - Forebet 전체 리그 지원
+ * Forebet Match Preview Scraper v14
+ * - puppeteer-extra + stealth plugin (봇 감지 우회)
+ * - TheSportsDB v2 Premium API
  */
 
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(StealthPlugin());
+
 const fs = require('fs');
 
 // TheSportsDB API 키 (환경변수 또는 기본값)
