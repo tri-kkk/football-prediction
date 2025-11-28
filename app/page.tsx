@@ -390,6 +390,8 @@ export default function Home() {
   const [liveCount, setLiveCount] = useState(0)
   // 📊 배너 자동 롤링
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0)
+  // 📱 모바일 하단 광고 닫기 상태
+  const [isMobileAdClosed, setIsMobileAdClosed] = useState(false)
 
   // 전체 리그 목록 (전체 제외)
   const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
@@ -1588,14 +1590,14 @@ export default function Home() {
         </div>
       </div>
       {/* TOP 하이라이트 섹션 - 승률 배너 아래 */}
-      <div className="max-w-7xl mx-auto px-4 py-1">
+      <div className="max-w-7xl mx-auto px-4 py-0.5 md:py-1">
         <TopHighlights 
           darkMode={darkMode}
         />
       </div>
 
       {/* 트렌드 컨텐츠 영역 */}
-      <div className="container mx-auto px-4 py-3">
+      <div className="container mx-auto px-4 pt-0 md:py-3 pb-32 lg:pb-3">
         <div className="flex gap-8 relative">
           {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
           <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
@@ -1755,7 +1757,7 @@ export default function Home() {
             </div>
 
         {/* 날짜 필터 - 글로벌 스탠다드 */}
-        <div className="mb-8">
+        <div className="mb-2 md:mb-8">
           <div className="max-w-3xl mx-auto">
             {/* 세그먼트 컨트롤 */}
             <div className={`
@@ -1821,7 +1823,7 @@ export default function Home() {
                         setCurrentPage(1)
                         setShowFallbackBanner(false)
                       }}
-                      className="relative py-3 px-2 rounded-lg transition-all duration-200 z-10"
+                      className="relative py-2 md:py-3 px-2 rounded-lg transition-all duration-200 z-10"
                     >
                       <div className="flex flex-col items-center gap-1">
                         {/* 라벨 */}
@@ -1852,8 +1854,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 날짜 정보 표시 (선택사항) */}
-            <div className="flex items-center justify-center gap-2 mt-3 text-xs text-gray-500">
+            {/* 날짜 정보 표시 - 데스크톱만 */}
+            <div className="hidden md:flex items-center justify-center gap-2 mt-1.5 md:mt-3 text-xs text-gray-500">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                       d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -2645,6 +2647,35 @@ export default function Home() {
               </div>
             )}
           </aside>
+        </div>
+      </div>
+
+      {/* 📱 모바일 하단 고정 배너 320x50 (하단 네비게이션 바 위) */}
+      <div className="block lg:hidden fixed bottom-[90px] left-0 right-0 z-40 flex justify-center">
+        <div className="py-1 px-2">
+          <a 
+            href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block hover:opacity-90 transition-opacity"
+          >
+            <img 
+              src="/ad-banner-320x50.png" 
+              alt="Advertisement"
+              className="w-[320px] h-[50px] object-cover rounded"
+              onError={(e) => {
+                // PNG 로드 실패 시 GIF로 폴백
+                if (e.currentTarget.src.endsWith('.png')) {
+                  e.currentTarget.src = '/ad-banner-320x50.gif'
+                } else if (e.currentTarget.src.endsWith('.gif')) {
+                  e.currentTarget.src = '/ad-banner-320x50.jpg'
+                } else {
+                  // 모두 실패하면 플레이스홀더
+                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="50"><rect width="320" height="50" fill="%231a1a1a"/><text x="160" y="30" text-anchor="middle" fill="%23666" font-size="12">AD 320x50</text></svg>'
+                }
+              }}
+            />
+          </a>
         </div>
       </div>
 

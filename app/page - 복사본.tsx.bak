@@ -9,6 +9,7 @@ import { useLanguage } from './contexts/LanguageContext'
 import LineupModal from './components/LineupModal'
 import BlogPreviewSidebar from './components/BlogPreviewSidebar'  
 
+import TopHighlights from './components/TopHighlights'
 // 리그 정보 (국기 이미지 포함)
 const LEAGUES = [
   { 
@@ -1406,6 +1407,7 @@ export default function Home() {
         실시간 해외축구 경기 예측 & 프리뷰 플랫폼 · Trend Soccer
       </h1>
       
+
       {/* 승률 배너 (자동 스크롤) */}
       
       {/* 데스크톱: 세로형 카드 */}
@@ -1585,9 +1587,15 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {/* TOP 하이라이트 섹션 - 승률 배너 아래 */}
+      <div className="max-w-7xl mx-auto px-4 py-1">
+        <TopHighlights 
+          darkMode={darkMode}
+        />
+      </div>
 
       {/* 트렌드 컨텐츠 영역 */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-3">
         <div className="flex gap-8 relative">
           {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
           <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>

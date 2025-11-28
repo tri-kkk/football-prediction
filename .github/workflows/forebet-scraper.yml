@@ -1,6 +1,5 @@
 # Forebet Blog Auto-Publisher
 # 매일 KST 9시 (UTC 0시) 자동 실행
-
 name: Forebet Blog Publisher
 
 on:
@@ -18,18 +17,26 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
       
-      - name: 📦 Install dependencies
+      - name: 📦 Install dependencies (clean)
         working-directory: ./scripts/forebet-scraper
-        run: npm install
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+          echo "📋 Installed packages:"
+          npm list --depth=0
       
       - name: 🔍 Run Scraper
         working-directory: ./scripts/forebet-scraper
+        env:
+          THESPORTSDB_API_KEY: ${{ secrets.THESPORTSDB_API_KEY }}
         run: node scraper.js
         continue-on-error: false
       
