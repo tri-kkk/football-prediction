@@ -17,6 +17,13 @@ export default function MobileBottomNav() {
       hidden: false
     },
     {
+      href: '/insights',
+      icon: 'insights',
+      labelKo: '인사이트',
+      labelEn: 'Insights',
+      hidden: false
+    },
+    {
       href: '/results',
       icon: '/event.svg',
       labelKo: '결과',
@@ -32,10 +39,9 @@ export default function MobileBottomNav() {
     },
     {
       href: '/magazine',
-      icon: 'feed', // inline SVG 사용
+      icon: 'feed',
       labelKo: '피드',
       labelEn: 'Feed',
-    
       hidden: false
     },
     {
@@ -43,7 +49,7 @@ export default function MobileBottomNav() {
       icon: '/dashboard.svg',
       labelKo: '대시보드',
       labelEn: 'Dashboard',
-      hidden: true  // 숨김 처리
+      hidden: true
     }
   ]
 
@@ -68,7 +74,6 @@ export default function MobileBottomNav() {
             >
               <div className={`relative transition-opacity ${isActive ? 'opacity-100' : 'opacity-60'}`}>
                 {item.icon === 'feed' ? (
-                  // Inline RSS Feed SVG with explicit colors
                   <svg 
                     width="24" 
                     height="24" 
@@ -79,6 +84,19 @@ export default function MobileBottomNav() {
                   >
                     <circle cx="6.18" cy="17.82" r="2.18" fill={isActive ? '#3b82f6' : '#9ca3af'}/>
                     <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z" fill={isActive ? '#3b82f6' : '#9ca3af'}/>
+                  </svg>
+                ) : item.icon === 'insights' ? (
+                  <svg 
+                    width="24" 
+                    height="24" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={isActive ? 'brightness-125' : ''}
+                  >
+                    <path d="M3 3v18h18" stroke={isActive ? '#3b82f6' : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M7 14l4-4 4 4 5-5" stroke={isActive ? '#3b82f6' : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="20" cy="9" r="2" fill={isActive ? '#3b82f6' : '#9ca3af'}/>
                   </svg>
                 ) : (
                   <Image 
