@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
       'Serie A': ['Serie A', 'Italian Serie A'],
       'Ligue 1': ['Ligue 1', 'French Ligue 1'],
       'Champions League': ['Champions League', 'UEFA Champions League'],
+      'Europa League': ['Europa League', 'UEFA Europa League'],  // 🆕 추가!
+      'Conference League': ['Conference League', 'UEFA Conference League'],  // 🆕 추가!
     }
 
     // 모든 하이라이트를 한 번에 가져오기
