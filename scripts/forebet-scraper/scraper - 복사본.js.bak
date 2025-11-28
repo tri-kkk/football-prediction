@@ -1,15 +1,12 @@
 /**
- * Forebet Match Preview Scraper v13
- * - TheSportsDB v2 Premium API (더 정확한 썸네일)
- * - X-API-KEY 헤더 인증
+ * Forebet Match Preview Scraper v12
+ * - TheSportsDB 리그별 경기 목록으로 썸네일 100% 확보
+ * - eventsnextleague API 활용
  * - Forebet 전체 리그 지원
  */
 
 const puppeteer = require('puppeteer');
 const fs = require('fs');
-
-// TheSportsDB API 키 (환경변수 또는 기본값)
-const SPORTSDB_API_KEY = process.env.THESPORTSDB_API_KEY || '166885';
 
 // ⚽ Forebet 제공 전체 리그
 const SUPPORTED_LEAGUES = [
@@ -45,130 +42,40 @@ async function delay(ms) {
 }
 
 /**
- * TheSportsDB v2 API - 리그별 다음 경기 목록
+ * TheSportsDB에서 리그별 다음 경기 목록 가져오기
  */
-async function fetchLeagueEventsV2(leagueId) {
+async function fetchLeagueEvents(leagueId) {
   if (sportsDbEventsCache[leagueId]) {
     return sportsDbEventsCache[leagueId];
   }
   
   try {
-    const url = `https://www.thesportsdb.com/api/v2/json/schedule/next/league/${leagueId}`;
-    const res = await fetch(url, {
-      headers: {
-        'X-API-KEY': SPORTSDB_API_KEY
-      }
-    });
-    
-    if (!res.ok) {
-      console.log(`    ⚠️ TheSportsDB v2 응답 에러: ${res.status}`);
-      return [];
-    }
-    
+    const url = `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${leagueId}`;
+    const res = await fetch(url);
     const data = await res.json();
     
     if (data.events?.length > 0) {
       sportsDbEventsCache[leagueId] = data.events;
-      console.log(`    📦 TheSportsDB v2: ${data.events.length}개 경기 (리그 ${leagueId})`);
+      console.log(`    📦 TheSportsDB: ${data.events.length}개 경기 캐시 (리그 ${leagueId})`);
       return data.events;
-    }
-    
-    // schedule 형식일 수도 있음
-    if (data.schedule?.length > 0) {
-      sportsDbEventsCache[leagueId] = data.schedule;
-      console.log(`    📦 TheSportsDB v2: ${data.schedule.length}개 경기 (리그 ${leagueId})`);
-      return data.schedule;
     }
     
     return [];
   } catch (e) {
-    console.log(`    ⚠️ TheSportsDB v2 조회 실패: ${e.message}`);
+    console.log(`    ⚠️ TheSportsDB 조회 실패: ${e.message}`);
     return [];
   }
 }
 
 /**
- * 특수문자 → 일반 알파벳 변환
- */
-function removeAccents(str) {
-  const accents = {
-    'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a', 'ą': 'a',
-    'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e', 'ę': 'e', 'ě': 'e',
-    'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i', 'ı': 'i',
-    'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o', 'ő': 'o',
-    'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u', 'ű': 'u',
-    'ý': 'y', 'ÿ': 'y',
-    'ñ': 'n', 'ń': 'n', 'ň': 'n',
-    'ç': 'c', 'ć': 'c', 'č': 'c',
-    'ß': 'ss',
-    'ş': 's', 'š': 's', 'ś': 's',
-    'ž': 'z', 'ź': 'z', 'ż': 'z',
-    'ł': 'l', 'ľ': 'l',
-    'đ': 'd', 'ď': 'd',
-    'ř': 'r',
-    'ť': 't',
-    'æ': 'ae', 'œ': 'oe',
-    'þ': 'th',
-  };
-  
-  return str.split('').map(char => accents[char.toLowerCase()] || char).join('');
-}
-
-/**
- * 팀 이름 정규화 (매칭용) - 더 유연하게
+ * 팀 이름 정규화 (매칭용)
  */
 function normalizeTeamName(name) {
   if (!name) return '';
-  
-  // 1. 특수문자 → 일반 알파벳
-  let normalized = removeAccents(name.toLowerCase());
-  
-  return normalized
-    // 일반적인 접두사/접미사 제거
-    .replace(/\b(fc|cf|sc|ac|as|ss|us|rc|cd|ud|sd|rcd|afc|ssc|1\.|)\b/gi, '')
-    // 국가/도시 관련 접두사
-    .replace(/\b(real|sporting|atletico|dynamo|inter|united|city)\b/gi, '')
-    // 특수문자 제거
-    .replace(/[^a-z0-9\s]/g, '')
-    // 공백 정리
-    .replace(/\s+/g, ' ')
+  return name.toLowerCase()
+    .replace(/fc|cf|sc|ac|as|ss|us|rc|cd|ud|sd|rcd|real|sporting|atletico|atlético/gi, '')
+    .replace(/[^a-z0-9]/g, '')
     .trim();
-}
-
-/**
- * 두 팀 이름이 매칭되는지 확인
- */
-function teamsMatch(name1, name2) {
-  // 's 제거 먼저
-  let clean1 = (name1 || '').replace(/['`'´ʼ′]s$/gi, '').replace(/['`'´ʼ′]$/gi, '');
-  let clean2 = (name2 || '').replace(/['`'´ʼ′]s$/gi, '').replace(/['`'´ʼ′]$/gi, '');
-  
-  const n1 = normalizeTeamName(clean1);
-  const n2 = normalizeTeamName(clean2);
-  
-  if (!n1 || !n2) return false;
-  
-  // 정확히 같음
-  if (n1 === n2) return true;
-  
-  // 포함 관계 (3글자 이상)
-  if (n1.length >= 3 && n2.length >= 3) {
-    if (n1.includes(n2) || n2.includes(n1)) return true;
-  }
-  
-  // 단어 기반 매칭
-  const words1 = n1.split(' ').filter(w => w.length >= 3);
-  const words2 = n2.split(' ').filter(w => w.length >= 3);
-  
-  for (const w1 of words1) {
-    for (const w2 of words2) {
-      if (w1 === w2 || w1.includes(w2) || w2.includes(w1)) {
-        return true;
-      }
-    }
-  }
-  
-  return false;
 }
 
 /**
@@ -177,17 +84,26 @@ function teamsMatch(name1, name2) {
 function findMatchingEvent(events, homeTeam, awayTeam) {
   if (!events?.length) return null;
   
+  const homeNorm = normalizeTeamName(homeTeam);
+  const awayNorm = normalizeTeamName(awayTeam);
+  
   for (const event of events) {
-    const eventHome = event.strHomeTeam || '';
-    const eventAway = event.strAwayTeam || '';
+    const eventHomeNorm = normalizeTeamName(event.strHomeTeam);
+    const eventAwayNorm = normalizeTeamName(event.strAwayTeam);
     
-    // 정방향 매칭
-    if (teamsMatch(homeTeam, eventHome) && teamsMatch(awayTeam, eventAway)) {
+    // 홈/어웨이 둘 다 매칭
+    const homeMatch = eventHomeNorm.includes(homeNorm) || homeNorm.includes(eventHomeNorm);
+    const awayMatch = eventAwayNorm.includes(awayNorm) || awayNorm.includes(eventAwayNorm);
+    
+    if (homeMatch && awayMatch) {
       return event;
     }
     
-    // 역방향 매칭 (홈/어웨이 뒤바뀐 경우)
-    if (teamsMatch(homeTeam, eventAway) && teamsMatch(awayTeam, eventHome)) {
+    // 역순 체크 (홈/어웨이 뒤바뀐 경우)
+    const homeMatchReverse = eventHomeNorm.includes(awayNorm) || awayNorm.includes(eventHomeNorm);
+    const awayMatchReverse = eventAwayNorm.includes(homeNorm) || homeNorm.includes(eventAwayNorm);
+    
+    if (homeMatchReverse && awayMatchReverse) {
       return event;
     }
   }
@@ -196,33 +112,28 @@ function findMatchingEvent(events, homeTeam, awayTeam) {
 }
 
 /**
- * TheSportsDB에서 썸네일 가져오기 (v2 API + 리그 기반)
+ * TheSportsDB에서 썸네일 가져오기 (리그 기반)
  */
 async function fetchThumbnailFromLeague(homeTeam, awayTeam, leagueKey) {
   const leagueInfo = LEAGUE_CODE_MAP[leagueKey];
   if (!leagueInfo?.sportsDbId) return null;
   
-  // 리그 경기 목록 가져오기 (v2 API)
-  const events = await fetchLeagueEventsV2(leagueInfo.sportsDbId);
+  // 1. 리그 경기 목록 가져오기
+  const events = await fetchLeagueEvents(leagueInfo.sportsDbId);
   
-  // 매칭되는 경기 찾기
+  // 2. 매칭되는 경기 찾기
   const matchedEvent = findMatchingEvent(events, homeTeam, awayTeam);
   
   if (matchedEvent) {
-    console.log(`    🎯 매칭: ${matchedEvent.strHomeTeam} vs ${matchedEvent.strAwayTeam}`);
-    
-    // 우선순위: strThumb > strPoster > strBanner > strSquare
+    // 우선순위: strThumb > strPoster > strBanner
     if (matchedEvent.strThumb) {
-      return { thumbnail: matchedEvent.strThumb + '/medium', type: 'event', source: 'v2-league' };
+      return { thumbnail: matchedEvent.strThumb + '/medium', type: 'event', source: 'league' };
     }
     if (matchedEvent.strPoster) {
-      return { thumbnail: matchedEvent.strPoster + '/medium', type: 'poster', source: 'v2-league' };
+      return { thumbnail: matchedEvent.strPoster + '/medium', type: 'poster', source: 'league' };
     }
     if (matchedEvent.strBanner) {
-      return { thumbnail: matchedEvent.strBanner, type: 'banner', source: 'v2-league' };
-    }
-    if (matchedEvent.strSquare) {
-      return { thumbnail: matchedEvent.strSquare, type: 'square', source: 'v2-league' };
+      return { thumbnail: matchedEvent.strBanner, type: 'banner', source: 'league' };
     }
   }
   
@@ -234,12 +145,12 @@ async function fetchThumbnailFromLeague(homeTeam, awayTeam, leagueKey) {
  */
 async function fetchThumbnailFromTeam(homeTeam) {
   try {
-    const teamUrl = `https://www.thesportsdb.com/api/v1/json/${SPORTSDB_API_KEY}/searchteams.php?t=${encodeURIComponent(homeTeam)}`;
+    const teamUrl = `https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(homeTeam)}`;
     const teamRes = await fetch(teamUrl);
     const teamData = await teamRes.json();
     
     if (teamData.teams?.length > 0 && teamData.teams[0].strBadge) {
-      return { thumbnail: teamData.teams[0].strBadge, type: 'badge', source: 'team-search' };
+      return { thumbnail: teamData.teams[0].strBadge, type: 'badge', source: 'team' };
     }
     
     return null;
@@ -252,7 +163,7 @@ async function fetchThumbnailFromTeam(homeTeam) {
  * 통합 썸네일 가져오기
  */
 async function fetchThumbnail(homeTeam, awayTeam, leagueKey) {
-  // 1. v2 API 리그 기반 (가장 정확)
+  // 1. 리그 기반 경기 목록에서 찾기 (가장 정확)
   const leagueResult = await fetchThumbnailFromLeague(homeTeam, awayTeam, leagueKey);
   if (leagueResult) return leagueResult;
   
@@ -266,23 +177,19 @@ async function fetchThumbnail(homeTeam, awayTeam, leagueKey) {
 }
 
 /**
- * 팀명 정리
+ * 팀명 정리 - 모든 아포스트로피 변형 처리
  */
 function cleanTeamName(name) {
   if (!name) return '';
   
   let cleaned = name.trim();
   
-  // 아포스트로피 's 제거
   cleaned = cleaned.replace(/['`'´ʼ′]s$/gi, '');
   cleaned = cleaned.replace(/['`'´ʼ′]$/gi, '');
-  
-  // In-Form 변형들 제거
   cleaned = cleaned.replace(/^In[-‑–—]?Form\s*/gi, '');
   cleaned = cleaned.replace(/\s*In[-‑–—]?Form$/gi, '');
   cleaned = cleaned.replace(/^Familiar\s*/gi, '');
   
-  // 불필요 단어/패턴 제거
   const removePatterns = [
     /\s*Home Steel.*$/i,
     /\s*Firepower.*$/i,
@@ -290,25 +197,12 @@ function cleanTeamName(name) {
     /\s*Perfect.*$/i,
     /\s*Statement.*$/i,
     /\s*Response.*$/i,
-    /\s*Lifeline.*$/i,
-    /\s*Stalemate.*$/i,
-    /\s*Efficient.*$/i,
     /^Form\s+/i,
     /\s+Form$/i,
-    /^Efficient$/i,
-    /^Lifeline$/i,
-    /^Against$/i,
-    /^Again$/i,
   ];
   
   for (const pattern of removePatterns) {
     cleaned = cleaned.replace(pattern, '');
-  }
-  
-  // 혹시 팀명이 비정상적인 단어만 남으면 null 반환할 수 있도록 체크
-  const invalidTeamNames = ['efficient', 'lifeline', 'against', 'again', 'perfect', 'statement', 'response'];
-  if (invalidTeamNames.includes(cleaned.toLowerCase())) {
-    return '';
   }
   
   return cleaned.trim();
@@ -365,28 +259,11 @@ function extractTeamsFromTitle(title, url) {
   const normalizedTitle = title.replace(/['´ʼ′]/g, "'");
   
   const patterns = [
-    // "A and B Set For..."
     /^(.+?)\s+(?:and|vs\.?|v)\s+(.+?)\s+(?:Set|Chase|Seek|Aim|Look|Meet|Face|Host|Battle|Clash|Eye|Target|Ready|Go|Travel)/i,
-    
-    // "A's Home Steel Meets B's Firepower"
     /^(.+?)(?:'s)?\s+Home Steel Meets\s+(.+?)(?:'s)?\s+Firepower/i,
-    
-    // "A's Home Strength Meets B's Stalemate"
-    /^(.+?)(?:'s)?\s+Home Strength Meets\s+(.+?)(?:'s)?\s+Stalemate/i,
-    
-    // "A's ... Meets B's ..."
     /^(.+?)(?:'s)?\s+.*?(?:Meets?|Faces?|Hosts?|Welcomes?)\s+(.+?)(?:'s)?(?:\s|$)/i,
-    
-    // "A Seek ... Against B" (새로 추가!)
-    /^(.+?)\s+(?:Seek|Look|Aim|Hope|Need|Want).*?(?:Against|Versus|Vs)\s+(.+?)(?:\s+In|\s+At|\s+On|$)/i,
-    
-    // "A Seek ... As In-Form B ..."
     /^(.+?)\s+(?:Seek|Look|Aim|Hope).+?(?:As|While|Against)\s+(?:In[-‑]?Form\s+)?(.+?)\s+(?:Return|Visit|Travel|Come|Arrive|Face|Head)/i,
-    
-    // "A Aim To Halt B's ..."
     /^(.+?)\s+(?:Aim|Look|Hope|Seek)\s+To\s+(?:Halt|Stop|End|Beat|Defeat)\s+(.+?)(?:'s)?(?:\s|$)/i,
-    
-    // "A Seek ... Against Familiar Foe B"
     /^(.+?)\s+(?:Seek|Look).+?(?:Against)\s+(?:Familiar\s+(?:Foe|Foes)?\s*)?(.+?)(?:\s|$)/i,
   ];
   
@@ -476,7 +353,10 @@ function extractPreviewText(fullText) {
   let started = false;
   
   for (const line of lines) {
-    if (!started && line.length >= 100) started = true;
+    if (!started && line.length >= 100) {
+      started = true;
+    }
+    
     if (!started) continue;
     
     if (line.includes('Probable Lineups')) break;
@@ -493,7 +373,9 @@ function extractPreviewText(fullText) {
     if (line === 'Overall Performance') continue;
     if (line === 'Main Trends') continue;
     
-    if (line.length >= 80) paragraphs.push(line);
+    if (line.length >= 80) {
+      paragraphs.push(line);
+    }
   }
   
   return paragraphs;
@@ -513,26 +395,39 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
     await page.goto(previewInfo.link, { waitUntil: 'networkidle2', timeout: 60000 });
     
     await delay(4000);
-    try { await page.evaluate(() => window.scrollTo(0, 1000)); } catch {}
+    
+    try {
+      await page.evaluate(() => window.scrollTo(0, 1000));
+    } catch {}
     await delay(2000);
     
     const pageData = await page.evaluate(() => {
       const fullText = document.body.innerText || '';
+      
       let articleText = '';
       const containers = [
         document.querySelector('article'),
         document.querySelector('.preview-content'),
+        document.querySelector('.article-content'),
+        document.querySelector('.entry-content'),
+        document.querySelector('.post-content'),
+        document.querySelector('.content-area'),
         document.querySelector('main'),
       ];
+      
       for (const container of containers) {
-        if (container?.innerText?.length > 500) {
+        if (container && container.innerText?.length > 500) {
           articleText = container.innerText;
           break;
         }
       }
+      
       return {
         fullText: articleText || fullText,
         fullTextLength: (articleText || fullText).length,
+        prediction: document.querySelector('.prediction, .tip')?.textContent?.trim() || '',
+        league: document.querySelector('.league, .competition')?.textContent?.trim() || '',
+        matchDate: document.querySelector('.date, time')?.textContent?.trim() || '',
       };
     });
     
@@ -540,6 +435,7 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
     
     const paragraphs = extractPreviewText(pageData.fullText);
     const previewText = paragraphs.join('\n\n');
+    
     const leagueInfo = LEAGUE_CODE_MAP[previewInfo.leagueKey] || { code: 'OTHER', nameKr: '기타' };
     
     return {
@@ -547,6 +443,9 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
       awayTeam: teams.awayTeam,
       previewParagraphs: paragraphs,
       previewText,
+      prediction: pageData.prediction,
+      league: pageData.league,
+      matchDate: pageData.matchDate,
       leagueCode: leagueInfo.code,
       leagueKr: leagueInfo.nameKr,
       leagueKey: previewInfo.leagueKey,
@@ -567,8 +466,7 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
  * 메인
  */
 async function scrapeForebetPreviews() {
-  console.log('🚀 Forebet Scraper v13 (TheSportsDB v2 Premium API)');
-  console.log(`🔑 API Key: ${SPORTSDB_API_KEY.substring(0, 3)}***`);
+  console.log('🚀 Forebet Scraper v12 (TheSportsDB 리그 기반 썸네일)');
   console.log('📅 ' + new Date().toISOString());
   console.log('🎯 지원 리그: 12개\n');
   
@@ -602,6 +500,7 @@ async function scrapeForebetPreviews() {
       const data = await scrapePreviewDetail(browser, preview, teams);
       
       if (data) {
+        // 썸네일 가져오기 (리그 기반)
         const thumbResult = await fetchThumbnail(data.homeTeam, data.awayTeam, data.leagueKey);
         if (thumbResult) {
           data.thumbnail = thumbResult.thumbnail;
@@ -616,7 +515,7 @@ async function scrapeForebetPreviews() {
         console.log(`    ✅ ${data.leagueKr} | 📝 ${data.previewText.length}자`);
       }
       
-      await delay(2500);
+      await delay(3000);
     }
     
     await browser.close();
@@ -627,14 +526,15 @@ async function scrapeForebetPreviews() {
     const withThumb = allPreviews.filter(p => p.thumbnail).length;
     console.log(`📸 썸네일: ${withThumb}/${allPreviews.length} (${Math.round(withThumb/allPreviews.length*100)}%)`);
     
-    const thumbStats = { 'v2-league': 0, 'team-search': 0, none: 0 };
+    // 썸네일 소스별 통계
+    const thumbStats = { league: 0, team: 0, none: 0 };
     allPreviews.forEach(p => {
-      if (p.thumbnailSource === 'v2-league') thumbStats['v2-league']++;
-      else if (p.thumbnailSource === 'team-search') thumbStats['team-search']++;
+      if (p.thumbnailSource === 'league') thumbStats.league++;
+      else if (p.thumbnailSource === 'team') thumbStats.team++;
       else thumbStats.none++;
     });
-    console.log(`   - v2 리그 기반: ${thumbStats['v2-league']}개`);
-    console.log(`   - 팀 검색: ${thumbStats['team-search']}개`);
+    console.log(`   - 리그 기반: ${thumbStats.league}개`);
+    console.log(`   - 팀 검색: ${thumbStats.team}개`);
     console.log(`   - 없음: ${thumbStats.none}개`);
     
     const avgTextLen = allPreviews.length > 0 
