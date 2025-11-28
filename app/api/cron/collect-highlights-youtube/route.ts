@@ -35,8 +35,115 @@ const CLUB_CHANNELS = [
   { channelId: 'UCyPJlI7FHwhXTYOGLNOPLsA', name: 'Paris Saint-Germain', league: 'Ligue 1' },
 ]
 
-// 하이라이트 키워드
-const HIGHLIGHT_KEYWORDS = ['highlight', 'highlights', 'vs', 'match', 'goal', 'goals', '하이라이트']
+// 하이라이트 키워드 (필수!)
+const MUST_HAVE_KEYWORDS = ['highlight', 'highlights', '하이라이트']
+
+// 추가 확인 키워드 (vs + 스코어)
+const MATCH_INDICATORS = ['vs', 'v.', '0', '1', '2', '3', '4', '5', '6']
+
+// ❌ 제외 키워드 (이런 영상은 무시)
+const EXCLUDE_KEYWORDS = [
+  'preview', 'press', 'conference', 'training', 'interview',
+  'behind', 'scenes', 'reaction', 'vlog', 'analysis', 
+  'tactical', 'best of', 'top 10', 'all goals', 'season',
+  'compilation', 'skills', 'welcome', 'transfer', 'signs',
+  'announcement', 'official', 'trailer', 'teaser', 'promo',
+  'fan', 'supporters', 'chant', 'anthem', 'trophy', 'parade',
+  'award', 'ceremony', 'gala', 'documentary', 'story',
+  '예고', '인터뷰', '훈련', '기자회견', '시즌', '베스트'
+]
+
+// 🏆 알려진 팀 이름 목록 (매칭용)
+const KNOWN_TEAMS: { [key: string]: string } = {
+  // Premier League
+  'chelsea': 'Chelsea',
+  'arsenal': 'Arsenal',
+  'liverpool': 'Liverpool',
+  'man united': 'Manchester United',
+  'manchester united': 'Manchester United',
+  'man utd': 'Manchester United',
+  'tottenham': 'Tottenham',
+  'spurs': 'Tottenham',
+  'man city': 'Manchester City',
+  'manchester city': 'Manchester City',
+  'west ham': 'West Ham',
+  'newcastle': 'Newcastle',
+  'aston villa': 'Aston Villa',
+  'everton': 'Everton',
+  'brighton': 'Brighton',
+  'wolves': 'Wolves',
+  'crystal palace': 'Crystal Palace',
+  'fulham': 'Fulham',
+  'brentford': 'Brentford',
+  'bournemouth': 'Bournemouth',
+  'nottingham forest': 'Nottingham Forest',
+  'leicester': 'Leicester',
+  'ipswich': 'Ipswich',
+  'southampton': 'Southampton',
+  
+  // La Liga
+  'real madrid': 'Real Madrid',
+  'barcelona': 'Barcelona',
+  'barca': 'Barcelona',
+  'atletico madrid': 'Atletico Madrid',
+  'atletico': 'Atletico Madrid',
+  'sevilla': 'Sevilla',
+  'villarreal': 'Villarreal',
+  'real sociedad': 'Real Sociedad',
+  'athletic bilbao': 'Athletic Bilbao',
+  'valencia': 'Valencia',
+  'betis': 'Real Betis',
+  'real betis': 'Real Betis',
+  
+  // Bundesliga
+  'bayern munich': 'Bayern Munich',
+  'bayern': 'Bayern Munich',
+  'dortmund': 'Borussia Dortmund',
+  'borussia dortmund': 'Borussia Dortmund',
+  'bvb': 'Borussia Dortmund',
+  'leverkusen': 'Bayer Leverkusen',
+  'bayer leverkusen': 'Bayer Leverkusen',
+  'rb leipzig': 'RB Leipzig',
+  'leipzig': 'RB Leipzig',
+  'frankfurt': 'Eintracht Frankfurt',
+  'eintracht frankfurt': 'Eintracht Frankfurt',
+  
+  // Serie A
+  'juventus': 'Juventus',
+  'juve': 'Juventus',
+  'inter': 'Inter Milan',
+  'inter milan': 'Inter Milan',
+  'ac milan': 'AC Milan',
+  'milan': 'AC Milan',
+  'napoli': 'Napoli',
+  'roma': 'AS Roma',
+  'as roma': 'AS Roma',
+  'lazio': 'Lazio',
+  'atalanta': 'Atalanta',
+  'fiorentina': 'Fiorentina',
+  
+  // Ligue 1
+  'psg': 'Paris Saint-Germain',
+  'paris': 'Paris Saint-Germain',
+  'paris saint-germain': 'Paris Saint-Germain',
+  'marseille': 'Marseille',
+  'lyon': 'Lyon',
+  'monaco': 'Monaco',
+  'lille': 'Lille',
+  
+  // Others
+  'psv': 'PSV Eindhoven',
+  'psv eindhoven': 'PSV Eindhoven',
+  'ajax': 'Ajax',
+  'benfica': 'Benfica',
+  'porto': 'Porto',
+  'sporting': 'Sporting CP',
+  'celtic': 'Celtic',
+  'rangers': 'Rangers',
+  'club brugge': 'Club Brugge',
+  'galatasaray': 'Galatasaray',
+  'olympiacos': 'Olympiacos',
+}
 
 interface YouTubeVideo {
   id: { videoId: string }
@@ -50,15 +157,62 @@ interface YouTubeVideo {
   }
 }
 
-// 팀 이름 추출 (제목에서)
+// 팀 이름 찾기 (알려진 목록에서)
+function findTeamName(text: string): string | null {
+  const lowerText = text.toLowerCase().trim()
+  
+  // 정확한 매칭 우선
+  for (const [key, value] of Object.entries(KNOWN_TEAMS)) {
+    if (lowerText === key || lowerText.includes(key)) {
+      return value
+    }
+  }
+  
+  return null
+}
+
+// 팀 이름 추출 (제목에서) - 개선된 버전
 function extractTeams(title: string, clubName: string): { home: string; away: string } | null {
-  // "Chelsea vs Barcelona" 또는 "Barcelona vs Chelsea" 형식
-  const vsMatch = title.match(/([A-Za-z\s]+)\s+(?:vs\.?|v\.?)\s+([A-Za-z\s]+)/i)
+  const lowerTitle = title.toLowerCase()
+  
+  // "vs" 또는 "v" 로 분리
+  const vsMatch = title.match(/(.+?)\s+(?:vs\.?|v\.?)\s+(.+)/i)
   
   if (vsMatch) {
-    return {
-      home: vsMatch[1].trim(),
-      away: vsMatch[2].trim()
+    const beforeVs = vsMatch[1].trim()
+    const afterVs = vsMatch[2].trim()
+    
+    // 앞뒤에서 팀 이름 찾기
+    let homeTeam = findTeamName(beforeVs)
+    let awayTeam = findTeamName(afterVs)
+    
+    // 못 찾으면 채널 구단 이름 사용
+    if (!homeTeam && !awayTeam) {
+      // 둘 다 못 찾으면 채널명을 홈팀으로
+      homeTeam = clubName
+      awayTeam = afterVs.split(/[|\-!]/)[0].trim() // | 나 - 뒤 제거
+    } else if (!homeTeam) {
+      // 홈팀만 못 찾으면 채널명 사용
+      homeTeam = clubName
+    } else if (!awayTeam) {
+      // 원정팀만 못 찾으면 채널명 사용
+      awayTeam = clubName
+    }
+    
+    // 채널 구단이 원정팀에 있으면 홈/어웨이 교체
+    const clubLower = clubName.toLowerCase()
+    if (awayTeam && awayTeam.toLowerCase().includes(clubLower.split(' ')[0])) {
+      // 채널 구단이 어웨이에 있으면 제목 그대로 (상대팀 홈경기)
+    }
+    
+    return { home: homeTeam || clubName, away: awayTeam || 'Unknown' }
+  }
+  
+  // vs가 없는 경우 - 채널 구단 + 제목에서 다른 팀 찾기
+  for (const [key, value] of Object.entries(KNOWN_TEAMS)) {
+    if (lowerTitle.includes(key) && value !== clubName) {
+      // 다른 팀 발견
+      return { home: clubName, away: value }
     }
   }
   
@@ -87,7 +241,17 @@ function extractMatchDate(title: string, publishedAt: string): string {
 // 하이라이트 영상인지 확인
 function isHighlightVideo(title: string): boolean {
   const lowerTitle = title.toLowerCase()
-  return HIGHLIGHT_KEYWORDS.some(keyword => lowerTitle.includes(keyword.toLowerCase()))
+  
+  // 하이라이트 키워드 확인
+  const hasHighlightKeyword = HIGHLIGHT_KEYWORDS.some(keyword => 
+    lowerTitle.includes(keyword.toLowerCase())
+  )
+  
+  // "vs"가 있으면서 프리뷰/예고가 아닌 경우도 포함
+  const hasVs = lowerTitle.includes(' vs ') || lowerTitle.includes(' v ')
+  const isPreview = lowerTitle.includes('preview') || lowerTitle.includes('예고') || lowerTitle.includes('lineup')
+  
+  return hasHighlightKeyword || (hasVs && !isPreview)
 }
 
 export async function GET(request: NextRequest) {
