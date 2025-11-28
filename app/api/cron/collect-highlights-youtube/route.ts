@@ -238,20 +238,32 @@ function extractMatchDate(title: string, publishedAt: string): string {
   return published.toISOString().split('T')[0]
 }
 
-// 하이라이트 영상인지 확인
+// 하이라이트 영상인지 확인 (엄격한 필터링!)
 function isHighlightVideo(title: string): boolean {
   const lowerTitle = title.toLowerCase()
   
-  // 하이라이트 키워드 확인
-  const hasHighlightKeyword = HIGHLIGHT_KEYWORDS.some(keyword => 
+  // 1️⃣ 제외 키워드 있으면 바로 false
+  for (const exclude of EXCLUDE_KEYWORDS) {
+    if (lowerTitle.includes(exclude)) {
+      return false
+    }
+  }
+  
+  // 2️⃣ "highlights" 키워드 필수!
+  const hasHighlight = MUST_HAVE_KEYWORDS.some(keyword => 
     lowerTitle.includes(keyword.toLowerCase())
   )
   
-  // "vs"가 있으면서 프리뷰/예고가 아닌 경우도 포함
-  const hasVs = lowerTitle.includes(' vs ') || lowerTitle.includes(' v ')
-  const isPreview = lowerTitle.includes('preview') || lowerTitle.includes('예고') || lowerTitle.includes('lineup')
+  if (!hasHighlight) {
+    return false
+  }
   
-  return hasHighlightKeyword || (hasVs && !isPreview)
+  // 3️⃣ 경기 지표 확인 (vs 또는 스코어)
+  const hasMatchIndicator = MATCH_INDICATORS.some(indicator => 
+    lowerTitle.includes(indicator)
+  )
+  
+  return hasMatchIndicator
 }
 
 export async function GET(request: NextRequest) {
