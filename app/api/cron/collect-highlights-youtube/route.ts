@@ -50,6 +50,9 @@ const EXCLUDE_KEYWORDS = [
   'announcement', 'official', 'trailer', 'teaser', 'promo',
   'fan', 'supporters', 'chant', 'anthem', 'trophy', 'parade',
   'award', 'ceremony', 'gala', 'documentary', 'story',
+  // 🚫 옛날 경기 제외!
+  'classic', 'throwback', 'retro', 'rewind', 'on this day',
+  'years ago', 'anniversary', 'memorable', 'iconic', 'legendary',
   '예고', '인터뷰', '훈련', '기자회견', '시즌', '베스트'
 ]
 
