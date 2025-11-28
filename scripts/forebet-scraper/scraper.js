@@ -136,6 +136,22 @@ function normalizeTeamName(name) {
 }
 
 /**
+ * 알려진 팀 별명 매핑
+ */
+const TEAM_ALIASES = {
+  'kobenhavn': ['copenhagen', 'fc kobenhavn', 'fc copenhagen'],
+  'copenhagen': ['kobenhavn', 'fc kobenhavn', 'fc copenhagen'],
+  'kairat': ['kairat almaty', 'fc kairat'],
+  'inter': ['inter milan', 'internazionale', 'inter milano'],
+  'atletico': ['atletico madrid', 'atletico de madrid', 'atleti'],
+  'bayern': ['bayern munich', 'bayern munchen', 'fc bayern'],
+  'dortmund': ['borussia dortmund', 'bvb'],
+  'psv': ['psv eindhoven'],
+  'brugge': ['club brugge', 'club bruges'],
+  'sporting': ['sporting cp', 'sporting lisbon', 'sporting lisboa'],
+};
+
+/**
  * 두 팀 이름이 매칭되는지 확인
  */
 function teamsMatch(name1, name2) {
@@ -166,6 +182,14 @@ function teamsMatch(name1, name2) {
         return true;
       }
     }
+  }
+  
+  // 별명 매핑 체크
+  for (const [key, aliases] of Object.entries(TEAM_ALIASES)) {
+    const allNames = [key, ...aliases];
+    const n1Match = allNames.some(alias => n1.includes(alias) || alias.includes(n1));
+    const n2Match = allNames.some(alias => n2.includes(alias) || alias.includes(n2));
+    if (n1Match && n2Match) return true;
   }
   
   return false;
@@ -324,8 +348,9 @@ function extractTeamsFromUrl(url) {
   if (!urlMatch) return null;
   
   const slug = urlMatch[2];
-  const verbs = 'chase|set|seek|aim|look|meet|meets|face|host|battle|clash|eye|target|hunt|bid|hope|need|want|ready|prepare|travel|welcome|take|go|gear|brace|steel|firepower';
+  const verbs = 'chase|set|seek|aim|look|meet|meets|face|host|battle|clash|eye|target|hunt|bid|hope|need|want|ready|prepare|travel|welcome|take|go|gear|brace|steel|firepower|lifeline|strength';
   
+  // "team1-and-team2-verb" 또는 "team1-vs-team2-verb"
   let pattern = new RegExp(`^(.+?)-(?:and|vs)-(.+?)-(?:${verbs})`, 'i');
   let match = slug.match(pattern);
   
@@ -339,11 +364,26 @@ function extractTeamsFromUrl(url) {
     };
   }
   
+  // "team1-home-steel-meets-team2s-firepower" 패턴
   pattern = /^(.+?)-home-steel-meets-(.+?)s?-firepower/i;
   match = slug.match(pattern);
   if (match) {
     let home = match[1].replace(/-/g, ' ').trim();
     let away = match[2].replace(/-/g, ' ').trim();
+    return { 
+      homeTeam: cleanTeamName(capitalizeWords(home)), 
+      awayTeam: cleanTeamName(capitalizeWords(away)) 
+    };
+  }
+  
+  // "team1-seek-...-lifeline-against-team2" 패턴 (새로 추가!)
+  pattern = /^(.+?)-seek.*?-(?:lifeline|response|statement)-against-(.+?)(?:-|$)/i;
+  match = slug.match(pattern);
+  if (match) {
+    let home = match[1].replace(/-/g, ' ').trim();
+    let away = match[2].replace(/-/g, ' ').trim();
+    // 불필요 단어 제거
+    away = away.replace(/-familiar.*$/i, '').replace(/-foe.*$/i, '').replace(/-in$/i, '');
     return { 
       homeTeam: cleanTeamName(capitalizeWords(home)), 
       awayTeam: cleanTeamName(capitalizeWords(away)) 
@@ -420,15 +460,39 @@ async function getPreviewLinks(browser) {
   page.on('pageerror', () => {});
   page.on('error', () => {});
   
-  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+  // User-Agent 강화 (봇 감지 우회)
+  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  
+  // 추가 헤더 설정
+  await page.setExtraHTTPHeaders({
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+  });
+  
   await page.setRequestInterception(true);
   page.on('request', req => {
     if (['image', 'stylesheet', 'font'].includes(req.resourceType())) req.abort();
     else req.continue();
   });
   
-  await page.goto(PREVIEWS_URL, { waitUntil: 'networkidle2', timeout: 60000 });
-  await delay(2000);
+  try {
+    // 더 긴 타임아웃 + domcontentloaded 사용
+    await page.goto(PREVIEWS_URL, { 
+      waitUntil: 'domcontentloaded', 
+      timeout: 90000 
+    });
+    
+    // 추가 대기 (JavaScript 렌더링)
+    await delay(5000);
+    
+    // 스크롤해서 콘텐츠 로드
+    await page.evaluate(() => window.scrollTo(0, 500));
+    await delay(2000);
+    
+  } catch (e) {
+    console.log(`  ⚠️ 페이지 로드 에러: ${e.message}`);
+    // 에러나도 계속 진행 시도
+  }
   
   const previews = await page.evaluate(() => {
     const results = [];
@@ -442,6 +506,15 @@ async function getPreviewLinks(browser) {
   });
   
   console.log(`  📄 Found ${previews.length} total links`);
+  
+  // 0개면 HTML 일부 출력 (디버깅용)
+  if (previews.length === 0) {
+    const html = await page.content();
+    console.log(`  🔍 페이지 길이: ${html.length}자`);
+    console.log(`  🔍 Preview 텍스트 포함: ${html.includes('Preview') ? 'Yes' : 'No'}`);
+    console.log(`  🔍 football-match-previews 포함: ${html.includes('football-match-previews') ? 'Yes' : 'No'}`);
+  }
+  
   await page.close();
   return previews;
 }
@@ -574,7 +647,15 @@ async function scrapeForebetPreviews() {
   
   const browser = await puppeteer.launch({
     headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--disable-gpu',
+      '--window-size=1920,1080',
+      '--disable-blink-features=AutomationControlled',
+    ]
   });
   
   try {
