@@ -2233,7 +2233,7 @@ export default function Home() {
                             {leagueIndex === 0 && (
                               <div className="block lg:hidden mb-4 flex justify-center">
                                 <a 
-                                  href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
+                                  href="https://m.spolive.com/affliate?recom=fc2350f1cf9ff73c1df02170fd0c6af3:474975cffa1f9962015c229adc14c84f" 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="block hover:opacity-90 transition-opacity"

@@ -20,14 +20,18 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'flagcdn.com',
+        hostname: 'media.api-sports.io',
         pathname: '/**',
       },
-      // 🆕 API-Football 이미지 추가
       {
         protocol: 'https',
-        hostname: 'media.api-sports.io',
-        pathname: '/football/**',
+        hostname: 'img.youtube.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+        pathname: '/**',
       },
     ],
   },

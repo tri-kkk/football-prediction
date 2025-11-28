@@ -1,5 +1,6 @@
 /**
- * Forebet Match Preview Scraper v15
+ * Forebet Match Preview Scraper v16
+ * - 썸네일 없으면 스킵
  * - 여러 페이지 스크래핑 (0, 20, 40, 60)
  * - puppeteer-extra + stealth plugin (봇 감지 우회)
  * - TheSportsDB v2 Premium API
@@ -667,7 +668,7 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
  * 메인
  */
 async function scrapeForebetPreviews() {
-  console.log('🚀 Forebet Scraper v15 (Multi-page + Stealth)');
+  console.log('🚀 Forebet Scraper v16 (Thumbnail Required)');
   console.log(`🔑 API Key: ${SPORTSDB_API_KEY.substring(0, 3)}***`);
   console.log('📅 ' + new Date().toISOString());
   console.log('🎯 지원 리그: 12개\n');
@@ -716,12 +717,11 @@ async function scrapeForebetPreviews() {
           data.thumbnailType = thumbResult.type;
           data.thumbnailSource = thumbResult.source;
           console.log(`    📸 ${thumbResult.type} (${thumbResult.source})`);
+          allPreviews.push(data);
+          console.log(`    ✅ ${data.leagueKr} | 📝 ${data.previewText.length}자`);
         } else {
-          console.log(`    📸 fallback`);
+          console.log(`    ⏭️ 썸네일 없음 - 스킵`);
         }
-        
-        allPreviews.push(data);
-        console.log(`    ✅ ${data.leagueKr} | 📝 ${data.previewText.length}자`);
       }
       
       await delay(2500);
@@ -730,20 +730,16 @@ async function scrapeForebetPreviews() {
     await browser.close();
     
     console.log(`\n${'='.repeat(50)}`);
-    console.log(`📊 결과: ${allPreviews.length}/${supportedLinks.length} 성공`);
+    console.log(`📊 결과: ${allPreviews.length}개 (썸네일 있는 것만)`);
     
-    const withThumb = allPreviews.filter(p => p.thumbnail).length;
-    console.log(`📸 썸네일: ${withThumb}/${allPreviews.length} (${Math.round(withThumb/allPreviews.length*100)}%)`);
-    
-    const thumbStats = { 'v2-league': 0, 'team-search': 0, none: 0 };
+    const thumbStats = { 'v2-league': 0, 'team-search': 0 };
     allPreviews.forEach(p => {
       if (p.thumbnailSource === 'v2-league') thumbStats['v2-league']++;
       else if (p.thumbnailSource === 'team-search') thumbStats['team-search']++;
-      else thumbStats.none++;
     });
+    console.log(`📸 썸네일 소스:`);
     console.log(`   - v2 리그 기반: ${thumbStats['v2-league']}개`);
     console.log(`   - 팀 검색: ${thumbStats['team-search']}개`);
-    console.log(`   - 없음: ${thumbStats.none}개`);
     
     const avgTextLen = allPreviews.length > 0 
       ? Math.round(allPreviews.reduce((a, p) => a + p.previewText.length, 0) / allPreviews.length)
