@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
     let totalCollected = 0
     let totalSkipped = 0
     let totalNoVideo = 0
+    let totalErrors = 0
     const results: any[] = []
+    const errors: any[] = []
 
     for (const league of LEAGUES) {
       console.log(`📊 ${league.name} 수집 중...`)
@@ -105,9 +107,17 @@ export async function GET(request: NextRequest) {
           
           if (!youtubeId) continue
           
-          // 중복 체크
+          // match_id를 숫자로 변환
+          const matchIdNum = parseInt(event.idEvent, 10)
+          
+          if (isNaN(matchIdNum)) {
+            console.log(`  ⚠️ 잘못된 match_id: ${event.idEvent}`)
+            continue
+          }
+          
+          // 중복 체크 (event_id로!)
           const checkResponse = await fetch(
-            `${SUPABASE_URL}/rest/v1/match_highlights?match_id=eq.${event.idEvent}&select=id`,
+            `${SUPABASE_URL}/rest/v1/match_highlights?event_id=eq.${event.idEvent}&select=id`,
             {
               headers: {
                 'apikey': SUPABASE_SERVICE_KEY || '',
@@ -126,7 +136,8 @@ export async function GET(request: NextRequest) {
           
           // DB에 저장
           const highlightData = {
-            match_id: event.idEvent,
+            match_id: matchIdNum,           // integer
+            event_id: event.idEvent,        // ✅ varchar - 추가!
             home_team: event.strHomeTeam,
             away_team: event.strAwayTeam,
             league: league.name,
@@ -158,6 +169,15 @@ export async function GET(request: NextRequest) {
               league: league.name,
               date: event.dateEvent,
             })
+            console.log(`  ✅ 저장: ${event.strHomeTeam} vs ${event.strAwayTeam}`)
+          } else {
+            const errorText = await insertResponse.text()
+            totalErrors++
+            errors.push({
+              match: `${event.strHomeTeam} vs ${event.strAwayTeam}`,
+              error: errorText,
+            })
+            console.log(`  ❌ 저장 실패: ${event.strHomeTeam} vs ${event.strAwayTeam} - ${errorText}`)
           }
         }
         
@@ -175,6 +195,7 @@ export async function GET(request: NextRequest) {
     console.log(`   - 새로 수집: ${totalCollected}개`)
     console.log(`   - 중복 건너뜀: ${totalSkipped}개`)
     console.log(`   - 영상 없음: ${totalNoVideo}개`)
+    console.log(`   - 에러: ${totalErrors}개`)
     console.log(`   - 소요 시간: ${duration}초`)
     
     return NextResponse.json({
@@ -183,8 +204,10 @@ export async function GET(request: NextRequest) {
       collected: totalCollected,
       skipped: totalSkipped,
       noVideo: totalNoVideo,
+      errors: totalErrors,
       duration: `${duration}s`,
       highlights: results,
+      errorDetails: errors.slice(0, 5),  // 최대 5개 에러만
       debug: {
         apiKey: THESPORTSDB_API_KEY === '3' ? '무료(3) - strVideo 미지원!' : '유료 ✅',
         leaguesChecked: LEAGUES.map(l => l.name),
