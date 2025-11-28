@@ -1,5 +1,6 @@
 /**
- * Forebet Match Preview Scraper v14
+ * Forebet Match Preview Scraper v15
+ * - 여러 페이지 스크래핑 (0, 20, 40, 60)
  * - puppeteer-extra + stealth plugin (봇 감지 우회)
  * - TheSportsDB v2 Premium API
  */
@@ -37,7 +38,12 @@ const LEAGUE_CODE_MAP = {
   'eredivisie': { code: 'DED', nameKr: '에레디비시', sportsDbId: 4337 },
 };
 
-const PREVIEWS_URL = 'https://www.forebet.com/en/football-match-previews';
+const PREVIEWS_URLS = [
+  'https://www.forebet.com/en/football-match-previews',
+  'https://www.forebet.com/en/football-match-previews?start=20',
+  'https://www.forebet.com/en/football-match-previews?start=40',
+  'https://www.forebet.com/en/football-match-previews?start=60',
+];
 
 // TheSportsDB 경기 캐시 (리그별)
 let sportsDbEventsCache = {};
@@ -453,72 +459,91 @@ function capitalizeWords(str) {
 }
 
 /**
- * 프리뷰 목록 수집
+ * 프리뷰 목록 수집 (여러 페이지)
  */
 async function getPreviewLinks(browser) {
   console.log('📋 Fetching preview list...');
-  const page = await browser.newPage();
+  const allPreviews = [];
+  const seenLinks = new Set();
   
-  page.on('pageerror', () => {});
-  page.on('error', () => {});
-  
-  // User-Agent 강화 (봇 감지 우회)
-  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-  
-  // 추가 헤더 설정
-  await page.setExtraHTTPHeaders({
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-  });
-  
-  await page.setRequestInterception(true);
-  page.on('request', req => {
-    if (['image', 'stylesheet', 'font'].includes(req.resourceType())) req.abort();
-    else req.continue();
-  });
-  
-  try {
-    // 더 긴 타임아웃 + domcontentloaded 사용
-    await page.goto(PREVIEWS_URL, { 
-      waitUntil: 'domcontentloaded', 
-      timeout: 90000 
+  for (const url of PREVIEWS_URLS) {
+    console.log(`  📄 페이지: ${url.includes('start=') ? url.split('start=')[1] : '0'}`);
+    
+    const page = await browser.newPage();
+    
+    page.on('pageerror', () => {});
+    page.on('error', () => {});
+    
+    // User-Agent 강화 (봇 감지 우회)
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    
+    // 추가 헤더 설정
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
     });
     
-    // 추가 대기 (JavaScript 렌더링)
-    await delay(5000);
+    await page.setRequestInterception(true);
+    page.on('request', req => {
+      if (['image', 'stylesheet', 'font'].includes(req.resourceType())) req.abort();
+      else req.continue();
+    });
     
-    // 스크롤해서 콘텐츠 로드
-    await page.evaluate(() => window.scrollTo(0, 500));
-    await delay(2000);
+    try {
+      // 더 긴 타임아웃 + domcontentloaded 사용
+      await page.goto(url, { 
+        waitUntil: 'domcontentloaded', 
+        timeout: 90000 
+      });
+      
+      // 추가 대기 (JavaScript 렌더링)
+      await delay(5000);
+      
+      // 스크롤해서 콘텐츠 로드
+      await page.evaluate(() => window.scrollTo(0, 500));
+      await delay(2000);
+      
+    } catch (e) {
+      console.log(`    ⚠️ 페이지 로드 에러: ${e.message}`);
+      // 에러나도 계속 진행 (페이지는 로드됐을 수 있음)
+    }
     
-  } catch (e) {
-    console.log(`  ⚠️ 페이지 로드 에러: ${e.message}`);
-    // 에러나도 계속 진행 시도
-  }
-  
-  const previews = await page.evaluate(() => {
-    const results = [];
-    document.querySelectorAll('a[href*="/football-match-previews/"]').forEach(el => {
-      const link = el.href;
-      if (link?.includes('/football-match-previews/') && !link.endsWith('/football-match-previews')) {
-        results.push({ link, title: el.textContent?.trim() || '' });
+    const previews = await page.evaluate(() => {
+      const results = [];
+      document.querySelectorAll('a[href*="/football-match-previews/"]').forEach(el => {
+        const link = el.href;
+        if (link?.includes('/football-match-previews/') && !link.endsWith('/football-match-previews')) {
+          results.push({ link, title: el.textContent?.trim() || '' });
+        }
+      });
+      return [...new Map(results.map(r => [r.link, r])).values()];
+    });
+    
+    // 중복 제거하면서 추가
+    let newCount = 0;
+    for (const p of previews) {
+      if (!seenLinks.has(p.link)) {
+        seenLinks.add(p.link);
+        allPreviews.push(p);
+        newCount++;
       }
-    });
-    return [...new Map(results.map(r => [r.link, r])).values()];
-  });
-  
-  console.log(`  📄 Found ${previews.length} total links`);
-  
-  // 0개면 HTML 일부 출력 (디버깅용)
-  if (previews.length === 0) {
-    const html = await page.content();
-    console.log(`  🔍 페이지 길이: ${html.length}자`);
-    console.log(`  🔍 Preview 텍스트 포함: ${html.includes('Preview') ? 'Yes' : 'No'}`);
-    console.log(`  🔍 football-match-previews 포함: ${html.includes('football-match-previews') ? 'Yes' : 'No'}`);
+    }
+    
+    console.log(`    Found ${previews.length} links (+${newCount} new)`);
+    
+    // 0개면 HTML 일부 출력 (디버깅용)
+    if (previews.length === 0) {
+      const html = await page.content();
+      console.log(`    🔍 페이지 길이: ${html.length}자`);
+      console.log(`    🔍 Preview 텍스트 포함: ${html.includes('Preview') ? 'Yes' : 'No'}`);
+    }
+    
+    await page.close();
+    await delay(2000); // 페이지 간 딜레이
   }
   
-  await page.close();
-  return previews;
+  console.log(`  📄 총 ${allPreviews.length} links found`);
+  return allPreviews;
 }
 
 /**
@@ -642,7 +667,7 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
  * 메인
  */
 async function scrapeForebetPreviews() {
-  console.log('🚀 Forebet Scraper v13 (TheSportsDB v2 Premium API)');
+  console.log('🚀 Forebet Scraper v15 (Multi-page + Stealth)');
   console.log(`🔑 API Key: ${SPORTSDB_API_KEY.substring(0, 3)}***`);
   console.log('📅 ' + new Date().toISOString());
   console.log('🎯 지원 리그: 12개\n');

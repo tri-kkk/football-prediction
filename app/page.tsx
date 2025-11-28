@@ -1597,7 +1597,7 @@ export default function Home() {
       </div>
 
       {/* 트렌드 컨텐츠 영역 */}
-      <div className="container mx-auto px-4 pt-0 md:py-3 pb-32 lg:pb-3">
+      <div className="container mx-auto px-4 pt-0 md:py-3 pb-20 lg:pb-3">
         <div className="flex gap-8 relative">
           {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
           <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
@@ -2013,41 +2013,41 @@ export default function Home() {
                           if (!orderedLeagues.includes(code)) orderedLeagues.push(code)
                         })
 
-                        return orderedLeagues.map(leagueCode => {
+                        return orderedLeagues.map((leagueCode, leagueIndex) => {
                           const leagueMatches = matchesByLeague[leagueCode]
                           const league = LEAGUES.find(l => l.code === leagueCode)
 
                           return (
-                            <div 
-                              key={leagueCode} 
-                              className={`rounded-xl overflow-hidden mb-4 ${
-                                darkMode ? 'bg-[#111]' : 'bg-white shadow-sm border border-gray-100'
-                              }`}
-                            >
-                              {/* 리그 헤더 */}
-                              <div className={`flex items-center gap-3 px-4 py-3 ${
-                                darkMode ? 'bg-[#0a0a0a]' : 'bg-gray-50'
-                              }`}>
-                                {league?.isEmoji ? (
-                                  <span className="text-xl">{league.logo}</span>
-                                ) : (
-                                  <div className="w-6 h-6 bg-white rounded flex items-center justify-center p-0.5">
-                                    <img 
-                                      src={league?.logo || getLeagueLogo(leagueCode)} 
-                                      alt={leagueCode}
-                                      className="w-full h-full object-contain"
-                                    />
-                                  </div>
-                                )}
-                                <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  {getLeagueName(leagueCode, currentLanguage)}
-                                </span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                  darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'
+                            <React.Fragment key={leagueCode}>
+                              <div 
+                                className={`rounded-xl overflow-hidden mb-4 ${
+                                  darkMode ? 'bg-[#111]' : 'bg-white shadow-sm border border-gray-100'
+                                }`}
+                              >
+                                {/* 리그 헤더 */}
+                                <div className={`flex items-center gap-3 px-4 py-3 ${
+                                  darkMode ? 'bg-[#0a0a0a]' : 'bg-gray-50'
                                 }`}>
-                                  {leagueMatches.length}
-                                </span>
-                              </div>
+                                  {league?.isEmoji ? (
+                                    <span className="text-xl">{league.logo}</span>
+                                  ) : (
+                                    <div className="w-6 h-6 bg-white rounded flex items-center justify-center p-0.5">
+                                      <img 
+                                        src={league?.logo || getLeagueLogo(leagueCode)} 
+                                        alt={leagueCode}
+                                        className="w-full h-full object-contain"
+                                      />
+                                    </div>
+                                  )}
+                                  <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    {getLeagueName(leagueCode, currentLanguage)}
+                                  </span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'
+                                  }`}>
+                                    {leagueMatches.length}
+                                  </span>
+                                </div>
 
                               {/* 경기 목록 */}
                               <div className={`divide-y ${darkMode ? 'divide-gray-900' : 'divide-gray-100'}`}>
@@ -2228,6 +2228,32 @@ export default function Home() {
                                 })}
                               </div>
                             </div>
+                            
+                            {/* 📱 모바일 인피드 배너 - 첫 번째 리그 다음에 표시 */}
+                            {leagueIndex === 0 && (
+                              <div className="block lg:hidden mb-4 flex justify-center">
+                                <a 
+                                  href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="block hover:opacity-90 transition-opacity"
+                                >
+                                  <img 
+                                    src="/ad-banner-320x50.png" 
+                                    alt="Advertisement"
+                                    className="w-[320px] h-[50px] object-cover rounded"
+                                    onError={(e) => {
+                                      if (e.currentTarget.src.endsWith('.png')) {
+                                        e.currentTarget.src = '/ad-banner-320x50.gif'
+                                      } else if (e.currentTarget.src.endsWith('.gif')) {
+                                        e.currentTarget.src = '/ad-banner-320x50.jpg'
+                                      }
+                                    }}
+                                  />
+                                </a>
+                              </div>
+                            )}
+                          </React.Fragment>
                           )
                         })
                       })()}
@@ -2647,35 +2673,6 @@ export default function Home() {
               </div>
             )}
           </aside>
-        </div>
-      </div>
-
-      {/* 📱 모바일 하단 고정 배너 320x50 (하단 네비게이션 바 위) */}
-      <div className="block lg:hidden fixed bottom-[90px] left-0 right-0 z-40 flex justify-center">
-        <div className="py-1 px-2">
-          <a 
-            href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block hover:opacity-90 transition-opacity"
-          >
-            <img 
-              src="/ad-banner-320x50.png" 
-              alt="Advertisement"
-              className="w-[320px] h-[50px] object-cover rounded"
-              onError={(e) => {
-                // PNG 로드 실패 시 GIF로 폴백
-                if (e.currentTarget.src.endsWith('.png')) {
-                  e.currentTarget.src = '/ad-banner-320x50.gif'
-                } else if (e.currentTarget.src.endsWith('.gif')) {
-                  e.currentTarget.src = '/ad-banner-320x50.jpg'
-                } else {
-                  // 모두 실패하면 플레이스홀더
-                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="50"><rect width="320" height="50" fill="%231a1a1a"/><text x="160" y="30" text-anchor="middle" fill="%23666" font-size="12">AD 320x50</text></svg>'
-                }
-              }}
-            />
-          </a>
         </div>
       </div>
 
