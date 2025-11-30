@@ -83,17 +83,21 @@ async function getMatchTrend(matchId: string): Promise<{ direction: 'UP' | 'DOWN
   }
 }
 
-// 오늘의 경기 데이터 가져오기
+// 오늘의 경기 데이터 가져오기 (현재 시간 이후 경기만)
 async function getTodayMatches(): Promise<InsightMatch[]> {
   const now = new Date()
-  const today = now.toISOString().split('T')[0]
-  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const nowISO = now.toISOString()
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+  const tomorrowEnd = tomorrow.toISOString().split('T')[0] + 'T23:59:59'
+
+  console.log('🕐 현재 시간:', nowISO)
+  console.log('🔍 조회 범위:', nowISO, '~', tomorrowEnd)
 
   const { data, error } = await supabase
     .from('match_odds_latest')
     .select('*')
-    .gte('commence_time', today)
-    .lt('commence_time', tomorrow + 'T23:59:59')
+    .gte('commence_time', nowISO)  // 현재 시간 이후만!
+    .lt('commence_time', tomorrowEnd)
     .order('commence_time', { ascending: true })
 
   if (error) {

@@ -1,8 +1,9 @@
 /**
- * Forebet Match Preview Scraper v16
+ * Forebet Match Preview Scraper v17
+ * - 페이지에서 리그 정보 직접 추출 (정확도 향상)
  * - 썸네일 없으면 스킵
  * - 여러 페이지 스크래핑 (0, 20, 40, 60)
- * - puppeteer-extra + stealth plugin (봇 감지 우회)
+ * - puppeteer-extra + stealth plugin
  * - TheSportsDB v2 Premium API
  */
 
@@ -20,7 +21,7 @@ const SUPPORTED_LEAGUES = [
   'champions league', 'europa league', 'conference league', 'nations league',
   'premier league', 'championship',
   'la liga', 'bundesliga', 'serie a', 'ligue 1',
-  'primeira liga', 'eredivisie',
+  'primeira liga', 'eredivisie', 'allsvenskan',
 ];
 
 // 리그 코드 + 한글명 + TheSportsDB ID
@@ -37,6 +38,7 @@ const LEAGUE_CODE_MAP = {
   'ligue 1': { code: 'FL1', nameKr: '리그1', sportsDbId: 4334 },
   'primeira liga': { code: 'PPL', nameKr: '프리메이라리가', sportsDbId: 4344 },
   'eredivisie': { code: 'DED', nameKr: '에레디비시', sportsDbId: 4337 },
+  'allsvenskan': { code: 'ASN', nameKr: '알스벤스칸', sportsDbId: 4350 },
 };
 
 const PREVIEWS_URLS = [
@@ -44,6 +46,8 @@ const PREVIEWS_URLS = [
   'https://www.forebet.com/en/football-match-previews?start=20',
   'https://www.forebet.com/en/football-match-previews?start=40',
   'https://www.forebet.com/en/football-match-previews?start=60',
+  'https://www.forebet.com/en/football-match-previews?start=80',
+  'https://www.forebet.com/en/football-match-previews?start=100',
 ];
 
 // TheSportsDB 경기 캐시 (리그별)
@@ -511,12 +515,74 @@ async function getPreviewLinks(browser) {
     
     const previews = await page.evaluate(() => {
       const results = [];
-      document.querySelectorAll('a[href*="/football-match-previews/"]').forEach(el => {
-        const link = el.href;
-        if (link?.includes('/football-match-previews/') && !link.endsWith('/football-match-previews')) {
-          results.push({ link, title: el.textContent?.trim() || '' });
+      
+      // 프리뷰 카드들 찾기 (여러 선택자 시도)
+      const cards = document.querySelectorAll('.preview_item, .previewItem, [class*="preview"], article');
+      
+      cards.forEach(card => {
+        const linkEl = card.querySelector('a[href*="/football-match-previews/"]');
+        if (!linkEl) return;
+        
+        const link = linkEl.href;
+        if (!link?.includes('/football-match-previews/') || link.endsWith('/football-match-previews')) return;
+        
+        const title = linkEl.textContent?.trim() || '';
+        
+        // 리그 정보 찾기 (카드 내에서)
+        let league = '';
+        const leagueEl = card.querySelector('.league_link, .leagueName, [class*="league"]');
+        if (leagueEl) {
+          league = leagueEl.textContent?.trim() || '';
         }
+        
+        // 카드 전체 텍스트에서 리그 찾기
+        if (!league) {
+          const cardText = card.textContent || '';
+          const leaguePatterns = [
+            'Premier League', 'La Liga', 'Bundesliga', 'Serie A', 'Ligue 1',
+            'Champions League', 'Europa League', 'Conference League', 'Nations League',
+            'Championship', 'Primeira Liga', 'Eredivisie', 'Allsvenskan'
+          ];
+          for (const pattern of leaguePatterns) {
+            if (cardText.includes(pattern)) {
+              league = pattern;
+              break;
+            }
+          }
+        }
+        
+        results.push({ link, title, league });
       });
+      
+      // 카드 방식 실패 시 기존 방식 fallback
+      if (results.length === 0) {
+        document.querySelectorAll('a[href*="/football-match-previews/"]').forEach(el => {
+          const link = el.href;
+          if (link?.includes('/football-match-previews/') && !link.endsWith('/football-match-previews')) {
+            // 부모 요소에서 리그 찾기
+            let league = '';
+            let parent = el.parentElement;
+            for (let i = 0; i < 5 && parent; i++) {
+              const text = parent.textContent || '';
+              const leaguePatterns = [
+                'Premier League', 'La Liga', 'Bundesliga', 'Serie A', 'Ligue 1',
+                'Champions League', 'Europa League', 'Conference League', 'Nations League',
+                'Championship', 'Primeira Liga', 'Eredivisie'
+              ];
+              for (const pattern of leaguePatterns) {
+                if (text.includes(pattern)) {
+                  league = pattern;
+                  break;
+                }
+              }
+              if (league) break;
+              parent = parent.parentElement;
+            }
+            results.push({ link, title: el.textContent?.trim() || '', league });
+          }
+        });
+      }
+      
       return [...new Map(results.map(r => [r.link, r])).values()];
     });
     
@@ -530,7 +596,18 @@ async function getPreviewLinks(browser) {
       }
     }
     
+    // 리그별 통계
+    const leagueCounts = {};
+    previews.forEach(p => {
+      if (p.league) {
+        leagueCounts[p.league] = (leagueCounts[p.league] || 0) + 1;
+      }
+    });
+    
     console.log(`    Found ${previews.length} links (+${newCount} new)`);
+    if (Object.keys(leagueCounts).length > 0) {
+      console.log(`    📋 리그: ${Object.entries(leagueCounts).map(([k,v]) => `${k}(${v})`).join(', ')}`);
+    }
     
     // 0개면 HTML 일부 출력 (디버깅용)
     if (previews.length === 0) {
@@ -554,12 +631,32 @@ function filterSupportedLeagues(previews) {
   const filtered = [];
   
   for (const p of previews) {
-    const titleLower = p.title.toLowerCase();
-    for (const league of SUPPORTED_LEAGUES) {
-      if (titleLower.includes(league)) {
-        filtered.push({ ...p, leagueKey: league });
-        break;
+    let foundLeague = null;
+    
+    // 1. 페이지에서 추출한 리그 정보 우선 사용
+    if (p.league) {
+      const leagueLower = p.league.toLowerCase();
+      for (const league of SUPPORTED_LEAGUES) {
+        if (leagueLower.includes(league)) {
+          foundLeague = league;
+          break;
+        }
       }
+    }
+    
+    // 2. 제목에서 리그 찾기 (fallback)
+    if (!foundLeague) {
+      const titleLower = p.title.toLowerCase();
+      for (const league of SUPPORTED_LEAGUES) {
+        if (titleLower.includes(league)) {
+          foundLeague = league;
+          break;
+        }
+      }
+    }
+    
+    if (foundLeague) {
+      filtered.push({ ...p, leagueKey: foundLeague });
     }
   }
   
@@ -668,10 +765,10 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
  * 메인
  */
 async function scrapeForebetPreviews() {
-  console.log('🚀 Forebet Scraper v16 (Thumbnail Required)');
+  console.log('🚀 Forebet Scraper v17 (League Detection Improved)');
   console.log(`🔑 API Key: ${SPORTSDB_API_KEY.substring(0, 3)}***`);
   console.log('📅 ' + new Date().toISOString());
-  console.log('🎯 지원 리그: 12개\n');
+  console.log(`🎯 지원 리그: ${SUPPORTED_LEAGUES.length}개\n`);
   
   const browser = await puppeteer.launch({
     headless: 'new',
