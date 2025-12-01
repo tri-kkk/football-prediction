@@ -1,9 +1,10 @@
 'use client'
 
-import type { Metadata } from 'next'
 import { useState } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function ContactPage() {
+  const { language } = useLanguage()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -42,20 +43,25 @@ export default function ContactPage() {
       if (response.ok) {
         setSubmitStatus({
           type: 'success',
-          message: data.message || '문의가 성공적으로 전송되었습니다!'
+          message: language === 'ko' 
+            ? '문의가 성공적으로 전송되었습니다!'
+            : 'Your message has been sent successfully!'
         })
-        // 폼 초기화
         setFormData({ name: '', email: '', subject: '', message: '' })
       } else {
         setSubmitStatus({
           type: 'error',
-          message: data.error || '전송에 실패했습니다. 다시 시도해주세요.'
+          message: language === 'ko'
+            ? '전송에 실패했습니다. 다시 시도해주세요.'
+            : 'Failed to send. Please try again.'
         })
       }
     } catch (error) {
       setSubmitStatus({
         type: 'error',
-        message: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+        message: language === 'ko'
+          ? '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+          : 'Network error occurred. Please try again later.'
       })
     } finally {
       setIsSubmitting(false)
@@ -67,9 +73,14 @@ export default function ContactPage() {
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">문의하기</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            {language === 'ko' ? '문의하기' : 'Contact Us'}
+          </h1>
           <p className="text-xl text-gray-400">
-            질문이나 제안사항이 있으시면 언제든지 연락해주세요
+            {language === 'ko'
+              ? '질문이나 제안사항이 있으시면 언제든지 연락해주세요'
+              : 'If you have any questions or suggestions, please feel free to contact us'
+            }
           </p>
         </div>
 
@@ -78,7 +89,9 @@ export default function ContactPage() {
           <section className="bg-[#1a1a1a] rounded-2xl p-8 border border-gray-800">
             <div className="flex items-center gap-3 mb-6">
               <span className="text-4xl">📧</span>
-              <h2 className="text-2xl font-bold">메시지 보내기</h2>
+              <h2 className="text-2xl font-bold">
+                {language === 'ko' ? '메시지 보내기' : 'Send a Message'}
+              </h2>
             </div>
             
             {/* 상태 메시지 */}
@@ -96,7 +109,7 @@ export default function ContactPage() {
               {/* Name */}
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
-                  이름
+                  {language === 'ko' ? '이름' : 'Name'}
                 </label>
                 <input
                   type="text"
@@ -105,7 +118,7 @@ export default function ContactPage() {
                   value={formData.name}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-[#0f0f0f] border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 transition-colors text-white"
-                  placeholder="홍길동"
+                  placeholder={language === 'ko' ? '홍길동' : 'John Doe'}
                   required
                   disabled={isSubmitting}
                 />
@@ -114,7 +127,7 @@ export default function ContactPage() {
               {/* Email */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                  이메일
+                  {language === 'ko' ? '이메일' : 'Email'}
                 </label>
                 <input
                   type="email"
@@ -132,7 +145,7 @@ export default function ContactPage() {
               {/* Subject */}
               <div>
                 <label htmlFor="subject" className="block text-sm font-medium text-gray-300 mb-2">
-                  제목
+                  {language === 'ko' ? '제목' : 'Subject'}
                 </label>
                 <input
                   type="text"
@@ -141,7 +154,7 @@ export default function ContactPage() {
                   value={formData.subject}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-[#0f0f0f] border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 transition-colors text-white"
-                  placeholder="무엇에 관한 문의인가요?"
+                  placeholder={language === 'ko' ? '무엇에 관한 문의인가요?' : 'What is your inquiry about?'}
                   required
                   disabled={isSubmitting}
                 />
@@ -150,7 +163,7 @@ export default function ContactPage() {
               {/* Message */}
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">
-                  메시지
+                  {language === 'ko' ? '메시지' : 'Message'}
                 </label>
                 <textarea
                   id="message"
@@ -159,7 +172,7 @@ export default function ContactPage() {
                   value={formData.message}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-[#0f0f0f] border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 transition-colors text-white resize-none"
-                  placeholder="메시지를 입력하세요..."
+                  placeholder={language === 'ko' ? '메시지를 입력하세요...' : 'Enter your message...'}
                   required
                   disabled={isSubmitting}
                 />
@@ -181,15 +194,13 @@ export default function ContactPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    전송 중...
+                    {language === 'ko' ? '전송 중...' : 'Sending...'}
                   </span>
                 ) : (
-                  '메시지 보내기'
+                  language === 'ko' ? '메시지 보내기' : 'Send Message'
                 )}
               </button>
             </form>
-
-          
           </section>
 
           {/* Contact Information */}
@@ -199,7 +210,9 @@ export default function ContactPage() {
               <div className="flex items-start gap-4">
                 <div className="text-3xl">📮</div>
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">이메일 문의</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    {language === 'ko' ? '이메일 문의' : 'Email Inquiry'}
+                  </h3>
                   <a 
                     href="mailto:trikilab2025@gmail.com" 
                     className="text-blue-400 hover:text-blue-300 transition-colors text-lg"
@@ -207,14 +220,14 @@ export default function ContactPage() {
                     trikilab2025@gmail.com
                   </a>
                   <p className="text-sm text-gray-500 mt-3">
-                    일반 문의, 비즈니스 제안, 파트너십 등 
-                    모든 문의는 위 이메일로 보내주세요
+                    {language === 'ko'
+                      ? '일반 문의, 비즈니스 제안, 파트너십 등 모든 문의는 위 이메일로 보내주세요'
+                      : 'For general inquiries, business proposals, partnerships, please send to the email above'
+                    }
                   </p>
                 </div>
               </div>
             </section>
-
-         
           </div>
         </div>
       </div>
