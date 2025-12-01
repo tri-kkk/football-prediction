@@ -21,7 +21,7 @@ export default function MobileBottomNav() {
       icon: 'insights',
       labelKo: '인사이트',
       labelEn: 'Insights',
-      hidden: false
+      hidden: true  // 임시 숨김
     },
     {
       href: '/results',
@@ -106,12 +106,6 @@ export default function MobileBottomNav() {
                     height={24}
                     className={isActive ? 'brightness-125' : ''}
                   />
-                )}
-                {/* NEW Badge */}
-                {item.badge && (
-                  <span className="absolute -top-1 -right-2 px-1 py-0.5 text-[8px] font-bold rounded-full bg-yellow-400 text-black">
-                    {item.badge}
-                  </span>
                 )}
               </div>
               <span className="text-[11px] font-medium">
