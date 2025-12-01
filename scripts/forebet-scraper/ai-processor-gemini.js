@@ -204,47 +204,7 @@ ${previewText.substring(0, 1500) || '없음'}
       if (jsonMatch) jsonStr = jsonMatch[0];
     }
     
-    // 더 강력한 JSON 파싱
-    let result;
-    try {
-      result = JSON.parse(jsonStr);
-    } catch (parseError) {
-      // JSON 문자열 내의 이스케이프되지 않은 줄바꿈 처리
-      // 문자열 값 내부의 줄바꿈만 교체 (키-값 구조는 유지)
-      const fixedJson = jsonStr
-        // 문자열 값 내부의 실제 줄바꿈을 \\n으로 변환
-        .replace(/"([^"]*?)"/g, (match, content) => {
-          const fixed = content
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t');
-          return `"${fixed}"`;
-        });
-      
-      try {
-        result = JSON.parse(fixedJson);
-      } catch (secondError) {
-        // 마지막 시도: 필드별로 추출
-        const titleMatch = jsonStr.match(/"title"\s*:\s*"([^"]+)"/);
-        const slugMatch = jsonStr.match(/"slug"\s*:\s*"([^"]+)"/);
-        const excerptMatch = jsonStr.match(/"excerpt"\s*:\s*"([^"]+)"/);
-        
-        // content는 여러 줄일 수 있으므로 다르게 처리
-        const contentMatch = jsonStr.match(/"content"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"tags"|"\s*})/);
-        
-        if (titleMatch) {
-          result = {
-            title: titleMatch[1],
-            slug: slugMatch?.[1] || '',
-            excerpt: excerptMatch?.[1] || '',
-            content: contentMatch?.[1]?.replace(/\\n/g, '\n').replace(/\\"/g, '"') || '',
-            tags: []
-          };
-        } else {
-          throw secondError;
-        }
-      }
-    }
+    const result = JSON.parse(jsonStr);
     
     // 태그 정리
     let tags = result.tags || [match.leagueKr, homeKr, awayKr];

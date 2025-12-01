@@ -11,7 +11,7 @@ export async function GET() {
   try {
     const { data, error } = await supabase
       .from('blog_posts')
-      .select('id, slug, title_kr, category, published, published_at, views, created_at')
+      .select('id, slug, title, title_kr, category, published, published_en, published_at, views, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -37,15 +37,22 @@ export async function POST(request: Request) {
       .from('blog_posts')
       .insert([{
         slug: body.slug,
+        // 영문
         title: body.title || body.title_kr,
+        content_en: body.content_en || null,
+        excerpt_en: body.excerpt_en || null,
+        // 한글
         title_kr: body.title_kr,
         excerpt: body.excerpt,
         content: body.content,
+        // 공통
         cover_image: body.cover_image,
         category: body.category,
         tags: body.tags || [],
+        // 발행 설정
         published: body.published || false,
-        published_at: body.published ? new Date().toISOString() : null
+        published_en: body.published_en || false,
+        published_at: (body.published || body.published_en) ? new Date().toISOString() : null
       }])
       .select()
       .single()

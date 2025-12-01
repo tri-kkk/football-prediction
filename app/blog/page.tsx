@@ -10,9 +10,13 @@ interface BlogPost {
   title: string
   title_kr: string
   excerpt: string
+  excerpt_en: string | null
+  content_en: string | null
   cover_image: string
   category: string
   published_at: string
+  published: boolean
+  published_en: boolean
   views: number
   tags: string[]
 }
@@ -24,7 +28,7 @@ const categories = [
   { value: 'analysis', labelKo: '심층 분석', labelEn: 'Analysis', emoji: '🔍' },
 ]
 
-const POSTS_PER_PAGE = 12  // 한 번에 로드할 포스트 수
+const POSTS_PER_PAGE = 12
 
 export default function BlogPage() {
   const { language: currentLanguage } = useLanguage()
@@ -42,7 +46,7 @@ export default function BlogPage() {
     setOffset(0)
     setHasMore(true)
     fetchPosts(0, true)
-  }, [selectedCategory])
+  }, [selectedCategory, currentLanguage])
 
   const fetchPosts = async (currentOffset: number, isInitial: boolean = false) => {
     if (isInitial) {
@@ -53,8 +57,10 @@ export default function BlogPage() {
 
     try {
       const category = selectedCategory === 'all' ? '' : `&category=${selectedCategory}`
+      // 언어에 따라 발행된 글만 필터링
+      const langFilter = currentLanguage === 'en' ? '&lang=en' : ''
       const res = await fetch(
-        `/api/blog/posts?published=true${category}&limit=${POSTS_PER_PAGE}&offset=${currentOffset}`
+        `/api/blog/posts?published=true${category}${langFilter}&limit=${POSTS_PER_PAGE}&offset=${currentOffset}`
       )
       const result = await res.json()
       
@@ -67,12 +73,10 @@ export default function BlogPage() {
           setPosts(prev => [...prev, ...newPosts])
         }
         
-        // 총 개수 저장 (API에서 count 반환 시)
         if (result.count !== undefined) {
           setTotalCount(result.count)
         }
         
-        // 더 불러올 데이터가 있는지 확인
         setHasMore(newPosts.length === POSTS_PER_PAGE)
         setOffset(currentOffset + newPosts.length)
       }
@@ -92,19 +96,34 @@ export default function BlogPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('ko-KR', {
+    return date.toLocaleDateString(currentLanguage === 'ko' ? 'ko-KR' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     })
   }
 
+  // 언어에 따른 콘텐츠 선택
+  const getTitle = (post: BlogPost) => {
+    if (currentLanguage === 'en' && post.title) {
+      return post.title
+    }
+    return post.title_kr || post.title
+  }
+
+  const getExcerpt = (post: BlogPost) => {
+    if (currentLanguage === 'en' && post.excerpt_en) {
+      return post.excerpt_en
+    }
+    return post.excerpt
+  }
+
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white">
-      {/* 카테고리 필터 - 모바일 최적화 */}
+      {/* 카테고리 필터 */}
       <div className="border-b border-gray-800 bg-[#0f0f0f] sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-3">
-          {/* Desktop: 가로 배치 */}
+          {/* Desktop */}
           <div className="hidden md:flex gap-2">
             {categories.map(cat => (
               <button
@@ -142,7 +161,7 @@ export default function BlogPage() {
         </div>
       </div>
 
-      {/* 로딩 상태 */}
+      {/* 로딩 */}
       {loading && (
         <div className="max-w-6xl mx-auto px-4 py-20 text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-700 border-t-[#A3FF4C]"></div>
@@ -157,7 +176,7 @@ export default function BlogPage() {
         <main className="max-w-6xl mx-auto px-4 py-8">
           {posts.length > 0 ? (
             <>
-              {/* 포스트 개수 표시 */}
+              {/* 포스트 개수 */}
               <div className="mb-6 flex items-center justify-between">
                 <p className="text-gray-400 text-sm">
                   {currentLanguage === 'ko' 
@@ -180,7 +199,7 @@ export default function BlogPage() {
                         <div className="aspect-video bg-gray-800 relative overflow-hidden">
                           <img 
                             src={post.cover_image} 
-                            alt={post.title_kr || post.title}
+                            alt={getTitle(post)}
                             className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                           />
                           {/* 카테고리 뱃지 */}
@@ -192,18 +211,26 @@ export default function BlogPage() {
                               }
                             </span>
                           </div>
+                          {/* 언어 뱃지 */}
+                          {currentLanguage === 'en' && !post.content_en && (
+                            <div className="absolute top-3 right-3">
+                              <span className="px-2 py-1 bg-gray-900/80 backdrop-blur-sm text-gray-300 text-xs rounded">
+                                🇰🇷 Korean
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
 
                       <div className="p-5 flex-1 flex flex-col">
                         {/* 제목 */}
                         <h2 className="text-xl font-bold mb-3 group-hover:text-[#A3FF4C] transition line-clamp-2">
-                          {post.title_kr || post.title}
+                          {getTitle(post)}
                         </h2>
 
                         {/* 요약 */}
                         <p className="text-gray-400 text-sm mb-4 line-clamp-3 flex-1">
-                          {post.excerpt}
+                          {getExcerpt(post)}
                         </p>
 
                         {/* 메타 정보 */}
@@ -248,7 +275,7 @@ export default function BlogPage() {
                       </>
                     ) : (
                       <>
-                        <span className="text-xl">📄</span>
+                        <span className="text-xl">🔄</span>
                         <span>{currentLanguage === 'ko' ? '더 보기' : 'Load More'}</span>
                       </>
                     )}

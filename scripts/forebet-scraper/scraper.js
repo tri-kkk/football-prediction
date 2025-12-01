@@ -1,10 +1,12 @@
 /**
- * Forebet Match Preview Scraper v17
- * - 페이지에서 리그 정보 직접 추출 (정확도 향상)
+ * Forebet Match Preview Scraper v19
+ * - 하루 최대 12개 제한 (AI 비용 절감)
+ * - 2페이지만 스크래핑 (정확도 우선)
  * - 썸네일 없으면 스킵
- * - 여러 페이지 스크래핑 (0, 20, 40, 60)
- * - puppeteer-extra + stealth plugin
+ * - 페이지에서 리그 정보 직접 추출
  * - TheSportsDB v2 Premium API
+ * - ⭐ NEW: 경기 날짜 필터링 (오늘~7일 이내)
+ * - ⭐ NEW: 팀명 수식어 제거
  */
 
 const puppeteer = require('puppeteer-extra');
@@ -16,45 +18,202 @@ const fs = require('fs');
 // TheSportsDB API 키 (환경변수 또는 기본값)
 const SPORTSDB_API_KEY = process.env.THESPORTSDB_API_KEY || '166885';
 
-// ⚽ Forebet 제공 전체 리그
+// ⚽ 지원 리그 (11개) - 일본, 노르웨이, 스위스, 터키 등 제외
 const SUPPORTED_LEAGUES = [
-  'champions league', 'europa league', 'conference league', 'nations league',
-  'premier league', 'championship',
-  'la liga', 'bundesliga', 'serie a', 'ligue 1',
-  'primeira liga', 'eredivisie', 'allsvenskan',
+  // 유럽 대회
+  'champions league', 'europa league', 'conference league',
+  // A매치
+  'nations league',
+  // 5대 리그
+  'premier league', 'la liga', 'bundesliga', 'serie a', 'ligue 1',
+  // 추가 리그
+  'eredivisie', 'championship',
 ];
 
-// 리그 코드 + 한글명 + TheSportsDB ID
+// ❌ 제외할 리그 키워드 (더 포괄적으로)
+const EXCLUDED_LEAGUES = [
+  // 일본
+  'j1 league', 'j2 league', 'j.league', 'j-league', 'japan', 'j1', 'j2',
+  // 노르웨이
+  'eliteserien', 'norwegian', 'norway',
+  // 스위스
+  'swiss super league', 'switzerland', 'swiss',
+  // 터키
+  'süper lig', 'super lig', 'turkish', 'turkey', 'türkiye',
+  // 스코틀랜드
+  'scottish', 'scotland', 'spfl',
+  // 포르투갈
+  'liga portugal', 'primeira liga', 'portugal',
+  // 한국
+  'k league', 'korean', 'korea', 'k1', 'k2',
+  // 미국
+  'mls', 'major league soccer',
+  // 호주
+  'a-league', 'australia',
+  // 멕시코
+  'liga mx', 'mexico',
+  // 사우디
+  'saudi', 'pro league', 'roshn', 'saudi pro', 'spl',
+  // 중국
+  'chinese super', 'china', 'csl',
+  // 브라질
+  'brasileirao', 'brazil', 'serie a brazil',
+  // 아르헨티나
+  'liga profesional', 'argentina',
+  // 벨기에
+  'belgian', 'belgium', 'jupiler',
+  // 그리스
+  'greek', 'greece', 'super league greece',
+  // 러시아
+  'russian', 'russia',
+  // 우크라이나
+  'ukrainian', 'ukraine',
+  // 덴마크
+  'danish', 'denmark', 'superliga',
+  // 오스트리아
+  'austrian', 'austria', 'bundesliga austria',
+  // 체코
+  'czech', 'fortuna liga',
+  // 폴란드
+  'polish', 'poland', 'ekstraklasa',
+  // 루마니아
+  'romanian', 'romania',
+  // 크로아티아
+  'croatian', 'croatia',
+  // 세르비아
+  'serbian', 'serbia',
+  // 이스라엘
+  'israeli', 'israel',
+  // 카타르
+  'qatar', 'qsl',
+  // UAE
+  'uae', 'emirates',
+  // 이집트
+  'egyptian', 'egypt',
+  // 남아공
+  'south african', 'psl',
+  // 인도
+  'indian', 'india', 'isl',
+];
+
+// 리그 코드 + 한글명 + TheSportsDB ID + 기본 썸네일
 const LEAGUE_CODE_MAP = {
-  'champions league': { code: 'CL', nameKr: '챔피언스리그', sportsDbId: 4480 },
-  'europa league': { code: 'EL', nameKr: '유로파리그', sportsDbId: 4481 },
-  'conference league': { code: 'ECL', nameKr: 'UEFA 컨퍼런스리그', sportsDbId: 5071 },
-  'nations league': { code: 'NL', nameKr: 'UEFA 네이션스리그', sportsDbId: 4490 },
-  'premier league': { code: 'PL', nameKr: '프리미어리그', sportsDbId: 4328 },
-  'championship': { code: 'ELC', nameKr: '챔피언십', sportsDbId: 4329 },
-  'la liga': { code: 'PD', nameKr: '라리가', sportsDbId: 4335 },
-  'bundesliga': { code: 'BL1', nameKr: '분데스리가', sportsDbId: 4331 },
-  'serie a': { code: 'SA', nameKr: '세리에A', sportsDbId: 4332 },
-  'ligue 1': { code: 'FL1', nameKr: '리그1', sportsDbId: 4334 },
-  'primeira liga': { code: 'PPL', nameKr: '프리메이라리가', sportsDbId: 4344 },
-  'eredivisie': { code: 'DED', nameKr: '에레디비시', sportsDbId: 4337 },
-  'allsvenskan': { code: 'ASN', nameKr: '알스벤스칸', sportsDbId: 4350 },
+  // 유럽 대회
+  'champions league': { code: 'CL', nameKr: '챔피언스리그', sportsDbId: 4480, defaultThumb: '/images/leagues/cl.jpg' },
+  'europa league': { code: 'EL', nameKr: '유로파리그', sportsDbId: 4481, defaultThumb: '/images/leagues/el.jpg' },
+  'conference league': { code: 'ECL', nameKr: 'UEFA 컨퍼런스리그', sportsDbId: 5071, defaultThumb: '/images/leagues/ecl.jpg' },
+  // A매치
+  'nations league': { code: 'NL', nameKr: 'UEFA 네이션스리그', sportsDbId: 4490, defaultThumb: '/images/leagues/nl.jpg' },
+  // 5대 리그
+  'premier league': { code: 'PL', nameKr: '프리미어리그', sportsDbId: 4328, defaultThumb: '/images/leagues/pl.jpg' },
+  'la liga': { code: 'PD', nameKr: '라리가', sportsDbId: 4335, defaultThumb: '/images/leagues/laliga.jpg' },
+  'bundesliga': { code: 'BL1', nameKr: '분데스리가', sportsDbId: 4331, defaultThumb: '/images/leagues/bundesliga.jpg' },
+  'serie a': { code: 'SA', nameKr: '세리에A', sportsDbId: 4332, defaultThumb: '/images/leagues/seriea.jpg' },
+  'ligue 1': { code: 'FL1', nameKr: '리그1', sportsDbId: 4334, defaultThumb: '/images/leagues/ligue1.jpg' },
+  // 추가 리그
+  'eredivisie': { code: 'DED', nameKr: '에레디비시', sportsDbId: 4337, defaultThumb: '/images/leagues/eredivisie.jpg' },
+  'championship': { code: 'ELC', nameKr: '챔피언십', sportsDbId: 4329, defaultThumb: '/images/leagues/championship.jpg' },
 };
 
 const PREVIEWS_URLS = [
   'https://www.forebet.com/en/football-match-previews',
   'https://www.forebet.com/en/football-match-previews?start=20',
-  'https://www.forebet.com/en/football-match-previews?start=40',
-  'https://www.forebet.com/en/football-match-previews?start=60',
-  'https://www.forebet.com/en/football-match-previews?start=80',
-  'https://www.forebet.com/en/football-match-previews?start=100',
 ];
+
+// 하루 최대 처리 개수 (AI 비용 절감)
+const MAX_POSTS_PER_DAY = 12;
+
+// 경기 날짜 범위 (오늘 기준 +7일까지)
+const MAX_DAYS_AHEAD = 7;
 
 // TheSportsDB 경기 캐시 (리그별)
 let sportsDbEventsCache = {};
 
 async function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * ⭐ NEW: 경기 날짜가 유효한지 체크 (한국 시간 기준, 오늘~7일 이내)
+ */
+function isValidMatchDate(dateStr) {
+  if (!dateStr) return true; // 날짜 없으면 일단 통과
+  
+  try {
+    // 경기 날짜 (UTC 기준으로 파싱)
+    const matchDate = new Date(dateStr);
+    
+    // 한국 시간 기준 오늘 자정 계산 (UTC+9)
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000; // 9시간을 밀리초로
+    const kstNow = new Date(now.getTime() + kstOffset);
+    
+    // 한국 시간 기준 오늘 00:00
+    const kstToday = new Date(kstNow);
+    kstToday.setUTCHours(0, 0, 0, 0);
+    
+    // UTC 기준으로 변환 (한국 자정 = UTC 전날 15:00)
+    const todayStart = new Date(kstToday.getTime() - kstOffset);
+    
+    // 7일 후
+    const maxDate = new Date(todayStart);
+    maxDate.setDate(maxDate.getDate() + MAX_DAYS_AHEAD);
+    
+    // 디버깅용 로그 (필요시 주석 해제)
+    // console.log(`    🕐 경기: ${matchDate.toISOString()}, KST 오늘: ${todayStart.toISOString()}, 마감: ${maxDate.toISOString()}`);
+    
+    // 이미 지난 경기 제외 (한국 시간 기준 오늘 이전)
+    if (matchDate < todayStart) {
+      console.log(`    ⏭️ 이미 지난 경기 (KST): ${dateStr}`);
+      return false;
+    }
+    
+    // 너무 먼 미래 경기 제외
+    if (matchDate > maxDate) {
+      return false;
+    }
+    
+    return true;
+  } catch {
+    return true; // 파싱 실패하면 일단 통과
+  }
+}
+
+/**
+ * ⭐ NEW: 팀명에서 수식어 제거
+ */
+function cleanTeamModifiers(name) {
+  if (!name) return '';
+  
+  let cleaned = name.trim();
+  
+  // 수식어 패턴들 (Forebet에서 붙이는 것들)
+  const modifierPatterns = [
+    /^Struggling\s+/i,
+    /^In-Form\s+/i,
+    /^In\s+Form\s+/i,
+    /^Out-of-Form\s+/i,
+    /^Steady\s+/i,
+    /^Tough\s+/i,
+    /^Strong\s+/i,
+    /^Weak\s+/i,
+    /^Dominant\s+/i,
+    /^Resurgent\s+/i,
+    /^Familiar\s+/i,
+    /^Foe\s+/i,
+    /\s+Resurgence$/i,
+    /\s+Draw Specialists$/i,
+    /\s+after Away Defeat$/i,
+    /\s+after Home Defeat$/i,
+    /\s+after Draw$/i,
+    /\s+after Win$/i,
+  ];
+  
+  for (const pattern of modifierPatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  
+  return cleaned.trim();
 }
 
 /**
@@ -172,6 +331,10 @@ function teamsMatch(name1, name2) {
   let clean1 = (name1 || '').replace(/['`'´ʼ′]s$/gi, '').replace(/['`'´ʼ′]$/gi, '');
   let clean2 = (name2 || '').replace(/['`'´ʼ′]s$/gi, '').replace(/['`'´ʼ′]$/gi, '');
   
+  // 수식어 제거
+  clean1 = cleanTeamModifiers(clean1);
+  clean2 = cleanTeamModifiers(clean2);
+  
   const n1 = normalizeTeamName(clean1);
   const n2 = normalizeTeamName(clean2);
   
@@ -214,17 +377,21 @@ function teamsMatch(name1, name2) {
 function findMatchingEvent(events, homeTeam, awayTeam) {
   if (!events?.length) return null;
   
+  // 팀명에서 수식어 제거
+  const cleanHome = cleanTeamModifiers(homeTeam);
+  const cleanAway = cleanTeamModifiers(awayTeam);
+  
   for (const event of events) {
     const eventHome = event.strHomeTeam || '';
     const eventAway = event.strAwayTeam || '';
     
     // 정방향 매칭
-    if (teamsMatch(homeTeam, eventHome) && teamsMatch(awayTeam, eventAway)) {
+    if (teamsMatch(cleanHome, eventHome) && teamsMatch(cleanAway, eventAway)) {
       return event;
     }
     
     // 역방향 매칭 (홈/어웨이 뒤바뀐 경우)
-    if (teamsMatch(homeTeam, eventAway) && teamsMatch(awayTeam, eventHome)) {
+    if (teamsMatch(cleanHome, eventAway) && teamsMatch(cleanAway, eventHome)) {
       return event;
     }
   }
@@ -248,18 +415,24 @@ async function fetchThumbnailFromLeague(homeTeam, awayTeam, leagueKey) {
   if (matchedEvent) {
     console.log(`    🎯 매칭: ${matchedEvent.strHomeTeam} vs ${matchedEvent.strAwayTeam}`);
     
+    // 경기 날짜 체크
+    if (!isValidMatchDate(matchedEvent.dateEvent)) {
+      console.log(`    ⏭️ 날짜 범위 외: ${matchedEvent.dateEvent}`);
+      return { skip: true, reason: 'date_out_of_range' };
+    }
+    
     // 우선순위: strThumb > strPoster > strBanner > strSquare
     if (matchedEvent.strThumb) {
-      return { thumbnail: matchedEvent.strThumb + '/medium', type: 'event', source: 'v2-league' };
+      return { thumbnail: matchedEvent.strThumb + '/medium', type: 'event', source: 'v2-league', matchDate: matchedEvent.dateEvent };
     }
     if (matchedEvent.strPoster) {
-      return { thumbnail: matchedEvent.strPoster + '/medium', type: 'poster', source: 'v2-league' };
+      return { thumbnail: matchedEvent.strPoster + '/medium', type: 'poster', source: 'v2-league', matchDate: matchedEvent.dateEvent };
     }
     if (matchedEvent.strBanner) {
-      return { thumbnail: matchedEvent.strBanner, type: 'banner', source: 'v2-league' };
+      return { thumbnail: matchedEvent.strBanner, type: 'banner', source: 'v2-league', matchDate: matchedEvent.dateEvent };
     }
     if (matchedEvent.strSquare) {
-      return { thumbnail: matchedEvent.strSquare, type: 'square', source: 'v2-league' };
+      return { thumbnail: matchedEvent.strSquare, type: 'square', source: 'v2-league', matchDate: matchedEvent.dateEvent };
     }
   }
   
@@ -271,7 +444,8 @@ async function fetchThumbnailFromLeague(homeTeam, awayTeam, leagueKey) {
  */
 async function fetchThumbnailFromTeam(homeTeam) {
   try {
-    const teamUrl = `https://www.thesportsdb.com/api/v1/json/${SPORTSDB_API_KEY}/searchteams.php?t=${encodeURIComponent(homeTeam)}`;
+    const cleanHome = cleanTeamModifiers(homeTeam);
+    const teamUrl = `https://www.thesportsdb.com/api/v1/json/${SPORTSDB_API_KEY}/searchteams.php?t=${encodeURIComponent(cleanHome)}`;
     const teamRes = await fetch(teamUrl);
     const teamData = await teamRes.json();
     
@@ -291,6 +465,12 @@ async function fetchThumbnailFromTeam(homeTeam) {
 async function fetchThumbnail(homeTeam, awayTeam, leagueKey) {
   // 1. v2 API 리그 기반 (가장 정확)
   const leagueResult = await fetchThumbnailFromLeague(homeTeam, awayTeam, leagueKey);
+  
+  // 날짜 범위 외면 스킵
+  if (leagueResult?.skip) {
+    return leagueResult;
+  }
+  
   if (leagueResult) return leagueResult;
   
   await delay(300);
@@ -313,6 +493,9 @@ function cleanTeamName(name) {
   // 아포스트로피 's 제거
   cleaned = cleaned.replace(/['`'´ʼ′]s$/gi, '');
   cleaned = cleaned.replace(/['`'´ʼ′]$/gi, '');
+  
+  // 수식어 제거 (NEW!)
+  cleaned = cleanTeamModifiers(cleaned);
   
   // In-Form 변형들 제거
   cleaned = cleaned.replace(/^In[-‑–—]?Form\s*/gi, '');
@@ -343,12 +526,19 @@ function cleanTeamName(name) {
   }
   
   // 혹시 팀명이 비정상적인 단어만 남으면 null 반환할 수 있도록 체크
-  const invalidTeamNames = ['efficient', 'lifeline', 'against', 'again', 'perfect', 'statement', 'response'];
+  const invalidTeamNames = ['efficient', 'lifeline', 'against', 'again', 'perfect', 'statement', 'response', 'struggling', 'tough', 'steady'];
   if (invalidTeamNames.includes(cleaned.toLowerCase())) {
     return '';
   }
   
   return cleaned.trim();
+}
+
+/**
+ * 단어 첫 글자 대문자
+ */
+function capitalizeWords(str) {
+  return str.replace(/\b\w/g, c => c.toUpperCase());
 }
 
 /**
@@ -417,6 +607,58 @@ function extractTeamsFromTitle(title, url) {
   
   const normalizedTitle = title.replace(/['´ʼ′]/g, "'");
   
+  // ⭐ NEW: 가장 간단한 패턴 먼저 - "A vs B: ..." 또는 "A vs B - ..."
+  const simpleVsMatch = normalizedTitle.match(/^(.+?)\s+vs\.?\s+(.+?)(?:\s*[:\-–—]|$)/i);
+  if (simpleVsMatch) {
+    let home = simpleVsMatch[1].trim();
+    let away = simpleVsMatch[2].trim();
+    
+    home = cleanTeamModifiers(home);
+    away = cleanTeamModifiers(away);
+    home = cleanTeamName(home);
+    away = cleanTeamName(away);
+    
+    if (home && away && home.length >= 2 && away.length >= 2) {
+      return { homeTeam: home, awayTeam: away };
+    }
+  }
+  
+  // ⭐ NEW: "A Host B at Stadium..." 패턴
+  const hostMatch = normalizedTitle.match(/^(.+?)\s+Host\s+(.+?)\s+(?:at|in|At|In)/i);
+  if (hostMatch) {
+    let home = hostMatch[1].trim();
+    let away = hostMatch[2].trim();
+    home = cleanTeamName(cleanTeamModifiers(home));
+    away = cleanTeamName(cleanTeamModifiers(away));
+    if (home && away && home.length >= 2 && away.length >= 2) {
+      return { homeTeam: home, awayTeam: away };
+    }
+  }
+  
+  // ⭐ NEW: "A Out to Extend ... at/against B" 패턴
+  const outToMatch = normalizedTitle.match(/^(.+?)\s+Out\s+to\s+.+?\s+(?:at|against|vs)\s+(.+?)(?:\s|:|$)/i);
+  if (outToMatch) {
+    let home = outToMatch[1].trim();
+    let away = outToMatch[2].trim();
+    home = cleanTeamName(cleanTeamModifiers(home));
+    away = cleanTeamName(cleanTeamModifiers(away));
+    if (home && away && home.length >= 2 && away.length >= 2) {
+      return { homeTeam: home, awayTeam: away };
+    }
+  }
+  
+  // ⭐ NEW: "A's Fortress Tested By B" 패턴
+  const fortressMatch = normalizedTitle.match(/^(.+?)(?:'s)?\s+(?:Fortress|Home|Ground)\s+Tested\s+By\s+(.+?)\s+(?:In|At|As|$)/i);
+  if (fortressMatch) {
+    let home = fortressMatch[1].trim();
+    let away = fortressMatch[2].trim();
+    home = cleanTeamName(cleanTeamModifiers(home));
+    away = cleanTeamName(cleanTeamModifiers(away));
+    if (home && away && home.length >= 2 && away.length >= 2) {
+      return { homeTeam: home, awayTeam: away };
+    }
+  }
+  
   const patterns = [
     // "A and B Set For..."
     /^(.+?)\s+(?:and|vs\.?|v)\s+(.+?)\s+(?:Set|Chase|Seek|Aim|Look|Meet|Face|Host|Battle|Clash|Eye|Target|Ready|Go|Travel)/i,
@@ -441,14 +683,41 @@ function extractTeamsFromTitle(title, url) {
     
     // "A Seek ... Against Familiar Foe B"
     /^(.+?)\s+(?:Seek|Look).+?(?:Against)\s+(?:Familiar\s+(?:Foe|Foes)?\s*)?(.+?)(?:\s|$)/i,
+    
+    // ⭐ NEW: "A's ... vs B's ..."
+    /^(.+?)(?:'s)?\s+.+?\s+vs\.?\s+(.+?)(?:'s)?\s+/i,
+    
+    // ⭐ NEW: "A Poised to ... at B" / "A Poised to ... Against B"
+    /^(.+?)\s+(?:Poised|Set|Ready|Look)\s+to\s+.+?\s+(?:at|against|versus)\s+(.+?)(?:\s|$)/i,
+    
+    // ⭐ NEW: "Can A ... B's ..."
+    /^Can\s+(.+?)\s+.+?\s+(.+?)(?:'s)?\s+/i,
   ];
   
   for (const pattern of patterns) {
     const match = normalizedTitle.match(pattern);
     if (match) {
-      let home = cleanTeamName(match[1]);
-      let away = cleanTeamName(match[2]);
-      if (home && away && home.length > 1 && away.length > 1) {
+      let home = match[1].trim();
+      let away = match[2].trim();
+      
+      home = home.replace(/'s$/i, '');
+      away = away.replace(/'s$/i, '');
+      
+      // 수식어 제거
+      home = cleanTeamModifiers(home);
+      away = cleanTeamModifiers(away);
+      
+      // In-Form 제거
+      away = away.replace(/^In[-‑]?Form\s+/i, '');
+      home = home.replace(/^In[-‑]?Form\s+/i, '');
+      
+      // 너무 긴 이름이면 불필요 부분 제거
+      away = away.split(/\s+(In|At|On|For|To|As|Return|Visit|Travel|Come|Arrive)\s+/i)[0];
+      
+      home = cleanTeamName(home);
+      away = cleanTeamName(away);
+      
+      if (home && away && home.length >= 2 && away.length >= 2) {
         return { homeTeam: home, awayTeam: away };
       }
     }
@@ -457,40 +726,27 @@ function extractTeamsFromTitle(title, url) {
   return null;
 }
 
-function capitalizeWords(str) {
-  return str.split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
-
 /**
- * 프리뷰 목록 수집 (여러 페이지)
+ * 프리뷰 링크 수집
  */
 async function getPreviewLinks(browser) {
-  console.log('📋 Fetching preview list...');
   const allPreviews = [];
   const seenLinks = new Set();
   
-  for (const url of PREVIEWS_URLS) {
-    console.log(`  📄 페이지: ${url.includes('start=') ? url.split('start=')[1] : '0'}`);
+  for (let i = 0; i < PREVIEWS_URLS.length; i++) {
+    const url = PREVIEWS_URLS[i];
+    console.log(`  📖 Page ${i+1}: ${url}`);
     
     const page = await browser.newPage();
     
     page.on('pageerror', () => {});
     page.on('error', () => {});
     
-    // User-Agent 강화 (봇 감지 우회)
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    
-    // 추가 헤더 설정
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    });
-    
+    // 리소스 차단
     await page.setRequestInterception(true);
     page.on('request', req => {
-      if (['image', 'stylesheet', 'font'].includes(req.resourceType())) req.abort();
+      const type = req.resourceType();
+      if (['image', 'stylesheet', 'font', 'media'].includes(type)) req.abort();
       else req.continue();
     });
     
@@ -528,25 +784,81 @@ async function getPreviewLinks(browser) {
         
         const title = linkEl.textContent?.trim() || '';
         
-        // 리그 정보 찾기 (카드 내에서)
+        // ⭐ 리그 정보 추출 (여러 소스에서)
         let league = '';
-        const leagueEl = card.querySelector('.league_link, .leagueName, [class*="league"]');
+        
+        // 1. 전용 리그 요소
+        const leagueEl = card.querySelector('.league_link, .leagueName, [class*="league"], .competition');
         if (leagueEl) {
           league = leagueEl.textContent?.trim() || '';
         }
         
-        // 카드 전체 텍스트에서 리그 찾기
+        // 2. 이미지 alt 텍스트에서 추출
+        if (!league) {
+          const img = card.querySelector('img');
+          if (img) {
+            const alt = img.alt || '';
+            const src = img.src || '';
+            // alt 텍스트에 리그명 있을 수 있음
+            if (alt) league = alt;
+            // 이미지 URL에서 리그 코드 추출 시도
+            if (!league && src) {
+              const urlLeagueMatch = src.match(/\/([a-z]{2,3})\d*\//i);
+              if (urlLeagueMatch) league = urlLeagueMatch[1];
+            }
+          }
+        }
+        
+        // 3. 링크 URL에서 리그 추출 시도
+        if (!league) {
+          const urlMatch = link.match(/football-match-previews\/([^\/]+)\//);
+          if (urlMatch) league = urlMatch[1].replace(/-/g, ' ');
+        }
+        
+        // 4. Preview 텍스트 근처에서 리그명 찾기 (| 구분자 패턴)
+        if (!league) {
+          const cardHtml = card.innerHTML || '';
+          // "Süper Lig | Preview" 같은 패턴
+          const pipeMatch = cardHtml.match(/([^<>|]+)\s*\|\s*Preview/i);
+          if (pipeMatch) {
+            league = pipeMatch[1].trim();
+          }
+        }
+        
+        // 5. 카드 전체 텍스트에서 리그 찾기 - 확장된 패턴
         if (!league) {
           const cardText = card.textContent || '';
-          const leaguePatterns = [
+          // 지원 리그
+          const supportedPatterns = [
             'Premier League', 'La Liga', 'Bundesliga', 'Serie A', 'Ligue 1',
             'Champions League', 'Europa League', 'Conference League', 'Nations League',
-            'Championship', 'Primeira Liga', 'Eredivisie', 'Allsvenskan'
+            'Championship', 'Eredivisie'
           ];
-          for (const pattern of leaguePatterns) {
+          // 제외 리그 (감지용)
+          const excludedPatterns = [
+            'Süper Lig', 'Super Lig', 'J1 League', 'J2 League', 'J.League',
+            'Saudi Pro', 'Pro League', 'Roshn', 'MLS', 'Liga MX',
+            'A-League', 'K League', 'Primeira Liga', 'Liga Portugal',
+            'Scottish', 'Eliteserien', 'Swiss Super', 'Jupiler',
+            'Brasileirao', 'Liga Profesional', 'Serie A Brazil',
+            'Brasileirão', 'Campeonato Brasileiro'
+          ];
+          
+          // 지원 리그 먼저 체크
+          for (const pattern of supportedPatterns) {
             if (cardText.includes(pattern)) {
               league = pattern;
               break;
+            }
+          }
+          
+          // 제외 리그도 감지 (나중에 필터링용)
+          if (!league) {
+            for (const pattern of excludedPatterns) {
+              if (cardText.includes(pattern)) {
+                league = pattern;
+                break;
+              }
             }
           }
         }
@@ -564,12 +876,14 @@ async function getPreviewLinks(browser) {
             let parent = el.parentElement;
             for (let i = 0; i < 5 && parent; i++) {
               const text = parent.textContent || '';
-              const leaguePatterns = [
+              const allPatterns = [
                 'Premier League', 'La Liga', 'Bundesliga', 'Serie A', 'Ligue 1',
                 'Champions League', 'Europa League', 'Conference League', 'Nations League',
-                'Championship', 'Primeira Liga', 'Eredivisie'
+                'Championship', 'Eredivisie',
+                'Süper Lig', 'Super Lig', 'J1 League', 'Saudi Pro', 'Pro League',
+                'Brasileirao', 'Campeonato Brasileiro'
               ];
-              for (const pattern of leaguePatterns) {
+              for (const pattern of allPatterns) {
                 if (text.includes(pattern)) {
                   league = pattern;
                   break;
@@ -625,12 +939,61 @@ async function getPreviewLinks(browser) {
 }
 
 /**
+ * ⭐ NEW: 제외 리그 체크 (리그명 + 제목)
+ */
+function isExcludedLeague(leagueName, title = '') {
+  const textToCheck = `${leagueName || ''} ${title || ''}`.toLowerCase();
+  
+  for (const excluded of EXCLUDED_LEAGUES) {
+    if (textToCheck.includes(excluded)) {
+      return true;
+    }
+  }
+  
+  // 추가 체크: 아랍/중동 팀명 패턴
+  const arabTeamPatterns = ['al ', 'al-', 'fc al', 'sc al', 'qadisiya', 'ettifaq', 'hilal', 'nassr', 'ahli', 'ittihad', 'shabab', 'fateh', 'neom', 'damak'];
+  for (const pattern of arabTeamPatterns) {
+    if (textToCheck.includes(pattern)) {
+      return true;
+    }
+  }
+  
+  // 추가 체크: 브라질 팀명 패턴
+  const brazilTeamPatterns = ['corinthians', 'botafogo', 'flamengo', 'palmeiras', 'sao paulo', 'santos', 'gremio', 'internacional', 'fluminense', 'athletico', 'cruzeiro', 'vasco', 'bahia', 'fortaleza'];
+  for (const pattern of brazilTeamPatterns) {
+    if (textToCheck.includes(pattern)) {
+      return true;
+    }
+  }
+  
+  // 추가 체크: 포르투갈 팀명 패턴 (프리메이라리가)
+  const portugalTeamPatterns = ['braga', 'arouca', 'estoril', 'vitoria', 'famalicao', 'boavista', 'gil vicente', 'moreirense', 'casa pia', 'rio ave', 'farense', 'estrela', 'nacional'];
+  for (const pattern of portugalTeamPatterns) {
+    if (textToCheck.includes(pattern)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
  * 지원 리그 필터 + 리그 키 추가
+ * ⭐ 지원 리그에 명시적으로 매칭되는 것만 통과
  */
 function filterSupportedLeagues(previews) {
   const filtered = [];
+  let excludedCount = 0;
+  let noLeagueCount = 0;
   
   for (const p of previews) {
+    // ⭐ NEW: 제외 리그 체크 (리그명 + 제목 모두 확인)
+    if (isExcludedLeague(p.league, p.title)) {
+      excludedCount++;
+      console.log(`    ❌ 제외: ${p.title.substring(0, 40)}... (${p.league || 'no league'})`);
+      continue;
+    }
+    
     let foundLeague = null;
     
     // 1. 페이지에서 추출한 리그 정보 우선 사용
@@ -655,12 +1018,16 @@ function filterSupportedLeagues(previews) {
       }
     }
     
+    // ⭐ NEW: 지원 리그에 매칭 안 되면 스킵 (이전에는 통과됨)
     if (foundLeague) {
       filtered.push({ ...p, leagueKey: foundLeague });
+    } else {
+      noLeagueCount++;
+      console.log(`    ⏭️ 미지원 리그: ${p.title.substring(0, 40)}... (${p.league || 'no league'})`);
     }
   }
   
-  console.log(`  🎯 Supported leagues: ${filtered.length}`);
+  console.log(`  🎯 Supported leagues: ${filtered.length} (제외: ${excludedCount}, 미지원: ${noLeagueCount})`);
   return filtered;
 }
 
@@ -728,21 +1095,78 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
           break;
         }
       }
+      
+      // ⭐ NEW: 리그 정보 추출 (상세 페이지에서)
+      let detectedLeague = '';
+      
+      // 1. "Süper Lig | Preview" 패턴 찾기
+      const pipeMatch = fullText.match(/([A-Za-zÀ-ÿ\s]+)\s*\|\s*Preview/i);
+      if (pipeMatch) {
+        detectedLeague = pipeMatch[1].trim();
+      }
+      
+      // 2. 페이지 상단의 리그명 (breadcrumb 등)
+      if (!detectedLeague) {
+        const breadcrumb = document.querySelector('.breadcrumb, nav[aria-label="breadcrumb"]');
+        if (breadcrumb) {
+          detectedLeague = breadcrumb.textContent || '';
+        }
+      }
+      
+      // 3. 메타 정보에서 찾기
+      if (!detectedLeague) {
+        const metaDesc = document.querySelector('meta[name="description"]');
+        if (metaDesc) {
+          const content = metaDesc.getAttribute('content') || '';
+          // 리그명 패턴 매칭
+          const leaguePatterns = [
+            'Premier League', 'La Liga', 'Bundesliga', 'Serie A', 'Ligue 1',
+            'Champions League', 'Europa League', 'Süper Lig', 'Super Lig',
+            'Eredivisie', 'Championship', 'Brasileirao', 'MLS', 'J1 League',
+            'Saudi Pro League', 'Liga Portugal', 'Scottish Premiership'
+          ];
+          for (const pattern of leaguePatterns) {
+            if (content.includes(pattern)) {
+              detectedLeague = pattern;
+              break;
+            }
+          }
+        }
+      }
+      
       return {
         fullText: articleText || fullText,
         fullTextLength: (articleText || fullText).length,
+        detectedLeague: detectedLeague,
       };
     });
     
     await page.close();
     
+    // ⭐ NEW: 상세 페이지에서 감지된 리그가 제외 대상이면 null 반환
+    if (pageData.detectedLeague) {
+      const detectedLower = pageData.detectedLeague.toLowerCase();
+      const excludedLeagues = ['süper lig', 'super lig', 'brasileirao', 'mls', 'j1 league', 'j2 league', 
+        'saudi', 'pro league', 'liga portugal', 'scottish', 'k league', 'a-league'];
+      for (const excluded of excludedLeagues) {
+        if (detectedLower.includes(excluded)) {
+          console.log(`    ❌ 상세페이지에서 제외 리그 감지: ${pageData.detectedLeague}`);
+          return null;
+        }
+      }
+    }
+    
     const paragraphs = extractPreviewText(pageData.fullText);
     const previewText = paragraphs.join('\n\n');
     const leagueInfo = LEAGUE_CODE_MAP[previewInfo.leagueKey] || { code: 'OTHER', nameKr: '기타' };
     
+    // 팀명에서 수식어 제거
+    const cleanHome = cleanTeamModifiers(teams.homeTeam);
+    const cleanAway = cleanTeamModifiers(teams.awayTeam);
+    
     return {
-      homeTeam: teams.homeTeam,
-      awayTeam: teams.awayTeam,
+      homeTeam: cleanHome,
+      awayTeam: cleanAway,
       previewParagraphs: paragraphs,
       previewText,
       leagueCode: leagueInfo.code,
@@ -751,6 +1175,7 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
       sourceUrl: previewInfo.link,
       originalTitle: previewInfo.title,
       fullTextLength: pageData.fullTextLength,
+      detectedLeague: pageData.detectedLeague, // 디버깅용
       scrapedAt: new Date().toISOString()
     };
     
@@ -765,10 +1190,11 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
  * 메인
  */
 async function scrapeForebetPreviews() {
-  console.log('🚀 Forebet Scraper v17 (League Detection Improved)');
+  console.log('🚀 Forebet Scraper v19 (날짜+리그 필터링)');
   console.log(`🔑 API Key: ${SPORTSDB_API_KEY.substring(0, 3)}***`);
   console.log('📅 ' + new Date().toISOString());
-  console.log(`🎯 지원 리그: ${SUPPORTED_LEAGUES.length}개\n`);
+  console.log(`🎯 지원 리그: ${SUPPORTED_LEAGUES.length}개`);
+  console.log(`📆 경기 범위: 오늘 ~ +${MAX_DAYS_AHEAD}일\n`);
   
   const browser = await puppeteer.launch({
     headless: 'new',
@@ -790,13 +1216,16 @@ async function scrapeForebetPreviews() {
     const supportedLinks = filterSupportedLeagues(allLinks);
     if (!supportedLinks.length) { await browser.close(); return []; }
     
-    console.log(`\n📖 Scraping ${supportedLinks.length} previews...\n`);
+    // 최대 개수 제한
+    const linksToProcess = supportedLinks.slice(0, MAX_POSTS_PER_DAY);
+    console.log(`\n📖 Scraping ${linksToProcess.length}/${supportedLinks.length} previews (max: ${MAX_POSTS_PER_DAY})...\n`);
     
     const allPreviews = [];
+    let skippedByDate = 0;
     
-    for (let i = 0; i < supportedLinks.length; i++) {
-      const preview = supportedLinks[i];
-      console.log(`[${i+1}/${supportedLinks.length}] ${preview.title.substring(0, 55)}...`);
+    for (let i = 0; i < linksToProcess.length; i++) {
+      const preview = linksToProcess[i];
+      console.log(`[${i+1}/${linksToProcess.length}] ${preview.title.substring(0, 55)}...`);
       
       const teams = extractTeamsFromTitle(preview.title, preview.link);
       if (!teams) {
@@ -809,16 +1238,39 @@ async function scrapeForebetPreviews() {
       
       if (data) {
         const thumbResult = await fetchThumbnail(data.homeTeam, data.awayTeam, data.leagueKey);
+        
+        // ⭐ NEW: 날짜 범위 외 스킵
+        if (thumbResult?.skip) {
+          console.log(`    ⏭️ 스킵: ${thumbResult.reason}`);
+          skippedByDate++;
+          continue;
+        }
+        
         if (thumbResult) {
           data.thumbnail = thumbResult.thumbnail;
           data.thumbnailType = thumbResult.type;
           data.thumbnailSource = thumbResult.source;
+          if (thumbResult.matchDate) {
+            data.matchDate = thumbResult.matchDate;
+          }
           console.log(`    📸 ${thumbResult.type} (${thumbResult.source})`);
-          allPreviews.push(data);
-          console.log(`    ✅ ${data.leagueKr} | 📝 ${data.previewText.length}자`);
         } else {
-          console.log(`    ⏭️ 썸네일 없음 - 스킵`);
+          // ⭐ 썸네일 없으면 동적 생성 API 사용
+          const leagueInfo = LEAGUE_CODE_MAP[data.leagueKey];
+          const leagueCode = leagueInfo?.code || 'PL';
+          
+          // URL 인코딩
+          const homeEncoded = encodeURIComponent(data.homeTeam);
+          const awayEncoded = encodeURIComponent(data.awayTeam);
+          
+          data.thumbnail = `/api/match-thumbnail?home=${homeEncoded}&away=${awayEncoded}&league=${leagueCode}`;
+          data.thumbnailType = 'dynamic';
+          data.thumbnailSource = 'api-generated';
+          console.log(`    📸 동적 생성 (${leagueCode})`);
         }
+        
+        allPreviews.push(data);
+        console.log(`    ✅ ${data.leagueKr} | 📝 ${data.previewText.length}자`);
       }
       
       await delay(2500);
@@ -828,15 +1280,18 @@ async function scrapeForebetPreviews() {
     
     console.log(`\n${'='.repeat(50)}`);
     console.log(`📊 결과: ${allPreviews.length}개 (썸네일 있는 것만)`);
+    console.log(`⏭️ 날짜 범위 외 스킵: ${skippedByDate}개`);
     
-    const thumbStats = { 'v2-league': 0, 'team-search': 0 };
+    const thumbStats = { 'v2-league': 0, 'team-search': 0, 'api-generated': 0 };
     allPreviews.forEach(p => {
-      if (p.thumbnailSource === 'v2-league') thumbStats['v2-league']++;
-      else if (p.thumbnailSource === 'team-search') thumbStats['team-search']++;
+      if (thumbStats[p.thumbnailSource] !== undefined) {
+        thumbStats[p.thumbnailSource]++;
+      }
     });
     console.log(`📸 썸네일 소스:`);
     console.log(`   - v2 리그 기반: ${thumbStats['v2-league']}개`);
     console.log(`   - 팀 검색: ${thumbStats['team-search']}개`);
+    console.log(`   - 동적 생성: ${thumbStats['api-generated']}개`);
     
     const avgTextLen = allPreviews.length > 0 
       ? Math.round(allPreviews.reduce((a, p) => a + p.previewText.length, 0) / allPreviews.length)

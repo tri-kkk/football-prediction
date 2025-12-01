@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface BlogPost {
   id: number
   slug: string
   title: string
   title_kr: string
+  excerpt: string
+  excerpt_en: string | null
   cover_image: string
   published_at: string
   category: string
@@ -18,6 +21,7 @@ interface BlogPreviewSidebarProps {
 }
 
 export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps) {
+  const { language } = useLanguage()
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -43,10 +47,18 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('ko-KR', {
+    return date.toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-US', {
       month: 'short',
       day: 'numeric'
     })
+  }
+
+  // 언어에 따른 제목 선택
+  const getTitle = (post: BlogPost) => {
+    if (language === 'en' && post.title) {
+      return post.title
+    }
+    return post.title_kr || post.title
   }
 
   if (loading || posts.length === 0) return null
@@ -64,7 +76,7 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
           <h3 className={`font-bold ${
             darkMode ? 'text-white' : 'text-gray-900'
           }`}>
-            매치 리포트
+            {language === 'ko' ? '매치 리포트' : 'Match Reports'}
           </h3>
         </div>
       </div>
@@ -87,7 +99,7 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
                 <div className="aspect-video bg-gray-800 relative overflow-hidden">
                   <img 
                     src={post.cover_image} 
-                    alt={post.title_kr}
+                    alt={getTitle(post)}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {
                       // 이미지 로드 실패 시 플레이스홀더
@@ -97,7 +109,7 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
                   {/* 카테고리 배지 */}
                   <div className="absolute top-2 left-2">
                     <span className="px-2 py-0.5 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-full">
-                      경기 프리뷰
+                      {language === 'ko' ? '경기 프리뷰' : 'Preview'}
                     </span>
                   </div>
                 </div>
@@ -109,7 +121,7 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
                 <h4 className={`text-sm font-bold mb-2 line-clamp-2 group-hover:text-blue-400 transition ${
                   darkMode ? 'text-white' : 'text-gray-900'
                 }`}>
-                  {post.title_kr}
+                  {getTitle(post)}
                 </h4>
 
                 {/* 날짜 */}
@@ -134,7 +146,7 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          전체 보기 →
+          {language === 'ko' ? '전체 보기 →' : 'View All →'}
         </Link>
       </div>
     </div>

@@ -47,15 +47,22 @@ export async function PUT(
       .from('blog_posts')
       .update({
         slug: body.slug,
+        // 영문
         title: body.title || body.title_kr,
+        content_en: body.content_en || null,
+        excerpt_en: body.excerpt_en || null,
+        // 한글
         title_kr: body.title_kr,
         excerpt: body.excerpt,
         content: body.content,
+        // 공통
         cover_image: body.cover_image,
         category: body.category,
         tags: body.tags || [],
+        // 발행 설정
         published: body.published,
-        published_at: body.published ? new Date().toISOString() : null,
+        published_en: body.published_en || false,
+        published_at: (body.published || body.published_en) ? new Date().toISOString() : null,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -111,12 +118,28 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString()
+    }
+
+    // 한글 발행 상태
+    if (body.published !== undefined) {
+      updateData.published = body.published
+    }
+    
+    // 영문 발행 상태
+    if (body.published_en !== undefined) {
+      updateData.published_en = body.published_en
+    }
+
+    // 발행 시간 업데이트
+    if (body.published || body.published_en) {
+      updateData.published_at = new Date().toISOString()
+    }
+
     const { data, error } = await supabase
       .from('blog_posts')
-      .update({
-        published: body.published,
-        published_at: body.published ? new Date().toISOString() : null
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()

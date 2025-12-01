@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface BlogPost {
   id: number
@@ -11,10 +12,14 @@ interface BlogPost {
   title: string
   title_kr: string
   excerpt: string
+  excerpt_en: string | null
   content: string
+  content_en: string | null
   cover_image: string
   category: string
   published_at: string
+  published: boolean
+  published_en: boolean
   views: number
   tags: string[]
   author: string
@@ -23,6 +28,7 @@ interface BlogPost {
 export default function BlogPostPage() {
   const params = useParams()
   const slug = params?.slug as string
+  const { language: currentLanguage } = useLanguage()
   const [post, setPost] = useState<BlogPost | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -42,10 +48,10 @@ export default function BlogPostPage() {
       if (result.success) {
         setPost(result.data)
       } else {
-        setError('포스트를 찾을 수 없습니다')
+        setError(currentLanguage === 'ko' ? '포스트를 찾을 수 없습니다' : 'Post not found')
       }
     } catch (err) {
-      setError('포스트를 불러오는데 실패했습니다')
+      setError(currentLanguage === 'ko' ? '포스트를 불러오는데 실패했습니다' : 'Failed to load post')
     } finally {
       setLoading(false)
     }
@@ -53,7 +59,7 @@ export default function BlogPostPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('ko-KR', {
+    return date.toLocaleDateString(currentLanguage === 'ko' ? 'ko-KR' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -61,12 +67,45 @@ export default function BlogPostPage() {
     })
   }
 
+  // 언어에 따른 콘텐츠 선택
+  const getTitle = () => {
+    if (!post) return ''
+    if (currentLanguage === 'en' && post.title) {
+      return post.title
+    }
+    return post.title_kr || post.title
+  }
+
+  const getExcerpt = () => {
+    if (!post) return ''
+    if (currentLanguage === 'en' && post.excerpt_en) {
+      return post.excerpt_en
+    }
+    return post.excerpt
+  }
+
+  const getContent = () => {
+    if (!post) return ''
+    if (currentLanguage === 'en' && post.content_en) {
+      return post.content_en
+    }
+    return post.content
+  }
+
+  // 현재 보여지는 콘텐츠가 영문인지 한글인지
+  const isShowingEnglish = () => {
+    if (!post) return false
+    return currentLanguage === 'en' && post.content_en
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-700 border-t-blue-500"></div>
-          <p className="mt-4 text-gray-400">로딩 중...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-700 border-t-[#A3FF4C]"></div>
+          <p className="mt-4 text-gray-400">
+            {currentLanguage === 'ko' ? '로딩 중...' : 'Loading...'}
+          </p>
         </div>
       </div>
     )
@@ -77,13 +116,15 @@ export default function BlogPostPage() {
       <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4">😕</div>
-          <h1 className="text-2xl font-bold text-white mb-2">포스트를 찾을 수 없습니다</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">
+            {currentLanguage === 'ko' ? '포스트를 찾을 수 없습니다' : 'Post Not Found'}
+          </h1>
           <p className="text-gray-400 mb-6">{error}</p>
           <Link 
             href="/blog"
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
+            className="px-6 py-3 bg-[#A3FF4C] hover:bg-[#8FE040] text-gray-900 rounded-lg transition font-medium"
           >
-            블로그로 돌아가기
+            {currentLanguage === 'ko' ? '블로그로 돌아가기' : 'Back to Blog'}
           </Link>
         </div>
       </div>
@@ -97,7 +138,7 @@ export default function BlogPostPage() {
         <div className="relative h-[400px] bg-gray-900 overflow-hidden">
           <img 
             src={post.cover_image} 
-            alt={post.title_kr}
+            alt={getTitle()}
             className="w-full h-full object-cover opacity-60"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/50 to-transparent"></div>
@@ -108,8 +149,8 @@ export default function BlogPostPage() {
       <article className="max-w-4xl mx-auto px-4 py-8">
         {/* 메타 정보 */}
         <div className="mb-6">
-          <div className="flex items-center gap-3 text-sm text-gray-400 mb-4">
-            <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full font-medium">
+          <div className="flex items-center gap-3 text-sm text-gray-400 mb-4 flex-wrap">
+            <span className="px-3 py-1 bg-[#A3FF4C]/20 text-[#A3FF4C] rounded-full font-medium">
               {post.category}
             </span>
             <span>{formatDate(post.published_at)}</span>
@@ -117,31 +158,49 @@ export default function BlogPostPage() {
             <span className="flex items-center gap-1">
               👁️ {post.views.toLocaleString()}
             </span>
+            {/* 언어 표시 */}
+            {currentLanguage === 'en' && !post.content_en && (
+              <span className="px-2 py-1 bg-gray-800 text-gray-400 rounded text-xs">
+                🇰🇷 {currentLanguage === 'ko' ? '한글 버전' : 'Korean version'}
+              </span>
+            )}
           </div>
 
           {/* 제목 */}
           <h1 className="text-4xl md:text-5xl font-black mb-4 leading-tight">
-            {post.title_kr}
+            {getTitle()}
           </h1>
 
           {/* 요약 */}
-          {post.excerpt && (
+          {getExcerpt() && (
             <p className="text-xl text-gray-400 leading-relaxed">
-              {post.excerpt}
+              {getExcerpt()}
             </p>
           )}
 
           {/* 작성자 */}
           <div className="flex items-center gap-3 mt-6 pt-6 border-t border-gray-800">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-2xl">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#A3FF4C] to-green-500 rounded-full flex items-center justify-center text-2xl">
               ⚽
             </div>
             <div>
               <div className="font-bold">{post.author}</div>
-              <div className="text-sm text-gray-400">축구 데이터 분석가</div>
+              <div className="text-sm text-gray-400">
+                {currentLanguage === 'ko' ? '축구 데이터 분석가' : 'Football Data Analyst'}
+              </div>
             </div>
           </div>
         </div>
+
+        {/* 영문 버전 없음 안내 */}
+        {currentLanguage === 'en' && !post.content_en && (
+          <div className="mb-8 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+            <p className="text-yellow-400 text-sm flex items-center gap-2">
+              <span>💡</span>
+              <span>This article is only available in Korean. English translation coming soon!</span>
+            </p>
+          </div>
+        )}
 
         {/* 본문 */}
         <div className="prose prose-invert prose-lg max-w-none">
@@ -178,12 +237,12 @@ export default function BlogPostPage() {
                 </ol>
               ),
               blockquote: ({ children }) => (
-                <blockquote className="border-l-4 border-blue-500 pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">
+                <blockquote className="border-l-4 border-[#A3FF4C] pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">
                   {children}
                 </blockquote>
               ),
               code: ({ children }) => (
-                <code className="bg-gray-900 text-blue-400 px-2 py-1 rounded text-sm">
+                <code className="bg-gray-900 text-[#A3FF4C] px-2 py-1 rounded text-sm">
                   {children}
                 </code>
               ),
@@ -212,7 +271,7 @@ export default function BlogPostPage() {
               a: ({ children, href }) => (
                 <a 
                   href={href} 
-                  className="text-blue-400 hover:text-blue-300 underline"
+                  className="text-[#A3FF4C] hover:text-[#8FE040] underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -224,7 +283,7 @@ export default function BlogPostPage() {
               )
             }}
           >
-            {post.content}
+            {getContent()}
           </ReactMarkdown>
         </div>
 
@@ -250,7 +309,7 @@ export default function BlogPostPage() {
             href="/blog"
             className="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition font-medium"
           >
-            ← 목록으로
+            {currentLanguage === 'ko' ? '← 목록으로' : '← Back to List'}
           </Link>
         </div>
       </article>
