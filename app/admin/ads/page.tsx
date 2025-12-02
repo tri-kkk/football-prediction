@@ -307,6 +307,12 @@ export default function AdminAdsPage() {
             <span className="text-gray-400 text-sm">TrendSoccer</span>
           </div>
           <div className="flex items-center gap-4">
+            <a
+              href="/admin/ads/report"
+              className="text-blue-400 hover:text-blue-300 text-sm"
+            >
+              📊 리포트
+            </a>
             <button
               onClick={() => {
                 sessionStorage.removeItem('ads_admin_auth')
