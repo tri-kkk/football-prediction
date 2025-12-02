@@ -109,6 +109,7 @@ export default function BlogPage() {
 
   // 시간 포맷팅
   const formatDate = (dateString: string) => {
+    if (!dateString) return ''
     const date = new Date(dateString)
     const now = new Date()
     const diff = now.getTime() - date.getTime()
@@ -119,6 +120,14 @@ export default function BlogPage() {
     if (hours < 24) return `${hours}시간 전`
     if (days < 7) return `${days}일 전`
     return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+  }
+
+  // 안전하게 첫 글자 가져오기
+  const getInitial = (name: string | undefined | null): string => {
+    if (!name || typeof name !== 'string' || name.length === 0) {
+      return 'T' // TrendSoccer의 T
+    }
+    return name.charAt(0).toUpperCase()
   }
 
   return (
@@ -150,7 +159,7 @@ export default function BlogPage() {
           <div className="space-y-0">
             {articles.map((article, index) => (
               <article
-                key={`${article.id}-${index}`}
+                key={`${article.id || index}-${index}`}
                 className="bg-[#0a0a0a] border-b border-gray-800 transition-all hover:bg-[#111111]"
               >
                 {/* 메타 정보 */}
@@ -158,48 +167,58 @@ export default function BlogPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
                       <span className="text-white font-bold text-sm">
-                        {article.author.charAt(0)}
+                        {getInitial(article.author)}
                       </span>
                     </div>
                     <div>
-                      <p className="text-white font-semibold text-sm">{article.author}</p>
+                      <p className="text-white font-semibold text-sm">
+                        {article.author || 'TrendSoccer'}
+                      </p>
                       <p className="text-gray-500 text-xs">{formatDate(article.publishedAt)}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-1 bg-gray-800/80 text-gray-400 rounded-md text-xs font-medium">
-                      {article.category}
+                      {article.category || '뉴스'}
                     </span>
                   </div>
                 </div>
 
                 {/* 이미지 */}
-                <div className="relative aspect-square bg-black overflow-hidden">
-                  <img
-                    src={article.imageUrl}
-                    alt={article.title}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  {/* 리그 배지 */}
-                  <div className="absolute top-3 left-3 px-3 py-1.5 bg-black/80 backdrop-blur-sm rounded-lg text-white text-xs font-semibold">
-                    {article.league}
+                {article.imageUrl && (
+                  <div className="relative aspect-square bg-black overflow-hidden">
+                    <img
+                      src={article.imageUrl}
+                      alt={article.title || '기사 이미지'}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        // 이미지 로드 실패 시 숨김
+                        (e.target as HTMLImageElement).style.display = 'none'
+                      }}
+                    />
+                    {/* 리그 배지 */}
+                    {article.league && (
+                      <div className="absolute top-3 left-3 px-3 py-1.5 bg-black/80 backdrop-blur-sm rounded-lg text-white text-xs font-semibold">
+                        {article.league}
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
 
                 {/* 컨텐츠 */}
                 <div className="px-4 py-3">
                   <h2 className="text-base font-bold text-white mb-2 leading-snug">
-                    {article.title}
+                    {article.title || '제목 없음'}
                   </h2>
                   
                   <p className="text-gray-400 text-sm leading-relaxed mb-3">
-                    {article.summary}
+                    {article.summary || ''}
                   </p>
 
                   {/* 태그 */}
-                  {article.tags && article.tags.length > 0 && (
+                  {article.tags && Array.isArray(article.tags) && article.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {article.tags.map((tag, idx) => (
                         <span
