@@ -121,8 +121,7 @@ const getKoreanTeamName = (teamName: string): string => {
   return TEAM_NAME_KR[teamName] || teamName
 }
 
-// 🆕 개선된 현실적인 스코어 계산 함수 (v2)
-// 변경점: 더 다양한 스코어 + 0점 경기 감소 + 리그 평균 반영
+// 🆕 현실적인 스코어 계산 함수
 function calculateRealisticScore(
   avgHome: number, 
   avgAway: number, 
@@ -135,153 +134,95 @@ function calculateRealisticScore(
   if (avgHome < 0 || avgAway < 0 || isNaN(avgHome) || isNaN(avgAway)) {
     console.warn('⚠️ Invalid goal data, using win percentages:', { avgHome, avgAway })
     
-    // 승률 기반으로만 스코어 예측 (더 다양하게)
+    // 승률 기반으로만 스코어 예측
     const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
     
     if (maxPercent === homeWinPercent) {
-      if (homeWinPercent > 65) return { home: 3, away: 1 }
-      if (homeWinPercent > 55) return { home: 2, away: 0 }
-      if (homeWinPercent > 45) return { home: 2, away: 1 }
+      // 홈 우세
+      if (homeWinPercent > 50) return { home: 2, away: 0 }
+      if (homeWinPercent > 40) return { home: 2, away: 1 }
       return { home: 1, away: 0 }
     } else if (maxPercent === awayWinPercent) {
-      if (awayWinPercent > 65) return { home: 1, away: 3 }
-      if (awayWinPercent > 55) return { home: 0, away: 2 }
-      if (awayWinPercent > 45) return { home: 1, away: 2 }
+      // 원정 우세
+      if (awayWinPercent > 50) return { home: 0, away: 2 }
+      if (awayWinPercent > 40) return { home: 1, away: 2 }
       return { home: 0, away: 1 }
     } else {
-      // 무승부 - 다양한 스코어
-      if (drawPercent > 35) return { home: 1, away: 1 }
-      return { home: 2, away: 2 }
+      // 무승부
+      return { home: 1, away: 1 }
     }
   }
   
-  // 🆕 1. 유럽 리그 평균 득점 기반 최소값 설정
-  const LEAGUE_AVG_HOME = 1.5
-  const LEAGUE_AVG_AWAY = 1.1
+  // 1. 평균 득점 기반 기본 스코어
+  let homeGoals = Math.floor(avgHome)  // 내림 (보수적)
+  let awayGoals = Math.floor(avgAway)
   
-  // API 값이 너무 낮으면 리그 평균으로 보정
-  const adjustedHome = avgHome < 0.5 ? Math.max(avgHome, LEAGUE_AVG_HOME * 0.7) : avgHome
-  const adjustedAway = avgAway < 0.5 ? Math.max(avgAway, LEAGUE_AVG_AWAY * 0.7) : avgAway
+  // 2. 소수점을 확률로 변환 (예: 1.7 → 70% 확률로 +1골)
+  const homeDecimal = avgHome - homeGoals
+  const awayDecimal = avgAway - awayGoals
   
-  // 🆕 2. 확률 기반 반올림 (소수점 0.35 이상이면 올림)
-  const homeDecimal = adjustedHome % 1
-  const awayDecimal = adjustedAway % 1
-  
-  let homeGoals = homeDecimal >= 0.35 
-    ? Math.ceil(adjustedHome) 
-    : Math.floor(adjustedHome)
-  
-  let awayGoals = awayDecimal >= 0.35 
-    ? Math.ceil(adjustedAway) 
-    : Math.floor(adjustedAway)
-  
-  // 🆕 3. 승률에 따른 골 조정 (더 세분화)
+  // 3. 승률 기반 조정
   const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
   
   if (maxPercent === homeWinPercent) {
     // 홈 승리 예상
-    if (homeWinPercent > 70 && homeGoals <= awayGoals) {
-      homeGoals = awayGoals + 2
-    } else if (homeWinPercent > 55 && homeGoals <= awayGoals) {
-      homeGoals = awayGoals + 1
-    } else if (homeWinPercent > 40 && homeGoals < awayGoals) {
-      homeGoals = awayGoals
-    }
-    
-    // 높은 승률이면 최소 2골 보장
-    if (homeWinPercent > 60 && homeGoals < 2) {
-      homeGoals = 2
+    if (homeDecimal > 0.6) homeGoals += 1  // 60% 이상이면 올림
+    if (homeWinPercent > 60 && homeGoals <= awayGoals) {
+      homeGoals = awayGoals + 1  // 강력한 홈 우세면 최소 1골 차
     }
   } else if (maxPercent === awayWinPercent) {
     // 원정 승리 예상
-    if (awayWinPercent > 70 && awayGoals <= homeGoals) {
-      awayGoals = homeGoals + 2
-    } else if (awayWinPercent > 55 && awayGoals <= homeGoals) {
-      awayGoals = homeGoals + 1
-    } else if (awayWinPercent > 40 && awayGoals < homeGoals) {
-      awayGoals = homeGoals
-    }
-    
-    if (awayWinPercent > 60 && awayGoals < 2) {
-      awayGoals = 2
+    if (awayDecimal > 0.6) awayGoals += 1
+    if (awayWinPercent > 60 && awayGoals <= homeGoals) {
+      awayGoals = homeGoals + 1  // 강력한 원정 우세면 최소 1골 차
     }
   } else {
     // 무승부 예상
-    if (drawPercent > 30) {
-      const avgGoals = (homeGoals + awayGoals) / 2
-      if (avgGoals < 1) {
-        homeGoals = 1
-        awayGoals = 1
-      } else if (avgGoals >= 2) {
-        homeGoals = 2
-        awayGoals = 2
-      } else {
-        homeGoals = Math.round(avgGoals)
-        awayGoals = Math.round(avgGoals)
-      }
+    if (drawPercent > 35) {
+      // 무승부 가능성 높으면 비슷하게
+      const avg = (homeGoals + awayGoals) / 2
+      homeGoals = Math.round(avg)
+      awayGoals = Math.round(avg)
     }
   }
   
-  // 🆕 4. 총 득점 조정
+  // 4. 현실성 체크
   const totalGoals = homeGoals + awayGoals
   
-  // 총 득점이 너무 낮으면 조정 (1골 이하)
-  if (totalGoals <= 1 && (adjustedHome + adjustedAway) >= 2) {
+  // 총 득점이 5골 이상이면 조정 (축구는 보통 2-3골)
+  if (totalGoals > 5) {
+    const scale = 4 / totalGoals  // 최대 4골로 제한
+    homeGoals = Math.round(homeGoals * scale)
+    awayGoals = Math.round(awayGoals * scale)
+  }
+  
+  // 5. 최소값 보장 (0-0은 너무 지루)
+  if (totalGoals === 0) {
     if (homeWinPercent > awayWinPercent) {
-      homeGoals = Math.max(homeGoals, 2)
-      awayGoals = Math.max(awayGoals, 1)
+      homeGoals = 1
     } else if (awayWinPercent > homeWinPercent) {
-      homeGoals = Math.max(homeGoals, 1)
-      awayGoals = Math.max(awayGoals, 2)
+      awayGoals = 1
     } else {
       homeGoals = 1
       awayGoals = 1
     }
   }
   
-  // 총 득점이 너무 높으면 조정 (6골 이상)
-  if (homeGoals + awayGoals > 5) {
-    const scale = 5 / (homeGoals + awayGoals)
-    homeGoals = Math.round(homeGoals * scale)
-    awayGoals = Math.round(awayGoals * scale)
+  // 6. 최종 일관성 체크
+  const finalHome = homeGoals
+  const finalAway = awayGoals
+  
+  // 승률과 스코어가 일치하는지 확인
+  if (homeWinPercent > awayWinPercent + 15 && finalHome <= finalAway) {
+    // 홈 승률이 15%p 이상 높은데 스코어가 지거나 비김 → 조정
+    return { home: finalAway + 1, away: finalAway }
+  }
+  if (awayWinPercent > homeWinPercent + 15 && finalAway <= finalHome) {
+    // 원정 승률이 15%p 이상 높은데 스코어가 지거나 비김 → 조정
+    return { home: finalHome, away: finalHome + 1 }
   }
   
-  // 🆕 5. 0-0 방지 (강화)
-  if (homeGoals === 0 && awayGoals === 0) {
-    if (adjustedHome >= adjustedAway) {
-      if (adjustedHome > 1.2) {
-        homeGoals = 2
-        awayGoals = 1
-      } else {
-        homeGoals = 1
-      }
-    } else {
-      if (adjustedAway > 1.2) {
-        homeGoals = 1
-        awayGoals = 2
-      } else {
-        awayGoals = 1
-      }
-    }
-  }
-  
-  // 🆕 6. 최종 일관성 체크
-  if (homeWinPercent > awayWinPercent + 15 && homeGoals <= awayGoals) {
-    homeGoals = Math.max(awayGoals + 1, 2)
-  }
-  
-  if (awayWinPercent > homeWinPercent + 15 && awayGoals <= homeGoals) {
-    awayGoals = Math.max(homeGoals + 1, 2)
-  }
-  
-  // 무승부 확률이 가장 높은데 비기지 않으면 조정
-  if (maxPercent === drawPercent && homeGoals !== awayGoals) {
-    const avg = Math.round((homeGoals + awayGoals) / 2)
-    homeGoals = avg || 1
-    awayGoals = avg || 1
-  }
-  
-  return { home: homeGoals, away: awayGoals }
+  return { home: finalHome, away: finalAway }
 }
 
 export default function MatchPrediction({ 
