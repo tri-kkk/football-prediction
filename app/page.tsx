@@ -8,6 +8,7 @@ import { getTeamId } from './utils/teamIdMapping'
 import { useLanguage } from './contexts/LanguageContext'
 import LineupModal from './components/LineupModal'
 import BlogPreviewSidebar from './components/BlogPreviewSidebar'  
+import AdBanner from './components/AdBanner'
 
 import TopHighlights from './components/TopHighlights'
 // 리그 정보 (국기 이미지 포함)
@@ -1716,35 +1717,7 @@ export default function Home() {
           {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
           <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
             <div className="sticky top-20">
-              <div className="overflow-hidden">
-                <a 
-                  href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block hover:opacity-90 transition-opacity"
-                  onClick={(e) => {
-                    // URL이 설정될 때까지 클릭 방지
-                    if (e.currentTarget.href === '#' || e.currentTarget.href.endsWith('#')) {
-                      e.preventDefault()
-                    }
-                  }}
-                >
-                  <img 
-                    src="/ad-banner-300x600.png" 
-                    alt="Advertisement"
-                    className="w-[300px] h-[600px] object-cover"
-                    onError={(e) => {
-                      // GIF 로드 실패 시 JPG로 폴백
-                      if (e.currentTarget.src.endsWith('.gif')) {
-                        e.currentTarget.src = '/ad-banner-300x600.jpg'
-                      } else {
-                        // JPG도 실패하면 플레이스홀더
-                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="600"><rect width="300" height="600" fill="%231a1a1a"/><text x="150" y="300" text-anchor="middle" fill="%23666" font-size="20">Advertisement</text><text x="150" y="330" text-anchor="middle" fill="%23444" font-size="14">300 x 600</text></svg>'
-                      }
-                    }}
-                  />
-                </a>
-              </div>
+              <AdBanner slot="sidebar" />
             </div>
           </aside>
 
@@ -1842,32 +1815,8 @@ export default function Home() {
             )}
             
             {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) */}
-            <div className="hidden lg:block mb-6">
-              <div className={`rounded-xl overflow-hidden mx-auto`} style={{ maxWidth: '728px' }}>
-                <a 
-                  href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block hover:opacity-90 transition-opacity"
-                >
-                  <img 
-                    src="/ad-banner-728x90.png" 
-                    alt="Advertisement"
-                    className="w-full h-[90px] object-cover"
-                    onError={(e) => {
-                      // PNG 로드 실패 시 GIF로 폴백
-                      if (e.currentTarget.src.endsWith('.png')) {
-                        e.currentTarget.src = '/ad-banner-728x90.gif'
-                      } else if (e.currentTarget.src.endsWith('.gif')) {
-                        e.currentTarget.src = '/ad-banner-728x90.jpg'
-                      } else {
-                        // 모두 실패하면 숨김
-                        e.currentTarget.style.display = 'none'
-                      }
-                    }}
-                  />
-                </a>
-              </div>
+            <div className="hidden lg:flex justify-center mb-6">
+              <AdBanner slot="desktop_banner" />
             </div>
 
         {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
@@ -2232,25 +2181,7 @@ export default function Home() {
                             {/* 📱 모바일 인피드 배너 - 첫 번째 리그 다음에 표시 */}
                             {leagueIndex === 0 && (
                               <div className="block lg:hidden mb-4 flex justify-center">
-                                <a 
-                                  href="https://m.spolive.com/affliate?recom=fc2350f1cf9ff73c1df02170fd0c6af3:474975cffa1f9962015c229adc14c84f" 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="block hover:opacity-90 transition-opacity"
-                                >
-                                  <img 
-                                    src="/ad-banner-320x50.png" 
-                                    alt="Advertisement"
-                                    className="w-[320px] h-[50px] object-cover rounded"
-                                    onError={(e) => {
-                                      if (e.currentTarget.src.endsWith('.png')) {
-                                        e.currentTarget.src = '/ad-banner-320x50.gif'
-                                      } else if (e.currentTarget.src.endsWith('.gif')) {
-                                        e.currentTarget.src = '/ad-banner-320x50.jpg'
-                                      }
-                                    }}
-                                  />
-                                </a>
+                                <AdBanner slot="mobile_bottom" />
                               </div>
                             )}
                           </React.Fragment>
@@ -2870,6 +2801,24 @@ export default function Home() {
           awayTeam={selectedMatchForLineup.awayTeam}
           darkMode={darkMode}
         />
+      )}
+
+      {/* 📢 모바일 하단 고정 배너 (320x50) */}
+      {!isMobileAdClosed && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 safe-area-bottom">
+          <div className="relative flex justify-center py-2">
+            <button
+              onClick={() => setIsMobileAdClosed(true)}
+              className="absolute top-1 left-2 w-5 h-5 bg-black/70 text-white text-xs rounded-full flex items-center justify-center hover:bg-black z-10"
+            >
+              ✕
+            </button>
+            <AdBanner slot="mobile_bottom" />
+            <span className="absolute top-1 right-2 px-1.5 py-0.5 bg-black/50 text-white text-[10px] rounded">
+              AD
+            </span>
+          </div>
+        </div>
       )}
     </div>
   )
