@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useLanguage } from '../contexts/LanguageContext'
 import { TEAM_NAME_KR } from '../teamLogos'
@@ -142,6 +142,14 @@ export default function MatchResultsPage() {
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL')
   const [selectedPeriod, setSelectedPeriod] = useState<string>('week')
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
+  
+  // 하이라이트 관련 상태
+  const [highlights, setHighlights] = useState<Record<string, any>>({})
+  const [loadingHighlight, setLoadingHighlight] = useState<string | null>(null)
+  const [showVideoModal, setShowVideoModal] = useState<string | null>(null)
+
+  // 하이라이트 캐시
+  const highlightCache: Record<string, any> = {}
 
   // 경기 데이터 로드 (최초 1회만)
   useEffect(() => {
@@ -152,6 +160,51 @@ export default function MatchResultsPage() {
   useEffect(() => {
     filterMatches()
   }, [selectedLeague, selectedPeriod, allMatches])
+
+  // 하이라이트 로드 함수
+  const loadHighlight = useCallback(async (match: Match) => {
+    const cacheKey = `${match.home_team}-${match.away_team}-${match.match_date.split('T')[0]}`
+    
+    if (highlightCache[cacheKey] !== undefined) {
+      setHighlights(prev => ({ ...prev, [match.match_id]: highlightCache[cacheKey] }))
+      return
+    }
+
+    setLoadingHighlight(match.match_id)
+
+    try {
+      const matchDate = match.match_date.split('T')[0]
+      const response = await fetch(
+        `/api/match-highlights?date=${matchDate}&homeTeam=${encodeURIComponent(match.home_team)}&awayTeam=${encodeURIComponent(match.away_team)}&league=${match.league}`
+      )
+      
+      if (!response.ok) throw new Error('Failed to fetch highlight')
+      
+      const data = await response.json()
+      const highlight = data.highlights?.[0] || null
+      highlightCache[cacheKey] = highlight
+      setHighlights(prev => ({ ...prev, [match.match_id]: highlight }))
+    } catch (error) {
+      console.error('Failed to load highlight:', error)
+      highlightCache[cacheKey] = null
+      setHighlights(prev => ({ ...prev, [match.match_id]: null }))
+    } finally {
+      setLoadingHighlight(null)
+    }
+  }, [])
+
+  // 경기 확장 핸들러
+  const handleMatchExpand = useCallback((match: Match) => {
+    const matchId = match.match_id
+    if (expandedMatch === matchId) {
+      setExpandedMatch(null)
+    } else {
+      setExpandedMatch(matchId)
+      if (highlights[matchId] === undefined) {
+        loadHighlight(match)
+      }
+    }
+  }, [expandedMatch, highlights, loadHighlight])
 
   const loadMatches = async () => {
     try {
@@ -331,6 +384,32 @@ if (data.success) {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white pb-20 md:pb-0">
+      {/* 비디오 모달 */}
+      {showVideoModal && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4"
+          onClick={() => setShowVideoModal(null)}
+        >
+          <div 
+            className="relative w-full max-w-4xl aspect-video"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowVideoModal(null)}
+              className="absolute -top-10 right-0 text-white text-2xl hover:text-gray-300"
+            >
+              ✕
+            </button>
+            <iframe
+              src={`https://www.youtube.com/embed/${showVideoModal}?autoplay=1`}
+              className="w-full h-full rounded-lg"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
+
       {/* 중앙 컨테이너 */}
       <div className="max-w-7xl mx-auto flex">
         {/* 좌측 사이드바 (데스크탑만) */}
@@ -490,6 +569,8 @@ if (data.success) {
                 const awayWin = match.final_score_away > match.final_score_home
                 const isExpanded = expandedMatch === match.match_id
                 const hasStats = match.statistics && Object.keys(match.statistics).length > 0
+                const highlight = highlights[match.match_id]
+                const isLoadingHighlight = loadingHighlight === match.match_id
 
                 return (
                   <div
@@ -499,7 +580,7 @@ if (data.success) {
                     {/* 경기 정보 */}
                     <div 
                       className="p-4 cursor-pointer"
-                      onClick={() => setExpandedMatch(isExpanded ? null : match.match_id)}
+                      onClick={() => handleMatchExpand(match)}
                     >
                       {/* 날짜 */}
                       <div className="flex items-center justify-between mb-3">
@@ -507,6 +588,9 @@ if (data.success) {
                           {formatDate(match.match_date)}
                         </span>
                         <div className="flex items-center gap-2">
+                          {highlight?.youtubeId && (
+                            <span className="text-red-500 text-[10px]">▶</span>
+                          )}
                           <span className="text-xs text-gray-600">FT</span>
                           {hasStats && (
                             <span className="text-[10px] text-gray-500">
@@ -575,13 +659,65 @@ if (data.success) {
                       </div>
                     </div>
 
-                    {/* 확장 영역 - 경기 통계 */}
+                    {/* 확장 영역 - 하이라이트 + 경기 통계 */}
                     {isExpanded && (
                       <div className="bg-[#151515] px-4 pb-4 border-t border-gray-800">
+                        {/* 하이라이트 섹션 */}
+                        <div className="py-3 border-b border-gray-800 mb-3">
+                          <h3 className="text-xs font-bold text-gray-400 mb-3">
+                            {currentLanguage === 'ko' ? '🎬 하이라이트' : '🎬 Highlights'}
+                          </h3>
+                          
+                          {isLoadingHighlight ? (
+                            <div className="flex items-center gap-2 text-gray-500 text-sm">
+                              <div className="w-4 h-4 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
+                              {currentLanguage === 'ko' ? '검색 중...' : 'Searching...'}
+                            </div>
+                          ) : highlight?.youtubeId ? (
+                            <div className="space-y-2">
+                              <div 
+                                className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden cursor-pointer group"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setShowVideoModal(highlight.youtubeId)
+                                }}
+                              >
+                                <Image
+                                  src={`https://img.youtube.com/vi/${highlight.youtubeId}/hqdefault.jpg`}
+                                  alt="Highlight"
+                                  fill
+                                  className="object-cover"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
+                                  <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                  </div>
+                                </div>
+                              </div>
+                              <a
+                                href={highlight.videoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white"
+                              >
+                                <span>YouTube에서 보기 →</span>
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="text-gray-500 text-sm">
+                              {currentLanguage === 'ko' ? '하이라이트 없음' : 'No highlights'}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 경기 통계 섹션 */}
                         {hasStats ? (
-                          <div className="py-3">
+                          <div className="py-1">
                             <h3 className="text-xs font-bold text-gray-400 mb-3">
-                              {currentLanguage === 'ko' ? '경기 통계' : 'Match Stats'}
+                              {currentLanguage === 'ko' ? '📊 경기 통계' : '📊 Match Stats'}
                             </h3>
                             
                             <div className="space-y-3">
