@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const league = searchParams.get('league') || 'ALL'
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 10) // 무료 플랜 최대 3개
+    const limit = Math.min(parseInt(searchParams.get('limit') || '12'), 25) // Basic 플랜 최대 25개
     const search = searchParams.get('search') || ''
     
     // 검색어 설정
@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
       searchQuery = search.replace(/\s+/g, '+')
     }
     
-    // API 호출
-    const apiUrl = `${NEWS_API_BASE}?api_token=${NEWS_API_TOKEN}&categories=sports&search=${searchQuery}&language=en&limit=${Math.min(limit, 3)}&published_after=2024-01-01`
+    // API 호출 - Basic 플랜: 25개까지 가능
+    const apiUrl = `${NEWS_API_BASE}?api_token=${NEWS_API_TOKEN}&categories=sports&search=${searchQuery}&language=en&limit=${limit}&published_after=2024-01-01`
     
     console.log('📰 Fetching news:', apiUrl.replace(NEWS_API_TOKEN, '***'))
     
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     
     const data: NewsResponse = await response.json()
     
-    // 데이터 변환 (한국 시간 변환 등)
+    // 데이터 변환
     const articles = data.data.map(article => ({
       id: article.uuid,
       title: article.title,
