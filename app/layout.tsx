@@ -65,11 +65,11 @@ export default function RootLayout({
         {/* Google Tag Manager */}
         <GoogleTagManager />
 
-        {/* Google AdSense */}
+        {/* Google AdSense - 수정된 pub ID */}
         <Script
           id="google-adsense"
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7858814871438044"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7853814871438044"
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
