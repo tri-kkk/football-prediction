@@ -28,7 +28,7 @@ const menuItems: MenuItem[] = [
     labelEn: 'Insights',
     href: '/insights', 
     icon: 'insights',
-    hidden: true  // 임시 숨김
+    hidden: true
   },
   { 
     labelKo: '경기 결과',
@@ -50,9 +50,9 @@ const menuItems: MenuItem[] = [
     icon: '/article.svg'
   },
   { 
-    labelKo: '피드',
-    labelEn: 'Feed',
-    href: '/magazine', 
+    labelKo: '뉴스',
+    labelEn: 'News',
+    href: '/news', 
     icon: 'feed',
   },
 ]
@@ -62,10 +62,8 @@ export default function Navigation() {
   const { language } = useLanguage()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  // 숨김 처리된 메뉴 필터링
   const visibleMenuItems = menuItems.filter(item => !item.hidden)
 
-  // 인사이트 아이콘 렌더링
   const renderIcon = (item: MenuItem, isActive: boolean, size: number = 20) => {
     if (item.icon === 'feed') {
       return (
@@ -140,7 +138,6 @@ export default function Navigation() {
                 {language === 'ko' ? item.labelKo : item.labelEn}
               </span>
               
-              {/* Badge */}
               {item.badge && (
                 <span className={`absolute -top-1 -right-1 px-1.5 py-0.5 text-[9px] font-bold rounded-full ${
                   item.badge === 'NEW' 
@@ -204,7 +201,6 @@ export default function Navigation() {
                     </div>
                     <span className="flex-1">{language === 'ko' ? item.labelKo : item.labelEn}</span>
                     
-                    {/* Badge */}
                     {item.badge && (
                       <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
                         item.badge === 'NEW' 

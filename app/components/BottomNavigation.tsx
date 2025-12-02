@@ -21,7 +21,7 @@ export default function MobileBottomNav() {
       icon: 'insights',
       labelKo: '인사이트',
       labelEn: 'Insights',
-      hidden: true  // 임시 숨김
+      hidden: true
     },
     {
       href: '/results',
@@ -38,10 +38,10 @@ export default function MobileBottomNav() {
       hidden: false
     },
     {
-      href: '/magazine',
+      href: '/news',
       icon: 'feed',
-      labelKo: '피드',
-      labelEn: 'Feed',
+      labelKo: '뉴스',
+      labelEn: 'News',
       hidden: false
     },
     {
@@ -53,7 +53,6 @@ export default function MobileBottomNav() {
     }
   ]
 
-  // 숨김 처리된 메뉴 필터링
   const visibleNavItems = navItems.filter(item => !item.hidden)
 
   return (
