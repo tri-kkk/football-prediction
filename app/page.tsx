@@ -418,7 +418,10 @@ export default function Home() {
   const [standings, setStandings] = useState<any[]>([])
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [currentLeagueIndex, setCurrentLeagueIndex] = useState(0)
+  const [standingsExpanded, setStandingsExpanded] = useState(false)
   const [allLeagueStandings, setAllLeagueStandings] = useState<{ [key: string]: any[] }>({})
+  // 📰 사이드바 뉴스
+  const [sidebarNews, setSidebarNews] = useState<any[]>([])
   // 🔴 라이브 경기 수
   const [liveCount, setLiveCount] = useState(0)
   // 📊 배너 자동 롤링
@@ -596,6 +599,22 @@ export default function Home() {
     const interval = setInterval(checkLive, 30000)
     return () => clearInterval(interval)
   }, [])
+
+  // 📰 사이드바 뉴스 로드
+  useEffect(() => {
+    async function fetchSidebarNews() {
+      try {
+        const response = await fetch(`/api/news?lang=${currentLanguage}`)
+        const data = await response.json()
+        if (data.success && data.articles) {
+          setSidebarNews(data.articles.slice(0, 5))
+        }
+      } catch (error) {
+        console.error('뉴스 로드 실패:', error)
+      }
+    }
+    fetchSidebarNews()
+  }, [currentLanguage])
 
   // selectedLeague 변경 시 순위표 인덱스 동기화
   useEffect(() => {
@@ -2347,6 +2366,7 @@ export default function Home() {
 
           {/* 우측 순위표 사이드바 */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
+            <div className="sticky top-24 space-y-4">
             {/* HilltopAds - 순위표 위 배너 (데스크톱 전용) - 임시 비활성화 */}
             {/* 
             <div className={`hidden lg:block mb-6 rounded-xl overflow-hidden ${
@@ -2360,7 +2380,7 @@ export default function Home() {
             
             {/* 전체 리그 선택 시 - 캐러셀 */}
             {selectedLeague === 'ALL' && (
-              <div className={`sticky top-24 rounded-xl overflow-hidden ${
+              <div className={`rounded-xl overflow-hidden select-none ${
                 darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
               }`}>
                 {/* 헤더 with 좌우 화살표 */}
@@ -2450,7 +2470,7 @@ export default function Home() {
                     </div>
                   ) : standings.length > 0 ? (
                     <div>
-                      {standings.slice(0, 20).map((team: any, index: number) => {
+                      {standings.slice(0, standingsExpanded ? 20 : 5).map((team: any, index: number) => {
                         const position = team.position || index + 1
                         const isTopFour = position <= 4
                         const isRelegation = position >= 18
@@ -2512,6 +2532,34 @@ export default function Home() {
                           </div>
                         )
                       })}
+                      
+                      {/* 펼치기/접기 버튼 */}
+                      {standings.length > 5 && (
+                        <button
+                          type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setStandingsExpanded(!standingsExpanded); }}
+                          className={`w-full py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+                            darkMode 
+                              ? 'text-emerald-400 hover:bg-gray-800/50' 
+                              : 'text-emerald-600 hover:bg-gray-50'
+                          }`}
+                        >
+                          {standingsExpanded ? (
+                            <>
+                              <span>접기</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            </>
+                          ) : (
+                            <>
+                              <span>전체 순위 보기</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-12">
@@ -2526,7 +2574,7 @@ export default function Home() {
             
             {/* 특정 리그 선택 시 - 기존 순위표 */}
             {selectedLeague !== 'ALL' && (
-              <div className={`sticky top-24 rounded-xl overflow-hidden ${
+              <div className={`rounded-xl overflow-hidden select-none ${
                 darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
               }`}>
                 {/* 헤더 */}
@@ -2575,7 +2623,7 @@ export default function Home() {
                     </div>
                   ) : standings.length > 0 ? (
                     <div>
-                      {standings.slice(0, 20).map((team: any, index: number) => {
+                      {standings.slice(0, standingsExpanded ? 20 : 5).map((team: any, index: number) => {
                         const position = team.position || index + 1
                         const isTopFour = position <= 4
                         const isRelegation = position >= 18
@@ -2642,6 +2690,34 @@ export default function Home() {
                           </div>
                         )
                       })}
+                      
+                      {/* 펼치기/접기 버튼 */}
+                      {standings.length > 5 && (
+                        <button
+                          type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setStandingsExpanded(!standingsExpanded); }}
+                          className={`w-full py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+                            darkMode 
+                              ? 'text-emerald-400 hover:bg-gray-800/50' 
+                              : 'text-emerald-600 hover:bg-gray-50'
+                          }`}
+                        >
+                          {standingsExpanded ? (
+                            <>
+                              <span>접기</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            </>
+                          ) : (
+                            <>
+                              <span>전체 순위 보기</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-12">
@@ -2653,6 +2729,50 @@ export default function Home() {
                 </div>
               </div>
             )}
+
+            {/* 📰 사이드바 뉴스 섹션 */}
+            {sidebarNews.length > 0 && (
+              <div className={`rounded-xl overflow-hidden select-none ${
+                darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
+              }`}>
+                <div className={`px-4 py-3 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                  <h3 className={`text-sm font-bold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <span>{currentLanguage === 'ko' ? '지금 뜨는' : 'Trending'}</span>
+                    <span className="text-emerald-500">{currentLanguage === 'ko' ? '축구 뉴스' : 'Football News'}</span>
+                  </h3>
+                </div>
+                <div className="p-2">
+                  {sidebarNews.map((news: any, idx: number) => (
+                    <a
+                      key={news.id || idx}
+                      href={news.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`block px-3 py-2.5 rounded-lg transition-colors ${
+                        darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <p className={`text-sm leading-snug line-clamp-2 ${
+                        darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                      }`}>
+                        {news.title}
+                      </p>
+                    </a>
+                  ))}
+                </div>
+                <a
+                  href="/news"
+                  className={`block text-center py-2.5 text-xs font-medium border-t transition-colors ${
+                    darkMode 
+                      ? 'border-gray-800 text-emerald-400 hover:bg-gray-800/50' 
+                      : 'border-gray-200 text-emerald-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {currentLanguage === 'ko' ? '뉴스 더보기 →' : 'More News →'}
+                </a>
+              </div>
+            )}
+            </div>
           </aside>
         </div>
       </div>

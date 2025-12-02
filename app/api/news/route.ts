@@ -1,75 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// API 설정
 const NEWS_API_TOKEN = process.env.NEWS_API_TOKEN || 'Fh23c0qhklAz5xdPY35QlRJ41SaJEBDywe6uWfH7'
 const NEWS_API_BASE = 'https://api.thenewsapi.com/v1/news/all'
 
-// 뉴스 카테고리 설정
-const NEWS_CATEGORIES = [
-  { 
-    id: 'premier-league',
-    name: 'Premier League',
-    nameKo: '프리미어리그',
-    search: 'Premier League',
-    logo: 'https://crests.football-data.org/PL.png',
-    limit: 8  // 중복 제거 후에도 5개 유지되도록 여유있게
-  },
-  { 
-    id: 'champions-league',
-    name: 'Champions League',
-    nameKo: '챔피언스리그',
-    search: 'Champions League UEFA',
-    logo: 'https://crests.football-data.org/CL.png',
-    limit: 8
-  },
-  { 
-    id: 'la-liga',
-    name: 'La Liga',
-    nameKo: '라리가',
-    search: 'La Liga Spain Barcelona Real Madrid',
-    logo: 'https://crests.football-data.org/PD.png',
-    limit: 8
-  },
-  { 
-    id: 'bundesliga',
-    name: 'Bundesliga',
-    nameKo: '분데스리가',
-    search: 'Bundesliga Bayern Munich Dortmund',
-    logo: 'https://crests.football-data.org/BL1.png',
-    limit: 8
-  },
-  { 
-    id: 'serie-a',
-    name: 'Serie A',
-    nameKo: '세리에 A',
-    search: 'Serie A Italy Inter Milan Juventus',
-    logo: 'https://crests.football-data.org/SA.png',
-    limit: 8
-  },
-  { 
-    id: 'transfers',
-    name: 'Transfers',
-    nameKo: '이적 소식',
-    search: 'football transfer rumor',
-    logo: '',
-    limit: 8
-  },
-]
-
-interface NewsArticle {
-  uuid: string
-  title: string
-  description: string
-  snippet: string
-  url: string
-  image_url: string
-  published_at: string
-  source: string
-}
-
-interface NewsResponse {
-  meta: { found: number; returned: number }
-  data: NewsArticle[]
-}
+const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || '4vRIttCnY29H4SdYztZU'
+const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || 'MaqnBYPgKh'
+const NAVER_API_BASE = 'https://openapi.naver.com/v1/search/news.json'
 
 interface ProcessedArticle {
   id: string
@@ -81,21 +18,19 @@ interface ProcessedArticle {
   publishedAt: string
 }
 
-async function fetchCategoryNews(search: string, limit: number): Promise<ProcessedArticle[]> {
+// TheNewsAPI에서 뉴스 가져오기 (영어)
+async function fetchInternationalNews(limit: number = 10): Promise<ProcessedArticle[]> {
   try {
-    const url = `${NEWS_API_BASE}?api_token=${NEWS_API_TOKEN}&categories=sports&search=${encodeURIComponent(search)}&language=en&limit=${limit}&sort=published_at`
+    const url = `${NEWS_API_BASE}?api_token=${NEWS_API_TOKEN}&categories=sports&search=football+soccer&language=en&limit=${limit}&sort=published_at`
     
-    const response = await fetch(url, {
-      next: { revalidate: 1800 }
-    })
-    
+    const response = await fetch(url, { next: { revalidate: 1800 } })
     if (!response.ok) return []
     
-    const data: NewsResponse = await response.json()
+    const data = await response.json()
     
     return data.data
-      .filter(article => article.image_url)
-      .map(article => ({
+      .filter((article: any) => article.image_url)
+      .map((article: any) => ({
         id: article.uuid,
         title: article.title,
         description: article.description || article.snippet,
@@ -105,64 +40,103 @@ async function fetchCategoryNews(search: string, limit: number): Promise<Process
         publishedAt: article.published_at,
       }))
   } catch (error) {
-    console.error(`Error fetching ${search}:`, error)
+    console.error('Error fetching international news:', error)
+    return []
+  }
+}
+
+// 네이버 API에서 뉴스 가져오기 (한국어)
+async function fetchNaverNews(display: number = 10): Promise<ProcessedArticle[]> {
+  try {
+    const url = `${NAVER_API_BASE}?query=${encodeURIComponent('축구')}&display=${display}&sort=date`
+    
+    const response = await fetch(url, {
+      headers: {
+        'X-Naver-Client-Id': NAVER_CLIENT_ID,
+        'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
+      },
+      next: { revalidate: 1800 }
+    })
+    
+    if (!response.ok) return []
+    
+    const data = await response.json()
+    
+    return data.items.map((item: any, index: number) => {
+      const cleanTitle = item.title
+        .replace(/<[^>]*>/g, '')
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+      
+      const cleanDesc = item.description
+        .replace(/<[^>]*>/g, '')
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+      
+      let source = '뉴스'
+      try {
+        const urlObj = new URL(item.originallink)
+        source = urlObj.hostname
+          .replace('www.', '')
+          .replace('.co.kr', '')
+          .replace('.com', '')
+          .replace('sports.', '')
+          .replace('news.', '')
+      } catch {}
+      
+      return {
+        id: `naver-${index}-${Date.now()}`,
+        title: cleanTitle,
+        description: cleanDesc,
+        imageUrl: '',
+        url: item.link,
+        source: source,
+        publishedAt: item.pubDate,
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching Naver news:', error)
     return []
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // 전역 중복 추적 Set
-    const usedArticleIds = new Set<string>()
-    const usedTitles = new Set<string>()
+    const { searchParams } = new URL(request.url)
+    const lang = searchParams.get('lang') || 'ko'
     
-    const results = []
+    let articles: ProcessedArticle[] = []
     
-    // 순차적으로 처리하여 중복 제거
-    for (const category of NEWS_CATEGORIES) {
-      const articles = await fetchCategoryNews(category.search, category.limit)
-      
-      // 중복 제거된 기사만 필터링
-      const uniqueArticles = articles.filter(article => {
-        // ID 중복 체크
-        if (usedArticleIds.has(article.id)) {
-          return false
-        }
-        
-        // 제목 유사도 체크 (같은 기사가 다른 ID로 올 수 있음)
-        const normalizedTitle = article.title.toLowerCase().substring(0, 50)
-        if (usedTitles.has(normalizedTitle)) {
-          return false
-        }
-        
-        // 사용된 것으로 표시
-        usedArticleIds.add(article.id)
-        usedTitles.add(normalizedTitle)
-        
-        return true
-      }).slice(0, 5)  // 최대 5개만
-      
-      if (uniqueArticles.length > 0) {
-        results.push({
-          id: category.id,
-          name: category.name,
-          nameKo: category.nameKo,
-          logo: category.logo,
-          articles: uniqueArticles,
-        })
-      }
+    if (lang === 'ko') {
+      // 한국어: 네이버 뉴스
+      articles = await fetchNaverNews(10)
+    } else {
+      // 영어: TheNewsAPI
+      articles = await fetchInternationalNews(10)
     }
+    
+    // 중복 제거
+    const seenTitles = new Set<string>()
+    const uniqueArticles = articles.filter(article => {
+      const normalizedTitle = article.title.substring(0, 30).toLowerCase()
+      if (seenTitles.has(normalizedTitle)) return false
+      seenTitles.add(normalizedTitle)
+      return true
+    }).slice(0, 6)
     
     return NextResponse.json({
       success: true,
-      categories: results,
+      articles: uniqueArticles,
+      lang: lang,
       updatedAt: new Date().toISOString(),
     })
     
   } catch (error) {
     console.error('News API Error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch news', categories: [] },
+      { success: false, error: 'Failed to fetch news', articles: [] },
       { status: 500 }
     )
   }

@@ -316,6 +316,39 @@ function formatDate(utcDateString: string, language: string = 'ko'): string {
 const CACHE_DURATION = 5 * 60 * 1000 // 5분
 const CACHE_KEY_PREFIX = 'football_'
 
+// 🕐 한국 시간(KST, UTC+9) 기준 날짜 계산 헬퍼
+function getKSTDate(date: Date = new Date()): Date {
+  // UTC 시간에 9시간 추가
+  const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
+  return new Date(utc + (9 * 60 * 60 * 1000))
+}
+
+function getKSTToday(): Date {
+  const kst = getKSTDate()
+  return new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()))
+}
+
+function getKSTTomorrow(): Date {
+  const today = getKSTToday()
+  const tomorrow = new Date(today)
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+  return tomorrow
+}
+
+function getKSTWeekEnd(): Date {
+  const today = getKSTToday()
+  const weekEnd = new Date(today)
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7)
+  return weekEnd
+}
+
+// 경기 날짜를 KST 기준으로 변환
+function getMatchKSTDate(utcDateString: string): Date {
+  const utcDate = new Date(utcDateString)
+  const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000))
+  return new Date(Date.UTC(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate()))
+}
+
 function getCachedData(key: string) {
   try {
     const cached = localStorage.getItem(CACHE_KEY_PREFIX + key)
@@ -377,8 +410,8 @@ export default function Home() {
   }>>({})
   const [lineupModalOpen, setLineupModalOpen] = useState(false)
   const [selectedMatchForLineup, setSelectedMatchForLineup] = useState<Match | null>(null)
-  // 날짜 필터와 페이지네이션
-  const [selectedDate, setSelectedDate] = useState<string>('week')  // 기본값 'week'로 변경
+  // 🆕 날짜 필터 - Date 기반으로 변경
+  const [selectedDate, setSelectedDate] = useState<Date>(getKSTToday())
   const [currentPage, setCurrentPage] = useState(1)
   const MATCHES_PER_PAGE = 15
   const [showFallbackBanner, setShowFallbackBanner] = useState(false)
@@ -398,6 +431,95 @@ export default function Home() {
   
   // 순위표용 리그 목록 (Nations League 제외)
   const standingsLeagues = availableLeagues.filter(l => l.code !== 'UNL')
+
+  // 🆕 날짜 네비게이션 함수들
+  const formatDateKey = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const formatDateDisplay = (date: Date): string => {
+    const today = getKSTToday()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    
+    const isToday = dateOnly.getTime() === today.getTime()
+    const isTomorrow = dateOnly.getTime() === tomorrow.getTime()
+    const isYesterday = dateOnly.getTime() === yesterday.getTime()
+
+    if (currentLanguage === 'ko') {
+      if (isToday) return '오늘'
+      if (isTomorrow) return '내일'
+      if (isYesterday) return '어제'
+      return `${date.getMonth() + 1}월 ${date.getDate()}일`
+    } else {
+      if (isToday) return 'Today'
+      if (isTomorrow) return 'Tomorrow'
+      if (isYesterday) return 'Yesterday'
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+  }
+
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(newDate.getDate() - 1)
+    setSelectedDate(newDate)
+    setCurrentPage(1)
+  }
+
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(newDate.getDate() + 1)
+    setSelectedDate(newDate)
+    setCurrentPage(1)
+  }
+
+  const goToToday = () => {
+    setSelectedDate(getKSTToday())
+    setCurrentPage(1)
+  }
+
+  // 선택된 날짜의 경기 필터링
+  const getMatchesForDate = (date: Date): Match[] => {
+    const dateKey = formatDateKey(date)
+    return matches.filter(match => {
+      const matchKST = getMatchKSTDate(match.utcDate)
+      const matchKey = formatDateKey(matchKST)
+      return matchKey === dateKey
+    })
+  }
+
+  // 가장 빠른 경기 날짜 찾기
+  const findEarliestMatchDate = (): Date | null => {
+    if (matches.length === 0) return null
+    
+    const sortedMatches = [...matches].sort((a, b) => 
+      new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
+    )
+    
+    return getMatchKSTDate(sortedMatches[0].utcDate)
+  }
+
+  // 🆕 오늘 경기 없으면 가장 빠른 경기 날짜로 자동 이동
+  useEffect(() => {
+    if (loading || matches.length === 0) return
+    
+    const todayMatches = getMatchesForDate(getKSTToday())
+    
+    if (todayMatches.length === 0) {
+      const earliestDate = findEarliestMatchDate()
+      if (earliestDate) {
+        console.log('📅 오늘 경기 없음 → 가장 빠른 경기 날짜로 이동:', formatDateKey(earliestDate))
+        setSelectedDate(earliestDate)
+      }
+    }
+  }, [loading, matches])
 
   // 다크모드 토글
   useEffect(() => {
@@ -989,33 +1111,6 @@ export default function Home() {
   useEffect(() => {
     fetchStandings(selectedLeague)
   }, [selectedLeague])
-
-  // 🎯 폴백 배너 상태 관리
-  useEffect(() => {
-    // 날짜 필터링 계산
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const weekEnd = new Date(today)
-    weekEnd.setDate(weekEnd.getDate() + 7)
-    
-    if (selectedDate === 'week') {
-      // 이번 주 경기 확인
-      const weekMatches = matches.filter(match => {
-        const matchDate = new Date(match.utcDate)
-        return matchDate >= today && matchDate < weekEnd
-      })
-      
-      // 이번 주에 경기가 없으면 배너 표시
-      if (weekMatches.length === 0 && matches.length > 0) {
-        setShowFallbackBanner(true)
-      } else {
-        setShowFallbackBanner(false)
-      }
-    } else {
-      // 다른 탭 선택 시 배너 숨김
-      setShowFallbackBanner(false)
-    }
-  }, [selectedDate, matches])
 
   // AI 논평 기능 일시 비활성화 (Rate Limit 때문)
   // TODO: 나중에 큐잉 시스템으로 개선
@@ -1756,135 +1851,58 @@ export default function Home() {
               </div>
             </div>
 
-        {/* 날짜 필터 - 글로벌 스탠다드 */}
-        <div className="mb-2 md:mb-8">
-          <div className="max-w-3xl mx-auto">
-            {/* 세그먼트 컨트롤 */}
-            <div className={`
-              relative p-1 rounded-xl backdrop-blur-sm
-              ${darkMode 
-                ? 'bg-gray-900/50 border border-gray-800' 
-                : 'bg-gray-100 border border-gray-200'
-              }
-            `}>
-              {/* 슬라이딩 배경 */}
-              <div 
-                className="absolute top-1 bottom-1 rounded-lg bg-[#A3FF4C] transition-all duration-300 ease-out"
-                style={{
-                  left: `${
-                    selectedDate === 'today' ? '0.25rem' :
-                    selectedDate === 'tomorrow' ? 'calc(25% + 0.25rem)' :
-                    selectedDate === 'week' ? 'calc(50% + 0.25rem)' :
-                    'calc(75% + 0.25rem)'
-                  }`,
-                  width: 'calc(25% - 0.5rem)'
-                }}
-              />
-
-              {/* 버튼들 */}
-              <div className="relative grid grid-cols-4 gap-1">
-                {[
-                  { value: 'today', labelKo: '오늘', labelEn: 'Today' },
-                  { value: 'tomorrow', labelKo: '내일', labelEn: 'Tomorrow' },
-                  { value: 'week', labelKo: '이번 주', labelEn: 'This Week' },
-                  { value: 'upcoming', labelKo: '전체', labelEn: 'All Matches' }
-                ].map((date) => {
-                  const isActive = selectedDate === date.value
-                  
-                  // 경기 수 계산
-                  const matchCount = (() => {
-                    const now = new Date()
-                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-                    const tomorrow = new Date(today)
-                    tomorrow.setDate(tomorrow.getDate() + 1)
-                    const weekEnd = new Date(today)
-                    weekEnd.setDate(weekEnd.getDate() + 7)
-                    
-                    return matches.filter(match => {
-                      const matchDate = new Date(match.utcDate)
-                      if (date.value === 'today') {
-                        return matchDate >= today && matchDate < tomorrow
-                      } else if (date.value === 'tomorrow') {
-                        const dayAfter = new Date(tomorrow)
-                        dayAfter.setDate(dayAfter.getDate() + 1)
-                        return matchDate >= tomorrow && matchDate < dayAfter
-                      } else if (date.value === 'week') {
-                        return matchDate >= today && matchDate < weekEnd
-                      }
-                      return true
-                    }).length
-                  })()
-
-                  return (
-                    <button
-                      key={date.value}
-                      onClick={() => {
-                        setSelectedDate(date.value)
-                        setCurrentPage(1)
-                        setShowFallbackBanner(false)
-                      }}
-                      className="relative py-2 md:py-3 px-2 rounded-lg transition-all duration-200 z-10"
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        {/* 라벨 */}
-                        <span className={`
-                          text-xs md:text-sm font-semibold transition-colors
-                          ${isActive 
-                            ? 'text-gray-900' 
-                            : darkMode ? 'text-gray-400' : 'text-gray-600'
-                          }
-                        `}>
-                          {currentLanguage === 'ko' ? date.labelKo : date.labelEn}
-                        </span>
-                        
-                        {/* 경기 수 */}
-                        <span className={`
-                          text-[10px] md:text-xs font-bold tabular-nums
-                          ${isActive 
-                            ? 'text-gray-800' 
-                            : darkMode ? 'text-gray-600' : 'text-gray-400'
-                          }
-                        `}>
-                          {matchCount} {currentLanguage === 'ko' ? '경기' : 'matches'}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* 날짜 정보 표시 - 데스크톱만 */}
-            <div className="hidden md:flex items-center justify-center gap-2 mt-1.5 md:mt-3 text-xs text-gray-500">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
+        <div className="mb-4 md:mb-8">
+          <div className="flex items-center justify-center gap-4">
+            {/* 이전 날짜 */}
+            <button
+              onClick={goToPreviousDay}
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${
+                darkMode 
+                  ? 'bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white' 
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <span>
-                {(() => {
-                  const now = new Date()
-                  const options: Intl.DateTimeFormatOptions = { 
-                    month: 'short', 
-                    day: 'numeric',
-                    timeZone: 'Asia/Seoul'
-                  }
-                  const today = now.toLocaleDateString(currentLanguage === 'ko' ? 'ko-KR' : 'en-US', options)
-                  
-                  if (selectedDate === 'today') {
-                    return currentLanguage === 'ko' ? `${today} 경기` : `Matches on ${today}`
-                  } else if (selectedDate === 'tomorrow') {
-                    const tomorrow = new Date(now)
-                    tomorrow.setDate(tomorrow.getDate() + 1)
-                    const tomorrowStr = tomorrow.toLocaleDateString(currentLanguage === 'ko' ? 'ko-KR' : 'en-US', options)
-                    return currentLanguage === 'ko' ? `${tomorrowStr} 경기` : `Matches on ${tomorrowStr}`
-                  } else if (selectedDate === 'week') {
-                    return currentLanguage === 'ko' ? '다음 7일간의 경기' : 'Next 7 days'
-                  } else {
-                    return currentLanguage === 'ko' ? '모든 예정된 경기' : 'All upcoming matches'
-                  }
-                })()}
+            </button>
+            
+            {/* 현재 날짜 + 경기 수 */}
+            <button
+              onClick={goToToday}
+              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl transition-all ${
+                darkMode 
+                  ? 'bg-[#1a1a1a] hover:bg-[#252525]' 
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+            >
+              <span className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {formatDateDisplay(selectedDate)}
               </span>
-            </div>
+              <span className={`text-sm px-2 py-0.5 rounded-full ${
+                darkMode ? 'bg-[#252525] text-gray-400' : 'bg-gray-200 text-gray-600'
+              }`}>
+                {getMatchesForDate(selectedDate).length}{currentLanguage === 'ko' ? '경기' : ' matches'}
+              </span>
+              <svg className={`w-4 h-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {/* 다음 날짜 */}
+            <button
+              onClick={goToNextDay}
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${
+                darkMode 
+                  ? 'bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white' 
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -1912,37 +1930,14 @@ export default function Home() {
         {!loading && !error && (
           <div className="grid gap-6 grid-cols-1">
             {(() => {
-              // 날짜 필터링
-              const now = new Date()
-              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-              const tomorrow = new Date(today)
-              tomorrow.setDate(tomorrow.getDate() + 1)
-              const weekEnd = new Date(today)
-              weekEnd.setDate(weekEnd.getDate() + 7)
+              // 🆕 선택된 날짜 기준 필터링 (한국 시간 기준)
+              const selectedDateKey = formatDateKey(selectedDate)
               
               let filteredMatches = matches.filter(match => {
-                const matchDate = new Date(match.utcDate)
-                
-                if (selectedDate === 'today') {
-                  return matchDate >= today && matchDate < tomorrow
-                } else if (selectedDate === 'tomorrow') {
-                  const dayAfter = new Date(tomorrow)
-                  dayAfter.setDate(dayAfter.getDate() + 1)
-                  return matchDate >= tomorrow && matchDate < dayAfter
-                } else if (selectedDate === 'week') {
-                  return matchDate >= today && matchDate < weekEnd
-                } else if (selectedDate === 'upcoming') {
-                  // 다가오는 경기: 모든 미래 경기 (이미 fetchMatches에서 필터링됨)
-                  return true
-                }
-                return true
+                const matchKST = getMatchKSTDate(match.utcDate)
+                const matchKey = formatDateKey(matchKST)
+                return matchKey === selectedDateKey
               })
-              
-              // 🎯 폴백 체크: 이번 주에 경기가 없으면 모든 경기 표시
-              const shouldShowFallback = selectedDate === 'week' && filteredMatches.length === 0 && matches.length > 0
-              if (shouldShowFallback) {
-                filteredMatches = matches // 모든 미래 경기 표시
-              }
               
               // 페이지네이션
               const totalMatches = filteredMatches.length
@@ -1953,46 +1948,32 @@ export default function Home() {
               
               return (
                 <>
-                  {/* 폴백 배너 */}
-                  {showFallbackBanner && (
-                    <div className="mb-6 bg-blue-900/20 border border-blue-700/50 rounded-xl p-4 backdrop-blur-sm">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <svg className="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <div>
-                            <p className="text-sm font-medium text-blue-300">
-                              {currentLanguage === 'ko' ? '이번 주 예정된 경기가 없습니다' : 'No matches scheduled this week'}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              {currentLanguage === 'ko' ? '가장 가까운 경기를 보여드립니다' : 'Showing nearest available matches'}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setShowFallbackBanner(false)}
-                          className="text-gray-400 hover:text-white transition-colors ml-4"
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
+                  {/* 경기 없음 안내 */}
+                  {filteredMatches.length === 0 && (
+                    <div className={`text-center py-12 rounded-2xl ${
+                      darkMode ? 'bg-[#1a1a1a]' : 'bg-gray-100'
+                    }`}>
+                      <div className="text-4xl mb-4">⚽</div>
+                      <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        {currentLanguage === 'ko' 
+                          ? '이 날짜에 예정된 경기가 없습니다'
+                          : 'No matches scheduled on this date'
+                        }
+                      </p>
+                      <button
+                        onClick={() => {
+                          const earliest = findEarliestMatchDate()
+                          if (earliest) setSelectedDate(earliest)
+                        }}
+                        className="mt-4 px-4 py-2 bg-[#A3FF4C] text-gray-900 rounded-lg text-sm font-medium hover:bg-[#8FE63D] transition-colors"
+                      >
+                        {currentLanguage === 'ko' ? '가장 빠른 경기로 이동' : 'Go to earliest match'}
+                      </button>
                     </div>
                   )}
 
                   {paginatedMatches.length === 0 ? (
-                    <div className={`text-center py-20 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      <div className="text-6xl mb-4">📅</div>
-                      <p className="text-xl mb-2">
-                        {currentLanguage === 'ko' ? '선택한 날짜에 예정된 경기가 없습니다.' : 'No matches scheduled for the selected date.'}
-                      </p>
-                      <p className="text-sm">
-                        {currentLanguage === 'ko' ? '다른 날짜를 선택해보세요!' : 'Try selecting a different date!'}
-                      </p>
-                    </div>
+                    null  // 이미 위에서 경기 없음 UI 표시
                   ) : (
                     <>
                       {/* ━━━━━━ FotMob 스타일: 리그별 그룹화 ━━━━━━ */}
