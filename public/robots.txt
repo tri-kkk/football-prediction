@@ -1,0 +1,16 @@
+# TrendSoccer Robots.txt
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://trendsoccer.com/sitemap.xml
+
+# Allow all crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
