@@ -28,7 +28,7 @@ const menuItems: MenuItem[] = [
     labelEn: 'Insights',
     href: '/insights', 
     icon: 'insights',
-    hidden: true
+    hidden: false
   },
   { 
     labelKo: '경기 결과',

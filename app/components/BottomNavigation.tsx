@@ -21,7 +21,7 @@ export default function MobileBottomNav() {
       icon: 'insights',
       labelKo: '인사이트',
       labelEn: 'Insights',
-      hidden: true
+      hidden: false
     },
     {
       href: '/results',
