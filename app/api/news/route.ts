@@ -8,6 +8,34 @@ const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || '4vRIttCnY29H4SdYztZU'
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || 'MaqnBYPgKh'
 const NAVER_API_BASE = 'https://openapi.naver.com/v1/search/news.json'
 
+// 해외 뉴스 카테고리 (이미지 있음)
+const INTERNATIONAL_CATEGORIES = [
+  { 
+    id: 'premier-league',
+    name: 'Premier League',
+    nameKo: '프리미어리그',
+    search: 'Premier League',
+    logo: 'https://crests.football-data.org/PL.png',
+    limit: 6
+  },
+  { 
+    id: 'champions-league',
+    name: 'Champions League',
+    nameKo: '챔피언스리그',
+    search: 'Champions League UEFA',
+    logo: 'https://crests.football-data.org/CL.png',
+    limit: 6
+  },
+  { 
+    id: 'la-liga',
+    name: 'La Liga',
+    nameKo: '라리가',
+    search: 'La Liga Spain Barcelona Real Madrid',
+    logo: 'https://crests.football-data.org/PD.png',
+    limit: 6
+  },
+]
+
 interface ProcessedArticle {
   id: string
   title: string
@@ -19,9 +47,9 @@ interface ProcessedArticle {
 }
 
 // TheNewsAPI에서 뉴스 가져오기 (영어)
-async function fetchInternationalNews(limit: number = 10): Promise<ProcessedArticle[]> {
+async function fetchInternationalNews(search: string, limit: number): Promise<ProcessedArticle[]> {
   try {
-    const url = `${NEWS_API_BASE}?api_token=${NEWS_API_TOKEN}&categories=sports&search=football+soccer&language=en&limit=${limit}&sort=published_at`
+    const url = `${NEWS_API_BASE}?api_token=${NEWS_API_TOKEN}&categories=sports&search=${encodeURIComponent(search)}&language=en&limit=${limit}&sort=published_at`
     
     const response = await fetch(url, { next: { revalidate: 1800 } })
     if (!response.ok) return []
@@ -105,38 +133,95 @@ async function fetchNaverNews(display: number = 10): Promise<ProcessedArticle[]>
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const lang = searchParams.get('lang') || 'ko'
+    const lang = searchParams.get('lang')
     
-    let articles: ProcessedArticle[] = []
-    
-    if (lang === 'ko') {
-      // 한국어: 네이버 뉴스
-      articles = await fetchNaverNews(10)
-    } else {
-      // 영어: TheNewsAPI
-      articles = await fetchInternationalNews(10)
+    // 🔹 사이드바용: lang 파라미터가 있으면 단순 articles 반환
+    if (lang) {
+      let articles: ProcessedArticle[] = []
+      
+      if (lang === 'ko') {
+        articles = await fetchNaverNews(10)
+      } else {
+        articles = await fetchInternationalNews('football soccer', 10)
+      }
+      
+      // 중복 제거
+      const seenTitles = new Set<string>()
+      const uniqueArticles = articles.filter(article => {
+        const normalizedTitle = article.title.substring(0, 30).toLowerCase()
+        if (seenTitles.has(normalizedTitle)) return false
+        seenTitles.add(normalizedTitle)
+        return true
+      }).slice(0, 6)
+      
+      return NextResponse.json({
+        success: true,
+        articles: uniqueArticles,
+        lang: lang,
+        updatedAt: new Date().toISOString(),
+      })
     }
     
-    // 중복 제거
-    const seenTitles = new Set<string>()
-    const uniqueArticles = articles.filter(article => {
-      const normalizedTitle = article.title.substring(0, 30).toLowerCase()
-      if (seenTitles.has(normalizedTitle)) return false
-      seenTitles.add(normalizedTitle)
+    // 🔹 뉴스 페이지용: categories 구조 반환
+    const usedArticleIds = new Set<string>()
+    const usedTitles = new Set<string>()
+    const results = []
+    
+    // 1. 해외 뉴스 (TheNewsAPI)
+    for (const category of INTERNATIONAL_CATEGORIES) {
+      const articles = await fetchInternationalNews(category.search, category.limit)
+      
+      const uniqueArticles = articles.filter(article => {
+        if (usedArticleIds.has(article.id)) return false
+        const normalizedTitle = article.title.toLowerCase().substring(0, 50)
+        if (usedTitles.has(normalizedTitle)) return false
+        usedArticleIds.add(article.id)
+        usedTitles.add(normalizedTitle)
+        return true
+      }).slice(0, 4)
+      
+      if (uniqueArticles.length > 0) {
+        results.push({
+          id: category.id,
+          name: category.name,
+          nameKo: category.nameKo,
+          logo: category.logo,
+          hasImage: true,
+          articles: uniqueArticles,
+        })
+      }
+    }
+    
+    // 2. 한국 뉴스 (네이버)
+    const koreanArticles = await fetchNaverNews(10)
+    const uniqueKoreanArticles = koreanArticles.filter(article => {
+      const normalizedTitle = article.title.substring(0, 30)
+      if (usedTitles.has(normalizedTitle)) return false
+      usedTitles.add(normalizedTitle)
       return true
     }).slice(0, 6)
     
+    if (uniqueKoreanArticles.length > 0) {
+      results.push({
+        id: 'korean-football',
+        name: 'Korean Football',
+        nameKo: '국내 축구',
+        logo: 'https://flagcdn.com/w40/kr.png',
+        hasImage: false,
+        articles: uniqueKoreanArticles,
+      })
+    }
+    
     return NextResponse.json({
       success: true,
-      articles: uniqueArticles,
-      lang: lang,
+      categories: results,
       updatedAt: new Date().toISOString(),
     })
     
   } catch (error) {
     console.error('News API Error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch news', articles: [] },
+      { success: false, error: 'Failed to fetch news', categories: [], articles: [] },
       { status: 500 }
     )
   }

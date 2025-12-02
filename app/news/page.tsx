@@ -34,7 +34,7 @@ export default function NewsPage() {
     try {
       const response = await fetch('/api/news')
       const data = await response.json()
-      if (data.success) {
+      if (data.success && data.categories) {
         setCategories(data.categories)
       }
     } catch (err) {
@@ -87,7 +87,10 @@ export default function NewsPage() {
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* 헤더 */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">⚽ Football News</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <span>⚽</span>
+            <span>Football News</span>
+          </h1>
           <p className="text-white/40 text-sm mt-1">Latest updates</p>
         </div>
 
