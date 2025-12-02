@@ -10,7 +10,8 @@ async function getFinishedMatches(leagueId: number, season: number, from: string
       headers: {
         'x-rapidapi-key': process.env.API_FOOTBALL_KEY!,
         'x-rapidapi-host': 'v3.football.api-sports.io'
-      }
+      },
+      cache: 'no-store'
     })
     
     console.log(`    📊 Response status: ${response.status}`)
@@ -38,7 +39,8 @@ async function getMatchStatistics(matchId: string) {
         headers: {
           'x-rapidapi-key': process.env.API_FOOTBALL_KEY!,
           'x-rapidapi-host': 'v3.football.api-sports.io'
-        }
+        },
+        cache: 'no-store'
       }
     )
     
@@ -80,20 +82,20 @@ async function getMatchStatistics(matchId: string) {
   }
 }
 
-// 리그 코드 → API-Football ID 매핑
+// 리그 코드 → API-Football ID 매핑 (시즌 2025)
 const LEAGUE_IDS: Record<string, { id: number, season: number }> = {
-  'CL': { id: 2, season: 2025 },
-  'EL': { id: 3, season: 2025 },
-  'UECL': { id: 848, season: 2025 },
-  'UNL': { id: 5, season: 2025 },
-  'PL': { id: 39, season: 2025 },
-  'ELC': { id: 40, season: 2025 },
-  'PD': { id: 140, season: 2025 },
-  'BL1': { id: 78, season: 2025 },
-  'SA': { id: 135, season: 2025 },
-  'FL1': { id: 61, season: 2025 },
-  'PPL': { id: 94, season: 2025 },
-  'DED': { id: 88, season: 2025 },
+  'CL': { id: 2, season: 2025 },      // Champions League
+  'EL': { id: 3, season: 2025 },      // Europa League
+  'UECL': { id: 848, season: 2025 },  // Conference League
+  'UNL': { id: 5, season: 2025 },     // Nations League
+  'PL': { id: 39, season: 2025 },     // Premier League
+  'ELC': { id: 40, season: 2025 },    // Championship
+  'PD': { id: 140, season: 2025 },    // La Liga
+  'BL1': { id: 78, season: 2025 },    // Bundesliga
+  'SA': { id: 135, season: 2025 },    // Serie A
+  'FL1': { id: 61, season: 2025 },    // Ligue 1
+  'PPL': { id: 94, season: 2025 },    // Primeira Liga
+  'DED': { id: 88, season: 2025 },    // Eredivisie
 }
 
 export async function GET(request: NextRequest) {
@@ -101,26 +103,42 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const league = searchParams.get('league') || 'ALL'
     const period = searchParams.get('period') || 'week'
+    const specificDate = searchParams.get('date') // 특정 날짜 (YYYY-MM-DD)
     
-    console.log(`📊 Fetching match results: league=${league}, period=${period}`)
+    console.log(`📊 Fetching match results: league=${league}, period=${period}, date=${specificDate}`)
     
     // 날짜 범위 계산
     const now = new Date()
     let fromDate: Date
-    let toDate: Date = now
+    let toDate: Date
     
-    switch (period) {
-      case 'today':
-        fromDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
-        break
-      case 'week':
-        fromDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-        break
-      case 'month':
-        fromDate = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000)
-        break
-      default:
-        fromDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+    if (specificDate) {
+      // 한국 시간 기준 해당 날짜의 경기를 가져오려면
+      // UTC 기준으로 전날~당일 범위로 조회 필요
+      // (한국 12/2 00:00 = UTC 12/1 15:00)
+      const targetDate = new Date(specificDate)
+      fromDate = new Date(targetDate)
+      fromDate.setDate(fromDate.getDate() - 1) // 전날부터
+      toDate = new Date(targetDate)
+      toDate.setDate(toDate.getDate() + 1) // 다음날까지
+      console.log(`📅 Specific date mode: ${specificDate} (KST)`)
+      console.log(`📅 API range: ${fromDate.toISOString().split('T')[0]} to ${toDate.toISOString().split('T')[0]} (UTC)`)
+    } else {
+      // 기존 period 기반 로직
+      toDate = now
+      switch (period) {
+        case 'today':
+          fromDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+          break
+        case 'week':
+          fromDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+          break
+        case 'month':
+          fromDate = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000)
+          break
+        default:
+          fromDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+      }
     }
     
     const fromStr = fromDate.toISOString().split('T')[0]
@@ -136,12 +154,12 @@ export async function GET(request: NextRequest) {
       
       const promises = leagueCodes.map(async (code) => {
         const leagueConfig = LEAGUE_IDS[code]
-        console.log(`  → Fetching ${code}...`)
+        console.log(`  → Fetching ${code} (season ${leagueConfig.season})...`)
         const matches = await getFinishedMatches(leagueConfig.id, leagueConfig.season, fromStr, toStr)
         console.log(`  ✓ ${code}: ${matches.length} matches`)
         return matches.map((m: any) => ({
           ...m,
-          league: code
+          leagueCode: code
         }))
       })
       
@@ -150,12 +168,12 @@ export async function GET(request: NextRequest) {
     } else {
       const leagueConfig = LEAGUE_IDS[league]
       if (leagueConfig) {
-        console.log(`🔄 Fetching ${league}...`)
+        console.log(`🔄 Fetching ${league} (season ${leagueConfig.season})...`)
         const matches = await getFinishedMatches(leagueConfig.id, leagueConfig.season, fromStr, toStr)
         console.log(`  ✓ ${league}: ${matches.length} matches`)
         allMatches = matches.map((m: any) => ({
           ...m,
-          league
+          leagueCode: league
         }))
       }
     }
@@ -163,23 +181,44 @@ export async function GET(request: NextRequest) {
     console.log(`📥 Fetched ${allMatches.length} matches from API`)
     
     // 데이터 변환
-    const formattedMatches = allMatches.map((match: any) => ({
+    let formattedMatches = allMatches.map((match: any) => ({
       match_id: match.fixture?.id?.toString() || '',
       home_team: match.teams?.home?.name || '',
       away_team: match.teams?.away?.name || '',
       home_crest: match.teams?.home?.logo || '',
       away_crest: match.teams?.away?.logo || '',
       match_date: match.fixture?.date || '',
-      league: match.league || '',
+      league: match.leagueCode || '',
       final_score_home: match.goals?.home ?? 0,
       final_score_away: match.goals?.away ?? 0,
     }))
     
+    // 특정 날짜 필터링 (한국 시간 UTC+9 기준)
+    if (specificDate) {
+      formattedMatches = formattedMatches.filter((match: any) => {
+        const matchDate = new Date(match.match_date)
+        
+        // 한국 시간으로 변환 (UTC+9)
+        const kstOffset = 9 * 60 * 60 * 1000
+        const kstDate = new Date(matchDate.getTime() + kstOffset)
+        const kstDateStr = kstDate.toISOString().split('T')[0]
+        
+        console.log(`    Match: ${match.home_team} vs ${match.away_team}`)
+        console.log(`    UTC: ${match.match_date}`)
+        console.log(`    KST Date: ${kstDateStr}`)
+        console.log(`    Target: ${specificDate}`)
+        console.log(`    Match: ${kstDateStr === specificDate}`)
+        
+        return kstDateStr === specificDate
+      })
+      console.log(`📅 Filtered to ${formattedMatches.length} matches for ${specificDate} (KST)`)
+    }
+    
     console.log(`✅ Formatted ${formattedMatches.length} matches`)
     
-    // 날짜순 정렬
+    // 시간순 정렬
     formattedMatches.sort((a: any, b: any) => 
-      new Date(b.match_date).getTime() - new Date(a.match_date).getTime()
+      new Date(a.match_date).getTime() - new Date(b.match_date).getTime()
     )
     
     // 통계 추가 (요청시)
@@ -187,27 +226,11 @@ export async function GET(request: NextRequest) {
     const includeStats = searchParams.get('stats') === 'true'
     
     if (includeStats && matches.length > 0) {
-      console.log(`📈 Fetching statistics for matches...`)
+      console.log(`📈 Fetching statistics for ${matches.length} matches...`)
       
-      // 리그별로 그룹화하여 각 리그에서 최대 10개씩 통계 가져오기
-      const matchesByLeague: Record<string, any[]> = {}
-      formattedMatches.forEach(match => {
-        if (!matchesByLeague[match.league]) {
-          matchesByLeague[match.league] = []
-        }
-        matchesByLeague[match.league].push(match)
-      })
+      // 통계 가져오기 (최대 50개)
+      const matchesForStats = matches.slice(0, 50)
       
-      // 각 리그에서 최대 10개씩 통계 가져오기
-      const matchesForStats: any[] = []
-      Object.keys(matchesByLeague).forEach(leagueCode => {
-        const leagueMatches = matchesByLeague[leagueCode].slice(0, 30)
-        matchesForStats.push(...leagueMatches)
-      })
-      
-      console.log(`📊 Fetching stats for ${matchesForStats.length} matches across ${Object.keys(matchesByLeague).length} leagues`)
-      
-      // 통계 가져오기
       const statsMap = new Map()
       await Promise.all(
         matchesForStats.map(async (match: any) => {
@@ -233,12 +256,16 @@ export async function GET(request: NextRequest) {
     }
     
     console.log(`✅ Returning ${matches.length} matches`)
-    console.log(`📦 Sample match:`, matches[0])
+    if (matches.length > 0) {
+      console.log(`📦 Sample match:`, JSON.stringify(matches[0], null, 2))
+    }
     
     return NextResponse.json({
       success: true,
       matches,
-      count: matches.length
+      count: matches.length,
+      date: specificDate || null,
+      period: specificDate ? null : period
     })
   } catch (error) {
     console.error('❌ Error in match-results API:', error)
