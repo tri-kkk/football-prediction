@@ -9,9 +9,9 @@ interface Highlight {
   awayTeam: string
   league: string
   matchDate: string
-  youtubeUrl: string      // ⭐ 추가!
+  youtubeUrl: string
   youtubeId: string
-  youtube_url: string     // fallback
+  youtube_url: string
   thumbnailUrl: string
   videoTitle: string
 }
@@ -31,14 +31,14 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
   const fetchHighlights = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/highlights?limit=8')
+      const response = await fetch('/api/highlights?limit=10')
       
       if (!response.ok) {
         throw new Error('Failed to fetch highlights')
       }
 
       const data = await response.json()
-      console.log('🎬 하이라이트 데이터:', data.highlights?.[0]) // 디버깅용
+      console.log('🎬 하이라이트 데이터:', data.highlights?.[0])
       setHighlights(data.highlights || [])
     } catch (error) {
       console.error('Error fetching highlights:', error)
@@ -49,29 +49,39 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
 
   if (loading) {
     return (
-      <section className="mb-6">
+      <section className="mb-2">
         <div className={`flex items-center gap-1.5 mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
           <span className="text-lg">🔥</span>
           <h2 className="text-sm font-black">TODAY'S HIGHLIGHTS</h2>
         </div>
         
-        {/* 모바일: 수평 스크롤 / PC: 그리드 */}
-        <div className="lg:grid lg:grid-cols-8 lg:gap-2 flex flex-nowrap lg:flex-none overflow-x-auto gap-2.5 pb-2 scrollbar-hide">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        {/* 로딩 스켈레톤 - 수평 스크롤 */}
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
             <div 
               key={i}
-              className={`rounded overflow-hidden animate-pulse flex-shrink-0 w-[160px] lg:w-auto ${
+              className={`rounded-lg overflow-hidden animate-pulse flex-shrink-0 w-[140px] lg:w-[calc((100%-72px)/10)] ${
                 darkMode ? 'bg-slate-800' : 'bg-gray-200'
               }`}
             >
-              <div className="aspect-video bg-slate-700" />
-              <div className="p-1">
-                <div className={`h-2 rounded mb-0.5 ${darkMode ? 'bg-slate-700' : 'bg-gray-300'}`} />
-                <div className={`h-1.5 rounded w-2/3 ${darkMode ? 'bg-slate-700' : 'bg-gray-300'}`} />
+              <div className={`aspect-video ${darkMode ? 'bg-slate-700' : 'bg-gray-300'}`} />
+              <div className="p-1.5">
+                <div className={`h-2.5 rounded mb-1 ${darkMode ? 'bg-slate-700' : 'bg-gray-300'}`} />
+                <div className={`h-2 rounded w-2/3 ${darkMode ? 'bg-slate-700' : 'bg-gray-300'}`} />
               </div>
             </div>
           ))}
         </div>
+
+        <style jsx>{`
+          .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
       </section>
     )
   }
@@ -81,23 +91,19 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
   }
 
   return (
-    <section className="mb-6">
+    <section className="mb-2">
       {/* 섹션 헤더 */}
       <div className={`flex items-center gap-1.5 mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
         <span className="text-lg">🔥</span>
         <h2 className="text-sm font-black">TODAY'S HIGHLIGHTS</h2>
       </div>
 
-      {/* 하이라이트 그리드 
-          모바일: 한 줄 수평 스크롤
-          PC: 8열 그리드 (8개)
-      */}
-      <div className="lg:grid lg:grid-cols-8 lg:gap-2 flex flex-nowrap lg:flex-none overflow-x-auto gap-2.5 pb-2 scrollbar-hide">
+      {/* 하이라이트 - 전체 너비 사용, 수평 스크롤 */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {highlights.map((highlight) => (
           <div
             key={highlight.id}
             onClick={() => {
-              // 여러 필드명 시도 (camelCase, snake_case)
               const youtubeUrl = 
                 highlight.youtubeUrl || 
                 highlight.youtube_url || 
@@ -106,8 +112,8 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
               console.log('🎬 클릭:', youtubeUrl)
               window.open(youtubeUrl, '_blank')
             }}
-            className={`group cursor-pointer rounded overflow-hidden transition-all hover:scale-105 hover:shadow-lg flex-shrink-0 w-[160px] lg:w-auto ${
-              darkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white hover:bg-gray-50'
+            className={`group cursor-pointer rounded-lg overflow-hidden transition-all hover:scale-105 hover:shadow-lg flex-shrink-0 w-[140px] lg:flex-1 lg:min-w-[120px] lg:max-w-[180px] ${
+              darkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white hover:bg-gray-50 shadow-sm'
             }`}
           >
             {/* 썸네일 */}
@@ -139,13 +145,13 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
             </div>
 
             {/* 정보 */}
-            <div className="p-1">
-              <p className={`text-[9px] font-bold line-clamp-1 ${
+            <div className="p-1.5">
+              <p className={`text-[10px] font-bold line-clamp-1 ${
                 darkMode ? 'text-white' : 'text-gray-900'
               }`}>
                 {highlight.homeTeam.split(' ')[0]} vs {highlight.awayTeam.split(' ')[0]}
               </p>
-              <p className={`text-[8px] leading-tight ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+              <p className={`text-[9px] leading-tight ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                 {new Date(highlight.matchDate).toLocaleDateString('ko-KR', {
                   month: 'numeric',
                   day: 'numeric'
@@ -156,13 +162,12 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
         ))}
       </div>
 
-      {/* CSS: 스크롤바 숨기기 + 부드러운 스크롤 */}
+      {/* CSS: 스크롤바 숨기기 */}
       <style jsx>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
           -webkit-overflow-scrolling: touch;
-          scroll-behavior: smooth;
         }
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
