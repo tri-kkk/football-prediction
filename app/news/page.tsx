@@ -12,17 +12,29 @@ interface NewsArticle {
   publishedAt: string
 }
 
+interface NewsCategory {
+  id: string
+  name: string
+  nameKo: string
+  logo: string
+  articles: NewsArticle[]
+}
+
 export default function NewsPage() {
-  const [articles, setArticles] = useState<NewsArticle[]>([])
+  const [categories, setCategories] = useState<NewsCategory[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchNews()
+  }, [])
 
   const fetchNews = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/news?league=ALL&limit=10')
+      const response = await fetch('/api/news')
       const data = await response.json()
       if (data.success) {
-        setArticles(data.articles)
+        setCategories(data.categories)
       }
     } catch (err) {
       console.error('News fetch error:', err)
@@ -31,11 +43,6 @@ export default function NewsPage() {
     }
   }
 
-  useEffect(() => {
-    fetchNews()
-  }, [])
-
-  // 상대 시간
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -50,107 +57,142 @@ export default function NewsPage() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* 타이틀 */}
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight">Football News</h1>
-          <p className="text-white/40 mt-2">Latest updates from around the world</p>
-        </div>
-
-        {/* 로딩 */}
-        {loading ? (
-          <div className="space-y-8">
-            <div className="animate-pulse aspect-[21/9] bg-white/5 rounded-3xl" />
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="aspect-video bg-white/5 rounded-2xl mb-4" />
-                  <div className="h-4 bg-white/5 rounded w-1/4 mb-3" />
-                  <div className="h-5 bg-white/5 rounded w-full" />
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : articles.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4 opacity-20">⚽</div>
-            <p className="text-white/40">No articles found</p>
-          </div>
-        ) : (
-          <>
-            {/* Featured */}
-            {articles[0] && (
-              <a
-                href={articles[0].url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group block mb-10"
-              >
-                <div className="relative aspect-[21/9] rounded-3xl overflow-hidden bg-white/5">
-                  <img
-                    src={articles[0].imageUrl}
-                    alt={articles[0].title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&q=80'
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                  
-                  <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="px-3 py-1 bg-emerald-500 text-black text-xs font-bold rounded-full uppercase tracking-wide">
-                        Featured
-                      </span>
-                      <span className="text-white/60 text-sm">{articles[0].source}</span>
-                      <span className="text-white/40 text-sm">{getTimeAgo(articles[0].publishedAt)}</span>
-                    </div>
-                    <h2 className="text-xl md:text-3xl lg:text-4xl font-bold leading-tight max-w-4xl group-hover:text-emerald-400 transition-colors">
-                      {articles[0].title}
-                    </h2>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] text-white p-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse space-y-8">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white/5 rounded-2xl p-6">
+                <div className="h-6 bg-white/10 rounded w-48 mb-4" />
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="aspect-video bg-white/10 rounded-xl" />
+                  <div className="space-y-3">
+                    <div className="h-4 bg-white/10 rounded" />
+                    <div className="h-4 bg-white/10 rounded w-3/4" />
                   </div>
                 </div>
-              </a>
-            )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-            {/* Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {articles.slice(1).map((article) => (
-                <a
-                  key={article.id}
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group"
-                >
-                  <div className="relative aspect-video rounded-2xl overflow-hidden mb-4 bg-white/5">
-                    <img
-                      src={article.imageUrl}
-                      alt={article.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* 헤더 */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Football News</h1>
+          <p className="text-white/40 mt-1">Latest updates from top leagues</p>
+        </div>
+
+        {/* 카테고리별 뉴스 */}
+        <div className="space-y-8">
+          {categories.map((category) => (
+            <section key={category.id} className="bg-[#111] rounded-2xl overflow-hidden">
+              {/* 카테고리 헤더 - 리그 엠블럼 with 흰색 배경 */}
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">
+                {category.logo ? (
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center p-1">
+                    <img 
+                      src={category.logo} 
+                      alt={category.name}
+                      className="w-6 h-6 object-contain"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=80'
+                        (e.target as HTMLImageElement).style.display = 'none'
                       }}
                     />
                   </div>
-                  
-                  <div className="flex items-center gap-2 mb-2 text-xs">
-                    <span className="text-white/50 font-medium">{article.source}</span>
-                    <span className="text-white/30">•</span>
-                    <span className="text-white/30">{getTimeAgo(article.publishedAt)}</span>
+                ) : (
+                  <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                    <span className="text-lg">🔄</span>
                   </div>
-                  
-                  <h3 className="font-semibold leading-snug text-white/90 group-hover:text-emerald-400 transition-colors line-clamp-2">
-                    {article.title}
-                  </h3>
-                </a>
-              ))}
-            </div>
-          </>
-        )}
-      </main>
+                )}
+                <h2 className="text-lg font-bold">{category.name}</h2>
+              </div>
+
+              {/* 뉴스 그리드 */}
+              <div className="p-4">
+                {category.articles.length > 0 && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* 메인 기사 (첫번째) */}
+                    <a
+                      href={category.articles[0].url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group md:row-span-2"
+                    >
+                      <div className="relative aspect-video rounded-xl overflow-hidden mb-3">
+                        <img
+                          src={category.articles[0].imageUrl}
+                          alt={category.articles[0].title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80'
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <h3 className="font-bold text-lg leading-tight group-hover:text-emerald-400 transition-colors line-clamp-2">
+                            {category.articles[0].title}
+                          </h3>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-white/50">
+                        <span className="font-medium">{category.articles[0].source}</span>
+                        <span>•</span>
+                        <span>{getTimeAgo(category.articles[0].publishedAt)}</span>
+                      </div>
+                    </a>
+
+                    {/* 사이드 기사들 */}
+                    <div className="space-y-3">
+                      {category.articles.slice(1, 5).map((article) => (
+                        <a
+                          key={article.id}
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm leading-snug group-hover:text-emerald-400 transition-colors line-clamp-2">
+                              {article.title}
+                            </h4>
+                            <div className="flex items-center gap-2 text-xs text-white/40 mt-1">
+                              <span>{article.source}</span>
+                              <span>•</span>
+                              <span>{getTimeAgo(article.publishedAt)}</span>
+                            </div>
+                          </div>
+                          <div className="w-20 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-white/5">
+                            <img
+                              src={article.imageUrl}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200&q=80'
+                              }}
+                            />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        {/* 푸터 */}
+        <div className="mt-12 text-center text-white/20 text-sm">
+          <p>Updates every 30 minutes • Powered by TheNewsAPI</p>
+        </div>
+      </div>
 
       <style jsx global>{`
         .line-clamp-2 {
