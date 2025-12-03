@@ -1,12 +1,71 @@
-// app/api/match-highlights/route.ts
-// ScoreBat Free Feed + TheSportsDB 폴백 (무료 버전)
 import { NextRequest, NextResponse } from 'next/server'
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+// ScoreBat API 토큰 (새 토큰)
+const SCOREBAT_TOKEN = process.env.SCOREBAT_API_TOKEN || 'MjU4NjkzXzE3NjQ3MzQ4MTRfN2FhODNjNmIxM2MxZDhiOWU3MDYzZTI3MzdjZThlZDJlZDEwYmNhMw=='
 
-const THESPORTSDB_API_KEY = process.env.THESPORTSDB_API_KEY || ''
-const SCOREBAT_TOKEN = process.env.SCOREBAT_TOKEN || ''
+// 리그 코드 → ScoreBat Competition ID 매핑
+const LEAGUE_TO_COMPETITION: Record<string, string> = {
+  'PL': 'england-premier-league',
+  'ELC': 'england-championship',
+  'PD': 'spain-la-liga',
+  'BL1': 'germany-bundesliga',
+  'SA': 'italy-serie-a',
+  'FL1': 'france-ligue-1',
+  'PPL': 'portugal-primeira-liga',
+  'DED': 'netherlands-eredivisie',
+  'CL': 'uefa-champions-league',
+  'EL': 'uefa-europa-league',
+  'UECL': 'uefa-europa-conference-league',
+}
+
+// 캐시 (Competition별로 저장)
+const highlightCache: Record<string, { data: any[]; timestamp: number }> = {}
+const CACHE_DURATION = 10 * 60 * 1000 // 10분 (API 호출 = 10 requests이므로 절약)
+
+// 팀 이름 정규화
+function normalizeTeamName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/^(fc|cf|afc|sc|ac|as|ss|ssc|rc|rcd|cd|ud|sd|ca|club|sporting|athletic|athletico|atletico)\s+/gi, '')
+    .replace(/\s+(fc|cf|afc|sc|ac|united|city|town|rovers|wanderers|hotspur)$/gi, '')
+    .replace(/[^\w\s]/g, '')
+    .trim()
+}
+
+// 팀 매칭 점수 계산
+function getMatchScore(team1: string, team2: string): number {
+  const n1 = normalizeTeamName(team1)
+  const n2 = normalizeTeamName(team2)
+  
+  if (n1 === n2) return 100
+  if (n1.includes(n2) || n2.includes(n1)) return 80
+  
+  const words1 = n1.split(' ').filter(w => w.length > 2)
+  const words2 = n2.split(' ').filter(w => w.length > 2)
+  
+  let matchedWords = 0
+  for (const word of words2) {
+    if (words1.some(w => w.includes(word) || word.includes(w))) {
+      matchedWords++
+    }
+  }
+  
+  if (matchedWords > 0) {
+    return (matchedWords / Math.max(words1.length, words2.length)) * 60
+  }
+  
+  return 0
+}
+
+// 타이틀에서 팀 추출 ("Team A - Team B" 형식)
+function extractTeamsFromTitle(title: string): { home: string; away: string } | null {
+  const match = title.match(/^(.+?)\s*[-–vs.]+\s*(.+?)$/i)
+  if (match) {
+    return { home: match[1].trim(), away: match[2].trim() }
+  }
+  return null
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,327 +73,165 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date')
     const homeTeam = searchParams.get('homeTeam')
     const awayTeam = searchParams.get('awayTeam')
+    const league = searchParams.get('league')
 
-    if (!homeTeam || !awayTeam || !date) {
-      return NextResponse.json({
-        success: false,
-        error: 'date, homeTeam, awayTeam are required',
-        highlights: [],
-        count: 0
+    console.log('🎬 Highlight request:', { date, homeTeam, awayTeam, league })
+
+    if (!homeTeam || !awayTeam) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Missing team parameters' 
       }, { status: 400 })
     }
 
-    console.log(`🎬 Searching: ${homeTeam} vs ${awayTeam} (${date})`)
+    const now = Date.now()
+    let allHighlights: any[] = []
 
-    const homeVariants = getTeamVariants(homeTeam)
-    const awayVariants = getTeamVariants(awayTeam)
+    // 리그별 Competition 엔드포인트 사용 (더 정확한 매칭)
+    const competitionId = league ? LEAGUE_TO_COMPETITION[league] : null
+    
+    if (competitionId) {
+      // Competition 엔드포인트 사용
+      const cacheKey = `competition-${competitionId}`
+      
+      if (highlightCache[cacheKey] && (now - highlightCache[cacheKey].timestamp) < CACHE_DURATION) {
+        console.log(`📦 Using cached data for ${competitionId}`)
+        allHighlights = highlightCache[cacheKey].data
+      } else {
+        const apiUrl = `https://www.scorebat.com/video-api/v3/competition/${competitionId}/?token=${SCOREBAT_TOKEN}`
+        console.log(`🔄 Fetching from ScoreBat Competition: ${competitionId}`)
 
-    console.log(`🔍 Home variants: ${homeVariants.slice(0, 4).join(', ')}`)
-    console.log(`🔍 Away variants: ${awayVariants.slice(0, 4).join(', ')}`)
-
-    // 1. ScoreBat Free Feed
-    if (SCOREBAT_TOKEN) {
-      const scoreBatResult = await searchScoreBatFeed(homeVariants, awayVariants)
-      if (scoreBatResult) {
-        console.log(`✅ [ScoreBat] Found: ${scoreBatResult.title}`)
-        return NextResponse.json({
-          success: true,
-          date,
-          count: 1,
-          source: 'scorebat',
-          highlights: [scoreBatResult]
+        const response = await fetch(apiUrl, {
+          headers: { 'Accept': 'application/json' },
+          next: { revalidate: 600 }
         })
+
+        if (response.ok) {
+          const data = await response.json()
+          allHighlights = data.response || []
+          highlightCache[cacheKey] = { data: allHighlights, timestamp: now }
+          console.log(`✅ Fetched ${allHighlights.length} highlights from ${competitionId}`)
+        }
+      }
+    }
+    
+    // Competition에서 못 찾으면 Featured Feed 사용
+    if (allHighlights.length === 0) {
+      const cacheKey = 'featured-feed'
+      
+      if (highlightCache[cacheKey] && (now - highlightCache[cacheKey].timestamp) < CACHE_DURATION) {
+        console.log('📦 Using cached featured feed')
+        allHighlights = highlightCache[cacheKey].data
+      } else {
+        const apiUrl = `https://www.scorebat.com/video-api/v3/featured-feed/?token=${SCOREBAT_TOKEN}`
+        console.log('🔄 Fetching from ScoreBat Featured Feed')
+
+        const response = await fetch(apiUrl, {
+          headers: { 'Accept': 'application/json' },
+          next: { revalidate: 600 }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          allHighlights = data.response || []
+          highlightCache[cacheKey] = { data: allHighlights, timestamp: now }
+          console.log(`✅ Fetched ${allHighlights.length} highlights from featured feed`)
+        }
       }
     }
 
-    // 2. TheSportsDB 폴백
-    if (THESPORTSDB_API_KEY) {
-      const sportsDbResult = await searchTheSportsDB(date, homeVariants, awayVariants)
-      if (sportsDbResult) {
-        console.log(`✅ [TheSportsDB] Found: ${sportsDbResult.event}`)
-        return NextResponse.json({
-          success: true,
-          date,
-          count: 1,
-          source: 'thesportsdb',
-          highlights: [sportsDbResult]
-        })
+    // 매칭 찾기
+    let bestMatch: any = null
+    let bestScore = 0
+
+    for (const highlight of allHighlights) {
+      const title = highlight.title || ''
+      const teams = extractTeamsFromTitle(title)
+      
+      if (!teams) continue
+      
+      const homeScore = getMatchScore(teams.home, homeTeam)
+      const awayScore = getMatchScore(teams.away, awayTeam)
+      
+      // 양쪽 팀 모두 40점 이상이어야 매칭
+      if (homeScore >= 40 && awayScore >= 40) {
+        const totalScore = homeScore + awayScore
+        
+        // 날짜 보너스
+        if (date && highlight.date) {
+          const highlightDate = highlight.date.split('T')[0]
+          if (highlightDate === date) {
+            if (totalScore + 50 > bestScore) {
+              bestScore = totalScore + 50
+              bestMatch = highlight
+            }
+            continue
+          }
+        }
+        
+        if (totalScore > bestScore) {
+          bestScore = totalScore
+          bestMatch = highlight
+        }
       }
     }
 
-    console.log(`❌ No highlights found for: ${homeTeam} vs ${awayTeam}`)
+    console.log(`🔍 Best match score: ${bestScore} for ${homeTeam} vs ${awayTeam}`)
+    
+    if (bestMatch) {
+      console.log(`✅ Found: ${bestMatch.title}`)
+    } else {
+      console.log('❌ No matching highlight found')
+    }
+
+    if (!bestMatch) {
+      return NextResponse.json({
+        success: true,
+        highlights: [],
+        message: 'No matching highlight found'
+      })
+    }
+
+    // 비디오 정보 추출 - videos 배열에서 embed 코드 가져오기
+    const videos = bestMatch.videos || []
+    
+    // 하이라이트 비디오 찾기 (Highlights, Extended Highlights 등)
+    const highlightVideo = videos.find((v: any) => 
+      v.title?.toLowerCase().includes('highlight') ||
+      v.title?.toLowerCase().includes('extended')
+    ) || videos[0]
+
+    const formattedHighlight = {
+      title: bestMatch.title,
+      thumbnail: bestMatch.thumbnail,
+      competition: bestMatch.competition,
+      date: bestMatch.date,
+      matchScore: bestScore,
+      // 위젯 페이지 URL (iframe으로 불러올 수 있음)
+      matchviewUrl: bestMatch.matchviewUrl,
+      // 메인 비디오 embed 코드
+      embedCode: highlightVideo?.embed || null,
+      // 모든 비디오 클립
+      videoClips: videos.map((v: any) => ({
+        title: v.title,
+        embedCode: v.embed,
+        id: v.id
+      }))
+    }
+
     return NextResponse.json({
       success: true,
-      date,
-      count: 0,
-      highlights: []
+      highlights: [formattedHighlight],
+      count: 1,
+      query: { homeTeam, awayTeam, date, league }
     })
 
   } catch (error) {
-    console.error('❌ API error:', error)
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed',
-      highlights: [],
-      count: 0
+    console.error('❌ Highlight API error:', error)
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to fetch highlights',
+      highlights: []
     }, { status: 500 })
   }
-}
-
-// ScoreBat Free Feed 검색
-async function searchScoreBatFeed(
-  homeVariants: string[], 
-  awayVariants: string[]
-): Promise<any | null> {
-  try {
-    // Free Feed 엔드포인트
-    const feedUrl = `https://www.scorebat.com/video-api/v3/feed/?token=${SCOREBAT_TOKEN}`
-    
-    console.log(`📡 [ScoreBat] Fetching free feed...`)
-    
-    const response = await fetch(feedUrl, {
-      headers: { 'Accept': 'application/json' },
-      cache: 'no-store'
-    })
-
-    if (!response.ok) {
-      console.log(`⚠️ [ScoreBat] Feed error: ${response.status}`)
-      return null
-    }
-
-    const data = await response.json()
-    const videos = data.response || data || []
-    
-    if (!Array.isArray(videos)) {
-      console.log(`⚠️ [ScoreBat] Invalid response format`)
-      return null
-    }
-
-    console.log(`📊 [ScoreBat] Got ${videos.length} videos`)
-
-    // 팀 매칭
-    for (const video of videos) {
-      const title = (video.title || '').toLowerCase()
-      
-      const homeMatch = homeVariants.some(v => title.includes(v))
-      const awayMatch = awayVariants.some(v => title.includes(v))
-      
-      if (homeMatch && awayMatch) {
-        console.log(`🎯 [ScoreBat] MATCH: ${video.title}`)
-        
-        const embed = video.videos?.[0]?.embed || ''
-        const embedUrl = extractIframeSrc(embed)
-        
-        return {
-          title: video.title,
-          competition: video.competition,
-          matchviewUrl: video.matchviewUrl,
-          date: video.date?.split('T')[0] || '',
-          thumbnail: video.thumbnail,
-          embed: embed,
-          embedUrl: embedUrl,
-          videoUrl: embedUrl || video.matchviewUrl
-        }
-      }
-    }
-
-    console.log(`❌ [ScoreBat] No match in ${videos.length} videos`)
-    return null
-
-  } catch (error) {
-    console.error('⚠️ [ScoreBat] Error:', error)
-    return null
-  }
-}
-
-// TheSportsDB 검색
-async function searchTheSportsDB(
-  date: string, 
-  homeVariants: string[], 
-  awayVariants: string[]
-): Promise<any | null> {
-  try {
-    console.log(`🔍 [TheSportsDB] Searching for ${date}...`)
-    
-    const v1Url = `https://www.thesportsdb.com/api/v1/json/${THESPORTSDB_API_KEY}/eventshighlights.php?d=${date}&s=Soccer`
-    
-    const v1Response = await fetch(v1Url, {
-      headers: { 'Accept': 'application/json' },
-      cache: 'no-store'
-    })
-
-    if (!v1Response.ok) {
-      console.log(`⚠️ [TheSportsDB] API error: ${v1Response.status}`)
-      return null
-    }
-
-    const v1Data = await v1Response.json()
-    const highlights = v1Data.tvhighlights || []
-    
-    console.log(`📊 [TheSportsDB] Found ${highlights.length} highlights`)
-
-    for (const h of highlights) {
-      // 팀 이름이 없으면 스킵
-      if (!h.strHomeTeam || !h.strAwayTeam) continue
-
-      const eventHome = h.strHomeTeam.toLowerCase()
-      const eventAway = h.strAwayTeam.toLowerCase()
-      
-      // 양쪽 팀 모두 매칭되어야 함
-      const homeMatch = homeVariants.some(v => 
-        eventHome.includes(v) || v.includes(eventHome.replace(/[^a-z0-9]/g, ''))
-      )
-      const awayMatch = awayVariants.some(v => 
-        eventAway.includes(v) || v.includes(eventAway.replace(/[^a-z0-9]/g, ''))
-      )
-      
-      if (homeMatch && awayMatch && h.strVideo) {
-        console.log(`🎯 [TheSportsDB] MATCH: ${h.strHomeTeam} vs ${h.strAwayTeam}`)
-        const youtubeId = extractYoutubeId(h.strVideo)
-        return {
-          eventId: h.idEvent,
-          event: h.strEvent,
-          videoUrl: h.strVideo,
-          thumbnail: h.strThumb || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null),
-          date: h.dateEvent,
-          homeTeam: h.strHomeTeam,
-          awayTeam: h.strAwayTeam,
-          youtubeId
-        }
-      }
-    }
-
-    console.log(`❌ [TheSportsDB] No match found`)
-    return null
-
-  } catch (error) {
-    console.error('⚠️ [TheSportsDB] Error:', error)
-    return null
-  }
-}
-
-// 팀 이름 변형 생성
-function getTeamVariants(name: string): string[] {
-  const variants: string[] = []
-  const lower = name.toLowerCase()
-  
-  variants.push(lower)
-  
-  // 접두어/접미어 제거
-  const cleaned = lower
-    .replace(/\s*(fc|cf|sc|ac|as|ss|afc|ssc|sk|fk|bsc|vfb|rb|sv|bv|osc|losc|1\.|rcd|cd)\s*/gi, '')
-    .trim()
-  if (cleaned && cleaned !== lower) variants.push(cleaned)
-  
-  // 특수문자 제거
-  const noSpecial = lower.replace(/[^a-z0-9\s]/g, '').trim()
-  if (noSpecial && !variants.includes(noSpecial)) variants.push(noSpecial)
-  
-  // 공백 제거
-  const noSpace = cleaned.replace(/\s+/g, '')
-  if (noSpace && !variants.includes(noSpace)) variants.push(noSpace)
-  
-  // 특수 팀 매핑 (확장)
-  const mappings: Record<string, string[]> = {
-    // England
-    'manchester united': ['man united', 'man utd', 'united'],
-    'manchester city': ['man city'],
-    'tottenham hotspur': ['tottenham', 'spurs'],
-    'tottenham': ['spurs', 'tottenham hotspur'],
-    'nottingham forest': ['forest', 'nottm forest', "nott'm forest"],
-    'newcastle united': ['newcastle'],
-    'newcastle': ['newcastle united'],
-    'west ham united': ['west ham'],
-    'west ham': ['west ham united'],
-    'wolverhampton': ['wolves'],
-    'wolves': ['wolverhampton'],
-    'brighton': ['brighton hove albion'],
-    'leicester city': ['leicester'],
-    'leicester': ['leicester city'],
-    // Spain
-    'atletico madrid': ['atletico', 'atlético madrid', 'atlético'],
-    'athletic bilbao': ['athletic club', 'bilbao'],
-    'athletic club': ['athletic bilbao', 'bilbao'],
-    'real sociedad': ['sociedad'],
-    'real betis': ['betis'],
-    // Germany
-    'borussia dortmund': ['dortmund', 'bvb'],
-    'dortmund': ['borussia dortmund', 'bvb'],
-    'bayern münchen': ['bayern munich', 'bayern'],
-    'bayern munich': ['bayern münchen', 'bayern'],
-    'rb leipzig': ['leipzig'],
-    'bayer leverkusen': ['leverkusen'],
-    'leverkusen': ['bayer leverkusen'],
-    'eintracht frankfurt': ['frankfurt'],
-    'vfb stuttgart': ['stuttgart'],
-    'stuttgart': ['vfb stuttgart'],
-    'sc freiburg': ['freiburg'],
-    // Italy
-    'inter milan': ['inter', 'internazionale'],
-    'inter': ['inter milan', 'internazionale'],
-    'ac milan': ['milan'],
-    'as roma': ['roma'],
-    'roma': ['as roma'],
-    'ssc napoli': ['napoli'],
-    'napoli': ['ssc napoli'],
-    // France
-    'paris saint germain': ['psg', 'paris saint-germain', 'paris'],
-    'paris saint-germain': ['psg', 'paris saint germain', 'paris'],
-    'psg': ['paris saint germain', 'paris'],
-    'olympique marseille': ['marseille', 'om'],
-    'marseille': ['olympique marseille', 'om'],
-    'olympique lyon': ['lyon', 'ol'],
-    'lyon': ['olympique lyon'],
-    // Portugal
-    'sporting cp': ['sporting', 'sporting lisbon'],
-    'sporting': ['sporting cp'],
-    'fc porto': ['porto'],
-    'porto': ['fc porto'],
-    'sl benfica': ['benfica'],
-    'benfica': ['sl benfica'],
-    // Netherlands
-    'psv eindhoven': ['psv'],
-    'psv': ['psv eindhoven'],
-    'ajax amsterdam': ['ajax'],
-    'ajax': ['ajax amsterdam'],
-    'feyenoord rotterdam': ['feyenoord'],
-    // Others
-    'club brugge': ['brugge', 'bruges'],
-    'red bull salzburg': ['salzburg', 'rb salzburg'],
-    'bsc young boys': ['young boys'],
-    'young boys': ['bsc young boys'],
-    'dinamo zagreb': ['zagreb', 'dinamo'],
-    'crvena zvezda': ['red star', 'red star belgrade'],
-    'fc midtjylland': ['midtjylland'],
-    'midtjylland': ['fc midtjylland'],
-    'malmo ff': ['malmo', 'malmö', 'malmö ff'],
-    'malmo': ['malmo ff', 'malmö'],
-    'celtic': ['celtic fc'],
-    'rangers': ['rangers fc'],
-    'galatasaray': ['galatasaray sk'],
-    'fenerbahce': ['fenerbahçe'],
-    'qarabag': ['qarabağ'],
-  }
-  
-  for (const [key, values] of Object.entries(mappings)) {
-    if (lower.includes(key) || cleaned === key.replace(/\s+/g, '')) {
-      variants.push(...values)
-    }
-  }
-  
-  return [...new Set(variants)].filter(v => v.length >= 3)
-}
-
-// iframe src 추출
-function extractIframeSrc(html: string): string | null {
-  if (!html) return null
-  const match = html.match(/src=["']([^"']+)["']/)
-  return match ? match[1] : null
-}
-
-// YouTube ID 추출
-function extractYoutubeId(url: string | undefined | null): string | null {
-  if (!url) return null
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/)
-  return match ? match[1] : null
 }

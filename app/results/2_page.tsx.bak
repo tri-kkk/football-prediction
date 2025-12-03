@@ -65,8 +65,7 @@ interface VideoClip {
 interface Highlight {
   title: string
   thumbnail: string
-  matchviewUrl: string  // 위젯 페이지 URL
-  embedCode?: string
+  embedCode: string  // HTML embed 코드
   competition?: string
   date?: string
   matchScore?: number
@@ -96,6 +95,8 @@ export default function MatchResultsPage() {
   // 하이라이트 관련 상태
   const [highlights, setHighlights] = useState<Record<string, Highlight | null>>({})
   const [loadingHighlight, setLoadingHighlight] = useState<string | null>(null)
+  // 비디오 모달 - embedCode를 직접 사용
+  const [showVideoModal, setShowVideoModal] = useState<{ embedCode: string; title: string } | null>(null)
 
   const dataCache = useRef<Record<string, Match[]>>({})
   const highlightCache = useRef<Record<string, Highlight | null>>({})
@@ -104,6 +105,17 @@ export default function MatchResultsPage() {
     const dateKey = formatDateKey(selectedDate)
     loadMatchesByDate(dateKey)
   }, [selectedDate])
+
+  // ESC 키로 모달 닫기
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showVideoModal) {
+        setShowVideoModal(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showVideoModal])
 
   const formatDateKey = (date: Date): string => {
     const year = date.getFullYear()
@@ -186,7 +198,7 @@ export default function MatchResultsPage() {
       const data = await response.json()
       const highlight = data.highlights?.[0] || null
       
-      console.log('🎬 Highlight loaded:', highlight?.title, 'URL:', highlight?.matchviewUrl)
+      console.log('🎬 Highlight loaded:', highlight?.title, 'Score:', highlight?.matchScore)
       
       highlightCache.current[cacheKey] = highlight
       setHighlights(prev => ({ ...prev, [match.match_id]: highlight }))
@@ -287,6 +299,11 @@ export default function MatchResultsPage() {
     return `${hours}:${minutes}`
   }
 
+  // 비디오 재생
+  const playVideo = (embedCode: string, title: string) => {
+    setShowVideoModal({ embedCode, title })
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f0f0f] text-white pb-20 md:pb-0">
@@ -330,6 +347,53 @@ export default function MatchResultsPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white pb-20 md:pb-0">
+      {/* 🎬 비디오 모달 - ScoreBat Embed 직접 렌더링 */}
+      {showVideoModal && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4"
+          onClick={() => setShowVideoModal(null)}
+        >
+          {/* 헤더 */}
+          <div 
+            className="w-full max-w-4xl flex items-center justify-between mb-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-white font-medium truncate flex-1 mr-4">
+              {showVideoModal.title}
+            </h3>
+            <button
+              onClick={() => setShowVideoModal(null)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <span className="text-sm text-white">
+                {currentLanguage === 'ko' ? '닫기 (ESC)' : 'Close (ESC)'}
+              </span>
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* 비디오 플레이어 - ScoreBat Embed */}
+          <div 
+            className="w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div 
+              className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
+              dangerouslySetInnerHTML={{ __html: showVideoModal.embedCode }}
+            />
+          </div>
+
+          {/* 안내 */}
+          <p className="mt-4 text-gray-500 text-sm">
+            {currentLanguage === 'ko' 
+              ? '화면을 클릭하거나 ESC를 눌러 닫기'
+              : 'Click outside or press ESC to close'}
+          </p>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto flex">
         {/* 좌측 사이드바 */}
         <aside className="hidden md:block w-64 min-h-screen bg-[#1a1a1a] border-r border-gray-800 sticky top-0 overflow-y-auto">
@@ -352,9 +416,7 @@ export default function MatchResultsPage() {
                     {league.isEmoji ? (
                       <span className="text-base">{league.logo}</span>
                     ) : (
-                      <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center flex-shrink-0">
-                        <Image src={league.logo} alt={league.nameEn} width={18} height={18} className="w-[18px] h-[18px] object-contain" />
-                      </div>
+                      <Image src={league.logo} alt={league.nameEn} width={20} height={20} className="w-5 h-5" />
                     )}
                     <span>{currentLanguage === 'ko' ? league.nameKo : league.nameEn}</span>
                   </button>
@@ -406,9 +468,7 @@ export default function MatchResultsPage() {
                       {league.isEmoji ? (
                         <span>{league.logo}</span>
                       ) : (
-                        <div className="w-5 h-5 bg-white rounded flex items-center justify-center flex-shrink-0">
-                          <Image src={league.logo} alt={league.nameEn} width={14} height={14} className="w-3.5 h-3.5 object-contain" />
-                        </div>
+                        <Image src={league.logo} alt={league.nameEn} width={16} height={16} className="w-4 h-4" />
                       )}
                       <span>{currentLanguage === 'ko' ? league.nameKo : league.nameEn}</span>
                     </button>
@@ -435,11 +495,9 @@ export default function MatchResultsPage() {
                       {leagueInfo?.isEmoji ? (
                         <span className="text-lg">{leagueInfo.logo}</span>
                       ) : leagueInfo?.logo ? (
-                        <div className="w-7 h-7 bg-white rounded-md flex items-center justify-center flex-shrink-0">
-                          <Image src={leagueInfo.logo} alt={leagueInfo.nameEn || leagueCode} width={20} height={20} className="w-5 h-5 object-contain" />
-                        </div>
+                        <Image src={leagueInfo.logo} alt={leagueInfo.nameEn || leagueCode} width={24} height={24} className="w-6 h-6" />
                       ) : (
-                        <div className="w-7 h-7 bg-gray-700 rounded-md" />
+                        <div className="w-6 h-6 bg-gray-700 rounded-full" />
                       )}
                       <span className="font-medium">{getLeagueName(leagueCode, currentLanguage)}</span>
                       <span className="text-xs text-gray-500">
@@ -457,6 +515,7 @@ export default function MatchResultsPage() {
                       {leagueMatches.map((match) => {
                         const isExpanded = expandedMatch === match.match_id
                         const highlight = highlights[match.match_id]
+                        const hasStats = match.statistics && Object.keys(match.statistics).length > 0
 
                         return (
                           <div key={match.match_id} className="bg-[#151515]">
@@ -504,46 +563,172 @@ export default function MatchResultsPage() {
                               </div>
                             </button>
 
-                            {/* 확장된 내용 - ScoreBat 위젯 iframe */}
+                            {/* 확장된 내용 */}
                             {isExpanded && (
-                              <div className="border-t border-gray-800 bg-[#0a0a0a]">
-                                {loadingHighlight === match.match_id ? (
-                                  <div className="flex items-center justify-center py-12">
-                                    <div className="w-8 h-8 border-2 border-gray-600 border-t-[#A3FF4C] rounded-full animate-spin"></div>
-                                  </div>
-                                ) : highlight && highlight.matchviewUrl ? (
-                                  <div className="relative">
-                                    {/* ScoreBat 위젯 iframe - 전체 너비 */}
-                                    <iframe
-                                      src={highlight.matchviewUrl}
-                                      className="w-full border-0"
-                                      style={{ height: '850px', minHeight: '700px' }}
-                                      allow="autoplay; fullscreen"
-                                      allowFullScreen
-                                      loading="lazy"
-                                    />
-                                    
-                                    {/* 새 탭에서 열기 버튼 */}
-                                    <div className="absolute top-2 right-2">
-                                      <a
-                                        href={highlight.matchviewUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-black/70 hover:bg-black/90 rounded-lg text-xs text-white transition-colors"
+                              <div className="px-4 pb-4 border-t border-gray-800 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#151515]">
+                                {/* 🎬 하이라이트 섹션 */}
+                                <div className="space-y-3">
+                                  <h3 className="text-xs font-bold text-gray-400 flex items-center gap-2">
+                                    <span>🎬</span>
+                                    {currentLanguage === 'ko' ? '하이라이트' : 'Highlights'}
+                                  </h3>
+                                  
+                                  {loadingHighlight === match.match_id ? (
+                                    <div className="flex items-center justify-center py-8">
+                                      <div className="w-6 h-6 border-2 border-gray-600 border-t-[#A3FF4C] rounded-full animate-spin"></div>
+                                    </div>
+                                  ) : highlight && highlight.embedCode ? (
+                                    <div className="space-y-3">
+                                      {/* 메인 하이라이트 */}
+                                      <div 
+                                        className="relative aspect-video rounded-lg overflow-hidden cursor-pointer group bg-gray-900"
+                                        onClick={() => playVideo(highlight.embedCode, highlight.title)}
                                       >
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                        {currentLanguage === 'ko' ? '새 탭' : 'New tab'}
-                                      </a>
+                                        {highlight.thumbnail ? (
+                                          <Image
+                                            src={highlight.thumbnail}
+                                            alt="Highlight thumbnail"
+                                            fill
+                                            className="object-cover"
+                                          />
+                                        ) : (
+                                          <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                                            <span className="text-4xl">⚽</span>
+                                          </div>
+                                        )}
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/60 transition-colors">
+                                          <div className="w-16 h-16 bg-[#A3FF4C] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl">
+                                            <svg className="w-8 h-8 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                              <path d="M8 5v14l11-7z"/>
+                                            </svg>
+                                          </div>
+                                        </div>
+                                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                                          <p className="text-white text-sm font-medium truncate">{highlight.title}</p>
+                                          {highlight.competition && (
+                                            <p className="text-gray-300 text-xs">{highlight.competition}</p>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* 개별 클립 목록 */}
+                                      {highlight.videoClips && highlight.videoClips.length > 1 && (
+                                        <div className="space-y-2">
+                                          <p className="text-xs text-gray-500">
+                                            {currentLanguage === 'ko' ? '다른 영상' : 'More videos'}
+                                          </p>
+                                          <div className="flex flex-wrap gap-2">
+                                            {highlight.videoClips.map((clip, idx) => (
+                                              <button
+                                                key={idx}
+                                                onClick={() => playVideo(clip.embedCode, clip.title)}
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#252525] rounded-lg transition-colors text-left"
+                                              >
+                                                <svg className="w-4 h-4 text-[#A3FF4C]" fill="currentColor" viewBox="0 0 24 24">
+                                                  <path d="M8 5v14l11-7z"/>
+                                                </svg>
+                                                <span className="text-xs text-gray-300">{clip.title}</span>
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="py-6 text-center bg-[#1a1a1a] rounded-lg">
+                                      <div className="text-2xl mb-2">📺</div>
+                                      <p className="text-gray-500 text-sm">
+                                        {currentLanguage === 'ko' ? '하이라이트 준비 중' : 'Highlights coming soon'}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* 📊 경기 통계 섹션 */}
+                                {hasStats ? (
+                                  <div className="py-1">
+                                    <h3 className="text-xs font-bold text-gray-400 mb-3 flex items-center gap-2">
+                                      <span>📊</span>
+                                      {currentLanguage === 'ko' ? '경기 통계' : 'Match Stats'}
+                                    </h3>
+                                    
+                                    <div className="space-y-3">
+                                      {match.statistics?.possession_home !== undefined && (
+                                        <div>
+                                          <div className="flex items-center justify-between text-xs mb-1">
+                                            <span className="text-white font-medium">{match.statistics.possession_home}%</span>
+                                            <span className="text-gray-400">{currentLanguage === 'ko' ? '점유율' : 'Possession'}</span>
+                                            <span className="text-white font-medium">{match.statistics.possession_away}%</span>
+                                          </div>
+                                          <div className="flex h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                            <div className="bg-blue-500" style={{ width: `${match.statistics.possession_home}%` }} />
+                                            <div className="bg-red-500" style={{ width: `${match.statistics.possession_away}%` }} />
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {match.statistics?.shots_total_home !== undefined && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-white font-medium">{match.statistics.shots_total_home}</span>
+                                          <span className="text-gray-400">{currentLanguage === 'ko' ? '슈팅' : 'Shots'}</span>
+                                          <span className="text-white font-medium">{match.statistics.shots_total_away}</span>
+                                        </div>
+                                      )}
+
+                                      {match.statistics?.shots_on_goal_home !== undefined && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-white font-medium">{match.statistics.shots_on_goal_home}</span>
+                                          <span className="text-gray-400">{currentLanguage === 'ko' ? '유효슈팅' : 'On Target'}</span>
+                                          <span className="text-white font-medium">{match.statistics.shots_on_goal_away}</span>
+                                        </div>
+                                      )}
+
+                                      {match.statistics?.pass_accuracy_home !== undefined && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-white font-medium">{match.statistics.pass_accuracy_home}%</span>
+                                          <span className="text-gray-400">{currentLanguage === 'ko' ? '패스 정확도' : 'Pass Accuracy'}</span>
+                                          <span className="text-white font-medium">{match.statistics.pass_accuracy_away}%</span>
+                                        </div>
+                                      )}
+
+                                      {match.statistics?.corners_home !== undefined && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-white font-medium">{match.statistics.corners_home}</span>
+                                          <span className="text-gray-400">{currentLanguage === 'ko' ? '코너킥' : 'Corners'}</span>
+                                          <span className="text-white font-medium">{match.statistics.corners_away}</span>
+                                        </div>
+                                      )}
+
+                                      {match.statistics?.fouls_home !== undefined && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-white font-medium">{match.statistics.fouls_home}</span>
+                                          <span className="text-gray-400">{currentLanguage === 'ko' ? '파울' : 'Fouls'}</span>
+                                          <span className="text-white font-medium">{match.statistics.fouls_away}</span>
+                                        </div>
+                                      )}
+
+                                      {match.statistics?.yellow_cards_home !== undefined && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-yellow-400 font-medium">{match.statistics.yellow_cards_home}</span>
+                                          <span className="text-gray-400">{currentLanguage === 'ko' ? '옐로카드' : 'Yellow Cards'}</span>
+                                          <span className="text-yellow-400 font-medium">{match.statistics.yellow_cards_away}</span>
+                                        </div>
+                                      )}
+
+                                      {match.statistics?.offsides_home !== undefined && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-white font-medium">{match.statistics.offsides_home}</span>
+                                          <span className="text-gray-400">{currentLanguage === 'ko' ? '오프사이드' : 'Offsides'}</span>
+                                          <span className="text-white font-medium">{match.statistics.offsides_away}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="py-12 text-center">
-                                    <div className="text-3xl mb-3">📺</div>
-                                    <p className="text-gray-500">
-                                      {currentLanguage === 'ko' ? '하이라이트 준비 중' : 'Highlights coming soon'}
-                                    </p>
+                                  <div className="py-8 text-center">
+                                    <div className="text-gray-500 text-xs">
+                                      {currentLanguage === 'ko' ? '경기 통계를 불러올 수 없습니다' : 'Statistics not available'}
+                                    </div>
                                   </div>
                                 )}
                               </div>
