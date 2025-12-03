@@ -116,8 +116,16 @@ interface MatchPredictionProps {
   darkMode: boolean
 }
 
-// ✅ 한글 팀명 변환 함수
-const getKoreanTeamName = (teamName: string): string => {
+// ✅ 다국어 팀명 변환 함수 (언어 설정 반영)
+const getLocalizedTeamName = (teamName: string, language: string): string => {
+  if (language === 'ko') {
+    return TEAM_NAME_KR[teamName] || teamName
+  }
+  return teamName // 영어일 때는 원본 이름
+}
+
+// ✅ 로고 검색용 한글 팀명 (언어 설정과 무관하게 항상 한글)
+const getKoreanTeamNameForLogo = (teamName: string): string => {
   return TEAM_NAME_KR[teamName] || teamName
 }
 
@@ -1246,7 +1254,7 @@ export default function MatchPrediction({
                           {/* 홈팀 */}
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <img 
-                              src={getTeamLogo(match.homeTeamId, getKoreanTeamName(match.homeTeam))}
+                              src={getTeamLogo(match.homeTeamId, getKoreanTeamNameForLogo(match.homeTeam))}
                               alt={match.homeTeam}
                               className="w-5 h-5 object-contain flex-shrink-0"
                               onError={(e) => {
@@ -1258,7 +1266,7 @@ export default function MatchPrediction({
                                 ? 'font-black ' + (darkMode ? 'text-white' : 'text-gray-900')
                                 : 'font-medium ' + (darkMode ? 'text-gray-400' : 'text-gray-600')
                             }`}>
-                              {getKoreanTeamName(match.homeTeam)}
+                              {getLocalizedTeamName(match.homeTeam, language)}
                             </span>
                             {match.isHomeTeamHome && (
                               <span className={`text-xs px-1 py-0.5 rounded font-bold flex-shrink-0 ${
@@ -1304,10 +1312,10 @@ export default function MatchPrediction({
                                 ? 'font-black ' + (darkMode ? 'text-white' : 'text-gray-900')
                                 : 'font-medium ' + (darkMode ? 'text-gray-400' : 'text-gray-600')
                             }`}>
-                              {getKoreanTeamName(match.awayTeam)}
+                              {getLocalizedTeamName(match.awayTeam, language)}
                             </span>
                             <img 
-                              src={getTeamLogo(match.awayTeamId, getKoreanTeamName(match.awayTeam))}
+                              src={getTeamLogo(match.awayTeamId, getKoreanTeamNameForLogo(match.awayTeam))}
                               alt={match.awayTeam}
                               className="w-5 h-5 object-contain flex-shrink-0"
                               onError={(e) => {
@@ -1378,7 +1386,7 @@ export default function MatchPrediction({
                           <div className={`flex-1 text-xs font-medium truncate ${
                             darkMode ? 'text-gray-300' : 'text-gray-700'
                           }`}>
-                            {getKoreanTeamName(match.opponent)}
+                            {getLocalizedTeamName(match.opponent, language)}
                           </div>
                           
                           {/* 스코어 */}
@@ -1440,7 +1448,7 @@ export default function MatchPrediction({
                           <div className={`flex-1 text-xs font-medium truncate ${
                             darkMode ? 'text-gray-300' : 'text-gray-700'
                           }`}>
-                            {getKoreanTeamName(match.opponent)}
+                            {getLocalizedTeamName(match.opponent, language)}
                           </div>
                           
                           {/* 스코어 */}
