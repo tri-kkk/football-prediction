@@ -64,6 +64,9 @@ export default function AdminAdsPage() {
   
   // 필터
   const [filterSlot, setFilterSlot] = useState<string>('all')
+  
+  // 오늘 통계
+  const [todayStats, setTodayStats] = useState<Record<string, { impressions: number; clicks: number }>>({})
 
   // 관리자 비밀번호 확인 (환경변수 또는 하드코딩)
   const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'trendsoccer2024!'
@@ -104,9 +107,33 @@ export default function AdminAdsPage() {
     }
   }
 
+  // 오늘 통계 불러오기
+  const fetchTodayStats = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const response = await fetch(`/api/ads/track?start=${today}&end=${today}`)
+      if (!response.ok) return
+      
+      const data = await response.json()
+      const statsMap: Record<string, { impressions: number; clicks: number }> = {}
+      
+      for (const stat of data.stats || []) {
+        statsMap[stat.ad_id] = {
+          impressions: stat.impressions || 0,
+          clicks: stat.clicks || 0
+        }
+      }
+      
+      setTodayStats(statsMap)
+    } catch (err) {
+      console.error('오늘 통계 로드 에러:', err)
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchAds()
+      fetchTodayStats()
     }
   }, [isAuthenticated])
 
@@ -178,6 +205,7 @@ export default function AdminAdsPage() {
       setEditingAd(null)
       resetForm()
       fetchAds()
+      fetchTodayStats()
     } catch (err) {
       alert('저장에 실패했습니다')
     }
@@ -193,6 +221,7 @@ export default function AdminAdsPage() {
       })
       if (!response.ok) throw new Error('삭제 실패')
       fetchAds()
+      fetchTodayStats()
     } catch (err) {
       alert('삭제에 실패했습니다')
     }
@@ -208,6 +237,7 @@ export default function AdminAdsPage() {
       })
       if (!response.ok) throw new Error('업데이트 실패')
       fetchAds()
+      fetchTodayStats()
     } catch (err) {
       alert('상태 변경에 실패했습니다')
     }
@@ -474,20 +504,21 @@ export default function AdminAdsPage() {
                         </div>
                       </div>
 
-                      {/* 통계 */}
+                      {/* 통계 - 오늘 */}
                       <div className="flex items-center gap-6 mb-4">
+                        <div className="text-xs text-gray-500 mr-2">오늘</div>
                         <div>
                           <span className="text-gray-500 text-xs">노출</span>
-                          <div className="text-white font-bold">{ad.impression_count.toLocaleString()}</div>
+                          <div className="text-white font-bold">{(todayStats[ad.id]?.impressions || 0).toLocaleString()}</div>
                         </div>
                         <div>
                           <span className="text-gray-500 text-xs">클릭</span>
-                          <div className="text-white font-bold">{ad.click_count.toLocaleString()}</div>
+                          <div className="text-white font-bold">{(todayStats[ad.id]?.clicks || 0).toLocaleString()}</div>
                         </div>
                         <div>
                           <span className="text-gray-500 text-xs">CTR</span>
                           <div className="text-emerald-400 font-bold">
-                            {calculateCTR(ad.click_count, ad.impression_count)}%
+                            {calculateCTR(todayStats[ad.id]?.clicks || 0, todayStats[ad.id]?.impressions || 0)}%
                           </div>
                         </div>
                       </div>
