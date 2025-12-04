@@ -10,35 +10,74 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-// 리그 설정 (12개)
+// 리그 설정 (20개 - 12개 리그 + 8개 컵대회)
 const LEAGUES = [
-  { code: 'PL', id: 39, name: 'Premier League' },
-  { code: 'PD', id: 140, name: 'La Liga' },
-  { code: 'BL1', id: 78, name: 'Bundesliga' },
-  { code: 'SA', id: 135, name: 'Serie A' },
-  { code: 'FL1', id: 61, name: 'Ligue 1' },
-  { code: 'PPL', id: 94, name: 'Primeira Liga' },
-  { code: 'DED', id: 88, name: 'Eredivisie' },
+  // ===== 유럽 대항전 =====
   { code: 'CL', id: 2, name: 'Champions League' },
   { code: 'EL', id: 3, name: 'Europa League' },
-  { code: 'ELC', id: 40, name: 'Championship' },
-  { code: 'UNL', id: 5, name: 'UEFA Nations League' },
   { code: 'UECL', id: 848, name: 'UEFA Conference League' },
+  { code: 'UNL', id: 5, name: 'UEFA Nations League' },
+  
+  // ===== 잉글랜드 =====
+  { code: 'PL', id: 39, name: 'Premier League' },
+  { code: 'ELC', id: 40, name: 'Championship' },
+  { code: 'FAC', id: 45, name: 'FA Cup' },           // 🆕 컵대회
+  { code: 'EFL', id: 46, name: 'EFL Cup' },          // 🆕 컵대회
+  
+  // ===== 스페인 =====
+  { code: 'PD', id: 140, name: 'La Liga' },
+  { code: 'CDR', id: 143, name: 'Copa del Rey' },    // 🆕 컵대회
+  
+  // ===== 독일 =====
+  { code: 'BL1', id: 78, name: 'Bundesliga' },
+  { code: 'DFB', id: 81, name: 'DFB Pokal' },        // 🆕 컵대회
+  
+  // ===== 이탈리아 =====
+  { code: 'SA', id: 135, name: 'Serie A' },
+  { code: 'CIT', id: 137, name: 'Coppa Italia' },    // 🆕 컵대회
+  
+  // ===== 프랑스 =====
+  { code: 'FL1', id: 61, name: 'Ligue 1' },
+  { code: 'CDF', id: 66, name: 'Coupe de France' },  // 🆕 컵대회
+  
+  // ===== 포르투갈 =====
+  { code: 'PPL', id: 94, name: 'Primeira Liga' },
+  { code: 'TDP', id: 96, name: 'Taca de Portugal' }, // 🆕 컵대회
+  
+  // ===== 네덜란드 =====
+  { code: 'DED', id: 88, name: 'Eredivisie' },
+  { code: 'KNV', id: 90, name: 'KNVB Beker' },       // 🆕 컵대회
 ]
 
 const LEAGUE_ID_TO_CODE: Record<number, string> = {
-  39: 'PL',
-  140: 'PD',
-  78: 'BL1',
-  135: 'SA',
-  61: 'FL1',
-  94: 'PPL',
-  88: 'DED',
+  // 유럽 대항전
   2: 'CL',
   3: 'EL',
-  40: 'ELC',
-  5: 'UNL',
   848: 'UECL',
+  5: 'UNL',
+  // 잉글랜드
+  39: 'PL',
+  40: 'ELC',
+  45: 'FAC',   // 🆕
+  46: 'EFL',   // 🆕
+  // 스페인
+  140: 'PD',
+  143: 'CDR',  // 🆕
+  // 독일
+  78: 'BL1',
+  81: 'DFB',   // 🆕
+  // 이탈리아
+  135: 'SA',
+  137: 'CIT',  // 🆕
+  // 프랑스
+  61: 'FL1',
+  66: 'CDF',   // 🆕
+  // 포르투갈
+  94: 'PPL',
+  96: 'TDP',   // 🆕
+  // 네덜란드
+  88: 'DED',
+  90: 'KNV',   // 🆕
 }
 
 // 오즈를 확률로 변환
