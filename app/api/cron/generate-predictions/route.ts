@@ -163,30 +163,40 @@ async function getUpcomingFixturesWithOdds(leagueId: number, days: number = 3) {
     date.setDate(date.getDate() + i)
     const dateStr = date.toISOString().split('T')[0]
 
-    const response = await fetch(
-      `https://v3.football.api-sports.io/fixtures?` +
-      `league=${leagueId}&date=${dateStr}&timezone=Asia/Seoul`,
-      {
-        headers: { 'x-apisports-key': apiKey }
-      }
-    )
+    console.log(`  📅 날짜 조회: ${dateStr}`)
+
+    const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&date=${dateStr}&timezone=Asia/Seoul`
+    
+    const response = await fetch(url, {
+      headers: { 'x-apisports-key': apiKey }
+    })
 
     if (response.ok) {
       const data = await response.json()
-      if (data.response) {
+      console.log(`  📦 API 응답: ${data.response?.length || 0}개 경기, errors: ${JSON.stringify(data.errors)}`)
+      
+      if (data.response && data.response.length > 0) {
+        // 모든 경기 상태 로깅
+        data.response.forEach((f: any) => {
+          console.log(`    - ${f.teams.home.name} vs ${f.teams.away.name} [${f.fixture.status.short}]`)
+        })
         fixtures.push(...data.response)
       }
+    } else {
+      console.log(`  ❌ API 오류: ${response.status}`)
     }
 
     // 레이트 리밋 방지
     await new Promise(r => setTimeout(r, 200))
   }
 
-  // 예정된 경기만 필터링
-  const scheduled = fixtures.filter(f => 
-    f.fixture.status.short === 'NS' || 
-    f.fixture.status.short === 'TBD'
-  )
+  // 예정된 경기만 필터링 (NS = Not Started, TBD, 또는 1H 이전)
+  const scheduled = fixtures.filter(f => {
+    const status = f.fixture.status.short
+    return status === 'NS' || status === 'TBD' || status === 'PST' || status === 'CANC'
+  })
+  
+  console.log(`  ✅ 예정된 경기: ${scheduled.length}개 (전체 ${fixtures.length}개 중)`)
 
   // 각 경기에 배당률 추가
   const fixturesWithOdds = []
