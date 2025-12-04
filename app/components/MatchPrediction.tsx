@@ -422,6 +422,37 @@ export default function MatchPrediction({
           
           setPrediction(predData)
           setDebugInfo(prev => ({ ...prev, predictionStatus: 'success' }))
+          
+          // 🆕 예측 데이터를 DB에 저장 (비동기, 백그라운드)
+          try {
+            const homeProb = Math.round(parseFloat(predData.predictions.percent.home.replace('%', '')) || 33)
+            const drawProb = Math.round(parseFloat(predData.predictions.percent.draw.replace('%', '')) || 34)
+            const awayProb = Math.round(parseFloat(predData.predictions.percent.away.replace('%', '')) || 33)
+            const predHomeScore = parseInt(predData.predictions.goals.home) || 1
+            const predAwayScore = parseInt(predData.predictions.goals.away) || 1
+
+            fetch('/api/predictions/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                matchId: fixtureId,
+                league: league || null,
+                homeTeam: homeTeam,
+                awayTeam: awayTeam,
+                homeWinProbability: homeProb,
+                drawProbability: drawProb,
+                awayWinProbability: awayProb,
+                predictedHomeScore: predHomeScore,
+                predictedAwayScore: predAwayScore,
+                matchDate: new Date().toISOString()
+              })
+            }).then(res => {
+              if (res.ok) console.log(`✅ Prediction saved for match ${fixtureId}`)
+              else console.warn(`⚠️ Failed to save prediction for match ${fixtureId}`)
+            }).catch(err => console.warn(`⚠️ Error saving prediction:`, err))
+          } catch (saveError) {
+            console.warn('⚠️ Error preparing prediction save:', saveError)
+          }
         } else {
           console.warn(`⚠️ Prediction API failed: ${predResponse.status}`)
           
