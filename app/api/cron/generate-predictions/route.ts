@@ -165,7 +165,7 @@ async function getUpcomingFixturesWithOdds(leagueId: number, days: number = 3) {
 
     console.log(`  📅 날짜 조회: ${dateStr}`)
 
-    const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&date=${dateStr}&timezone=Asia/Seoul`
+    const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=2025&date=${dateStr}&timezone=Asia/Seoul`
     
     const response = await fetch(url, {
       headers: { 'x-apisports-key': apiKey }
