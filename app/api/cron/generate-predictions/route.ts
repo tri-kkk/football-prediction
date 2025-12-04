@@ -97,56 +97,79 @@ async function savePrediction(prediction: {
   predicted_away_score: number
   predicted_winner: string
 }) {
-  // 먼저 기존 데이터 확인
-  const checkResponse = await fetch(
-    `${supabaseUrl}/rest/v1/match_predictions?match_id=eq.${prediction.match_id}&select=match_id`,
-    {
-      headers: {
-        'apikey': supabaseServiceKey,
-        'Authorization': `Bearer ${supabaseServiceKey}`
+  try {
+    // 먼저 기존 데이터 확인
+    const checkResponse = await fetch(
+      `${supabaseUrl}/rest/v1/match_predictions?match_id=eq.${prediction.match_id}&select=match_id`,
+      {
+        headers: {
+          'apikey': supabaseServiceKey,
+          'Authorization': `Bearer ${supabaseServiceKey}`
+        }
       }
+    )
+
+    if (!checkResponse.ok) {
+      const err = await checkResponse.text()
+      console.error(`    ❌ SELECT 실패: ${checkResponse.status} - ${err}`)
+      return false
     }
-  )
 
-  const existing = await checkResponse.json()
+    const existing = await checkResponse.json()
 
-  if (existing && existing.length > 0) {
-    // UPDATE
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/match_predictions?match_id=eq.${prediction.match_id}`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseServiceKey,
-          'Authorization': `Bearer ${supabaseServiceKey}`
-        },
-        body: JSON.stringify({
-          predicted_home_win: prediction.predicted_home_win,
-          predicted_draw: prediction.predicted_draw,
-          predicted_away_win: prediction.predicted_away_win,
-          predicted_home_score: prediction.predicted_home_score,
-          predicted_away_score: prediction.predicted_away_score,
-          predicted_winner: prediction.predicted_winner
-        })
+    if (existing && existing.length > 0) {
+      // UPDATE
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/match_predictions?match_id=eq.${prediction.match_id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseServiceKey,
+            'Authorization': `Bearer ${supabaseServiceKey}`
+          },
+          body: JSON.stringify({
+            predicted_home_win: prediction.predicted_home_win,
+            predicted_draw: prediction.predicted_draw,
+            predicted_away_win: prediction.predicted_away_win,
+            predicted_home_score: prediction.predicted_home_score,
+            predicted_away_score: prediction.predicted_away_score,
+            predicted_winner: prediction.predicted_winner
+          })
+        }
+      )
+      
+      if (!response.ok) {
+        const err = await response.text()
+        console.error(`    ❌ UPDATE 실패: ${response.status} - ${err}`)
+        return false
       }
-    )
-    return response.ok
-  } else {
-    // INSERT
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/match_predictions`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseServiceKey,
-          'Authorization': `Bearer ${supabaseServiceKey}`
-        },
-        body: JSON.stringify(prediction)
+      return true
+    } else {
+      // INSERT
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/match_predictions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseServiceKey,
+            'Authorization': `Bearer ${supabaseServiceKey}`
+          },
+          body: JSON.stringify(prediction)
+        }
+      )
+      
+      if (!response.ok) {
+        const err = await response.text()
+        console.error(`    ❌ INSERT 실패: ${response.status} - ${err}`)
+        return false
       }
-    )
-    return response.ok
+      return true
+    }
+  } catch (error: any) {
+    console.error(`    ❌ 저장 예외: ${error.message}`)
+    return false
   }
 }
 
