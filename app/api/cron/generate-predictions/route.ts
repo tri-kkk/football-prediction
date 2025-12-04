@@ -90,6 +90,10 @@ function oddsToProb(homeOdds: number, drawOdds: number, awayOdds: number) {
 // match_predictions 테이블에 저장 (UPSERT)
 async function savePrediction(prediction: {
   match_id: number
+  home_team: string
+  away_team: string
+  league: string
+  match_date: string
   predicted_home_win: number
   predicted_draw: number
   predicted_away_win: number
@@ -188,7 +192,7 @@ async function getUpcomingFixturesWithOdds(leagueId: number, days: number = 3) {
 
     console.log(`  📅 날짜 조회: ${dateStr}`)
 
-    const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=2025&date=${dateStr}&timezone=Asia/Seoul`
+    const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=2024&date=${dateStr}&timezone=Asia/Seoul`
     
     const response = await fetch(url, {
       headers: { 'x-apisports-key': apiKey }
@@ -299,6 +303,7 @@ export async function GET(request: NextRequest) {
             const matchId = fixture.fixture.id
             const homeTeam = fixture.teams.home.name
             const awayTeam = fixture.teams.away.name
+            const matchDate = fixture.fixture.date
             const odds = fixture.odds
 
             // 확률 계산
@@ -314,6 +319,10 @@ export async function GET(request: NextRequest) {
             // 저장
             const prediction = {
               match_id: matchId,
+              home_team: homeTeam,
+              away_team: awayTeam,
+              league: leagueCode,
+              match_date: matchDate,
               predicted_home_win: probs.home,
               predicted_draw: probs.draw,
               predicted_away_win: probs.away,
