@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import LineupWidget from '../components/LineupWidget'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface MatchEvent {
   time: number
@@ -50,7 +51,7 @@ interface LiveMatch {
 }
 
 export default function LivePage() {
-  const [language, setLanguage] = useState<'ko' | 'en'>('ko')
+  const { language } = useLanguage()
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL')
   const [matches, setMatches] = useState<LiveMatch[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,12 +62,26 @@ export default function LivePage() {
 
   const leagues = [
     { code: 'ALL', nameKo: '전체', nameEn: 'All' },
-    { code: 'PL', nameKo: 'EPL', nameEn: 'EPL' },
-    { code: 'PD', nameKo: '라리가', nameEn: 'La Liga' },
-    { code: 'BL1', nameKo: '분데스', nameEn: 'Bundesliga' },
-    { code: 'SA', nameKo: '세리에', nameEn: 'Serie A' },
-    { code: 'FL1', nameKo: '리그1', nameEn: 'Ligue 1' },
+    // 유럽 대항전
     { code: 'CL', nameKo: '챔스', nameEn: 'UCL' },
+    { code: 'EL', nameKo: '유로파', nameEn: 'UEL' },
+    { code: 'UECL', nameKo: '컨퍼', nameEn: 'UECL' },
+    // 잉글랜드
+    { code: 'PL', nameKo: 'EPL', nameEn: 'EPL' },
+    { code: 'FAC', nameKo: 'FA컵', nameEn: 'FA' },
+    { code: 'EFL', nameKo: 'EFL', nameEn: 'EFL' },
+    // 스페인
+    { code: 'PD', nameKo: '라리가', nameEn: 'Liga' },
+    { code: 'CDR', nameKo: '코파', nameEn: 'Copa' },
+    // 독일
+    { code: 'BL1', nameKo: '분데스', nameEn: 'Bund' },
+    { code: 'DFB', nameKo: 'DFB', nameEn: 'DFB' },
+    // 이탈리아
+    { code: 'SA', nameKo: '세리에', nameEn: 'SerieA' },
+    { code: 'CIT', nameKo: '코파IT', nameEn: 'CopIt' },
+    // 프랑스
+    { code: 'FL1', nameKo: '리그1', nameEn: 'L1' },
+    { code: 'CDF', nameKo: '쿠프', nameEn: 'CdF' },
   ]
 
   const fetchLiveMatches = async () => {
@@ -187,13 +202,6 @@ export default function LivePage() {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setLanguage(language === 'ko' ? 'en' : 'ko')}
-                className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 rounded text-xs font-medium transition-colors"
-              >
-                {language === 'ko' ? 'KO' : 'EN'}
-              </button>
-              
-              <button
                 onClick={fetchLiveMatches}
                 className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 rounded text-xs transition-colors"
               >
@@ -202,15 +210,16 @@ export default function LivePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {/* 리그 필터 - 모바일 스크롤 최적화 */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
             {leagues.map(league => (
               <button
                 key={league.code}
                 onClick={() => setSelectedLeague(league.code)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
                   selectedLeague === league.code
                     ? 'bg-green-600 text-white shadow-lg'
-                    : 'bg-[#2a2a2a] text-gray-300 hover:bg-[#333]'
+                    : 'bg-[#2a2a2a] text-gray-300 hover:bg-[#333] active:bg-[#444]'
                 }`}
               >
                 {language === 'ko' ? league.nameKo : league.nameEn}
