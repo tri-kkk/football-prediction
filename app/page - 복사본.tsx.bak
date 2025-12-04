@@ -8,6 +8,7 @@ import { getTeamId } from './utils/teamIdMapping'
 import { useLanguage } from './contexts/LanguageContext'
 import LineupModal from './components/LineupModal'
 import BlogPreviewSidebar from './components/BlogPreviewSidebar'  
+import AdBanner from './components/AdBanner'
 
 import TopHighlights from './components/TopHighlights'
 // 리그 정보 (국기 이미지 포함)
@@ -120,6 +121,95 @@ const LEAGUES = [
 
 
 
+]
+
+// 🆕 국가/지역별 계층형 리그 그룹
+const LEAGUE_GROUPS = [
+  {
+    id: 'all',
+    region: '전체',
+    regionEn: 'All',
+    flag: 'https://flagcdn.com/w40/eu.png',
+    leagues: [
+      { code: 'ALL', name: '전체 리그', nameEn: 'All Leagues', logo: 'https://img.icons8.com/color/48/globe--v1.png' }
+    ]
+  },
+  {
+    id: 'europe',
+    region: '유럽 대항전',
+    regionEn: 'Europe',
+    flag: 'https://flagcdn.com/w40/eu.png',
+    leagues: [
+      { code: 'CL', name: '챔피언스리그', nameEn: 'Champions League', logo: 'https://media.api-sports.io/football/leagues/2.png' },
+      { code: 'EL', name: '유로파리그', nameEn: 'Europa League', logo: 'https://media.api-sports.io/football/leagues/3.png' },
+      { code: 'UECL', name: '컨퍼런스리그', nameEn: 'Conference League', logo: 'https://media.api-sports.io/football/leagues/848.png' },
+      { code: 'UNL', name: '네이션스리그', nameEn: 'Nations League', logo: 'https://media.api-sports.io/football/leagues/5.png' },
+    ]
+  },
+  {
+    id: 'england',
+    region: '잉글랜드',
+    regionEn: 'England',
+    flag: 'https://flagcdn.com/w40/gb-eng.png',
+    leagues: [
+      { code: 'PL', name: '프리미어리그', nameEn: 'Premier League', logo: 'https://media.api-sports.io/football/leagues/39.png' },
+      { code: 'ELC', name: '챔피언십', nameEn: 'Championship', logo: 'https://media.api-sports.io/football/leagues/40.png' },
+    ]
+  },
+  {
+    id: 'spain',
+    region: '스페인',
+    regionEn: 'Spain',
+    flag: 'https://flagcdn.com/w40/es.png',
+    leagues: [
+      { code: 'PD', name: '라리가', nameEn: 'La Liga', logo: 'https://media.api-sports.io/football/leagues/140.png' },
+    ]
+  },
+  {
+    id: 'germany',
+    region: '독일',
+    regionEn: 'Germany',
+    flag: 'https://flagcdn.com/w40/de.png',
+    leagues: [
+      { code: 'BL1', name: '분데스리가', nameEn: 'Bundesliga', logo: 'https://media.api-sports.io/football/leagues/78.png' },
+    ]
+  },
+  {
+    id: 'italy',
+    region: '이탈리아',
+    regionEn: 'Italy',
+    flag: 'https://flagcdn.com/w40/it.png',
+    leagues: [
+      { code: 'SA', name: '세리에A', nameEn: 'Serie A', logo: 'https://media.api-sports.io/football/leagues/135.png' },
+    ]
+  },
+  {
+    id: 'france',
+    region: '프랑스',
+    regionEn: 'France',
+    flag: 'https://flagcdn.com/w40/fr.png',
+    leagues: [
+      { code: 'FL1', name: '리그1', nameEn: 'Ligue 1', logo: 'https://media.api-sports.io/football/leagues/61.png' },
+    ]
+  },
+  {
+    id: 'portugal',
+    region: '포르투갈',
+    regionEn: 'Portugal',
+    flag: 'https://flagcdn.com/w40/pt.png',
+    leagues: [
+      { code: 'PPL', name: '프리메이라리가', nameEn: 'Primeira Liga', logo: 'https://media.api-sports.io/football/leagues/94.png' },
+    ]
+  },
+  {
+    id: 'netherlands',
+    region: '네덜란드',
+    regionEn: 'Netherlands',
+    flag: 'https://flagcdn.com/w40/nl.png',
+    leagues: [
+      { code: 'DED', name: '에레디비시', nameEn: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png' },
+    ]
+  },
 ]
 
 // 오즈 데이터가 있는 리그만 (경기 목록 필터용)
@@ -428,6 +518,8 @@ export default function Home() {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0)
   // 📱 모바일 하단 광고 닫기 상태
   const [isMobileAdClosed, setIsMobileAdClosed] = useState(false)
+  // 🆕 리그 그룹 펼침 상태 (기본: 모두 접힘)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   // 전체 리그 목록 (전체 제외)
   const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
@@ -486,6 +578,28 @@ export default function Home() {
   const goToToday = () => {
     setSelectedDate(getKSTToday())
     setCurrentPage(1)
+  }
+
+  // 🆕 리그 그룹 펼침/접힘 토글
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId)
+      } else {
+        newSet.add(groupId)
+      }
+      return newSet
+    })
+  }
+
+  // 🆕 리그 선택 시 해당 그룹 자동 펼침
+  const handleLeagueSelect = (leagueCode: string, groupId: string) => {
+    setSelectedLeague(leagueCode)
+    // 선택한 리그가 속한 그룹 펼침
+    if (groupId !== 'all') {
+      setExpandedGroups(prev => new Set(prev).add(groupId))
+    }
   }
 
   // 선택된 날짜의 경기 필터링
@@ -1716,35 +1830,7 @@ export default function Home() {
           {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
           <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
             <div className="sticky top-20">
-              <div className="overflow-hidden">
-                <a 
-                  href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block hover:opacity-90 transition-opacity"
-                  onClick={(e) => {
-                    // URL이 설정될 때까지 클릭 방지
-                    if (e.currentTarget.href === '#' || e.currentTarget.href.endsWith('#')) {
-                      e.preventDefault()
-                    }
-                  }}
-                >
-                  <img 
-                    src="/ad-banner-300x600.png" 
-                    alt="Advertisement"
-                    className="w-[300px] h-[600px] object-cover"
-                    onError={(e) => {
-                      // GIF 로드 실패 시 JPG로 폴백
-                      if (e.currentTarget.src.endsWith('.gif')) {
-                        e.currentTarget.src = '/ad-banner-300x600.jpg'
-                      } else {
-                        // JPG도 실패하면 플레이스홀더
-                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="600"><rect width="300" height="600" fill="%231a1a1a"/><text x="150" y="300" text-anchor="middle" fill="%23666" font-size="20">Advertisement</text><text x="150" y="330" text-anchor="middle" fill="%23444" font-size="14">300 x 600</text></svg>'
-                      }
-                    }}
-                  />
-                </a>
-              </div>
+              <AdBanner slot="sidebar" />
             </div>
           </aside>
 
@@ -1761,43 +1847,117 @@ export default function Home() {
                   {currentLanguage === 'ko' ? '리그 선택' : 'SELECT LEAGUE'}
                 </h2>
                 <nav className="space-y-1">
-                  {LEAGUES
-                    .filter(league => LEAGUES_WITH_ODDS.includes(league.code))
-                    .map((league) => {
-                      return (
-                        <button
-                          key={league.code}
-                          onClick={() => setSelectedLeague(league.code)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all text-left group ${
-                            selectedLeague === league.code
-                              ? 'bg-[#A3FF4C] text-gray-900'
-                              : darkMode
-                                ? 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
-                                : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {league.isEmoji ? (
-                            <span className="text-xl">{league.logo}</span>
-                          ) : (
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center p-1 flex-shrink-0 ${
-                              selectedLeague === league.code ? 'bg-white/90' : 'bg-white'
+                  {LEAGUE_GROUPS.map((group) => {
+                    const isExpanded = expandedGroups.has(group.id)
+                    const hasSelectedLeague = group.leagues.some(l => l.code === selectedLeague)
+                    const isAllGroup = group.id === 'all'
+                    
+                    return (
+                      <div key={group.id}>
+                        {/* 전체 그룹은 바로 리그 버튼 표시 */}
+                        {isAllGroup ? (
+                          group.leagues.map((league) => (
+                            <button
+                              key={league.code}
+                              onClick={() => handleLeagueSelect(league.code, group.id)}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all text-left ${
+                                selectedLeague === league.code
+                                  ? 'bg-[#A3FF4C] text-gray-900'
+                                  : darkMode
+                                    ? 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
+                                    : 'text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center p-1 flex-shrink-0 ${
+                                selectedLeague === league.code ? 'bg-white/90' : 'bg-white'
+                              }`}>
+                                <img 
+                                  src={league.logo} 
+                                  alt={league.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <span className="text-sm flex-1 truncate">
+                                {currentLanguage === 'ko' ? league.name : league.nameEn}
+                              </span>
+                            </button>
+                          ))
+                        ) : (
+                          <>
+                            {/* 국가/지역 헤더 (클릭하면 펼침/접힘) */}
+                            <button
+                              onClick={() => toggleGroup(group.id)}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${
+                                hasSelectedLeague
+                                  ? darkMode
+                                    ? 'bg-gray-800/70 text-white'
+                                    : 'bg-gray-100 text-gray-900'
+                                  : darkMode
+                                    ? 'text-gray-400 hover:bg-gray-800/30 hover:text-gray-300'
+                                    : 'text-gray-600 hover:bg-gray-50'
+                              }`}
+                            >
+                              <div className="w-6 h-4 flex-shrink-0 overflow-hidden rounded-sm">
+                                <img 
+                                  src={group.flag} 
+                                  alt={group.region}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = 'https://flagcdn.com/w40/eu.png'
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium flex-1">
+                                {currentLanguage === 'ko' ? group.region : group.regionEn}
+                              </span>
+                              <svg 
+                                className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            
+                            {/* 리그 목록 (펼쳐진 경우) */}
+                            <div className={`overflow-hidden transition-all duration-200 ${
+                              isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                             }`}>
-                              <img 
-                                src={league.logo} 
-                                alt={league.name}
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none'
-                                }}
-                              />
+                              <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-700/30 pl-2">
+                                {group.leagues.map((league) => (
+                                  <button
+                                    key={league.code}
+                                    onClick={() => handleLeagueSelect(league.code, group.id)}
+                                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg font-medium transition-all text-left ${
+                                      selectedLeague === league.code
+                                        ? 'bg-[#A3FF4C] text-gray-900'
+                                        : darkMode
+                                          ? 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
+                                          : 'text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    <div className={`w-6 h-6 rounded-md flex items-center justify-center p-0.5 flex-shrink-0 ${
+                                      selectedLeague === league.code ? 'bg-white/90' : 'bg-white'
+                                    }`}>
+                                      <img 
+                                        src={league.logo} 
+                                        alt={league.name}
+                                        className="w-full h-full object-contain"
+                                      />
+                                    </div>
+                                    <span className="text-sm flex-1 truncate">
+                                      {currentLanguage === 'ko' ? league.name : league.nameEn}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
                             </div>
-                          )}
-                          <span className="text-sm flex-1 truncate">
-                            {currentLanguage === 'ko' ? league.name : league.nameEn}
-                          </span>
-                        </button>
-                      )
-                    })}
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
                 </nav>
               </div>
 
@@ -1842,32 +2002,8 @@ export default function Home() {
             )}
             
             {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) */}
-            <div className="hidden lg:block mb-6">
-              <div className={`rounded-xl overflow-hidden mx-auto`} style={{ maxWidth: '728px' }}>
-                <a 
-                  href="https://spolive.com/affliate?recom=9074eed9688dbd8f22cb7175ebf3084b:71103256801980d9316782d7299c6bc0" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block hover:opacity-90 transition-opacity"
-                >
-                  <img 
-                    src="/ad-banner-728x90.png" 
-                    alt="Advertisement"
-                    className="w-full h-[90px] object-cover"
-                    onError={(e) => {
-                      // PNG 로드 실패 시 GIF로 폴백
-                      if (e.currentTarget.src.endsWith('.png')) {
-                        e.currentTarget.src = '/ad-banner-728x90.gif'
-                      } else if (e.currentTarget.src.endsWith('.gif')) {
-                        e.currentTarget.src = '/ad-banner-728x90.jpg'
-                      } else {
-                        // 모두 실패하면 숨김
-                        e.currentTarget.style.display = 'none'
-                      }
-                    }}
-                  />
-                </a>
-              </div>
+            <div className="hidden lg:flex justify-center mb-6">
+              <AdBanner slot="desktop_banner" />
             </div>
 
         {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
@@ -2232,25 +2368,7 @@ export default function Home() {
                             {/* 📱 모바일 인피드 배너 - 첫 번째 리그 다음에 표시 */}
                             {leagueIndex === 0 && (
                               <div className="block lg:hidden mb-4 flex justify-center">
-                                <a 
-                                  href="https://m.spolive.com/affliate?recom=fc2350f1cf9ff73c1df02170fd0c6af3:474975cffa1f9962015c229adc14c84f" 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="block hover:opacity-90 transition-opacity"
-                                >
-                                  <img 
-                                    src="/ad-banner-320x50.png" 
-                                    alt="Advertisement"
-                                    className="w-[320px] h-[50px] object-cover rounded"
-                                    onError={(e) => {
-                                      if (e.currentTarget.src.endsWith('.png')) {
-                                        e.currentTarget.src = '/ad-banner-320x50.gif'
-                                      } else if (e.currentTarget.src.endsWith('.gif')) {
-                                        e.currentTarget.src = '/ad-banner-320x50.jpg'
-                                      }
-                                    }}
-                                  />
-                                </a>
+                                <AdBanner slot="mobile_bottom" />
                               </div>
                             )}
                           </React.Fragment>
@@ -2870,6 +2988,24 @@ export default function Home() {
           awayTeam={selectedMatchForLineup.awayTeam}
           darkMode={darkMode}
         />
+      )}
+
+      {/* 📢 모바일 하단 고정 배너 (320x50) */}
+      {!isMobileAdClosed && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 safe-area-bottom">
+          <div className="relative flex justify-center py-2">
+            <button
+              onClick={() => setIsMobileAdClosed(true)}
+              className="absolute top-1 left-2 w-5 h-5 bg-black/70 text-white text-xs rounded-full flex items-center justify-center hover:bg-black z-10"
+            >
+              ✕
+            </button>
+            <AdBanner slot="mobile_bottom" />
+            <span className="absolute top-1 right-2 px-1.5 py-0.5 bg-black/50 text-white text-[10px] rounded">
+              AD
+            </span>
+          </div>
+        </div>
       )}
     </div>
   )

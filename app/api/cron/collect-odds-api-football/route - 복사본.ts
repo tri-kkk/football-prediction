@@ -10,7 +10,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-// 리그 설정 (10개)
+// 리그 설정 (12개)
 const LEAGUES = [
   { code: 'PL', id: 39, name: 'Premier League' },
   { code: 'PD', id: 140, name: 'La Liga' },
@@ -22,6 +22,8 @@ const LEAGUES = [
   { code: 'CL', id: 2, name: 'Champions League' },
   { code: 'EL', id: 3, name: 'Europa League' },
   { code: 'ELC', id: 40, name: 'Championship' },
+  { code: 'UNL', id: 5, name: 'UEFA Nations League' },
+  { code: 'UECL', id: 848, name: 'UEFA Conference League' },
 ]
 
 const LEAGUE_ID_TO_CODE: Record<number, string> = {
@@ -35,6 +37,8 @@ const LEAGUE_ID_TO_CODE: Record<number, string> = {
   2: 'CL',
   3: 'EL',
   40: 'ELC',
+  5: 'UNL',
+  848: 'UECL',
 }
 
 // 오즈를 확률로 변환
@@ -55,6 +59,89 @@ function normalizePercentages(home: number, draw: number, away: number) {
   }
 }
 
+// 🔥 스코어 계산 함수 (메인 페이지와 동일)
+function calculateRealisticScore(
+  avgHome: number, 
+  avgAway: number, 
+  homeWinPercent: number, 
+  drawPercent: number, 
+  awayWinPercent: number
+): { home: number; away: number } {
+  
+  if (avgHome < 0 || avgAway < 0 || isNaN(avgHome) || isNaN(avgAway)) {
+    const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
+    
+    if (maxPercent === homeWinPercent) {
+      if (homeWinPercent > 50) return { home: 2, away: 0 }
+      if (homeWinPercent > 40) return { home: 2, away: 1 }
+      return { home: 1, away: 0 }
+    } else if (maxPercent === awayWinPercent) {
+      if (awayWinPercent > 50) return { home: 0, away: 2 }
+      if (awayWinPercent > 40) return { home: 1, away: 2 }
+      return { home: 0, away: 1 }
+    } else {
+      return { home: 1, away: 1 }
+    }
+  }
+  
+  let homeGoals = Math.floor(avgHome)
+  let awayGoals = Math.floor(avgAway)
+  
+  const homeDecimal = avgHome - homeGoals
+  const awayDecimal = avgAway - awayGoals
+  
+  const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
+  
+  if (maxPercent === homeWinPercent) {
+    if (homeDecimal > 0.6) homeGoals += 1
+    if (homeWinPercent > 60 && homeGoals <= awayGoals) {
+      homeGoals = awayGoals + 1
+    }
+  } else if (maxPercent === awayWinPercent) {
+    if (awayDecimal > 0.6) awayGoals += 1
+    if (awayWinPercent > 60 && awayGoals <= homeGoals) {
+      awayGoals = homeGoals + 1
+    }
+  } else {
+    if (drawPercent > 35) {
+      const avg = (homeGoals + awayGoals) / 2
+      homeGoals = Math.round(avg)
+      awayGoals = Math.round(avg)
+    }
+  }
+  
+  const totalGoals = homeGoals + awayGoals
+  
+  if (totalGoals > 5) {
+    const scale = 4 / totalGoals
+    homeGoals = Math.round(homeGoals * scale)
+    awayGoals = Math.round(awayGoals * scale)
+  }
+  
+  if (totalGoals === 0) {
+    if (homeWinPercent > awayWinPercent) {
+      homeGoals = 1
+    } else if (awayWinPercent > homeWinPercent) {
+      awayGoals = 1
+    } else {
+      homeGoals = 1
+      awayGoals = 1
+    }
+  }
+  
+  const finalHome = homeGoals
+  const finalAway = awayGoals
+  
+  if (homeWinPercent > awayWinPercent + 15 && finalHome <= finalAway) {
+    return { home: finalAway + 1, away: finalAway }
+  }
+  if (awayWinPercent > homeWinPercent + 15 && finalAway <= finalHome) {
+    return { home: finalHome, away: finalHome + 1 }
+  }
+  
+  return { home: finalHome, away: finalAway }
+}
+
 // API-Football 요청
 async function fetchFromApiFootball(endpoint: string) {
   const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -72,7 +159,7 @@ async function fetchFromApiFootball(endpoint: string) {
 
 export async function POST(request: Request) {
   try {
-    console.log('🏈 ========== API-Football Odds Collection Started ==========')
+    console.log('🈴 ========== API-Football Odds Collection Started ==========')
     console.log('⏰ Time:', new Date().toISOString())
 
     const results = {
@@ -122,23 +209,6 @@ export async function POST(request: Request) {
         // 각 경기마다 오즈 가져오기
         for (const fixture of fixtures) {
           try {
-            // 🆕 디버깅: 첫 번째 경기만 구조 출력
-            if (savedCount === 0) {
-              console.log('🔍 First fixture structure:', JSON.stringify({
-                fixtureId: fixture.fixture?.id,
-                homeTeam: {
-                  id: fixture.teams?.home?.id,
-                  name: fixture.teams?.home?.name,
-                  logo: fixture.teams?.home?.logo
-                },
-                awayTeam: {
-                  id: fixture.teams?.away?.id,
-                  name: fixture.teams?.away?.name,
-                  logo: fixture.teams?.away?.logo
-                }
-              }, null, 2))
-            }
-
             // 시간 필터링 (경기 336시간(14일) 전 ~ 종료 후 1시간)
             const commenceTime = new Date(fixture.fixture.date).getTime()
             const hoursUntilMatch = (commenceTime - now) / (1000 * 60 * 60)
@@ -160,29 +230,52 @@ export async function POST(request: Request) {
               continue
             }
 
-            // 첫 번째 북메이커의 오즈 사용
-            const bookmaker = oddsResponse.bookmakers[0]
-            const matchWinnerBet = bookmaker.bets.find(
-              (bet: any) => bet.name === 'Match Winner' || bet.id === 1
-            )
+            // 다중 북메이커 평균 로직 (3~10개)
+            const bookmakers = oddsResponse.bookmakers.slice(0, 10)
+            let validOddsCount = 0
+            let totalHomeOdds = 0
+            let totalDrawOdds = 0
+            let totalAwayOdds = 0
+            const bookmakerNames: string[] = []
 
-            if (!matchWinnerBet) {
+            for (const bookmaker of bookmakers) {
+              const matchWinnerBet = bookmaker.bets.find(
+                (bet: any) => bet.name === 'Match Winner' || bet.id === 1
+              )
+
+              if (!matchWinnerBet) continue
+
+              const homeOdds = parseFloat(
+                matchWinnerBet.values.find((v: any) => v.value === 'Home')?.odd || '0'
+              )
+              const drawOdds = parseFloat(
+                matchWinnerBet.values.find((v: any) => v.value === 'Draw')?.odd || '0'
+              )
+              const awayOdds = parseFloat(
+                matchWinnerBet.values.find((v: any) => v.value === 'Away')?.odd || '0'
+              )
+
+              if (homeOdds > 0 && drawOdds > 0 && awayOdds > 0) {
+                totalHomeOdds += homeOdds
+                totalDrawOdds += drawOdds
+                totalAwayOdds += awayOdds
+                validOddsCount++
+                bookmakerNames.push(bookmaker.name)
+              }
+            }
+
+            // 최소 3개 북메이커 필요
+            if (validOddsCount < 3) {
+              console.log(`⚠️ Not enough bookmakers (${validOddsCount}): ${fixture.teams.home.name} vs ${fixture.teams.away.name}`)
               continue
             }
 
-            const homeOdds = parseFloat(
-              matchWinnerBet.values.find((v: any) => v.value === 'Home')?.odd || '0'
-            )
-            const drawOdds = parseFloat(
-              matchWinnerBet.values.find((v: any) => v.value === 'Draw')?.odd || '0'
-            )
-            const awayOdds = parseFloat(
-              matchWinnerBet.values.find((v: any) => v.value === 'Away')?.odd || '0'
-            )
+            // 평균 계산
+            const homeOdds = totalHomeOdds / validOddsCount
+            const drawOdds = totalDrawOdds / validOddsCount
+            const awayOdds = totalAwayOdds / validOddsCount
 
-            if (!homeOdds || !drawOdds || !awayOdds) {
-              continue
-            }
+            console.log(`📊 ${validOddsCount} bookmakers averaged: ${bookmakerNames.slice(0, 3).join(', ')}${validOddsCount > 3 ? `... (+${validOddsCount - 3})` : ''}`)
 
             // 확률 계산
             const homePercent = oddsToPercentage(homeOdds)
@@ -191,7 +284,60 @@ export async function POST(request: Request) {
 
             const normalized = normalizePercentages(homePercent, drawPercent, awayPercent)
 
-            // 🆕 팀 ID 추출 (안전하게)
+            // 🔥 MatchPrediction과 동일한 득점 계산 로직
+            let avgHomeGoals = 1.0
+            let avgAwayGoals = 1.0
+            
+            // 홈팀 득점 예상
+            if (normalized.home > 60) {
+              avgHomeGoals = 2.0
+            } else if (normalized.home > 50) {
+              avgHomeGoals = 1.7
+            } else if (normalized.home > 40) {
+              avgHomeGoals = 1.4
+            } else if (normalized.home > 30) {
+              avgHomeGoals = 1.1
+            } else {
+              avgHomeGoals = 0.8
+            }
+            
+            // 원정팀 득점 예상
+            if (normalized.away > 60) {
+              avgAwayGoals = 2.0
+            } else if (normalized.away > 50) {
+              avgAwayGoals = 1.7
+            } else if (normalized.away > 40) {
+              avgAwayGoals = 1.4
+            } else if (normalized.away > 30) {
+              avgAwayGoals = 1.1
+            } else {
+              avgAwayGoals = 0.8
+            }
+            
+            // 무승부 확률이 높으면 양팀 득점을 비슷하게 조정
+            if (normalized.draw > 35) {
+              const avg = (avgHomeGoals + avgAwayGoals) / 2
+              avgHomeGoals = avg
+              avgAwayGoals = avg
+            }
+            
+            console.log(`📊 승률 기반 득점: Home ${avgHomeGoals.toFixed(1)} - Away ${avgAwayGoals.toFixed(1)} (${normalized.home.toFixed(1)}% / ${normalized.draw.toFixed(1)}% / ${normalized.away.toFixed(1)}%)`)
+            
+            const predictedScore = calculateRealisticScore(
+              avgHomeGoals,
+              avgAwayGoals,
+              normalized.home,
+              normalized.draw,
+              normalized.away
+            )
+
+            // 승자 결정
+            let predictedWinner = 'draw'
+            if (predictedScore.home > predictedScore.away) predictedWinner = 'home'
+            else if (predictedScore.away > predictedScore.home) predictedWinner = 'away'
+
+            console.log(`⚽ Predicted: ${predictedScore.home} - ${predictedScore.away} (${predictedWinner})`)
+
             const homeTeamId = fixture.teams?.home?.id || null
             const awayTeamId = fixture.teams?.away?.id || null
 
@@ -212,7 +358,10 @@ export async function POST(request: Request) {
               home_probability: normalized.home,
               draw_probability: normalized.draw,
               away_probability: normalized.away,
-              odds_source: bookmaker.name,
+              predicted_score_home: predictedScore.home, // 🔥 추가
+              predicted_score_away: predictedScore.away, // 🔥 추가
+              predicted_winner: predictedWinner,          // 🔥 추가
+              odds_source: `Averaged from ${validOddsCount} bookmakers`,
             }
 
             const { error: historyError } = await supabase
@@ -227,30 +376,37 @@ export async function POST(request: Request) {
 
             // 4. DB 저장 (latest) - UPSERT
             const { error: latestError } = await supabase
-              .rpc('upsert_match_odds_latest', {
-                p_match_id: fixture.fixture.id.toString(),
-                p_home_team: fixture.teams.home.name,
-                p_away_team: fixture.teams.away.name,
-                p_home_team_id: homeTeamId,
-                p_away_team_id: awayTeamId,
-                p_home_team_logo: fixture.teams.home.logo,
-                p_away_team_logo: fixture.teams.away.logo,
-                p_league_code: league.code,
-                p_commence_time: fixture.fixture.date,
-                p_home_odds: homeOdds,
-                p_draw_odds: drawOdds,
-                p_away_odds: awayOdds,
-                p_home_probability: normalized.home,
-                p_draw_probability: normalized.draw,
-                p_away_probability: normalized.away,
-                p_odds_source: bookmaker.name,
+              .from('match_odds_latest')
+              .upsert({
+                match_id: fixture.fixture.id.toString(),
+                home_team: fixture.teams.home.name,
+                away_team: fixture.teams.away.name,
+                home_team_id: homeTeamId,
+                away_team_id: awayTeamId,
+                home_team_logo: fixture.teams.home.logo,
+                away_team_logo: fixture.teams.away.logo,
+                league_code: league.code,
+                commence_time: fixture.fixture.date,
+                home_odds: homeOdds,
+                draw_odds: drawOdds,
+                away_odds: awayOdds,
+                home_probability: normalized.home,
+                draw_probability: normalized.draw,
+                away_probability: normalized.away,
+                predicted_score_home: predictedScore.home, // 🔥 추가
+                predicted_score_away: predictedScore.away, // 🔥 추가
+                predicted_winner: predictedWinner,          // 🔥 추가
+                odds_source: `Averaged from ${validOddsCount} bookmakers`,
+                updated_at: new Date().toISOString(),
+              }, {
+                onConflict: 'match_id'
               })
 
             if (latestError) {
               console.error('❌ Latest save error:', latestError.message)
             } else {
               savedCount++
-              console.log(`✅ Saved: ${fixture.teams.home.name} (ID:${homeTeamId}) vs ${fixture.teams.away.name} (ID:${awayTeamId}) - ${normalized.home.toFixed(1)}% / ${normalized.draw.toFixed(1)}% / ${normalized.away.toFixed(1)}%`)
+              console.log(`✅ Saved: ${fixture.teams.home.name} vs ${fixture.teams.away.name} - ${normalized.home.toFixed(1)}% / ${normalized.draw.toFixed(1)}% / ${normalized.away.toFixed(1)}% - Score: ${predictedScore.home}-${predictedScore.away}`)
             }
 
             // API 제한 방지 (경기 간 0.5초 대기)
