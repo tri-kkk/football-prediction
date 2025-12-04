@@ -8,18 +8,34 @@ import { TEAM_NAME_KR } from '../teamLogos'
 // 🏆 리그 정보
 const LEAGUES = [
   { code: 'ALL', nameKo: '전체', nameEn: 'All Leagues', logo: '🌍', isEmoji: true },
+  // 유럽 대항전
   { code: 'CL', nameKo: '챔스', nameEn: 'Champions League', logo: 'https://media.api-sports.io/football/leagues/2.png', isEmoji: false },
   { code: 'EL', nameKo: '유로파', nameEn: 'Europa League', logo: 'https://media.api-sports.io/football/leagues/3.png', isEmoji: false },
   { code: 'UECL', nameKo: '컨퍼런스', nameEn: 'UEFA Conference League', logo: 'https://media.api-sports.io/football/leagues/848.png', isEmoji: false },
   { code: 'UNL', nameKo: '네이션스', nameEn: 'UEFA Nations League', logo: 'https://media.api-sports.io/football/leagues/5.png', isEmoji: false },
+  // 잉글랜드
   { code: 'PL', nameKo: 'EPL', nameEn: 'Premier League', logo: 'https://media.api-sports.io/football/leagues/39.png', isEmoji: false },
   { code: 'ELC', nameKo: '챔피언십', nameEn: 'Championship', logo: 'https://media.api-sports.io/football/leagues/40.png', isEmoji: false },
+  { code: 'FAC', nameKo: 'FA컵', nameEn: 'FA Cup', logo: 'https://media.api-sports.io/football/leagues/45.png', isEmoji: false },        // 🆕
+  { code: 'EFL', nameKo: 'EFL컵', nameEn: 'EFL Cup', logo: 'https://media.api-sports.io/football/leagues/46.png', isEmoji: false },      // 🆕
+  // 스페인
   { code: 'PD', nameKo: '라리가', nameEn: 'La Liga', logo: 'https://media.api-sports.io/football/leagues/140.png', isEmoji: false },
+  { code: 'CDR', nameKo: '코파델레이', nameEn: 'Copa del Rey', logo: 'https://media.api-sports.io/football/leagues/143.png', isEmoji: false },  // 🆕
+  // 독일
   { code: 'BL1', nameKo: '분데스', nameEn: 'Bundesliga', logo: 'https://media.api-sports.io/football/leagues/78.png', isEmoji: false },
+  { code: 'DFB', nameKo: 'DFB포칼', nameEn: 'DFB Pokal', logo: 'https://media.api-sports.io/football/leagues/81.png', isEmoji: false },  // 🆕
+  // 이탈리아
   { code: 'SA', nameKo: '세리에', nameEn: 'Serie A', logo: 'https://media.api-sports.io/football/leagues/135.png', isEmoji: false },
+  { code: 'CIT', nameKo: '코파이탈리아', nameEn: 'Coppa Italia', logo: 'https://media.api-sports.io/football/leagues/137.png', isEmoji: false },  // 🆕
+  // 프랑스
   { code: 'FL1', nameKo: '리그1', nameEn: 'Ligue 1', logo: 'https://media.api-sports.io/football/leagues/61.png', isEmoji: false },
+  { code: 'CDF', nameKo: '쿠프드프랑스', nameEn: 'Coupe de France', logo: 'https://media.api-sports.io/football/leagues/66.png', isEmoji: false },  // 🆕
+  // 포르투갈
   { code: 'PPL', nameKo: '포르투갈', nameEn: 'Primeira Liga', logo: 'https://media.api-sports.io/football/leagues/94.png', isEmoji: false },
+  { code: 'TDP', nameKo: '타사드포르투갈', nameEn: 'Taça de Portugal', logo: 'https://media.api-sports.io/football/leagues/96.png', isEmoji: false },  // 🆕
+  // 네덜란드
   { code: 'DED', nameKo: '네덜란드', nameEn: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png', isEmoji: false },
+  { code: 'KNV', nameKo: 'KNVB컵', nameEn: 'KNVB Cup', logo: 'https://media.api-sports.io/football/leagues/90.png', isEmoji: false },  // 🆕
 ]
 
 // 예측 정보 인터페이스 - 기존 테이블 구조에 맞춤

@@ -9,18 +9,36 @@ const supabase = createClient(
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY!
 const API_FOOTBALL_HOST = 'v3.football.api-sports.io'
 
-// 🏆 리그 설정
+// 🏆 리그 설정 (20개 - 12개 리그 + 8개 컵대회)
 const LEAGUES = [
-  { code: 'PL', apiId: 39, name: 'Premier League' },
-  { code: 'PD', apiId: 140, name: 'La Liga' },
-  { code: 'BL1', apiId: 78, name: 'Bundesliga' },
-  { code: 'SA', apiId: 135, name: 'Serie A' },
-  { code: 'FL1', apiId: 61, name: 'Ligue 1' },
-  { code: 'PPL', apiId: 94, name: 'Primeira Liga' },
-  { code: 'DED', apiId: 88, name: 'Eredivisie' },
+  // 유럽 대항전
   { code: 'CL', apiId: 2, name: 'Champions League' },
   { code: 'EL', apiId: 3, name: 'Europa League' },
-  { code: 'ELC', apiId: 40, name: 'Championship' }
+  { code: 'UECL', apiId: 848, name: 'Conference League' },
+  { code: 'UNL', apiId: 5, name: 'Nations League' },
+  // 잉글랜드
+  { code: 'PL', apiId: 39, name: 'Premier League' },
+  { code: 'ELC', apiId: 40, name: 'Championship' },
+  { code: 'FAC', apiId: 45, name: 'FA Cup' },           // 🆕
+  { code: 'EFL', apiId: 46, name: 'EFL Cup' },          // 🆕
+  // 스페인
+  { code: 'PD', apiId: 140, name: 'La Liga' },
+  { code: 'CDR', apiId: 143, name: 'Copa del Rey' },    // 🆕
+  // 독일
+  { code: 'BL1', apiId: 78, name: 'Bundesliga' },
+  { code: 'DFB', apiId: 81, name: 'DFB Pokal' },        // 🆕
+  // 이탈리아
+  { code: 'SA', apiId: 135, name: 'Serie A' },
+  { code: 'CIT', apiId: 137, name: 'Coppa Italia' },    // 🆕
+  // 프랑스
+  { code: 'FL1', apiId: 61, name: 'Ligue 1' },
+  { code: 'CDF', apiId: 66, name: 'Coupe de France' },  // 🆕
+  // 포르투갈
+  { code: 'PPL', apiId: 94, name: 'Primeira Liga' },
+  { code: 'TDP', apiId: 96, name: 'Taca de Portugal' }, // 🆕
+  // 네덜란드
+  { code: 'DED', apiId: 88, name: 'Eredivisie' },
+  { code: 'KNV', apiId: 90, name: 'KNVB Beker' },       // 🆕
 ]
 
 // 🌐 팀명 한글 매핑 (UTF-8 인코딩 수정)

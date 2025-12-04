@@ -4,18 +4,36 @@ import { NextRequest, NextResponse } from 'next/server'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 
-// 리그 코드 매핑
+// 리그 코드 매핑 (20개 - 12개 리그 + 8개 컵대회)
 const LEAGUE_IDS: { [key: string]: number } = {
-  'PL': 39,    // Premier League
-  'PD': 140,   // La Liga
-  'BL1': 78,   // Bundesliga
-  'SA': 135,   // Serie A
-  'FL1': 61,   // Ligue 1
+  // 유럽 대항전
   'CL': 2,     // Champions League
   'EL': 3,     // Europa League
+  'UECL': 848, // Conference League
+  'UNL': 5,    // Nations League
+  // 잉글랜드
+  'PL': 39,    // Premier League
   'ELC': 40,   // Championship
+  'FAC': 45,   // FA Cup 🆕
+  'EFL': 46,   // EFL Cup 🆕
+  // 스페인
+  'PD': 140,   // La Liga
+  'CDR': 143,  // Copa del Rey 🆕
+  // 독일
+  'BL1': 78,   // Bundesliga
+  'DFB': 81,   // DFB Pokal 🆕
+  // 이탈리아
+  'SA': 135,   // Serie A
+  'CIT': 137,  // Coppa Italia 🆕
+  // 프랑스
+  'FL1': 61,   // Ligue 1
+  'CDF': 66,   // Coupe de France 🆕
+  // 포르투갈
   'PPL': 94,   // Primeira Liga
+  'TDP': 96,   // Taca de Portugal 🆕
+  // 네덜란드
   'DED': 88,   // Eredivisie
+  'KNV': 90,   // KNVB Beker 🆕
 }
 
 // 예상 스코어 계산 (확률 기반)
