@@ -38,18 +38,36 @@ interface InsightCombo {
   icon: string
 }
 
-// 리그 로고 매핑
+// 리그 로고 매핑 (20개 - 12개 리그 + 8개 컵대회)
 const LEAGUE_LOGOS: { [key: string]: string } = {
-  'PL': 'https://media.api-sports.io/football/leagues/39.png',
-  'PD': 'https://media.api-sports.io/football/leagues/140.png',
-  'BL1': 'https://media.api-sports.io/football/leagues/78.png',
-  'SA': 'https://media.api-sports.io/football/leagues/135.png',
-  'FL1': 'https://media.api-sports.io/football/leagues/61.png',
+  // 유럽 대항전
   'CL': 'https://media.api-sports.io/football/leagues/2.png',
   'EL': 'https://media.api-sports.io/football/leagues/3.png',
-  'PPL': 'https://media.api-sports.io/football/leagues/94.png',
-  'DED': 'https://media.api-sports.io/football/leagues/88.png',
+  'UECL': 'https://media.api-sports.io/football/leagues/848.png',
+  'UNL': 'https://media.api-sports.io/football/leagues/5.png',
+  // 잉글랜드
+  'PL': 'https://media.api-sports.io/football/leagues/39.png',
   'ELC': 'https://media.api-sports.io/football/leagues/40.png',
+  'FAC': 'https://media.api-sports.io/football/leagues/45.png',   // 🆕 FA Cup
+  'EFL': 'https://media.api-sports.io/football/leagues/46.png',   // 🆕 EFL Cup
+  // 스페인
+  'PD': 'https://media.api-sports.io/football/leagues/140.png',
+  'CDR': 'https://media.api-sports.io/football/leagues/143.png',  // 🆕 Copa del Rey
+  // 독일
+  'BL1': 'https://media.api-sports.io/football/leagues/78.png',
+  'DFB': 'https://media.api-sports.io/football/leagues/81.png',   // 🆕 DFB Pokal
+  // 이탈리아
+  'SA': 'https://media.api-sports.io/football/leagues/135.png',
+  'CIT': 'https://media.api-sports.io/football/leagues/137.png',  // 🆕 Coppa Italia
+  // 프랑스
+  'FL1': 'https://media.api-sports.io/football/leagues/61.png',
+  'CDF': 'https://media.api-sports.io/football/leagues/66.png',   // 🆕 Coupe de France
+  // 포르투갈
+  'PPL': 'https://media.api-sports.io/football/leagues/94.png',
+  'TDP': 'https://media.api-sports.io/football/leagues/96.png',   // 🆕 Taca de Portugal
+  // 네덜란드
+  'DED': 'https://media.api-sports.io/football/leagues/88.png',
+  'KNV': 'https://media.api-sports.io/football/leagues/90.png',   // 🆕 KNVB Beker
 }
 
 // 조합 타입별 색상
