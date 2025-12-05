@@ -168,19 +168,41 @@ export async function GET(request: NextRequest) {
       const leagueCodes = Object.keys(LEAGUE_IDS)
       console.log(`🔄 Fetching from ${leagueCodes.length} leagues...`)
       
-      const promises = leagueCodes.map(async (code) => {
-        const leagueConfig = LEAGUE_IDS[code]
-        console.log(`  → Fetching ${code} (season ${leagueConfig.season})...`)
-        const matches = await getFinishedMatches(leagueConfig.id, leagueConfig.season, fromStr, toStr)
-        console.log(`  ✓ ${code}: ${matches.length} matches`)
-        return matches.map((m: any) => ({
-          ...m,
-          leagueCode: code
-        }))
-      })
+      // 배치로 5개씩 순차 처리 (레이트 리밋 방지)
+      const batchSize = 5
+      for (let i = 0; i < leagueCodes.length; i += batchSize) {
+        const batch = leagueCodes.slice(i, i + batchSize)
+        console.log(`  📦 Batch ${Math.floor(i/batchSize) + 1}: ${batch.join(', ')}`)
+        
+        const promises = batch.map(async (code) => {
+          try {
+            const leagueConfig = LEAGUE_IDS[code]
+            const matches = await getFinishedMatches(leagueConfig.id, leagueConfig.season, fromStr, toStr)
+            console.log(`  ✓ ${code}: ${matches.length} matches`)
+            return matches.map((m: any) => ({
+              ...m,
+              leagueCode: code
+            }))
+          } catch (error) {
+            console.error(`  ❌ ${code} failed:`, error)
+            return []
+          }
+        })
+        
+        const results = await Promise.allSettled(promises)
+        results.forEach((result) => {
+          if (result.status === 'fulfilled') {
+            allMatches.push(...result.value)
+          }
+        })
+        
+        // 배치 간 딜레이 (레이트 리밋 방지)
+        if (i + batchSize < leagueCodes.length) {
+          await new Promise(r => setTimeout(r, 300))
+        }
+      }
       
-      const results = await Promise.all(promises)
-      allMatches = results.flat()
+      console.log(`📊 Total matches fetched: ${allMatches.length}`)
     } else {
       const leagueConfig = LEAGUE_IDS[league]
       if (leagueConfig) {
