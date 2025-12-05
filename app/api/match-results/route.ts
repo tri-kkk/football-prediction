@@ -84,18 +84,34 @@ async function getMatchStatistics(matchId: string) {
 
 // 리그 코드 → API-Football ID 매핑 (시즌 2025)
 const LEAGUE_IDS: Record<string, { id: number, season: number }> = {
+  // 유럽 대항전
   'CL': { id: 2, season: 2025 },      // Champions League
   'EL': { id: 3, season: 2025 },      // Europa League
   'UECL': { id: 848, season: 2025 },  // Conference League
   'UNL': { id: 5, season: 2025 },     // Nations League
+  // 잉글랜드
   'PL': { id: 39, season: 2025 },     // Premier League
   'ELC': { id: 40, season: 2025 },    // Championship
+  'FAC': { id: 45, season: 2025 },    // FA Cup
+  'EFL': { id: 46, season: 2025 },    // EFL Cup
+  // 스페인
   'PD': { id: 140, season: 2025 },    // La Liga
+  'CDR': { id: 143, season: 2025 },   // Copa del Rey
+  // 독일
   'BL1': { id: 78, season: 2025 },    // Bundesliga
+  'DFB': { id: 81, season: 2025 },    // DFB Pokal
+  // 이탈리아
   'SA': { id: 135, season: 2025 },    // Serie A
+  'CIT': { id: 137, season: 2025 },   // Coppa Italia
+  // 프랑스
   'FL1': { id: 61, season: 2025 },    // Ligue 1
+  'CDF': { id: 66, season: 2025 },    // Coupe de France
+  // 포르투갈
   'PPL': { id: 94, season: 2025 },    // Primeira Liga
+  'TDP': { id: 96, season: 2025 },    // Taça de Portugal
+  // 네덜란드
   'DED': { id: 88, season: 2025 },    // Eredivisie
+  'KNV': { id: 90, season: 2025 },    // KNVB Cup
 }
 
 export async function GET(request: NextRequest) {
