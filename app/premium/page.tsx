@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
+import AdBanner from '../components/AdBanner'
 
 // ============================================
 // 다국어 텍스트
@@ -1017,7 +1018,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                     <span className="font-mono text-yellow-400 font-bold">{prediction.pattern}</span>
                     {prediction.patternStats && (
                       <span className="text-xs text-gray-500 ml-2">
-                        ({prediction.patternStats.totalMatches}경기 기반)
+                        ({prediction.patternStats.totalMatches} {t.basedOn})
                       </span>
                     )}
                   </div>
@@ -1289,37 +1290,49 @@ export default function PremiumPredictPage() {
       </header>
       
       {/* 메인 콘텐츠 */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {loading ? (
-          <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-            <p className="text-gray-400 mt-4">{t.loading}</p>
-          </div>
-        ) : filteredMatches.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-gray-400">{t.noMatches}</p>
-            <button 
-              onClick={loadUpcomingMatches}
-              className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm"
-            >
-              🔄 새로고침
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMatches.map((match, index) => (
-              <MatchPredictionCard
-                key={match.match_id || index}
-                match={match}
-                onAnalyze={() => analyzeMatch(matches.indexOf(match))}
-                onClear={() => clearPrediction(matches.indexOf(match))}
-                language={language}
-                t={t}
-              />
-            ))}
-          </div>
-        )}
-      </main>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex gap-6 relative">
+          {/* 좌측 광고 배너 (PC xl 이상에서만) */}
+          <aside className="hidden xl:block flex-shrink-0 w-[300px]" style={{ marginLeft: '-332px' }}>
+            <div className="sticky top-20">
+              <AdBanner slot="sidebar" />
+            </div>
+          </aside>
+          
+          {/* 메인 콘텐츠 영역 */}
+          <main className="flex-1 min-w-0">
+            {loading ? (
+              <div className="text-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+                <p className="text-gray-400 mt-4">{t.loading}</p>
+              </div>
+            ) : filteredMatches.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-gray-400">{t.noMatches}</p>
+                <button 
+                  onClick={loadUpcomingMatches}
+                  className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm"
+                >
+                  🔄 새로고침
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredMatches.map((match, index) => (
+                  <MatchPredictionCard
+                    key={match.match_id || index}
+                    match={match}
+                    onAnalyze={() => analyzeMatch(matches.indexOf(match))}
+                    onClear={() => clearPrediction(matches.indexOf(match))}
+                    language={language}
+                    t={t}
+                  />
+                ))}
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
     </div>
   )
 }
