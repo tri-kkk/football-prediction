@@ -12,15 +12,16 @@ export default function MobileBottomNav() {
     {
       href: '/',
       icon: '/preview.svg',
-      labelKo: '프리뷰',
-      labelEn: 'Preview',
+      labelKo: '트렌드',
+      labelEn: 'Trend',
       hidden: false
     },
     {
-      href: '/insights',
+      href: '/premium',
       icon: 'insights',
-      labelKo: '인사이트',
-      labelEn: 'Insights',
+      labelKo: '예측',
+      labelEn: 'Predict',
+      badge: 'BETA',
       hidden: false
     },
     {
@@ -33,8 +34,8 @@ export default function MobileBottomNav() {
     {
       href: '/blog',
       icon: '/article.svg',
-      labelKo: '아티클',
-      labelEn: 'Article',
+      labelKo: '리포트',
+      labelEn: 'Report',
       hidden: false
     },
     {
@@ -110,6 +111,11 @@ export default function MobileBottomNav() {
               <span className="text-[11px] font-medium">
                 {language === 'ko' ? item.labelKo : item.labelEn}
               </span>
+              {item.badge && (
+                <span className="absolute -top-0.5 -right-0.5 px-1 py-0.5 text-[8px] font-bold rounded bg-yellow-400 text-black">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           )
         })}

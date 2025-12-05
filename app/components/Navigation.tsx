@@ -18,16 +18,17 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { 
-    labelKo: '프리뷰',
-    labelEn: 'Preview',
+    labelKo: '트렌드',
+    labelEn: 'Trend',
     href: '/', 
     icon: '/preview.svg'
   },
   { 
-    labelKo: '인사이트',
-    labelEn: 'Insights',
-    href: '/insights', 
+    labelKo: '예측',
+    labelEn: 'Predict',
+    href: '/premium', 
     icon: 'insights',
+    badge: 'BETA',
     hidden: false
   },
   { 
@@ -44,8 +45,8 @@ const menuItems: MenuItem[] = [
     hidden: true
   },
   { 
-    labelKo: '아티클',
-    labelEn: 'Article',
+    labelKo: '리포트',
+    labelEn: 'Report',
     href: '/blog', 
     icon: '/article.svg'
   },
