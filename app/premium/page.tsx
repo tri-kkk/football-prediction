@@ -392,11 +392,14 @@ const translateReason = (reason: string, language: 'ko' | 'en'): string => {
   if (reason.startsWith('Pattern:')) {
     return reason.replace('Pattern:', '패턴:').replace('matches', '경기 기반')
   }
+  if (reason.startsWith('Data:')) {
+    return reason.replace('Data:', '데이터:').replace('games', '경기')
+  }
   if (reason === 'Warning: Home promoted') {
-    return '홈팀 승격팀 주의'
+    return '⚠️ 홈팀 승격팀'
   }
   if (reason === 'Warning: Away promoted') {
-    return '원정팀 승격팀 주의'
+    return '⚠️ 원정팀 승격팀'
   }
   if (reason.includes('Low edge') && reason.includes('risky')) {
     return reason.replace('Low edge', '확률 차이').replace('- risky', '- 예측 어려움')

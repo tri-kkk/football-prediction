@@ -328,9 +328,8 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
       finalProb: { home: 0.4, draw: 0.3, away: 0.3 },
       recommendation: {
         pick: 'SKIP',
-        confidence: 'VERY_LOW',
-        value: 'POOR',
-        reasons: ['팀 통계 부족'],
+        grade: 'PASS' as const,
+        reasons: ['Insufficient team stats'],
       },
       debug: { 
         homeStats: null, 
@@ -635,43 +634,43 @@ function generateRecommendation(
   
   // 파워 차이
   if (Math.abs(powerDiff) >= 20) {
-    reasons.push(`파워차 ${Math.abs(powerDiff)}점`)
+    reasons.push(`Power diff: ${Math.abs(powerDiff)}pts`)
   }
   
   // 확률 우위
-  reasons.push(`확률 우위 ${(probDiff * 100).toFixed(1)}%`)
+  reasons.push(`Prob edge: ${(probDiff * 100).toFixed(1)}%`)
   
   // 선제골 승률
   if (pick === 'HOME' && rates.homeFirstGoalWinRate >= 0.70) {
-    reasons.push(`홈 선득점 승률 ${(rates.homeFirstGoalWinRate * 100).toFixed(0)}%`)
+    reasons.push(`Home 1st goal win: ${(rates.homeFirstGoalWinRate * 100).toFixed(0)}%`)
   }
   if (pick === 'AWAY' && rates.awayFirstGoalWinRate >= 0.60) {
-    reasons.push(`원정 선득점 승률 ${(rates.awayFirstGoalWinRate * 100).toFixed(0)}%`)
+    reasons.push(`Away 1st goal win: ${(rates.awayFirstGoalWinRate * 100).toFixed(0)}%`)
   }
   
   // 패턴 기반
   if (patternStats && patternStats.totalMatches >= 20) {
-    reasons.push(`패턴 ${patternStats.totalMatches}경기 기반`)
+    reasons.push(`Pattern: ${patternStats.totalMatches} matches`)
   }
   
   // 데이터 양
   if (minGames >= 50) {
-    reasons.push(`데이터 ${minGames}+ 경기`)
+    reasons.push(`Data: ${minGames}+ games`)
   }
   
   // 승격팀 경고
   if (homeStats.is_promoted) {
-    reasons.push(`⚠️ 홈팀 승격팀`)
+    reasons.push(`Warning: Home promoted`)
   }
   if (awayStats.is_promoted) {
-    reasons.push(`⚠️ 원정팀 승격팀`)
+    reasons.push(`Warning: Away promoted`)
   }
   
   // 확률 너무 비슷하면 SKIP
   if (probDiff < 0.08) {
     pick = 'SKIP'
     grade = 'PASS'
-    reasons.unshift(`확률 차이 ${(probDiff * 100).toFixed(1)}% - 리스크`)
+    reasons.unshift(`Low edge ${(probDiff * 100).toFixed(1)}% - risky`)
   }
   
   return { pick, grade, reasons }
