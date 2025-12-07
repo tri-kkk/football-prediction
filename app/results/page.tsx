@@ -285,8 +285,16 @@ export default function MatchResultsPage() {
                     actualWinner = 'away'
                   }
                   
-                  // 기존 테이블 컬럼명 사용
-                  const isWinnerCorrect = prediction.predicted_winner === actualWinner
+                  // 🔧 예측 승자를 스코어 기반으로 재계산 (DB 불일치 방지)
+                  let predictedWinner: 'home' | 'draw' | 'away' = 'draw'
+                  if (prediction.predicted_home_score > prediction.predicted_away_score) {
+                    predictedWinner = 'home'
+                  } else if (prediction.predicted_away_score > prediction.predicted_home_score) {
+                    predictedWinner = 'away'
+                  }
+                  
+                  // 스코어 기반으로 적중 여부 판단
+                  const isWinnerCorrect = predictedWinner === actualWinner
                   const isScoreCorrect = 
                     prediction.predicted_home_score === match.final_score_home &&
                     prediction.predicted_away_score === match.final_score_away

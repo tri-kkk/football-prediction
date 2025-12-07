@@ -42,6 +42,7 @@ const texts = {
     patternHistory: '패턴 역대',
     analysisResult: '분석 결과',
     analysisReason: '분석 근거',
+    odds: '배당',
     winRate: '승률',
     powerDiff: '파워차',
     confidence: '신뢰도',
@@ -91,6 +92,7 @@ const texts = {
     patternHistory: 'Pattern History',
     analysisResult: 'Result',
     analysisReason: 'Reasoning',
+    odds: 'Odds',
     winRate: 'Win%',
     powerDiff: 'Power',
     confidence: 'Conf.',
@@ -661,24 +663,6 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
         </div>
       </div>
       
-      {/* 배당 (있는 경우만) */}
-      {match.home_odds && match.draw_odds && match.away_odds && (
-        <div className="flex justify-center gap-4 mb-4 text-sm">
-          <div className="text-center">
-            <div className="text-blue-400 font-bold">{match.home_odds?.toFixed(2)}</div>
-            <div className="text-xs text-gray-500">{t.homeWin}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-gray-400 font-bold">{match.draw_odds?.toFixed(2)}</div>
-            <div className="text-xs text-gray-500">{t.drawResult}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-red-400 font-bold">{match.away_odds?.toFixed(2)}</div>
-            <div className="text-xs text-gray-500">{t.awayWin}</div>
-          </div>
-        </div>
-      )}
-      
       {/* 예측 결과 */}
       {loading ? (
         <div className="text-center py-4">
@@ -765,6 +749,27 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                       <span>{translateReason(reason, language)}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+            
+            {/* 배당 */}
+            {match.home_odds && match.draw_odds && match.away_odds && (
+              <div className="bg-black/30 rounded p-3 mt-2">
+                <div className="text-[10px] text-gray-500 mb-2">{t.odds}</div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2 text-center">
+                    <div className="text-blue-400 font-bold text-lg">{match.home_odds?.toFixed(2)}</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">{t.homeWin}</div>
+                  </div>
+                  <div className="bg-gray-500/10 border border-gray-500/30 rounded-lg p-2 text-center">
+                    <div className="text-gray-300 font-bold text-lg">{match.draw_odds?.toFixed(2)}</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">{t.drawResult}</div>
+                  </div>
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-center">
+                    <div className="text-red-400 font-bold text-lg">{match.away_odds?.toFixed(2)}</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">{t.awayWin}</div>
+                  </div>
                 </div>
               </div>
             )}
