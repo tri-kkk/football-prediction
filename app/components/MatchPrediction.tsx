@@ -116,21 +116,65 @@ interface MatchPredictionProps {
   darkMode: boolean
 }
 
-// ✅ 다국어 팀명 변환 함수 (언어 설정 반영)
-const getLocalizedTeamName = (teamName: string, language: string): string => {
-  if (language === 'ko') {
-    return TEAM_NAME_KR[teamName] || teamName
-  }
-  return teamName // 영어일 때는 원본 이름
-}
-
-// ✅ 로고 검색용 한글 팀명 (언어 설정과 무관하게 항상 한글)
-const getKoreanTeamNameForLogo = (teamName: string): string => {
+// ✅ 한글 팀명 변환 함수
+const getKoreanTeamName = (teamName: string): string => {
   return TEAM_NAME_KR[teamName] || teamName
 }
 
-// 🆕 개선된 현실적인 스코어 계산 함수 (v2)
-// 변경점: 더 다양한 스코어 + 0점 경기 감소 + 리그 평균 반영
+// 🆕 개선된 현실적인 스코어 계산 함수 (v3)
+// 문제점: 1-1 예측이 너무 많음 (90%+)
+// 해결: 승률 기반 로직 강화, 무승부 조건 엄격화
+
+// 🆕 승률로 결과 결정 (핵심 로직)
+function determineResult(
+  homeWinPercent: number, 
+  drawPercent: number, 
+  awayWinPercent: number
+): 'home' | 'draw' | 'away' {
+  
+  // 1. 무승부가 확실히 가장 높을 때만 무승부 예측
+  // (무승부가 홈과 원정 둘 다보다 높아야 함)
+  if (drawPercent > homeWinPercent && drawPercent > awayWinPercent && drawPercent >= 33) {
+    return 'draw'
+  }
+  
+  // 2. 홈 vs 원정 비교
+  if (homeWinPercent > awayWinPercent) {
+    return 'home'
+  } else if (awayWinPercent > homeWinPercent) {
+    return 'away'
+  }
+  
+  // 3. 완전히 같으면 홈 어드밴티지
+  return 'home'
+}
+
+// 🆕 승률만으로 스코어 예측 (기대골 없을 때)
+function calculateFromWinPercent(
+  homeWinPercent: number, 
+  drawPercent: number, 
+  awayWinPercent: number
+): { home: number; away: number } {
+  
+  const result = determineResult(homeWinPercent, drawPercent, awayWinPercent)
+  
+  if (result === 'home') {
+    if (homeWinPercent > 65) return { home: 3, away: 0 }
+    if (homeWinPercent > 55) return { home: 2, away: 0 }
+    if (homeWinPercent > 45) return { home: 2, away: 1 }
+    return { home: 1, away: 0 }
+  } else if (result === 'away') {
+    if (awayWinPercent > 65) return { home: 0, away: 3 }
+    if (awayWinPercent > 55) return { home: 0, away: 2 }
+    if (awayWinPercent > 45) return { home: 1, away: 2 }
+    return { home: 0, away: 1 }
+  } else {
+    // 무승부
+    if (drawPercent > 35) return { home: 1, away: 1 }
+    return { home: 2, away: 2 }
+  }
+}
+
 function calculateRealisticScore(
   avgHome: number, 
   avgAway: number, 
@@ -141,153 +185,103 @@ function calculateRealisticScore(
   
   // 🔥 음수 또는 유효하지 않은 데이터 처리
   if (avgHome < 0 || avgAway < 0 || isNaN(avgHome) || isNaN(avgAway)) {
-    console.warn('⚠️ Invalid goal data, using win percentages:', { avgHome, avgAway })
-    
-    // 승률 기반으로만 스코어 예측 (더 다양하게)
-    const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
-    
-    if (maxPercent === homeWinPercent) {
-      if (homeWinPercent > 65) return { home: 3, away: 1 }
-      if (homeWinPercent > 55) return { home: 2, away: 0 }
-      if (homeWinPercent > 45) return { home: 2, away: 1 }
-      return { home: 1, away: 0 }
-    } else if (maxPercent === awayWinPercent) {
-      if (awayWinPercent > 65) return { home: 1, away: 3 }
-      if (awayWinPercent > 55) return { home: 0, away: 2 }
-      if (awayWinPercent > 45) return { home: 1, away: 2 }
-      return { home: 0, away: 1 }
-    } else {
-      // 무승부 - 다양한 스코어
-      if (drawPercent > 35) return { home: 1, away: 1 }
-      return { home: 2, away: 2 }
-    }
+    console.warn('⚠️ Invalid goal data, using win percentages only:', { avgHome, avgAway })
+    return calculateFromWinPercent(homeWinPercent, drawPercent, awayWinPercent)
   }
   
-  // 🆕 1. 유럽 리그 평균 득점 기반 최소값 설정
-  const LEAGUE_AVG_HOME = 1.5
-  const LEAGUE_AVG_AWAY = 1.1
+  // 🆕 핵심 로직: 승률 기반으로 결과 결정
+  const result = determineResult(homeWinPercent, drawPercent, awayWinPercent)
   
-  // API 값이 너무 낮으면 리그 평균으로 보정
-  const adjustedHome = avgHome < 0.5 ? Math.max(avgHome, LEAGUE_AVG_HOME * 0.7) : avgHome
-  const adjustedAway = avgAway < 0.5 ? Math.max(avgAway, LEAGUE_AVG_AWAY * 0.7) : avgAway
+  // 기대골 기반 스코어 계산
+  let homeGoals: number
+  let awayGoals: number
   
-  // 🆕 2. 확률 기반 반올림 (소수점 0.35 이상이면 올림)
-  const homeDecimal = adjustedHome % 1
-  const awayDecimal = adjustedAway % 1
+  // 리그 평균 반영 (너무 낮은 기대골 보정)
+  const adjustedHome = Math.max(avgHome, 0.8)
+  const adjustedAway = Math.max(avgAway, 0.7)
   
-  let homeGoals = homeDecimal >= 0.35 
-    ? Math.ceil(adjustedHome) 
-    : Math.floor(adjustedHome)
-  
-  let awayGoals = awayDecimal >= 0.35 
-    ? Math.ceil(adjustedAway) 
-    : Math.floor(adjustedAway)
-  
-  // 🆕 3. 승률에 따른 골 조정 (더 세분화)
-  const maxPercent = Math.max(homeWinPercent, drawPercent, awayWinPercent)
-  
-  if (maxPercent === homeWinPercent) {
-    // 홈 승리 예상
-    if (homeWinPercent > 70 && homeGoals <= awayGoals) {
-      homeGoals = awayGoals + 2
-    } else if (homeWinPercent > 55 && homeGoals <= awayGoals) {
-      homeGoals = awayGoals + 1
-    } else if (homeWinPercent > 40 && homeGoals < awayGoals) {
-      homeGoals = awayGoals
-    }
+  if (result === 'home') {
+    // 홈 승리 예측
+    const dominance = homeWinPercent - awayWinPercent
     
-    // 높은 승률이면 최소 2골 보장
-    if (homeWinPercent > 60 && homeGoals < 2) {
-      homeGoals = 2
-    }
-  } else if (maxPercent === awayWinPercent) {
-    // 원정 승리 예상
-    if (awayWinPercent > 70 && awayGoals <= homeGoals) {
-      awayGoals = homeGoals + 2
-    } else if (awayWinPercent > 55 && awayGoals <= homeGoals) {
-      awayGoals = homeGoals + 1
-    } else if (awayWinPercent > 40 && awayGoals < homeGoals) {
-      awayGoals = homeGoals
-    }
-    
-    if (awayWinPercent > 60 && awayGoals < 2) {
-      awayGoals = 2
-    }
-  } else {
-    // 무승부 예상
-    if (drawPercent > 30) {
-      const avgGoals = (homeGoals + awayGoals) / 2
-      if (avgGoals < 1) {
-        homeGoals = 1
-        awayGoals = 1
-      } else if (avgGoals >= 2) {
-        homeGoals = 2
-        awayGoals = 2
-      } else {
-        homeGoals = Math.round(avgGoals)
-        awayGoals = Math.round(avgGoals)
+    if (dominance > 40) {
+      // 압도적 우세 (예: 75-15-10) → 3-0, 3-1, 4-0
+      homeGoals = Math.max(3, Math.round(adjustedHome * 1.3))
+      awayGoals = dominance > 50 ? 0 : Math.min(1, Math.round(adjustedAway * 0.5))
+    } else if (dominance > 25) {
+      // 확실한 우세 (예: 58-22-21) → 2-0, 2-1, 3-1
+      homeGoals = Math.max(2, Math.round(adjustedHome))
+      awayGoals = Math.round(adjustedAway * 0.6)
+    } else if (dominance > 10) {
+      // 약간 우세 (예: 47-28-25) → 2-1, 1-0
+      homeGoals = Math.max(1, Math.round(adjustedHome * 0.9))
+      awayGoals = Math.max(0, Math.round(adjustedAway * 0.7))
+      // 홈이 우세하면 최소 1골 차 보장
+      if (homeGoals <= awayGoals) {
+        homeGoals = awayGoals + 1
+      }
+    } else {
+      // 미세 우세 (예: 40-30-30) → 1-0, 2-1
+      homeGoals = Math.max(1, Math.round(adjustedHome * 0.8))
+      awayGoals = Math.round(adjustedAway * 0.6)
+      if (homeGoals <= awayGoals) {
+        homeGoals = awayGoals + 1
       }
     }
-  }
-  
-  // 🆕 4. 총 득점 조정
-  const totalGoals = homeGoals + awayGoals
-  
-  // 총 득점이 너무 낮으면 조정 (1골 이하)
-  if (totalGoals <= 1 && (adjustedHome + adjustedAway) >= 2) {
-    if (homeWinPercent > awayWinPercent) {
-      homeGoals = Math.max(homeGoals, 2)
-      awayGoals = Math.max(awayGoals, 1)
-    } else if (awayWinPercent > homeWinPercent) {
-      homeGoals = Math.max(homeGoals, 1)
-      awayGoals = Math.max(awayGoals, 2)
+  } else if (result === 'away') {
+    // 원정 승리 예측
+    const dominance = awayWinPercent - homeWinPercent
+    
+    if (dominance > 40) {
+      // 압도적 우세 → 0-3, 1-3, 0-4
+      awayGoals = Math.max(3, Math.round(adjustedAway * 1.3))
+      homeGoals = dominance > 50 ? 0 : Math.min(1, Math.round(adjustedHome * 0.5))
+    } else if (dominance > 25) {
+      // 확실한 우세 → 0-2, 1-2, 1-3
+      awayGoals = Math.max(2, Math.round(adjustedAway))
+      homeGoals = Math.round(adjustedHome * 0.6)
+    } else if (dominance > 10) {
+      // 약간 우세 → 1-2, 0-1
+      awayGoals = Math.max(1, Math.round(adjustedAway * 0.9))
+      homeGoals = Math.max(0, Math.round(adjustedHome * 0.7))
+      if (awayGoals <= homeGoals) {
+        awayGoals = homeGoals + 1
+      }
     } else {
+      // 미세 우세 → 0-1, 1-2
+      awayGoals = Math.max(1, Math.round(adjustedAway * 0.8))
+      homeGoals = Math.round(adjustedHome * 0.6)
+      if (awayGoals <= homeGoals) {
+        awayGoals = homeGoals + 1
+      }
+    }
+  } else {
+    // 무승부 예측 (drawPercent가 가장 높을 때만)
+    const avgGoals = (adjustedHome + adjustedAway) / 2
+    
+    if (avgGoals >= 2.5) {
+      // 다득점 예상 → 2-2
+      homeGoals = 2
+      awayGoals = 2
+    } else if (avgGoals >= 1.5) {
+      // 중간 → 1-1
+      homeGoals = 1
+      awayGoals = 1
+    } else {
+      // 저득점 예상 → 0-0 또는 1-1
       homeGoals = 1
       awayGoals = 1
     }
   }
   
-  // 총 득점이 너무 높으면 조정 (6골 이상)
-  if (homeGoals + awayGoals > 5) {
-    const scale = 5 / (homeGoals + awayGoals)
-    homeGoals = Math.round(homeGoals * scale)
-    awayGoals = Math.round(awayGoals * scale)
-  }
+  // 최대 골 제한 (현실성)
+  homeGoals = Math.min(homeGoals, 5)
+  awayGoals = Math.min(awayGoals, 5)
   
-  // 🆕 5. 0-0 방지 (강화)
-  if (homeGoals === 0 && awayGoals === 0) {
-    if (adjustedHome >= adjustedAway) {
-      if (adjustedHome > 1.2) {
-        homeGoals = 2
-        awayGoals = 1
-      } else {
-        homeGoals = 1
-      }
-    } else {
-      if (adjustedAway > 1.2) {
-        homeGoals = 1
-        awayGoals = 2
-      } else {
-        awayGoals = 1
-      }
-    }
-  }
-  
-  // 🆕 6. 최종 일관성 체크
-  if (homeWinPercent > awayWinPercent + 15 && homeGoals <= awayGoals) {
-    homeGoals = Math.max(awayGoals + 1, 2)
-  }
-  
-  if (awayWinPercent > homeWinPercent + 15 && awayGoals <= homeGoals) {
-    awayGoals = Math.max(homeGoals + 1, 2)
-  }
-  
-  // 무승부 확률이 가장 높은데 비기지 않으면 조정
-  if (maxPercent === drawPercent && homeGoals !== awayGoals) {
-    const avg = Math.round((homeGoals + awayGoals) / 2)
-    homeGoals = avg || 1
-    awayGoals = avg || 1
-  }
+  console.log(`📊 Score prediction:`)
+  console.log(`  - Win%: ${homeWinPercent}% / ${drawPercent}% / ${awayWinPercent}%`)
+  console.log(`  - Expected goals: ${avgHome.toFixed(2)} - ${avgAway.toFixed(2)}`)
+  console.log(`  - Result: ${result} → ${homeGoals}-${awayGoals}`)
   
   return { home: homeGoals, away: awayGoals }
 }
@@ -422,37 +416,6 @@ export default function MatchPrediction({
           
           setPrediction(predData)
           setDebugInfo(prev => ({ ...prev, predictionStatus: 'success' }))
-          
-          // 🆕 예측 데이터를 DB에 저장 (비동기, 백그라운드)
-          try {
-            const homeProb = Math.round(parseFloat(predData.predictions.percent.home.replace('%', '')) || 33)
-            const drawProb = Math.round(parseFloat(predData.predictions.percent.draw.replace('%', '')) || 34)
-            const awayProb = Math.round(parseFloat(predData.predictions.percent.away.replace('%', '')) || 33)
-            const predHomeScore = parseInt(predData.predictions.goals.home) || 1
-            const predAwayScore = parseInt(predData.predictions.goals.away) || 1
-
-            fetch('/api/predictions/save', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                matchId: fixtureId,
-                league: league || null,
-                homeTeam: homeTeam,
-                awayTeam: awayTeam,
-                homeWinProbability: homeProb,
-                drawProbability: drawProb,
-                awayWinProbability: awayProb,
-                predictedHomeScore: predHomeScore,
-                predictedAwayScore: predAwayScore,
-                matchDate: new Date().toISOString()
-              })
-            }).then(res => {
-              if (res.ok) console.log(`✅ Prediction saved for match ${fixtureId}`)
-              else console.warn(`⚠️ Failed to save prediction for match ${fixtureId}`)
-            }).catch(err => console.warn(`⚠️ Error saving prediction:`, err))
-          } catch (saveError) {
-            console.warn('⚠️ Error preparing prediction save:', saveError)
-          }
         } else {
           console.warn(`⚠️ Prediction API failed: ${predResponse.status}`)
           
@@ -1285,7 +1248,7 @@ export default function MatchPrediction({
                           {/* 홈팀 */}
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <img 
-                              src={getTeamLogo(match.homeTeamId, getKoreanTeamNameForLogo(match.homeTeam))}
+                              src={getTeamLogo(match.homeTeamId, getKoreanTeamName(match.homeTeam))}
                               alt={match.homeTeam}
                               className="w-5 h-5 object-contain flex-shrink-0"
                               onError={(e) => {
@@ -1297,7 +1260,7 @@ export default function MatchPrediction({
                                 ? 'font-black ' + (darkMode ? 'text-white' : 'text-gray-900')
                                 : 'font-medium ' + (darkMode ? 'text-gray-400' : 'text-gray-600')
                             }`}>
-                              {getLocalizedTeamName(match.homeTeam, language)}
+                              {getKoreanTeamName(match.homeTeam)}
                             </span>
                             {match.isHomeTeamHome && (
                               <span className={`text-xs px-1 py-0.5 rounded font-bold flex-shrink-0 ${
@@ -1343,10 +1306,10 @@ export default function MatchPrediction({
                                 ? 'font-black ' + (darkMode ? 'text-white' : 'text-gray-900')
                                 : 'font-medium ' + (darkMode ? 'text-gray-400' : 'text-gray-600')
                             }`}>
-                              {getLocalizedTeamName(match.awayTeam, language)}
+                              {getKoreanTeamName(match.awayTeam)}
                             </span>
                             <img 
-                              src={getTeamLogo(match.awayTeamId, getKoreanTeamNameForLogo(match.awayTeam))}
+                              src={getTeamLogo(match.awayTeamId, getKoreanTeamName(match.awayTeam))}
                               alt={match.awayTeam}
                               className="w-5 h-5 object-contain flex-shrink-0"
                               onError={(e) => {
@@ -1417,7 +1380,7 @@ export default function MatchPrediction({
                           <div className={`flex-1 text-xs font-medium truncate ${
                             darkMode ? 'text-gray-300' : 'text-gray-700'
                           }`}>
-                            {getLocalizedTeamName(match.opponent, language)}
+                            {getKoreanTeamName(match.opponent)}
                           </div>
                           
                           {/* 스코어 */}
@@ -1479,7 +1442,7 @@ export default function MatchPrediction({
                           <div className={`flex-1 text-xs font-medium truncate ${
                             darkMode ? 'text-gray-300' : 'text-gray-700'
                           }`}>
-                            {getLocalizedTeamName(match.opponent, language)}
+                            {getKoreanTeamName(match.opponent)}
                           </div>
                           
                           {/* 스코어 */}
