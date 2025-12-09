@@ -440,7 +440,6 @@ export default function AdReportPage() {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
-                              weekday: 'short'
                             })}
                           </td>
                           <td className="px-6 py-4 text-right text-blue-400">
