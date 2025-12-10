@@ -59,6 +59,15 @@ interface Match {
   final_score_home: number
   final_score_away: number
   statistics?: any
+  // 🔧 match_results 테이블의 실제 컬럼명 (API에서 직접 옴)
+  predicted_winner?: string
+  predicted_score_home?: number
+  predicted_score_away?: number
+  predicted_home_probability?: number
+  predicted_draw_probability?: number
+  predicted_away_probability?: number
+  is_correct?: boolean
+  prediction_type?: string
   // 예측 관련 필드
   prediction?: Prediction | null
   actualWinner?: 'home' | 'draw' | 'away'
@@ -247,90 +256,70 @@ export default function MatchResultsPage() {
       if (data.success) {
         const matchesArray: Match[] = data.matches || []
         
-        // 예측 데이터 로드 및 매칭
-        if (matchesArray.length > 0) {
-          const matchIds = matchesArray.map(m => m.match_id)
+        // 🔧 match_results 테이블에서 직접 예측 데이터 사용 (별도 API 호출 불필요!)
+        let winnerCorrectCount = 0
+        let scoreCorrectCount = 0
+        let withPredictionsCount = 0
+
+        matchesArray.forEach((match: any) => {
+          // match_results 테이블의 실제 컬럼명 확인
+          const hasPrediction = match.predicted_home_probability !== null && 
+                                match.predicted_home_probability !== undefined
           
-          try {
-            const predictionsResponse = await fetch(
-              `/api/predictions/batch?matchIds=${matchIds.join(',')}`
-            )
+          if (hasPrediction) {
+            withPredictionsCount++
             
-            if (predictionsResponse.ok) {
-              const predictionsData = await predictionsResponse.json()
-              
-              // 기존 테이블 컬럼명에 맞게 매핑
-              const predictionsMap = new Map(
-                (predictionsData.data || []).map((p: any) => [
-                  String(p.match_id),  // match_id를 string으로 변환하여 매칭
-                  p
-                ])
-              )
-              
-              let winnerCorrectCount = 0
-              let scoreCorrectCount = 0
-              let withPredictionsCount = 0
-
-              matchesArray.forEach(match => {
-                const prediction = predictionsMap.get(String(match.match_id))
-                
-                if (prediction) {
-                  withPredictionsCount++
-                  
-                  // 실제 승자 계산
-                  let actualWinner: 'home' | 'draw' | 'away' = 'draw'
-                  if (match.final_score_home > match.final_score_away) {
-                    actualWinner = 'home'
-                  } else if (match.final_score_away > match.final_score_home) {
-                    actualWinner = 'away'
-                  }
-                  
-                  // 🔧 예측 승자를 스코어 기반으로 재계산 (DB 불일치 방지)
-                  let predictedWinner: 'home' | 'draw' | 'away' = 'draw'
-                  if (prediction.predicted_home_score > prediction.predicted_away_score) {
-                    predictedWinner = 'home'
-                  } else if (prediction.predicted_away_score > prediction.predicted_home_score) {
-                    predictedWinner = 'away'
-                  }
-                  
-                  // 스코어 기반으로 적중 여부 판단
-                  const isWinnerCorrect = predictedWinner === actualWinner
-                  const isScoreCorrect = 
-                    prediction.predicted_home_score === match.final_score_home &&
-                    prediction.predicted_away_score === match.final_score_away
-                  
-                  if (isWinnerCorrect) winnerCorrectCount++
-                  if (isScoreCorrect) scoreCorrectCount++
-                  
-                  // 기존 테이블 컬럼명으로 매핑
-                  match.prediction = {
-                    homeWinProbability: prediction.predicted_home_win,      // 기존 컬럼명
-                    drawProbability: prediction.predicted_draw,             // 기존 컬럼명
-                    awayWinProbability: prediction.predicted_away_win,      // 기존 컬럼명
-                    predictedHomeScore: prediction.predicted_home_score,    // 새 컬럼
-                    predictedAwayScore: prediction.predicted_away_score,    // 새 컬럼
-                    predictedWinner: prediction.predicted_winner            // 새 컬럼
-                  }
-                  match.actualWinner = actualWinner
-                  match.isWinnerCorrect = isWinnerCorrect
-                  match.isScoreCorrect = isScoreCorrect
-                }
-              })
-
-              setPredictionStats({
-                total: matchesArray.length,
-                withPredictions: withPredictionsCount,
-                winnerCorrect: winnerCorrectCount,
-                scoreCorrect: scoreCorrectCount,
-                accuracy: withPredictionsCount > 0 
-                  ? Math.round((winnerCorrectCount / withPredictionsCount) * 100)
-                  : 0
-              })
+            // 실제 승자 계산
+            let actualWinner: 'home' | 'draw' | 'away' = 'draw'
+            if (match.final_score_home > match.final_score_away) {
+              actualWinner = 'home'
+            } else if (match.final_score_away > match.final_score_home) {
+              actualWinner = 'away'
             }
-          } catch (predError) {
-            console.warn('Failed to load predictions:', predError)
+            
+            // 예측 승자를 스코어 기반으로 계산
+            let predictedWinner: 'home' | 'draw' | 'away' = 'draw'
+            const predHome = match.predicted_score_home ?? 0
+            const predAway = match.predicted_score_away ?? 0
+            if (predHome > predAway) {
+              predictedWinner = 'home'
+            } else if (predAway > predHome) {
+              predictedWinner = 'away'
+            }
+            
+            // 적중 여부 판단
+            const isWinnerCorrect = predictedWinner === actualWinner
+            const isScoreCorrect = 
+              predHome === match.final_score_home &&
+              predAway === match.final_score_away
+            
+            if (isWinnerCorrect) winnerCorrectCount++
+            if (isScoreCorrect) scoreCorrectCount++
+            
+            // 🔧 match_results 테이블 컬럼명으로 매핑
+            match.prediction = {
+              homeWinProbability: Math.round(match.predicted_home_probability ?? 0),
+              drawProbability: Math.round(match.predicted_draw_probability ?? 0),
+              awayWinProbability: Math.round(match.predicted_away_probability ?? 0),
+              predictedHomeScore: predHome,
+              predictedAwayScore: predAway,
+              predictedWinner: predictedWinner
+            }
+            match.actualWinner = actualWinner
+            match.isWinnerCorrect = isWinnerCorrect
+            match.isScoreCorrect = isScoreCorrect
           }
-        }
+        })
+
+        setPredictionStats({
+          total: matchesArray.length,
+          withPredictions: withPredictionsCount,
+          winnerCorrect: winnerCorrectCount,
+          scoreCorrect: scoreCorrectCount,
+          accuracy: withPredictionsCount > 0 
+            ? Math.round((winnerCorrectCount / withPredictionsCount) * 100)
+            : 0
+        })
         
         dataCache.current[dateKey] = matchesArray
         setMatches(matchesArray)
@@ -655,11 +644,10 @@ export default function MatchResultsPage() {
                       {/* 데스크톱: 테이블 형식 */}
                       <div className="hidden md:block overflow-x-auto">
                         {/* 테이블 헤더 */}
-                        <div className="grid grid-cols-[80px_1fr_120px_80px_80px_70px] gap-2 px-4 py-2 bg-[#1a1a1a] border-b border-gray-800 text-xs text-gray-500 font-medium">
+                        <div className="grid grid-cols-[80px_1fr_120px_80px_70px] gap-2 px-4 py-2 bg-[#1a1a1a] border-b border-gray-800 text-xs text-gray-500 font-medium">
                           <div className="text-center">{currentLanguage === 'ko' ? '시간' : 'Time'}</div>
                           <div className="text-center">{currentLanguage === 'ko' ? '경기' : 'Match'}</div>
                           <div className="text-center">{currentLanguage === 'ko' ? '확률 (1-X-2)' : 'Prob (1-X-2)'}</div>
-                          <div className="text-center">{currentLanguage === 'ko' ? '예측' : 'Pred'}</div>
                           <div className="text-center">{currentLanguage === 'ko' ? '결과' : 'Result'}</div>
                           <div className="text-center">{currentLanguage === 'ko' ? '적중' : 'Hit'}</div>
                         </div>
@@ -675,7 +663,7 @@ export default function MatchResultsPage() {
                               <div key={match.match_id} className="bg-[#151515]">
                                 <button
                                   onClick={() => handleMatchExpand(match)}
-                                  className="w-full grid grid-cols-[80px_1fr_120px_80px_80px_70px] gap-2 px-4 py-3 hover:bg-[#1a1a1a] transition-colors items-center"
+                                  className="w-full grid grid-cols-[80px_1fr_120px_80px_70px] gap-2 px-4 py-3 hover:bg-[#1a1a1a] transition-colors items-center"
                                 >
                                   {/* 시간 */}
                                   <div className="text-xs text-gray-500 font-medium text-center">
@@ -719,17 +707,6 @@ export default function MatchResultsPage() {
                                           {pred.awayWinProbability || '-'}
                                         </span>
                                       </>
-                                    ) : (
-                                      <span className="text-gray-600">-</span>
-                                    )}
-                                  </div>
-
-                                  {/* 예측 스코어 */}
-                                  <div className="text-center">
-                                    {pred ? (
-                                      <span className="text-blue-400 font-bold text-sm">
-                                        {pred.predictedHomeScore}-{pred.predictedAwayScore}
-                                      </span>
                                     ) : (
                                       <span className="text-gray-600">-</span>
                                     )}
@@ -857,17 +834,12 @@ export default function MatchResultsPage() {
                                   </div>
                                 </div>
 
-                                {/* 하단: 예측 정보 + 적중 라벨 (있을 때만) */}
+                                {/* 하단: 확률 정보 + 적중 라벨 (있을 때만) */}
                                 {pred && (
                                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-800/50">
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-xs text-gray-500">
-                                        {currentLanguage === 'ko' ? '예측' : 'Pred'} <span className="text-blue-400 font-medium">{pred.predictedHomeScore}-{pred.predictedAwayScore}</span>
-                                      </span>
-                                      <span className="text-xs text-gray-500">
-                                        {currentLanguage === 'ko' ? '확률' : 'Prob'} <span className="text-gray-400">{pred.homeWinProbability}-{pred.drawProbability}-{pred.awayWinProbability}</span>
-                                      </span>
-                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {currentLanguage === 'ko' ? '확률' : 'Prob'} <span className="text-gray-400">{pred.homeWinProbability}-{pred.drawProbability}-{pred.awayWinProbability}</span>
+                                    </span>
                                     {match.isWinnerCorrect ? (
                                       <span className="px-2 py-0.5 text-xs font-bold bg-[#A3FF4C] text-black rounded">{currentLanguage === 'ko' ? '적중' : 'Hit'}</span>
                                     ) : (
