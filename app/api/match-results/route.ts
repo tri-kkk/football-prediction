@@ -75,7 +75,21 @@ export async function GET(request: NextRequest) {
     console.log(`✅ Found ${data?.length || 0} matches in Supabase`)
 
     // 데이터 변환 (기존 프론트엔드 호환 유지)
-    const matches = (data || []).map(row => ({
+    const matches = (data || []).map(row => {
+      // ✅ KST 시간 변환 (DB는 timestamp without time zone = UTC)
+      let matchTimeKST = ''
+      if (row.match_date) {
+        // 'Z' 붙여서 UTC임을 명시 → Asia/Seoul로 변환
+        const date = new Date(row.match_date + 'Z')
+        matchTimeKST = date.toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'Asia/Seoul'
+        })
+      }
+      
+      return {
       // 기본 정보
       match_id: row.match_id?.toString() || '',
       league: row.league || '',
@@ -86,6 +100,7 @@ export async function GET(request: NextRequest) {
       home_crest: row.home_crest || '',
       away_crest: row.away_crest || '',
       match_date: row.match_date || '',
+      match_time_kst: matchTimeKST,  // ✅ KST 시간 추가
       match_status: row.match_status || 'FT',
       
       // 실제 결과
@@ -103,7 +118,8 @@ export async function GET(request: NextRequest) {
       // 적중 여부
       is_correct: row.is_correct ?? null,
       prediction_type: row.prediction_type || null,
-    }))
+    }
+    })
 
     // 예측 데이터 있는 경기 수 로깅
     const withPredictions = matches.filter(m => m.predicted_home_probability !== null).length

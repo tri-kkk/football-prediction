@@ -55,6 +55,7 @@ interface Match {
   home_crest?: string
   away_crest?: string
   match_date: string
+  match_time_kst?: string  // ✅ KST 시간 (API에서 변환해서 내려줌)
   league: string
   final_score_home: number
   final_score_away: number
@@ -372,11 +373,16 @@ export default function MatchResultsPage() {
     return league ? (lang === 'ko' ? league.nameKo : league.nameEn) : code
   }
 
+  // ✅ 수정: UTC → KST 변환 (DB는 timestamp without time zone = UTC)
   function formatTime(dateString: string): string {
-    const date = new Date(dateString)
-    const hours = date.getHours()
-    const minutes = date.getMinutes().toString().padStart(2, '0')
-    return `${hours}:${minutes}`
+    // 'Z' 붙여서 UTC임을 명시 → Asia/Seoul로 변환
+    const date = new Date(dateString + 'Z')
+    return date.toLocaleTimeString('ko-KR', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: false,
+      timeZone: 'Asia/Seoul'
+    })
   }
 
   // 예측 결과 배지
