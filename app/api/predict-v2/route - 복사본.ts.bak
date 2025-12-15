@@ -3,7 +3,6 @@
 // 선제골 + 폼 기반 (배당 불필요)
 // 3가지 Method 평균 + 패턴 역대 승률 반영
 // ✅ v2.1: 전체 시즌 통합 통계 사용
-// ✅ v2.2: PICK 등급 자동 저장 기능 추가
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -25,11 +24,6 @@ interface PredictionInput {
   leagueId: number
   leagueCode: string
   season: string
-  // ✅ 추가 필드 (PICK 저장용)
-  matchId?: string | number
-  commenceTime?: string
-  homeTeamLogo?: string
-  awayTeamLogo?: string
 }
 
 interface TeamStats {
@@ -298,111 +292,150 @@ async function getAggregatedStats(
     }
   }
   
+  console.log(`✅ Aggregated ${aggregated.seasons_count} seasons for ${aggregated.team_name}: ${aggregated.total_played} games`)
+  
   return aggregated
 }
 
 // ============================================
-// 메인 예측 함수
+// 메인 예측 로직
 // ============================================
 
 async function predict(input: PredictionInput): Promise<PredictionResult> {
-  const { homeTeam, awayTeam, homeTeamId, awayTeamId, leagueCode, season } = input
+  const { homeTeam, awayTeam, homeTeamId, awayTeamId, leagueId, leagueCode, season } = input
   
   // ============================================
-  // 1단계: 팀 통계 조회 (전체 시즌 합산)
+  // 1단계: 전체 시즌 통합 통계 조회
   // ============================================
   
   const homeStats = await getAggregatedStats(homeTeamId, homeTeam, season)
   const awayStats = await getAggregatedStats(awayTeamId, awayTeam, season)
   
+  // 기본값 설정 (통계 없을 경우)
   if (!homeStats || !awayStats) {
-    throw new Error(`Stats not found: ${!homeStats ? homeTeam : awayTeam}`)
+    return {
+      homeTeam,
+      awayTeam,
+      homePower: 50,
+      awayPower: 50,
+      homePA: { all: 1, five: 1, firstGoal: 0.5 },
+      awayPA: { all: 1, five: 1, firstGoal: 0.5 },
+      method1: { win: 0.4, draw: 0.3, lose: 0.3 },
+      method2: { win: 0.4, draw: 0.3, lose: 0.3 },
+      method3: { win: 0.4, draw: 0.3, lose: 0.3 },
+      pattern: '2-2-2',
+      patternStats: null,
+      finalProb: { home: 0.4, draw: 0.3, away: 0.3 },
+      recommendation: {
+        pick: 'SKIP',
+        grade: 'PASS' as const,
+        reasons: ['Insufficient team stats'],
+      },
+      debug: { 
+        homeStats: null, 
+        awayStats: null,
+        note: 'No team stats found'
+      },
+    }
   }
   
   // ============================================
-  // 2단계: P/A 비율 계산
+  // 2단계: P/A (득실비율) 계산
   // ============================================
   
-  // 홈팀 P/A (홈 경기 기준)
   const homePA_all = calcPA(homeStats.home_goals_for, homeStats.home_goals_against)
-  const homePA_five = (homeStats.form_home_5 ?? 1.5) / 1.5  // 폼 기반 추정
-  const homePA_firstGoal = homeStats.home_first_goal_games > 0
-    ? calcPA(
-        homeStats.home_first_goal_wins, 
-        homeStats.home_first_goal_games - homeStats.home_first_goal_wins
-      )
-    : 1.0
-  
-  // 원정팀 P/A (원정 경기 기준)
   const awayPA_all = calcPA(awayStats.away_goals_for, awayStats.away_goals_against)
-  const awayPA_five = (awayStats.form_away_5 ?? 1.5) / 1.5
-  const awayPA_firstGoal = awayStats.away_first_goal_games > 0
-    ? calcPA(
-        awayStats.away_first_goal_wins,
-        awayStats.away_first_goal_games - awayStats.away_first_goal_wins
-      )
-    : 1.0
+  
+  // 선제골 승률 (전체 시즌 합산)
+  const homePA_firstGoal = calcWinRate(homeStats.home_first_goal_wins, homeStats.home_first_goal_games)
+  const awayPA_firstGoal = calcWinRate(awayStats.away_first_goal_wins, awayStats.away_first_goal_games)
   
   // ============================================
-  // 3단계: Method 1 - P/A 직접 비교 + 폼 보정
+  // 2-1단계: 폼 지수 반영
   // ============================================
   
-  const homeFormBonus = homeStats.form_home_5 ? (homeStats.form_home_5 - 1.5) * 0.1 : 0
-  const awayFormBonus = awayStats.form_away_5 ? (awayStats.form_away_5 - 1.5) * 0.1 : 0
+  const homeForm = homeStats.form_home_5 ?? 1.5
+  const awayForm = awayStats.form_away_5 ?? 1.5
   
-  const homeScore_m1 = (homePA_all * 0.4 + homePA_five * 0.3 + homePA_firstGoal * 0.3) + homeFormBonus + 0.05
-  const awayScore_m1 = (awayPA_all * 0.4 + awayPA_five * 0.3 + awayPA_firstGoal * 0.3) + awayFormBonus
+  const homeFormBonus = (homeForm - 1.5) * 0.167
+  const awayFormBonus = (awayForm - 1.5) * 0.167
   
-  const totalScore_m1 = homeScore_m1 + awayScore_m1 + 0.3
-  let method1_win = homeScore_m1 / totalScore_m1
-  let method1_draw = 0.3 / totalScore_m1
-  let method1_lose = awayScore_m1 / totalScore_m1
+  const homePA_five = homePA_all * (1 + homeFormBonus)
+  const awayPA_five = awayPA_all * (1 + awayFormBonus)
   
-  // 정규화
+  // ============================================
+  // 3단계: Method 1 - P/A 직접 비교
+  // ============================================
+  
+  const homeAdvantage = (homePA_all + homePA_five) / 2
+  const awayAdvantage = (awayPA_all + awayPA_five) / 2
+  const totalAdvantage = homeAdvantage + awayAdvantage
+  
+  const homeFirstGoalBonus = (homePA_firstGoal - 0.5) * 0.3
+  const awayFirstGoalBonus = (awayPA_firstGoal - 0.5) * 0.3
+  
+  let method1_win = (homeAdvantage / totalAdvantage) + homeFirstGoalBonus + homeFormBonus * 0.5
+  let method1_lose = (awayAdvantage / totalAdvantage) + awayFirstGoalBonus + awayFormBonus * 0.5
+  let method1_draw = 1 - method1_win - method1_lose
+  
+  if (method1_draw < 0.05) method1_draw = 0.05
   const m1_total = method1_win + method1_draw + method1_lose
   method1_win /= m1_total
   method1_draw /= m1_total
   method1_lose /= m1_total
   
   // ============================================
-  // 4단계: Method 2 - Min-Max 조합
+  // 4단계: Method 2 - min-max 조합
   // ============================================
   
-  const mmComb = calcMinMaxCombination(homePA_all, homePA_five, awayPA_all, awayPA_five)
+  const combinations = calcMinMaxCombination(
+    homePA_all, homePA_five,
+    awayPA_all, awayPA_five
+  )
   
-  let method2_win = (mmComb.minmin * 0.3 + mmComb.maxmin * 0.4 + mmComb.minmax * 0.3)
-  let method2_draw = 0.25
-  let method2_lose = 1 - method2_win - method2_draw
+  let method2_win = (combinations.minmin + combinations.maxmin + combinations.minmax) / 3
+  let method2_lose = 1 - method2_win
   
-  if (method2_lose < 0.1) {
-    method2_lose = 0.1
-    method2_win = 1 - method2_draw - method2_lose
-  }
+  const paDiff = Math.abs(homeAdvantage - awayAdvantage)
+  let method2_draw = Math.max(0.1, 0.35 - paDiff * 0.2)
+  
+  const m2_total = method2_win + method2_draw + method2_lose
+  method2_win = method2_win / m2_total * (1 - method2_draw) + method2_draw * 0.3
+  method2_lose = method2_lose / m2_total * (1 - method2_draw) + method2_draw * 0.3
+  method2_draw = 1 - method2_win - method2_lose
   
   // ============================================
   // 5단계: Method 3 - 선제골 시나리오
   // ============================================
   
-  const homeFirstGoalWinRate = calcWinRate(homeStats.home_first_goal_wins, homeStats.home_first_goal_games)
-  const awayFirstGoalWinRate = calcWinRate(awayStats.away_first_goal_wins, awayStats.away_first_goal_games)
-  const homeComebackRate = calcWinRate(homeStats.home_concede_first_wins, homeStats.home_concede_first_games)
-  const awayComebackRate = calcWinRate(awayStats.away_concede_first_wins, awayStats.away_concede_first_games)
+  const homeFirstGoalWinRate = calcWinRate(
+    homeStats.home_first_goal_wins,
+    homeStats.home_first_goal_games
+  )
+  const awayFirstGoalWinRate = calcWinRate(
+    awayStats.away_first_goal_wins,
+    awayStats.away_first_goal_games
+  )
   
-  // 선제골 확률 추정
-  const homeFirstProb = 0.55  // 홈팀 선제골 기본 확률
-  const awayFirstProb = 0.45
+  const homeComebackRate = calcWinRate(
+    homeStats.home_concede_first_wins,
+    homeStats.home_concede_first_games
+  )
+  const awayComebackRate = calcWinRate(
+    awayStats.away_concede_first_wins,
+    awayStats.away_concede_first_games
+  )
   
-  // 시나리오별 승률
-  const homeWin_scenario = 
-    homeFirstProb * homeFirstGoalWinRate + 
-    awayFirstProb * awayComebackRate * 0.5
+  const homeScoreFirst = homePA_all / (homePA_all + awayPA_all)
+  const awayScoreFirst = 1 - homeScoreFirst
   
-  const awayWin_scenario = 
-    awayFirstProb * awayFirstGoalWinRate +
-    homeFirstProb * homeComebackRate * 0.3
+  const scenario1_home = homeScoreFirst * homeFirstGoalWinRate
+  const scenario2_home = awayScoreFirst * homeComebackRate
+  const scenario1_away = awayScoreFirst * awayFirstGoalWinRate
+  const scenario2_away = homeScoreFirst * awayComebackRate
   
-  let method3_win = homeWin_scenario
-  let method3_lose = awayWin_scenario
+  let method3_win = scenario1_home + scenario2_home
+  let method3_lose = scenario1_away + scenario2_away
   let method3_draw = 1 - method3_win - method3_lose
   
   if (method3_draw < 0.05) method3_draw = 0.05
@@ -644,65 +677,17 @@ function generateRecommendation(
 }
 
 // ============================================
-// ✅ 🔥 PICK 저장 함수 (NEW!)
-// ============================================
-
-async function savePick(input: PredictionInput, result: PredictionResult): Promise<void> {
-  try {
-    // pick_result에 따른 확률 가져오기
-    const pickKey = result.recommendation.pick.toLowerCase() as 'home' | 'draw' | 'away'
-    const pickProbability = result.finalProb[pickKey] * 100
-    
-    const { data, error } = await supabase
-      .from('pick_recommendations')
-      .upsert({
-        match_id: String(input.matchId || `${input.homeTeam}-vs-${input.awayTeam}-${Date.now()}`),
-        league_code: input.leagueCode,
-        home_team: input.homeTeam,
-        away_team: input.awayTeam,
-        home_team_logo: input.homeTeamLogo || null,
-        away_team_logo: input.awayTeamLogo || null,
-        commence_time: input.commenceTime || new Date().toISOString(),
-        
-        // 예측 정보
-        pick_result: result.recommendation.pick,
-        pick_probability: Math.round(pickProbability * 10) / 10,
-        home_probability: Math.round(result.finalProb.home * 1000) / 10,
-        draw_probability: Math.round(result.finalProb.draw * 1000) / 10,
-        away_probability: Math.round(result.finalProb.away * 1000) / 10,
-        home_power: result.homePower,
-        away_power: result.awayPower,
-        pattern: result.pattern,
-        reasons: result.recommendation.reasons,
-        
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'match_id'
-      })
-    
-    if (error) {
-      console.error('❌ Failed to save PICK:', error.message)
-    } else {
-      console.log(`✅ PICK saved: ${input.homeTeam} vs ${input.awayTeam} (${result.recommendation.pick} ${pickProbability.toFixed(1)}%)`)
-    }
-  } catch (e: any) {
-    console.error('❌ Save PICK error:', e.message)
-  }
-}
-
-// ============================================
 // API 핸들러
 // ============================================
 
 export async function GET(request: NextRequest) {
   return NextResponse.json({
     status: 'ready',
-    version: 'v2.2-pick-tracking',
+    version: 'v2.1-aggregated',
     changes: [
       '✅ 전체 시즌 통합 통계 사용',
       '✅ 2022-2025 시즌 합산',
       '✅ 경기 수 많아져서 승률 안정화',
-      '✅ 🔥 PICK 등급 자동 저장 기능 추가',
     ],
     algorithm: [
       '1. 전체 시즌 통합 P/A 계산',
@@ -712,7 +697,6 @@ export async function GET(request: NextRequest) {
       '5. 3 Method 평균',
       '6. 패턴 역대 승률 50% 반영',
       '7. 파워 점수 & 추천',
-      '8. PICK 등급 → 자동 DB 저장',
     ],
   })
 }
@@ -730,15 +714,9 @@ export async function POST(request: NextRequest) {
     
     const result = await predict(body as PredictionInput)
     
-    // ✅ 🔥 PICK 등급이면 자동 저장!
-    if (result.recommendation.grade === 'PICK') {
-      await savePick(body as PredictionInput, result)
-    }
-    
     return NextResponse.json({
       success: true,
       prediction: result,
-      pickSaved: result.recommendation.grade === 'PICK',  // 저장 여부 알림
     })
     
   } catch (error: any) {
