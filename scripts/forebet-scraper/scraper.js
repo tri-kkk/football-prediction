@@ -117,10 +117,11 @@ const LEAGUE_CODE_MAP = {
 
 const PREVIEWS_URLS = [
   'https://www.forebet.com/en/football-match-previews',
+  'https://www.forebet.com/en/football-match-previews?start=20',
 ];
 
 // 하루 최대 처리 개수 (AI 비용 절감)
-const MAX_POSTS_PER_DAY = 6;
+const MAX_POSTS_PER_DAY = 8;
 
 // 경기 날짜 범위 (오늘 기준 +7일까지)
 const MAX_DAYS_AHEAD = 7;
