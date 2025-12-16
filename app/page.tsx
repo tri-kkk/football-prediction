@@ -2168,6 +2168,56 @@ export default function Home() {
           </div>
         </div>
 
+        {/* 🔥 모바일 PICK 배너 (날짜 필터 아래) - 마케팅 최적화 */}
+        <a 
+          href="/premium"
+          className="lg:hidden block mb-4 active:scale-[0.98] transition-transform"
+        >
+          <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-2xl p-[2px] shadow-lg shadow-orange-500/20">
+            <div className="bg-[#0a0a0f] rounded-2xl p-4">
+              {/* 상단: 타이틀 + LIVE */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🔥</span>
+                  <span className="text-white font-bold text-base">
+                    {currentLanguage === 'ko' ? '트렌드 PICK' : 'Trend PICK'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-green-400 bg-green-500/20 px-2 py-1 rounded-full animate-pulse font-medium">
+                  ● LIVE
+                </span>
+              </div>
+              
+              {/* 중앙: 적중률 강조 */}
+              <div className="flex items-center justify-center gap-4 mb-3">
+                <div className="text-center">
+                  <div className="text-gray-400 text-xs mb-1">
+                    {currentLanguage === 'ko' ? '평균 적중률' : 'Accuracy'}
+                  </div>
+                  <div className="flex items-baseline justify-center">
+                    <span className="text-yellow-400 font-black text-4xl">67</span>
+                    <span className="text-yellow-400 font-bold text-xl ml-0.5">%</span>
+                  </div>
+                </div>
+                <div className="w-px h-12 bg-gray-700" />
+                <div className="text-center">
+                  <div className="text-gray-400 text-xs mb-1">
+                    {currentLanguage === 'ko' ? '분석 경기' : 'Matches'}
+                  </div>
+                  <div className="text-white font-bold text-2xl">8,200+</div>
+                </div>
+              </div>
+              
+              {/* 하단: CTA 버튼 */}
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl py-3 text-center shadow-lg shadow-orange-500/30">
+                <span className="text-white font-bold text-sm">
+                  {currentLanguage === 'ko' ? '무료로 예측 확인하기' : 'View Free Predictions'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </a>
+
         {/* 상단 광고 배너 */}
         
 
