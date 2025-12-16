@@ -1359,7 +1359,7 @@ export default function PremiumPredictPage() {
                       'DED': 'https://media.api-sports.io/football/leagues/88.png',
                     }
                     const leagueNamesKo: Record<string, string> = {
-                      'PL': 'EPL', 'PD': '라리가', 'BL1': '분데스', 'SA': '세리에', 'FL1': '리그1', 'DED': '에레디',
+                      'PL': '프리미어리그', 'PD': '라리가', 'BL1': '분데스리가', 'SA': '세리에A', 'FL1': '리그1', 'DED': '에레디비지',
                     }
                     const leagueNamesEn: Record<string, string> = {
                       'PL': 'EPL', 'PD': 'LaLiga', 'BL1': 'Bundes', 'SA': 'SerieA', 'FL1': 'Ligue1', 'DED': 'Erediv',
@@ -1389,7 +1389,7 @@ export default function PremiumPredictPage() {
                   <div className="mt-3 pt-3 border-t border-gray-700/50">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs text-gray-400">
-                        {language === 'ko' ? '✨ 최근 적중' : '✨ Recent Hits'}
+                        {language === 'ko' ? '✨ 최근 적중 경기' : '✨ Recent Hits'}
                       </span>
                     </div>
                     <div className="relative overflow-hidden">
