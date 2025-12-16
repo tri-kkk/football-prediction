@@ -1,6 +1,7 @@
 /**
- * Supabase Blog Uploader v3
- * - source_url 기반 중복 방지 (가장 확실)
+ * Supabase Blog Uploader v4 (Bilingual)
+ * - 한글 + 영문 동시 업로드
+ * - source_url 기반 중복 방지
  * - 팀+날짜 조합 이중 체크
  * - 썸네일 fallback 강화
  */
@@ -85,10 +86,10 @@ async function checkDuplicateByTeams(homeTeam, awayTeam) {
 
 function generateSlug(match) {
   const home = (match.homeTeam || 'home').toLowerCase()
-    .replace(/[^a-z0-9가-힣]+/g, '-')
+    .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
   const away = (match.awayTeam || 'away').toLowerCase()
-    .replace(/[^a-z0-9가-힣]+/g, '-')
+    .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const rand = Math.random().toString(36).slice(2, 6);
@@ -115,16 +116,26 @@ async function uploadPost(match) {
   const coverImage = getCoverImage(match);
   const slug = match.slug || generateSlug(match);
   
+  // 기본 fallback 값
+  const fallbackTitleEn = `${match.homeTeam} vs ${match.awayTeam} Preview`;
+  const fallbackTitleKr = `${match.homeTeamKr || match.homeTeam} vs ${match.awayTeamKr || match.awayTeam} 프리뷰`;
+  
   const post = {
     slug,
-    title: `${match.homeTeam} vs ${match.awayTeam} Preview`,
-    title_kr: match.title_kr || `${match.homeTeamKr || match.homeTeam} vs ${match.awayTeamKr || match.awayTeam} 프리뷰`,
+    // 영문 (AI 생성 또는 fallback)
+    title: match.title || fallbackTitleEn,
+    excerpt_en: match.excerpt_en || match.excerpt || '',
+    content_en: match.content_en || '',
+    published_en: match.published_en !== undefined ? match.published_en : true,
+    // 한글
+    title_kr: match.title_kr || fallbackTitleKr,
     excerpt: match.excerpt || match.summary || '',
     content: match.content || '',
+    published: match.published !== undefined ? match.published : true,
+    // 공통
     cover_image: coverImage,
     category: 'preview',
-    tags: match.tags || [match.leagueKr || '축구'],
-    published: true,
+    tags: match.tags || [match.leagueKr || 'Football'],
     published_at: new Date().toISOString(),
     source_url: match.sourceUrl || null,
     views: 0
@@ -154,9 +165,12 @@ async function uploadPost(match) {
     .select('id, slug, cover_image');
   
   if (error) {
-    // meta 또는 source_url 컬럼 없으면 제거 후 재시도
+    // 새 컬럼이 없으면 제거 후 재시도
     delete post.meta;
     delete post.source_url;
+    delete post.excerpt_en;
+    delete post.content_en;
+    delete post.published_en;
     
     const { data: data2, error: error2 } = await supabase
       .from('blog_posts')
@@ -164,14 +178,15 @@ async function uploadPost(match) {
       .select('id, slug, cover_image');
     
     if (error2) throw new Error(error2.message);
-    return data2[0];
+    return { ...data2[0], bilingual: false };
   }
   
-  return data[0];
+  return { ...data[0], bilingual: true };
 }
 
 async function uploadAll() {
-  console.log('📤 Supabase Uploader v3 (중복 방지)');
+  console.log('📤 Supabase Uploader v4 (Bilingual)');
+  console.log('🌐 한글 + English 동시 업로드');
   console.log('📅 ' + new Date().toISOString() + '\n');
   
   if (!fs.existsSync('processed-previews.json')) {
@@ -188,6 +203,7 @@ async function uploadAll() {
   console.log(`📋 ${posts.length}개 포스트 업로드 시작...\n`);
   
   let uploaded = 0, skipped = 0, failed = 0;
+  let bilingualCount = 0;
   
   for (let i = 0; i < posts.length; i++) {
     const post = posts[i];
@@ -212,6 +228,14 @@ async function uploadAll() {
       const result = await uploadPost(post);
       console.log(`    ✅ /blog/${result.slug}`);
       console.log(`    🖼️ ${post.thumbnailType || 'fallback'}`);
+      
+      if (result.bilingual) {
+        console.log(`    🌐 한글 + English`);
+        bilingualCount++;
+      } else {
+        console.log(`    🇰🇷 한글만 (영문 컬럼 없음)`);
+      }
+      
       uploaded++;
     } catch (e) {
       console.log(`    ❌ Error: ${e.message}`);
@@ -222,6 +246,7 @@ async function uploadAll() {
   console.log(`\n${'='.repeat(50)}`);
   console.log(`📊 업로드 결과:`);
   console.log(`   ✅ 성공: ${uploaded}`);
+  console.log(`   🌐 이중언어: ${bilingualCount}`);
   console.log(`   ⏭️ 스킵: ${skipped}`);
   console.log(`   ❌ 실패: ${failed}`);
 }

@@ -1,12 +1,12 @@
 /**
- * Forebet Match Preview Scraper v19
- * - 하루 최대 12개 제한 (AI 비용 절감)
- * - 2페이지만 스크래핑 (정확도 우선)
- * - 썸네일 없으면 스킵
+ * Forebet Match Preview Scraper v21
+ * - 하루 최대 6개 제한 (AI 비용 절감)
+ * - 1페이지만 스크래핑
+ * - ⛔ TheSportsDB 경기 썸네일(event)만 허용 (badge 제외)
  * - 페이지에서 리그 정보 직접 추출
  * - TheSportsDB v2 Premium API
- * - ⭐ NEW: 경기 날짜 필터링 (오늘~7일 이내)
- * - ⭐ NEW: 팀명 수식어 제거
+ * - 경기 날짜 필터링 (오늘~7일 이내)
+ * - 팀명 수식어 제거
  */
 
 const puppeteer = require('puppeteer-extra');
@@ -117,11 +117,10 @@ const LEAGUE_CODE_MAP = {
 
 const PREVIEWS_URLS = [
   'https://www.forebet.com/en/football-match-previews',
-  'https://www.forebet.com/en/football-match-previews?start=20',
 ];
 
 // 하루 최대 처리 개수 (AI 비용 절감)
-const MAX_POSTS_PER_DAY = 12;
+const MAX_POSTS_PER_DAY = 6;
 
 // 경기 날짜 범위 (오늘 기준 +7일까지)
 const MAX_DAYS_AHEAD = 7;
@@ -1190,11 +1189,13 @@ async function scrapePreviewDetail(browser, previewInfo, teams) {
  * 메인
  */
 async function scrapeForebetPreviews() {
-  console.log('🚀 Forebet Scraper v19 (날짜+리그 필터링)');
+  console.log('🚀 Forebet Scraper v21 (경기 썸네일만)');
   console.log(`🔑 API Key: ${SPORTSDB_API_KEY.substring(0, 3)}***`);
   console.log('📅 ' + new Date().toISOString());
   console.log(`🎯 지원 리그: ${SUPPORTED_LEAGUES.length}개`);
-  console.log(`📆 경기 범위: 오늘 ~ +${MAX_DAYS_AHEAD}일\n`);
+  console.log(`📆 경기 범위: 오늘 ~ +${MAX_DAYS_AHEAD}일`);
+  console.log(`📸 썸네일: event만 (badge 제외)`);
+  console.log(`📄 페이지: 1페이지 | 최대: ${MAX_POSTS_PER_DAY}개\n`);
   
   const browser = await puppeteer.launch({
     headless: 'new',
@@ -1222,6 +1223,7 @@ async function scrapeForebetPreviews() {
     
     const allPreviews = [];
     let skippedByDate = 0;
+    let skippedNoThumb = 0;
     
     for (let i = 0; i < linksToProcess.length; i++) {
       const preview = linksToProcess[i];
@@ -1247,6 +1249,13 @@ async function scrapeForebetPreviews() {
         }
         
         if (thumbResult) {
+          // ⛔ event 타입(경기 썸네일)만 허용, badge(팀 뱃지)는 스킵
+          if (thumbResult.type !== 'event') {
+            console.log(`    ⏭️ ${thumbResult.type} 타입 - 스킵 (event만 허용)`);
+            skippedNoThumb++;
+            continue;
+          }
+          
           data.thumbnail = thumbResult.thumbnail;
           data.thumbnailType = thumbResult.type;
           data.thumbnailSource = thumbResult.source;
@@ -1254,23 +1263,15 @@ async function scrapeForebetPreviews() {
             data.matchDate = thumbResult.matchDate;
           }
           console.log(`    📸 ${thumbResult.type} (${thumbResult.source})`);
+          
+          allPreviews.push(data);
+          console.log(`    ✅ ${data.leagueKr} | 📝 ${data.previewText.length}자`);
         } else {
-          // ⭐ 썸네일 없으면 동적 생성 API 사용
-          const leagueInfo = LEAGUE_CODE_MAP[data.leagueKey];
-          const leagueCode = leagueInfo?.code || 'PL';
-          
-          // URL 인코딩
-          const homeEncoded = encodeURIComponent(data.homeTeam);
-          const awayEncoded = encodeURIComponent(data.awayTeam);
-          
-          data.thumbnail = `/api/match-thumbnail?home=${homeEncoded}&away=${awayEncoded}&league=${leagueCode}`;
-          data.thumbnailType = 'dynamic';
-          data.thumbnailSource = 'api-generated';
-          console.log(`    📸 동적 생성 (${leagueCode})`);
+          // ⛔ 썸네일 없으면 스킵 (TheSportsDB에서 찾을 수 있는 경기만 처리)
+          console.log(`    ⏭️ 썸네일 없음 - 스킵`);
+          skippedNoThumb++;
+          continue;
         }
-        
-        allPreviews.push(data);
-        console.log(`    ✅ ${data.leagueKr} | 📝 ${data.previewText.length}자`);
       }
       
       await delay(2500);
@@ -1279,19 +1280,10 @@ async function scrapeForebetPreviews() {
     await browser.close();
     
     console.log(`\n${'='.repeat(50)}`);
-    console.log(`📊 결과: ${allPreviews.length}개 (썸네일 있는 것만)`);
+    console.log(`📊 결과: ${allPreviews.length}개 (경기 썸네일 있는 것만)`);
     console.log(`⏭️ 날짜 범위 외 스킵: ${skippedByDate}개`);
-    
-    const thumbStats = { 'v2-league': 0, 'team-search': 0, 'api-generated': 0 };
-    allPreviews.forEach(p => {
-      if (thumbStats[p.thumbnailSource] !== undefined) {
-        thumbStats[p.thumbnailSource]++;
-      }
-    });
-    console.log(`📸 썸네일 소스:`);
-    console.log(`   - v2 리그 기반: ${thumbStats['v2-league']}개`);
-    console.log(`   - 팀 검색: ${thumbStats['team-search']}개`);
-    console.log(`   - 동적 생성: ${thumbStats['api-generated']}개`);
+    console.log(`⏭️ 썸네일 없음/badge 스킵: ${skippedNoThumb}개`);
+    console.log(`📸 모든 썸네일: TheSportsDB 경기 이미지 (event)`);
     
     const avgTextLen = allPreviews.length > 0 
       ? Math.round(allPreviews.reduce((a, p) => a + p.previewText.length, 0) / allPreviews.length)

@@ -440,9 +440,15 @@ export default function MatchResultsPage() {
     return code
   }
 
+  // ✅ UTC → KST 변환 (DB는 timestamp without time zone = UTC)
   const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+    const date = new Date(dateStr + 'Z')  // 'Z' 붙여서 UTC임을 명시
+    return date.toLocaleTimeString('ko-KR', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: false,
+      timeZone: 'Asia/Seoul'  // KST로 변환
+    })
   }
 
   if (loading) {

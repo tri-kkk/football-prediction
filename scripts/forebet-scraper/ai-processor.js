@@ -1,9 +1,10 @@
 /**
- * AI Processor v4 - Gemini Edition
+ * AI Processor v5 - Bilingual Edition
  * - Google Gemini API 사용 (무료 1,500회/일)
- * - 1500-2000자 분량
+ * - 한글 + 영문 동시 생성
+ * - 1500-2000자 분량 (각 언어별)
  * - 구조화된 섹션
- * - 자연스러운 한국어 (AI 티 제거)
+ * - 자연스러운 문체 (AI 티 제거)
  */
 
 const fs = require('fs');
@@ -43,6 +44,21 @@ const TEAM_KR = {
   'København': '코펜하겐', 'Club Brugge': '클럽 브뤼헤',
 };
 
+// 리그명 영문 매핑
+const LEAGUE_EN = {
+  '프리미어리그': 'Premier League',
+  '라리가': 'La Liga',
+  '분데스리가': 'Bundesliga',
+  '세리에A': 'Serie A',
+  '리그1': 'Ligue 1',
+  '챔피언스리그': 'Champions League',
+  '유로파리그': 'Europa League',
+  'UEFA 컨퍼런스리그': 'Conference League',
+  'UEFA 네이션스리그': 'Nations League',
+  '에레디비시': 'Eredivisie',
+  '챔피언십': 'Championship',
+};
+
 function getTeamKr(name) {
   if (!name) return '';
   if (TEAM_KR[name]) return TEAM_KR[name];
@@ -52,22 +68,29 @@ function getTeamKr(name) {
   return name;
 }
 
+function getLeagueEn(leagueKr) {
+  return LEAGUE_EN[leagueKr] || leagueKr;
+}
+
 async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function processWithGemini(match) {
   const homeKr = getTeamKr(match.homeTeam);
   const awayKr = getTeamKr(match.awayTeam);
+  const homeEn = match.homeTeam;
+  const awayEn = match.awayTeam;
+  const leagueEn = getLeagueEn(match.leagueKr);
   
   const previewText = match.previewParagraphs?.join('\n\n') || '';
   const h2hText = match.h2h?.slice(0,5).join('\n') || '';
   const injuriesText = match.injuries?.slice(0,5).join('\n') || '';
 
-  const prompt = `당신은 TrendSoccer의 전문 축구 분석 블로그 작성자입니다.
+  const prompt = `당신은 TrendSoccer의 전문 축구 분석 블로그 작성자입니다. 한글과 영문 버전을 동시에 작성합니다.
 
 ## 📋 경기 정보
-- 리그: ${match.leagueKr} (${match.league})
-- 홈팀: ${homeKr} (${match.homeTeam})
-- 원정팀: ${awayKr} (${match.awayTeam})
+- 리그: ${match.leagueKr} (${leagueEn})
+- 홈팀: ${homeKr} (${homeEn})
+- 원정팀: ${awayKr} (${awayEn})
 - 날짜: ${match.matchDate || '미정'}
 
 ## 📊 예측 데이터
@@ -76,8 +99,8 @@ async function processWithGemini(match) {
 - 예상 스코어: ${match.predictedScore || '미정'}
 
 ## 📈 팀 폼
-- ${match.homeTeam}: ${match.homeForm || '정보없음'}
-- ${match.awayTeam}: ${match.awayForm || '정보없음'}
+- ${homeEn}: ${match.homeForm || '정보없음'}
+- ${awayEn}: ${match.awayForm || '정보없음'}
 
 ## 🔄 상대전적
 ${h2hText || '정보 없음'}
@@ -85,7 +108,7 @@ ${h2hText || '정보 없음'}
 ## 🤕 부상자
 ${injuriesText || '주요 부상자 없음'}
 
-## 📝 참고 자료 (원본 분석)
+## 📝 참고 자료 (원본 분석 - 영어)
 ${previewText.substring(0, 1500) || '없음'}
 
 ---
@@ -94,82 +117,103 @@ ${previewText.substring(0, 1500) || '없음'}
 
 ### 필수 출력 (JSON만 출력하세요)
 {
-  "title": "SEO 친화적 한글 제목 (25-40자)",
+  "title_kr": "SEO 친화적 한글 제목 (25-40자)",
+  "title": "SEO-friendly English title (50-80 chars)",
   "slug": "english-url-slug-format",
-  "excerpt": "목록용 요약 (80-120자)",
-  "content": "마크다운 본문 (1500-2000자)",
-  "tags": ["태그1", "태그2", "태그3", "태그4", "태그5"]
+  "excerpt": "한글 요약 (80-120자)",
+  "excerpt_en": "English excerpt (100-150 chars)",
+  "content": "한글 마크다운 본문 (1500-2000자)",
+  "content_en": "English markdown content (1500-2000 chars)",
+  "tags": ["Tag1", "Tag2", "Tag3", "Tag4", "Tag5"]
 }
 
-### 본문 구조 (content)
+### 한글 본문 구조 (content)
 
 # ${homeKr} vs ${awayKr}: [부제]
 
-[인트로 2-3문장: 경기 중요성, 독자 관심 유도]
+[인트로 2-3문장]
 
 ## 📊 양팀 현황
 
 **${homeKr}**
 - 최근 폼: X승 X무 X패
-- 강점: ...
-- 약점: ...
+- 강점/약점 분석
 
 **${awayKr}**
 - 최근 폼: X승 X무 X패
-- 강점: ...
-- 약점: ...
+- 강점/약점 분석
 
 ## 🎯 전술 분석
 
 ### ${homeKr}의 전략
-[2-3문단]
+[분석]
 
 ### ${awayKr}의 대응
-[2-3문단]
+[분석]
 
 ## 💡 승부처
 
-### 1. [핵심 대결 1]
-[설명]
+1. [핵심 포인트 1]
+2. [핵심 포인트 2]
+3. [핵심 포인트 3]
 
-### 2. [핵심 대결 2]
-[설명]
+## 📈 예측
 
-### 3. [핵심 대결 3]
-[설명]
+**예상 스코어**: [X-X]
+[근거 설명]
 
-## 📈 예상 시나리오
+### 영문 본문 구조 (content_en)
 
-**가장 가능성 높은 전개**: [예상 스코어]
-[구체적 근거와 전개 설명]
+# ${homeEn} vs ${awayEn}: [Subtitle]
 
-**변수**: [반전 가능성]
-[설명]
+[Intro 2-3 sentences]
 
-## 🏷️ 해시태그
+## 📊 Team Analysis
 
-#${match.leagueKr} #${homeKr.replace(/\s/g,'')} #${awayKr.replace(/\s/g,'')} #경기프리뷰 #축구분석
+**${homeEn}**
+- Recent form: X wins, X draws, X losses
+- Strengths/weaknesses
 
-### 문체 규칙 (매우 중요!)
+**${awayEn}**
+- Recent form: X wins, X draws, X losses
+- Strengths/weaknesses
 
-✅ 해야 할 것:
-- 자연스러운 구어체 혼용: "~네요", "~죠", "~거든요"
-- 독자에게 말 걸기: "어떻게 보시나요?", "주목해야 합니다"
-- 다양한 문장 길이 (짧은 문장 → 긴 문장 리듬감)
-- 비유와 예시 활용
-- **굵게** 강조로 핵심 부각
+## 🎯 Tactical Preview
 
-❌ 피해야 할 것 (AI 티 제거):
-- "첫째, 둘째, 셋째" 나열식 금지
-- "~측면에서", "~관점에서" 형식적 표현 금지
-- "또한", "더불어", "아울러" 과도한 사용 금지
-- 똑같은 문장 패턴 반복 금지
-- 인사말/마무리 인사 금지
-- 면책조항 금지
+### ${homeEn}'s Approach
+[Analysis]
 
-### 예시 문체:
-❌ "맨시티는 강력한 공격력을 가지고 있습니다. 또한 리버풀은 견고한 수비를 가지고 있습니다."
-✅ "맨시티의 공격력이 심상치 않네요. 하지만 리버풀 수비도 만만치 않죠. 결국 중원 싸움이 관건이 될 것 같습니다."
+### ${awayEn}'s Counter
+[Analysis]
+
+## 💡 Key Battles
+
+1. [Key point 1]
+2. [Key point 2]
+3. [Key point 3]
+
+## 📈 Prediction
+
+**Expected Score**: [X-X]
+[Reasoning]
+
+### 문체 규칙
+
+✅ 한글:
+- 자연스러운 구어체: "~네요", "~죠", "~거든요"
+- 독자에게 말 걸기: "주목해야 합니다"
+- 다양한 문장 길이
+
+✅ English:
+- Professional but engaging tone
+- Active voice preferred
+- Varied sentence structure
+
+❌ 피해야 할 것:
+- "첫째, 둘째, 셋째" 나열식
+- "In conclusion", "To summarize" 등 AI스러운 표현
+- 인사말/마무리 인사
+- 면책조항
 
 반드시 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.`;
 
@@ -181,7 +225,7 @@ ${previewText.substring(0, 1500) || '없음'}
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 4000,
+          maxOutputTokens: 8000,  // 더 긴 출력을 위해 증가
         }
       })
     });
@@ -204,15 +248,13 @@ ${previewText.substring(0, 1500) || '없음'}
       if (jsonMatch) jsonStr = jsonMatch[0];
     }
     
-    // 더 강력한 JSON 파싱
+    // JSON 파싱
     let result;
     try {
       result = JSON.parse(jsonStr);
     } catch (parseError) {
-      // JSON 문자열 내의 이스케이프되지 않은 줄바꿈 처리
-      // 문자열 값 내부의 줄바꿈만 교체 (키-값 구조는 유지)
+      // 문자열 값 내부의 줄바꿈 처리
       const fixedJson = jsonStr
-        // 문자열 값 내부의 실제 줄바꿈을 \\n으로 변환
         .replace(/"([^"]*?)"/g, (match, content) => {
           const fixed = content
             .replace(/\n/g, '\\n')
@@ -224,20 +266,22 @@ ${previewText.substring(0, 1500) || '없음'}
       try {
         result = JSON.parse(fixedJson);
       } catch (secondError) {
-        // 마지막 시도: 필드별로 추출
+        // 필드별 추출 시도
+        const titleKrMatch = jsonStr.match(/"title_kr"\s*:\s*"([^"]+)"/);
         const titleMatch = jsonStr.match(/"title"\s*:\s*"([^"]+)"/);
         const slugMatch = jsonStr.match(/"slug"\s*:\s*"([^"]+)"/);
         const excerptMatch = jsonStr.match(/"excerpt"\s*:\s*"([^"]+)"/);
+        const excerptEnMatch = jsonStr.match(/"excerpt_en"\s*:\s*"([^"]+)"/);
         
-        // content는 여러 줄일 수 있으므로 다르게 처리
-        const contentMatch = jsonStr.match(/"content"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"tags"|"\s*})/);
-        
-        if (titleMatch) {
+        if (titleKrMatch || titleMatch) {
           result = {
-            title: titleMatch[1],
+            title_kr: titleKrMatch?.[1] || '',
+            title: titleMatch?.[1] || '',
             slug: slugMatch?.[1] || '',
             excerpt: excerptMatch?.[1] || '',
-            content: contentMatch?.[1]?.replace(/\\n/g, '\n').replace(/\\"/g, '"') || '',
+            excerpt_en: excerptEnMatch?.[1] || '',
+            content: '',
+            content_en: '',
             tags: []
           };
         } else {
@@ -246,37 +290,50 @@ ${previewText.substring(0, 1500) || '없음'}
       }
     }
     
-    // 태그 정리
-    let tags = result.tags || [match.leagueKr, homeKr, awayKr];
+    // 태그 정리 (영문으로)
+    let tags = result.tags || [leagueEn, homeEn, awayEn, 'Preview', 'Analysis'];
     if (typeof tags === 'string') tags = tags.split(',').map(t => t.trim());
     
     return {
       ...match,
-      title_kr: result.title,
-      slug: result.slug || generateSlug(homeKr, awayKr),
+      // 한글
+      title_kr: result.title_kr || result.title,
       excerpt: result.excerpt,
       content: result.content,
       summary: result.excerpt,
+      // 영문
+      title: result.title || result.title_kr,
+      excerpt_en: result.excerpt_en || result.excerpt,
+      content_en: result.content_en || result.content,
+      // 공통
+      slug: result.slug || generateSlug(homeEn, awayEn),
       tags: tags,
       homeTeamKr: homeKr,
       awayTeamKr: awayKr,
+      homeTeam: homeEn,
+      awayTeam: awayEn,
+      // 발행 설정
+      published: true,
+      published_en: true,
+      // 메타
       ai_model: 'gemini-2.0-flash',
       processed_at: new Date().toISOString()
     };
   } catch (e) {
     console.log(`  ⚠️ AI error: ${e.message}`);
-    return createFallback(match, homeKr, awayKr);
+    return createFallback(match, homeKr, awayKr, homeEn, awayEn, leagueEn);
   }
 }
 
 function generateSlug(home, away) {
-  const h = home.toLowerCase().replace(/[^a-z0-9가-힣]/g, '-').replace(/--+/g, '-');
-  const a = away.toLowerCase().replace(/[^a-z0-9가-힣]/g, '-').replace(/--+/g, '-');
+  const h = home.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/--+/g, '-');
+  const a = away.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/--+/g, '-');
   return `${h}-vs-${a}-preview`;
 }
 
-function createFallback(match, homeKr, awayKr) {
-  const content = `# ${homeKr} vs ${awayKr}: ${match.leagueKr} 프리뷰
+function createFallback(match, homeKr, awayKr, homeEn, awayEn, leagueEn) {
+  // 한글 본문
+  const contentKr = `# ${homeKr} vs ${awayKr}: ${match.leagueKr} 프리뷰
 
 ${match.leagueKr}에서 ${homeKr}와 ${awayKr}의 경기가 예정되어 있습니다.
 
@@ -291,30 +348,57 @@ ${match.leagueKr}에서 ${homeKr}와 ${awayKr}의 경기가 예정되어 있습�
 ## 🎯 예측
 
 예상 결과: ${match.prediction || '미정'}
-예상 스코어: ${match.predictedScore || '미정'}
+예상 스코어: ${match.predictedScore || '미정'}`;
 
-## 🏷️ 해시태그
+  // 영문 본문
+  const contentEn = `# ${homeEn} vs ${awayEn}: ${leagueEn} Preview
 
-#${match.leagueKr} #${homeKr.replace(/\s/g,'')} #${awayKr.replace(/\s/g,'')} #경기프리뷰`;
+${homeEn} faces ${awayEn} in an upcoming ${leagueEn} match.
+
+## 📊 Match Info
+
+**${homeEn}** (Home)
+- Check recent form
+
+**${awayEn}** (Away)
+- Check recent form
+
+## 🎯 Prediction
+
+Expected Result: ${match.prediction || 'TBD'}
+Expected Score: ${match.predictedScore || 'TBD'}`;
 
   return {
     ...match,
+    // 한글
     title_kr: `${homeKr} vs ${awayKr} 프리뷰`,
-    slug: generateSlug(homeKr, awayKr),
     excerpt: `${match.leagueKr} ${homeKr} vs ${awayKr} 경기 분석`,
-    content: content,
+    content: contentKr,
     summary: `${match.leagueKr} ${homeKr} vs ${awayKr} 경기 분석`,
-    tags: [match.leagueKr, homeKr, awayKr, '경기프리뷰'],
+    // 영문
+    title: `${homeEn} vs ${awayEn} Preview`,
+    excerpt_en: `${leagueEn} ${homeEn} vs ${awayEn} match analysis`,
+    content_en: contentEn,
+    // 공통
+    slug: generateSlug(homeEn, awayEn),
+    tags: [leagueEn, homeEn, awayEn, 'Preview'],
     homeTeamKr: homeKr,
     awayTeamKr: awayKr,
+    homeTeam: homeEn,
+    awayTeam: awayEn,
+    // 발행 설정
+    published: true,
+    published_en: true,
+    // 메타
     ai_model: 'fallback',
     processed_at: new Date().toISOString()
   };
 }
 
 async function processAll() {
-  console.log('🤖 AI Processing v4 (Gemini Edition)\n');
-  console.log('📦 Model: gemini-2.0-flash (무료 1,500회/일)\n');
+  console.log('🤖 AI Processing v5 (Bilingual Edition)\n');
+  console.log('📦 Model: gemini-2.0-flash');
+  console.log('🌐 Output: 한글 + English\n');
   
   if (!fs.existsSync('scraped-previews.json')) {
     console.error('❌ scraped-previews.json not found');
@@ -336,12 +420,15 @@ async function processAll() {
     const result = await processWithGemini(matches[i]);
     processed.push(result);
     
-    const contentLen = (result.content || '').length;
+    const contentKrLen = (result.content || '').length;
+    const contentEnLen = (result.content_en || '').length;
     const model = result.ai_model === 'fallback' ? '⚠️ fallback' : '✅ gemini';
-    console.log(`  ${model} "${result.title_kr}" (${contentLen}자)`);
+    console.log(`  ${model}`);
+    console.log(`    🇰🇷 "${result.title_kr}" (${contentKrLen}자)`);
+    console.log(`    🇺🇸 "${result.title}" (${contentEnLen} chars)`);
     
-    // Gemini는 rate limit이 넉넉하지만 안전하게 1초 대기
-    if (i < matches.length - 1) await delay(1000);
+    // Rate limit 대비 2초 대기 (더 긴 응답이므로)
+    if (i < matches.length - 1) await delay(2000);
   }
   
   fs.writeFileSync('processed-previews.json', JSON.stringify(processed, null, 2));
@@ -349,6 +436,7 @@ async function processAll() {
   
   const successCount = processed.filter(p => p.ai_model !== 'fallback').length;
   console.log(`✅ AI 처리 성공: ${successCount}/${processed.length}`);
+  console.log(`🌐 각 포스트: 한글 + 영문 버전 포함`);
 }
 
 if (!GEMINI_API_KEY) { 
