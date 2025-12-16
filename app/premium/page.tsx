@@ -1322,7 +1322,7 @@ export default function PremiumPredictPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             {/* 좌측: 기존 텍스트 */}
-            <div>
+            <div className="flex-shrink-0">
               <span className="text-green-500 text-[10px] md:text-xs font-semibold tracking-widest">MATCH ANALYTICS</span>
               <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mt-1 mb-2">
                 {language === 'ko' 
@@ -1338,7 +1338,7 @@ export default function PremiumPredictPage() {
             
             {/* ✅ 우측: 트렌드 PICK 적중 현황 */}
             {pickAccuracy.length > 0 && (
-              <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 overflow-hidden">
+              <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 overflow-hidden flex-shrink min-w-0 md:max-w-[700px]">
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <span className="text-base">🔥</span>
                   <span className="text-yellow-400 font-bold text-sm">
