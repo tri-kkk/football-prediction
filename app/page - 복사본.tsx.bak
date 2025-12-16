@@ -71,11 +71,35 @@ const LEAGUES = [
     isEmoji: false
   },
   { 
+    code: 'FAC', 
+    name: 'FA컵',
+    nameEn: 'FA Cup',
+    flag: 'https://flagcdn.com/w40/gb-eng.png',
+    logo: 'https://media.api-sports.io/football/leagues/45.png',
+    isEmoji: false
+  },
+  { 
+    code: 'EFL', 
+    name: 'EFL컵',
+    nameEn: 'EFL Cup',
+    flag: 'https://flagcdn.com/w40/gb-eng.png',
+    logo: 'https://media.api-sports.io/football/leagues/46.png',
+    isEmoji: false
+  },
+  { 
     code: 'PD', 
     name: '라리가',
     nameEn: 'La Liga',
     flag: 'https://flagcdn.com/w40/es.png',
     logo: 'https://media.api-sports.io/football/leagues/140.png',
+    isEmoji: false
+  },
+  { 
+    code: 'CDR', 
+    name: '코파델레이',
+    nameEn: 'Copa del Rey',
+    flag: 'https://flagcdn.com/w40/es.png',
+    logo: 'https://media.api-sports.io/football/leagues/143.png',
     isEmoji: false
   },
   { 
@@ -87,11 +111,27 @@ const LEAGUES = [
     isEmoji: false
   },
   { 
+    code: 'DFB', 
+    name: 'DFB포칼',
+    nameEn: 'DFB Pokal',
+    flag: 'https://flagcdn.com/w40/de.png',
+    logo: 'https://media.api-sports.io/football/leagues/81.png',
+    isEmoji: false
+  },
+  { 
     code: 'SA', 
     name: '세리에A',
     nameEn: 'Serie A',
     flag: 'https://flagcdn.com/w40/it.png',
     logo: 'https://media.api-sports.io/football/leagues/135.png',
+    isEmoji: false
+  },
+  { 
+    code: 'CIT', 
+    name: '코파이탈리아',
+    nameEn: 'Coppa Italia',
+    flag: 'https://flagcdn.com/w40/it.png',
+    logo: 'https://media.api-sports.io/football/leagues/137.png',
     isEmoji: false
   },
   { 
@@ -103,11 +143,27 @@ const LEAGUES = [
     isEmoji: false
   },
   { 
+    code: 'CDF', 
+    name: '쿠프드프랑스',
+    nameEn: 'Coupe de France',
+    flag: 'https://flagcdn.com/w40/fr.png',
+    logo: 'https://media.api-sports.io/football/leagues/66.png',
+    isEmoji: false
+  },
+  { 
     code: 'PPL', 
     name: '프리메이라리가',
     nameEn: 'Primeira Liga',
     flag: 'https://flagcdn.com/w40/pt.png',
     logo: 'https://media.api-sports.io/football/leagues/94.png',
+    isEmoji: false
+  },
+  { 
+    code: 'TDP', 
+    name: '타사드포르투갈',
+    nameEn: 'Taça de Portugal',
+    flag: 'https://flagcdn.com/w40/pt.png',
+    logo: 'https://media.api-sports.io/football/leagues/96.png',
     isEmoji: false
   },
   { 
@@ -118,9 +174,14 @@ const LEAGUES = [
     logo: 'https://media.api-sports.io/football/leagues/88.png',
     isEmoji: false
   },
-
-
-
+  { 
+    code: 'KNV', 
+    name: 'KNVB컵',
+    nameEn: 'KNVB Cup',
+    flag: 'https://flagcdn.com/w40/nl.png',
+    logo: 'https://media.api-sports.io/football/leagues/90.png',
+    isEmoji: false
+  },
 ]
 
 // 🆕 국가/지역별 계층형 리그 그룹
@@ -154,6 +215,8 @@ const LEAGUE_GROUPS = [
     leagues: [
       { code: 'PL', name: '프리미어리그', nameEn: 'Premier League', logo: 'https://media.api-sports.io/football/leagues/39.png' },
       { code: 'ELC', name: '챔피언십', nameEn: 'Championship', logo: 'https://media.api-sports.io/football/leagues/40.png' },
+      { code: 'FAC', name: 'FA컵', nameEn: 'FA Cup', logo: 'https://media.api-sports.io/football/leagues/45.png' },
+      { code: 'EFL', name: 'EFL컵', nameEn: 'EFL Cup', logo: 'https://media.api-sports.io/football/leagues/46.png' },
     ]
   },
   {
@@ -163,6 +226,7 @@ const LEAGUE_GROUPS = [
     flag: 'https://flagcdn.com/w40/es.png',
     leagues: [
       { code: 'PD', name: '라리가', nameEn: 'La Liga', logo: 'https://media.api-sports.io/football/leagues/140.png' },
+      { code: 'CDR', name: '코파델레이', nameEn: 'Copa del Rey', logo: 'https://media.api-sports.io/football/leagues/143.png' },
     ]
   },
   {
@@ -172,6 +236,7 @@ const LEAGUE_GROUPS = [
     flag: 'https://flagcdn.com/w40/de.png',
     leagues: [
       { code: 'BL1', name: '분데스리가', nameEn: 'Bundesliga', logo: 'https://media.api-sports.io/football/leagues/78.png' },
+      { code: 'DFB', name: 'DFB포칼', nameEn: 'DFB Pokal', logo: 'https://media.api-sports.io/football/leagues/81.png' },
     ]
   },
   {
@@ -181,6 +246,7 @@ const LEAGUE_GROUPS = [
     flag: 'https://flagcdn.com/w40/it.png',
     leagues: [
       { code: 'SA', name: '세리에A', nameEn: 'Serie A', logo: 'https://media.api-sports.io/football/leagues/135.png' },
+      { code: 'CIT', name: '코파이탈리아', nameEn: 'Coppa Italia', logo: 'https://media.api-sports.io/football/leagues/137.png' },
     ]
   },
   {
@@ -190,6 +256,7 @@ const LEAGUE_GROUPS = [
     flag: 'https://flagcdn.com/w40/fr.png',
     leagues: [
       { code: 'FL1', name: '리그1', nameEn: 'Ligue 1', logo: 'https://media.api-sports.io/football/leagues/61.png' },
+      { code: 'CDF', name: '쿠프드프랑스', nameEn: 'Coupe de France', logo: 'https://media.api-sports.io/football/leagues/66.png' },
     ]
   },
   {
@@ -199,6 +266,7 @@ const LEAGUE_GROUPS = [
     flag: 'https://flagcdn.com/w40/pt.png',
     leagues: [
       { code: 'PPL', name: '프리메이라리가', nameEn: 'Primeira Liga', logo: 'https://media.api-sports.io/football/leagues/94.png' },
+      { code: 'TDP', name: '타사드포르투갈', nameEn: 'Taça de Portugal', logo: 'https://media.api-sports.io/football/leagues/96.png' },
     ]
   },
   {
@@ -208,13 +276,21 @@ const LEAGUE_GROUPS = [
     flag: 'https://flagcdn.com/w40/nl.png',
     leagues: [
       { code: 'DED', name: '에레디비시', nameEn: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png' },
+      { code: 'KNV', name: 'KNVB컵', nameEn: 'KNVB Cup', logo: 'https://media.api-sports.io/football/leagues/90.png' },
     ]
   },
 ]
 
 // 오즈 데이터가 있는 리그만 (경기 목록 필터용)
 const LEAGUES_WITH_ODDS = [
-  'ALL', 'CL', 'EL', 'UECL', 'UNL', 'PL', 'ELC', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'DED'
+  'ALL', 'CL', 'EL', 'UECL', 'UNL', 
+  'PL', 'ELC', 'FAC', 'EFL',  // 잉글랜드
+  'PD', 'CDR',                 // 스페인
+  'BL1', 'DFB',                // 독일
+  'SA', 'CIT',                 // 이탈리아
+  'FL1', 'CDF',                // 프랑스
+  'PPL', 'TDP',                // 포르투갈
+  'DED', 'KNV'                 // 네덜란드
 ]
 
 // 헬퍼 함수들
@@ -230,6 +306,17 @@ function getLeagueLogo(league: string): string {
     'DED': 'https://media.api-sports.io/football/leagues/88.png',
     'EL': 'https://media.api-sports.io/football/leagues/3.png',
     'ELC': 'https://media.api-sports.io/football/leagues/40.png',
+    'UECL': 'https://media.api-sports.io/football/leagues/848.png',
+    'UNL': 'https://media.api-sports.io/football/leagues/5.png',
+    // 컵대회 추가
+    'FAC': 'https://media.api-sports.io/football/leagues/45.png',
+    'EFL': 'https://media.api-sports.io/football/leagues/46.png',
+    'CDR': 'https://media.api-sports.io/football/leagues/143.png',
+    'DFB': 'https://media.api-sports.io/football/leagues/81.png',
+    'CIT': 'https://media.api-sports.io/football/leagues/137.png',
+    'CDF': 'https://media.api-sports.io/football/leagues/66.png',
+    'TDP': 'https://media.api-sports.io/football/leagues/96.png',
+    'KNV': 'https://media.api-sports.io/football/leagues/90.png',
   }
   return leagueMap[league] || ''
 }
@@ -244,11 +331,22 @@ function getLeagueFlag(leagueCode: string): { url: string; isEmoji: boolean } {
     'FL1': { url: 'https://flagcdn.com/w40/fr.png', isEmoji: false },
     'PPL': { url: 'https://flagcdn.com/w40/pt.png', isEmoji: false },
     'DED': { url: 'https://flagcdn.com/w40/nl.png', isEmoji: false },
-    'CL': { url: '⭐', isEmoji: true },
-    'EL': { url: '⭐', isEmoji: true },
+    'CL': { url: 'https://flagcdn.com/w40/eu.png', isEmoji: false },
+    'EL': { url: 'https://flagcdn.com/w40/eu.png', isEmoji: false },
     'ELC': { url: 'https://flagcdn.com/w40/gb-eng.png', isEmoji: false },
+    'UECL': { url: 'https://flagcdn.com/w40/eu.png', isEmoji: false },
+    'UNL': { url: 'https://flagcdn.com/w40/eu.png', isEmoji: false },
+    // 컵대회 추가
+    'FAC': { url: 'https://flagcdn.com/w40/gb-eng.png', isEmoji: false },
+    'EFL': { url: 'https://flagcdn.com/w40/gb-eng.png', isEmoji: false },
+    'CDR': { url: 'https://flagcdn.com/w40/es.png', isEmoji: false },
+    'DFB': { url: 'https://flagcdn.com/w40/de.png', isEmoji: false },
+    'CIT': { url: 'https://flagcdn.com/w40/it.png', isEmoji: false },
+    'CDF': { url: 'https://flagcdn.com/w40/fr.png', isEmoji: false },
+    'TDP': { url: 'https://flagcdn.com/w40/pt.png', isEmoji: false },
+    'KNV': { url: 'https://flagcdn.com/w40/nl.png', isEmoji: false },
   }
-  return flagMap[leagueCode] || { url: '🌍', isEmoji: true }
+  return flagMap[leagueCode] || { url: 'https://flagcdn.com/w40/eu.png', isEmoji: false }
 }
 
 // 리그 코드를 한글 이름으로 변환
@@ -903,7 +1001,16 @@ export default function Home() {
         
         if (selectedLeague === 'ALL') {
           // 모든 리그의 경기 가져오기 (DB에서 오즈 포함)
-          const leagues = ['CL', 'EL', 'UECL', 'UNL', 'PL', 'ELC', 'PD', 'BL1', 'SA', 'FL1']
+          const leagues = [
+            'CL', 'EL', 'UECL', 'UNL',           // 유럽 대항전
+            'PL', 'ELC', 'FAC', 'EFL',           // 잉글랜드
+            'PD', 'CDR',                          // 스페인
+            'BL1', 'DFB',                         // 독일
+            'SA', 'CIT',                          // 이탈리아
+            'FL1', 'CDF',                         // 프랑스
+            'PPL', 'TDP',                         // 포르투갈
+            'DED', 'KNV'                          // 네덜란드
+          ]
           const promises = leagues.map(league => 
             fetch(`/api/odds-from-db?league=${league}`, {
               headers: {

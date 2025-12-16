@@ -3097,6 +3097,43 @@ export default function Home() {
         />
       )}
 
+      {/* 🔥 플로팅 PICK 배너 (PC 전용) */}
+      <a 
+        href="/premium"
+        className="hidden lg:flex fixed bottom-8 right-20 z-[9999] group"
+        style={{ position: 'fixed', bottom: '32px', right: '80px' }}
+      >
+        {/* 배경 글로우 효과 */}
+        <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl blur-xl opacity-50 group-hover:opacity-80 transition-opacity" />
+        
+        {/* 메인 카드 */}
+        <div className="relative bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-2xl p-1 shadow-2xl transform group-hover:scale-105 transition-all duration-300 overflow-hidden">
+          {/* 반짝이 효과 */}
+          <div className="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:left-full transition-all duration-700" />
+          
+          {/* 내부 컨텐츠 */}
+          <div className="relative bg-black/90 rounded-xl px-5 py-4">
+            {/* 상단 라벨 */}
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <span className="text-xl">🔥</span>
+              <span className="text-white font-bold text-sm">트렌드 PICK</span>
+              <span className="text-[10px] text-green-400 bg-green-500/20 px-2 py-0.5 rounded animate-pulse">LIVE</span>
+            </div>
+            
+            {/* 적중률 */}
+            <div className="text-center mb-3">
+              <div className="text-gray-400 text-xs mb-1">평균 적중률</div>
+              <div className="text-yellow-400 font-bold text-3xl">67%</div>
+            </div>
+            
+            {/* CTA 버튼 */}
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg py-2 px-4 text-center group-hover:from-orange-400 group-hover:to-red-400 transition-all">
+              <span className="text-white font-bold text-sm">무료로 예측 확인 →</span>
+            </div>
+          </div>
+        </div>
+      </a>
+
       {/* 📢 모바일 하단 고정 배너 (320x50) */}
       {!isMobileAdClosed && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 safe-area-bottom">
