@@ -3116,19 +3116,25 @@ export default function Home() {
             {/* 상단 라벨 */}
             <div className="flex items-center justify-center gap-2 mb-3">
               <span className="text-xl">🔥</span>
-              <span className="text-white font-bold text-sm">트렌드 PICK</span>
+              <span className="text-white font-bold text-sm">
+                {currentLanguage === 'ko' ? '트렌드 PICK' : 'Trend PICK'}
+              </span>
               <span className="text-[10px] text-green-400 bg-green-500/20 px-2 py-0.5 rounded animate-pulse">LIVE</span>
             </div>
             
             {/* 적중률 */}
             <div className="text-center mb-3">
-              <div className="text-gray-400 text-xs mb-1">평균 적중률</div>
+              <div className="text-gray-400 text-xs mb-1">
+                {currentLanguage === 'ko' ? '평균 적중률' : 'Avg. Accuracy'}
+              </div>
               <div className="text-yellow-400 font-bold text-3xl">67%</div>
             </div>
             
             {/* CTA 버튼 */}
             <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg py-2 px-4 text-center group-hover:from-orange-400 group-hover:to-red-400 transition-all">
-              <span className="text-white font-bold text-sm">무료로 예측 확인 →</span>
+              <span className="text-white font-bold text-sm">
+                {currentLanguage === 'ko' ? '무료로 예측 확인 →' : 'View Predictions →'}
+              </span>
             </div>
           </div>
         </div>
