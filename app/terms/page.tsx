@@ -1,16 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import type { Metadata } from 'next'
-
-// Note: Metadata should be in a separate layout.tsx or use generateMetadata for client components
-// export const metadata: Metadata = {
-//   title: '이용약관 - Trend Soccer',
-//   description: 'Trend Soccer 서비스 이용약관',
-// }
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function TermsPage() {
-  const [lang, setLang] = useState<'ko' | 'en'>('ko')
+  const { language } = useLanguage()
+  const lang = language === 'ko' ? 'ko' : 'en'
 
   const content = {
     ko: {
@@ -196,32 +190,6 @@ export default function TermsPage() {
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white py-12">
       <div className="container mx-auto px-4 max-w-4xl">
-        {/* Language Toggle */}
-        <div className="flex justify-end mb-6">
-          <div className="inline-flex rounded-lg border border-gray-700 p-1 bg-[#1a1a1a]">
-            <button
-              onClick={() => setLang('ko')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                lang === 'ko'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              한국어
-            </button>
-            <button
-              onClick={() => setLang('en')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                lang === 'en'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              English
-            </button>
-          </div>
-        </div>
-
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">{t.title}</h1>
