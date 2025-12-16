@@ -503,6 +503,7 @@ function formatDate(utcDateString: string, language: string = 'ko'): string {
 // 📦 캐시 헬퍼 함수
 const CACHE_DURATION = 5 * 60 * 1000 // 5분
 const CACHE_KEY_PREFIX = 'football_'
+const MAX_CACHE_SIZE = 2 * 1024 * 1024 // 2MB 제한 (안전 마진)
 
 // 🕐 한국 시간(KST, UTC+9) 기준 날짜 계산 헬퍼
 function getKSTDate(date: Date = new Date()): Date {
@@ -537,6 +538,67 @@ function getMatchKSTDate(utcDateString: string): Date {
   return new Date(Date.UTC(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate()))
 }
 
+// ✅ 오래된 캐시 정리 함수
+function clearOldCache() {
+  try {
+    const keysToRemove: { key: string; timestamp: number }[] = []
+    
+    // football_ 관련 모든 캐시 수집
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+        try {
+          const cached = localStorage.getItem(key)
+          if (cached) {
+            const { timestamp } = JSON.parse(cached)
+            keysToRemove.push({ key, timestamp: timestamp || 0 })
+          }
+        } catch {
+          // 파싱 실패한 캐시는 삭제 대상
+          keysToRemove.push({ key, timestamp: 0 })
+        }
+      }
+    }
+    
+    // 오래된 순으로 정렬
+    keysToRemove.sort((a, b) => a.timestamp - b.timestamp)
+    
+    // 가장 오래된 절반 삭제
+    const removeCount = Math.max(1, Math.ceil(keysToRemove.length / 2))
+    for (let i = 0; i < removeCount && i < keysToRemove.length; i++) {
+      localStorage.removeItem(keysToRemove[i].key)
+      console.log('🗑️ 오래된 캐시 삭제:', keysToRemove[i].key)
+    }
+    
+    return removeCount
+  } catch (error) {
+    console.error('캐시 정리 실패:', error)
+    return 0
+  }
+}
+
+// ✅ 전체 캐시 초기화 함수
+function clearAllCache() {
+  try {
+    const keysToRemove: string[] = []
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+        keysToRemove.push(key)
+      }
+    }
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key))
+    console.log('🧹 전체 캐시 초기화 완료:', keysToRemove.length, '개 삭제')
+    
+    return keysToRemove.length
+  } catch (error) {
+    console.error('전체 캐시 초기화 실패:', error)
+    return 0
+  }
+}
+
 function getCachedData(key: string) {
   try {
     const cached = localStorage.getItem(CACHE_KEY_PREFIX + key)
@@ -556,20 +618,71 @@ function getCachedData(key: string) {
     return null
   } catch (error) {
     console.error('캐시 로드 실패:', error)
+    // 손상된 캐시 삭제
+    try {
+      localStorage.removeItem(CACHE_KEY_PREFIX + key)
+    } catch {}
     return null
   }
 }
 
+// ✅ 개선된 캐시 저장 함수 (QuotaExceededError 처리)
 function setCachedData(key: string, data: any) {
   try {
     const cacheData = {
       data,
       timestamp: Date.now()
     }
-    localStorage.setItem(CACHE_KEY_PREFIX + key, JSON.stringify(cacheData))
+    
+    const jsonString = JSON.stringify(cacheData)
+    
+    // 데이터가 너무 크면 저장하지 않음 (2MB 초과)
+    if (jsonString.length > MAX_CACHE_SIZE) {
+      console.warn('⚠️ 캐시 데이터 크기 초과, 저장 건너뜀:', key, `(${(jsonString.length / 1024 / 1024).toFixed(2)}MB)`)
+      return false
+    }
+    
+    localStorage.setItem(CACHE_KEY_PREFIX + key, jsonString)
     console.log('💾 캐시에 저장:', key)
-  } catch (error) {
+    return true
+    
+  } catch (error: any) {
+    // QuotaExceededError 처리
+    if (error.name === 'QuotaExceededError' || 
+        error.code === 22 || 
+        error.code === 1014 ||
+        error.message?.includes('quota')) {
+      
+      console.warn('⚠️ localStorage 용량 초과, 캐시 정리 중...')
+      
+      // 1차 시도: 오래된 캐시 정리 후 재시도
+      const cleared = clearOldCache()
+      if (cleared > 0) {
+        try {
+          const cacheData = { data, timestamp: Date.now() }
+          localStorage.setItem(CACHE_KEY_PREFIX + key, JSON.stringify(cacheData))
+          console.log('💾 캐시 정리 후 저장 성공:', key)
+          return true
+        } catch (retryError) {
+          console.warn('⚠️ 재시도 실패, 전체 캐시 초기화...')
+        }
+      }
+      
+      // 2차 시도: 전체 캐시 초기화 후 재시도
+      clearAllCache()
+      try {
+        const cacheData = { data, timestamp: Date.now() }
+        localStorage.setItem(CACHE_KEY_PREFIX + key, JSON.stringify(cacheData))
+        console.log('💾 전체 초기화 후 저장 성공:', key)
+        return true
+      } catch (finalError) {
+        console.error('❌ 캐시 저장 최종 실패:', key, finalError)
+        return false
+      }
+    }
+    
     console.error('캐시 저장 실패:', error)
+    return false
   }
 }
 
