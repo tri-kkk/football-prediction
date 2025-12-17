@@ -183,6 +183,15 @@ const LEAGUES = [
     logo: 'https://media.api-sports.io/football/leagues/90.png',
     isEmoji: false
   },
+  // 🆕 아프리카 네이션스컵
+  { 
+    code: 'AFCON', 
+    name: '아프리카 네이션스컵',
+    nameEn: 'Africa Cup of Nations',
+    flag: 'https://img.icons8.com/color/48/africa.png',
+    logo: 'https://media.api-sports.io/football/leagues/6.png',
+    isEmoji: false
+  },
 ]
 
 // 🆕 국가/지역별 계층형 리그 그룹
@@ -280,6 +289,16 @@ const LEAGUE_GROUPS = [
       { code: 'KNV', name: 'KNVB컵', nameEn: 'KNVB Cup', logo: 'https://media.api-sports.io/football/leagues/90.png' },
     ]
   },
+  // 🆕 아프리카
+  {
+    id: 'africa',
+    region: '아프리카',
+    regionEn: 'Africa',
+    flag: 'https://img.icons8.com/color/48/africa.png',
+    leagues: [
+      { code: 'AFCON', name: '아프리카 네이션스컵', nameEn: 'Africa Cup of Nations', logo: 'https://media.api-sports.io/football/leagues/6.png' },
+    ]
+  },
 ]
 
 // 오즈 데이터가 있는 리그만 (경기 목록 필터용)
@@ -291,7 +310,8 @@ const LEAGUES_WITH_ODDS = [
   'SA', 'CIT',                 // 이탈리아
   'FL1', 'CDF',                // 프랑스
   'PPL', 'TDP',                // 포르투갈
-  'DED', 'KNV'                 // 네덜란드
+  'DED', 'KNV',                // 네덜란드
+  'AFCON'                      // 🆕 아프리카
 ]
 
 // 헬퍼 함수들
@@ -318,6 +338,7 @@ function getLeagueLogo(league: string): string {
     'CDF': 'https://media.api-sports.io/football/leagues/66.png',
     'TDP': 'https://media.api-sports.io/football/leagues/96.png',
     'KNV': 'https://media.api-sports.io/football/leagues/90.png',
+    'AFCON': 'https://media.api-sports.io/football/leagues/6.png',  // 🆕 아프리카 네이션스컵
   }
   return leagueMap[league] || ''
 }
@@ -346,6 +367,7 @@ function getLeagueFlag(leagueCode: string): { url: string; isEmoji: boolean } {
     'CDF': { url: 'https://flagcdn.com/w40/fr.png', isEmoji: false },
     'TDP': { url: 'https://flagcdn.com/w40/pt.png', isEmoji: false },
     'KNV': { url: 'https://flagcdn.com/w40/nl.png', isEmoji: false },
+    'AFCON': { url: 'https://img.icons8.com/color/48/africa.png', isEmoji: false },  // 🆕 아프리카 네이션스컵
   }
   return flagMap[leagueCode] || { url: 'https://flagcdn.com/w40/eu.png', isEmoji: false }
 }

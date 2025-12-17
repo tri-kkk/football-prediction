@@ -10,74 +10,76 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-// 리그 설정 (20개 - 12개 리그 + 8개 컵대회)
+// 리그 설정 (21개 - 12개 리그 + 8개 컵대회 + 1개 국제대회)
 const LEAGUES = [
-  // ===== 유럽 대항전 =====
+  // ===== 국제 대회 =====
   { code: 'CL', id: 2, name: 'Champions League' },
   { code: 'EL', id: 3, name: 'Europa League' },
   { code: 'UECL', id: 848, name: 'UEFA Conference League' },
   { code: 'UNL', id: 5, name: 'UEFA Nations League' },
+  { code: 'AFCON', id: 6, name: 'Africa Cup of Nations', season: 2025 },  // 🆕 아프리카 네이션스컵
   
   // ===== 잉글랜드 =====
   { code: 'PL', id: 39, name: 'Premier League' },
   { code: 'ELC', id: 40, name: 'Championship' },
-  { code: 'FAC', id: 45, name: 'FA Cup' },           // 🆕 컵대회
-  { code: 'EFL', id: 48, name: 'EFL Cup' },          // 🆕 컵대회
+  { code: 'FAC', id: 45, name: 'FA Cup' },
+  { code: 'EFL', id: 48, name: 'EFL Cup' },
   
   // ===== 스페인 =====
   { code: 'PD', id: 140, name: 'La Liga' },
-  { code: 'CDR', id: 143, name: 'Copa del Rey' },    // 🆕 컵대회
+  { code: 'CDR', id: 143, name: 'Copa del Rey' },
   
   // ===== 독일 =====
   { code: 'BL1', id: 78, name: 'Bundesliga' },
-  { code: 'DFB', id: 81, name: 'DFB Pokal' },        // 🆕 컵대회
+  { code: 'DFB', id: 81, name: 'DFB Pokal' },
   
   // ===== 이탈리아 =====
   { code: 'SA', id: 135, name: 'Serie A' },
-  { code: 'CIT', id: 137, name: 'Coppa Italia' },    // 🆕 컵대회
+  { code: 'CIT', id: 137, name: 'Coppa Italia' },
   
   // ===== 프랑스 =====
   { code: 'FL1', id: 61, name: 'Ligue 1' },
-  { code: 'CDF', id: 66, name: 'Coupe de France' },  // 🆕 컵대회
+  { code: 'CDF', id: 66, name: 'Coupe de France' },
   
   // ===== 포르투갈 =====
   { code: 'PPL', id: 94, name: 'Primeira Liga' },
-  { code: 'TDP', id: 96, name: 'Taca de Portugal' }, // 🆕 컵대회
+  { code: 'TDP', id: 96, name: 'Taca de Portugal' },
   
   // ===== 네덜란드 =====
   { code: 'DED', id: 88, name: 'Eredivisie' },
-  { code: 'KNV', id: 90, name: 'KNVB Beker' },       // 🆕 컵대회
+  { code: 'KNV', id: 90, name: 'KNVB Beker' },
 ]
 
 const LEAGUE_ID_TO_CODE: Record<number, string> = {
-  // 유럽 대항전
+  // 국제 대회
   2: 'CL',
   3: 'EL',
   848: 'UECL',
   5: 'UNL',
+  6: 'AFCON',   // 🆕 아프리카 네이션스컵
   // 잉글랜드
   39: 'PL',
   40: 'ELC',
-  45: 'FAC',   // 🆕
-  46: 'EFL',   // 🆕
+  45: 'FAC',
+  48: 'EFL',
   // 스페인
   140: 'PD',
-  143: 'CDR',  // 🆕
+  143: 'CDR',
   // 독일
   78: 'BL1',
-  81: 'DFB',   // 🆕
+  81: 'DFB',
   // 이탈리아
   135: 'SA',
-  137: 'CIT',  // 🆕
+  137: 'CIT',
   // 프랑스
   61: 'FL1',
-  66: 'CDF',   // 🆕
+  66: 'CDF',
   // 포르투갈
   94: 'PPL',
-  96: 'TDP',   // 🆕
+  96: 'TDP',
   // 네덜란드
   88: 'DED',
-  90: 'KNV',   // 🆕
+  90: 'KNV',
 }
 
 // 오즈를 확률로 변환
@@ -224,13 +226,21 @@ export async function POST(request: Request) {
       try {
         console.log(`\n🔍 Processing ${league.name} (${league.code})...`)
 
+        // 시즌 결정: AFCON은 2025, 그 외는 현재 연도 기반
+        const currentYear = new Date().getFullYear()
+        const currentMonth = new Date().getMonth() + 1
+        // 기본 시즌: 8월 이후면 현재 연도, 아니면 이전 연도 (유럽 리그 기준)
+        const defaultSeason = currentMonth >= 8 ? currentYear : currentYear - 1
+        // 리그별 시즌 설정 (AFCON 등 특별 대회는 별도 지정)
+        const season = (league as any).season || defaultSeason
+
         // 1. 경기 목록 가져오기
         const fixturesData = await fetchFromApiFootball(
-          `/fixtures?league=${league.id}&season=2025&from=${from}&to=${to}`
+          `/fixtures?league=${league.id}&season=${season}&from=${from}&to=${to}`
         )
 
         const fixtures = fixturesData.response || []
-        console.log(`📊 Found ${fixtures.length} fixtures`)
+        console.log(`📊 Found ${fixtures.length} fixtures (season: ${season})`)
 
         if (fixtures.length === 0) {
           results.leagues.push({
@@ -243,33 +253,28 @@ export async function POST(request: Request) {
         }
 
         let savedCount = 0
-        const now = Date.now()
 
-        // 각 경기마다 오즈 가져오기
         for (const fixture of fixtures) {
           try {
-            // 시간 필터링 (경기 336시간(14일) 전 ~ 종료 후 1시간)
-            const commenceTime = new Date(fixture.fixture.date).getTime()
-            const hoursUntilMatch = (commenceTime - now) / (1000 * 60 * 60)
-
-            if (hoursUntilMatch < -1 || hoursUntilMatch > 336) {
-              console.log(`⏭️ Skip: ${fixture.teams.home.name} vs ${fixture.teams.away.name} (${hoursUntilMatch.toFixed(1)}h)`)
+            // 이미 종료된 경기는 건너뜀
+            const matchStatus = fixture.fixture.status.short
+            if (['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'].includes(matchStatus)) {
+              console.log(`⏭️ Skipping finished match: ${fixture.teams.home.name} vs ${fixture.teams.away.name}`)
               continue
             }
 
-            // 2. 오즈 가져오기
+            // 2. 해당 경기의 오즈 가져오기
             const oddsData = await fetchFromApiFootball(
-              `/odds?fixture=${fixture.fixture.id}&bet=1` // bet=1: Match Winner
+              `/odds?fixture=${fixture.fixture.id}`
             )
 
             const oddsResponse = oddsData.response?.[0]
-            
             if (!oddsResponse || !oddsResponse.bookmakers || oddsResponse.bookmakers.length === 0) {
-              console.log(`⚠️ No odds: ${fixture.teams.home.name} vs ${fixture.teams.away.name}`)
+              console.log(`⚠️ No odds for: ${fixture.teams.home.name} vs ${fixture.teams.away.name}`)
               continue
             }
 
-            // 다중 북메이커 평균 로직 (3~10개)
+            // 북메이커에서 오즈 추출 (최대 10개)
             const bookmakers = oddsResponse.bookmakers.slice(0, 10)
             let validOddsCount = 0
             let totalHomeOdds = 0
@@ -397,9 +402,9 @@ export async function POST(request: Request) {
               home_probability: normalized.home,
               draw_probability: normalized.draw,
               away_probability: normalized.away,
-              predicted_score_home: predictedScore.home, // 🔥 추가
-              predicted_score_away: predictedScore.away, // 🔥 추가
-              predicted_winner: predictedWinner,          // 🔥 추가
+              predicted_score_home: predictedScore.home,
+              predicted_score_away: predictedScore.away,
+              predicted_winner: predictedWinner,
               odds_source: `Averaged from ${validOddsCount} bookmakers`,
             }
 
@@ -432,9 +437,9 @@ export async function POST(request: Request) {
                 home_probability: normalized.home,
                 draw_probability: normalized.draw,
                 away_probability: normalized.away,
-                predicted_score_home: predictedScore.home, // 🔥 추가
-                predicted_score_away: predictedScore.away, // 🔥 추가
-                predicted_winner: predictedWinner,          // 🔥 추가
+                predicted_score_home: predictedScore.home,
+                predicted_score_away: predictedScore.away,
+                predicted_winner: predictedWinner,
                 odds_source: `Averaged from ${validOddsCount} bookmakers`,
                 updated_at: new Date().toISOString(),
               }, {

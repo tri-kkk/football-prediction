@@ -36,6 +36,8 @@ const LEAGUES = [
   // 네덜란드
   { code: 'DED', nameKo: '네덜란드', nameEn: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png', isEmoji: false },
   { code: 'KNV', nameKo: 'KNVB컵', nameEn: 'KNVB Cup', logo: 'https://media.api-sports.io/football/leagues/90.png', isEmoji: false },
+  // 🆕 아프리카
+  { code: 'AFCON', nameKo: '아프리카컵', nameEn: 'Africa Cup of Nations', logo: 'https://media.api-sports.io/football/leagues/6.png', isEmoji: false },
 ]
 
 // 예측 정보 인터페이스
