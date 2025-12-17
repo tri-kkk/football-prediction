@@ -120,21 +120,22 @@ interface PickStats {
 }
 
 export default function MatchResultsPage() {
-  // 브라우저 로컬 시간대 자동 적용
-  const getLocalDate = (date: Date = new Date()): Date => {
-    return date
+  const getKoreanDate = (date: Date = new Date()): Date => {
+    const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
+    const kst = new Date(utc + (9 * 60 * 60 * 1000))
+    return kst
   }
 
-  const getLocalToday = (): Date => {
-    const now = new Date()
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const getKoreanToday = (): Date => {
+    const kst = getKoreanDate()
+    return new Date(kst.getFullYear(), kst.getMonth(), kst.getDate())
   }
 
   const { language: currentLanguage } = useLanguage()
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL')
-  const [selectedDate, setSelectedDate] = useState<Date>(getLocalToday())
+  const [selectedDate, setSelectedDate] = useState<Date>(getKoreanToday())
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set())
   
@@ -176,7 +177,7 @@ export default function MatchResultsPage() {
   }
 
   const formatDateDisplay = (date: Date): string => {
-    const today = getLocalToday()
+    const today = getKoreanToday()
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
     const tomorrow = new Date(today)
@@ -214,7 +215,7 @@ export default function MatchResultsPage() {
   }
 
   const goToToday = () => {
-    setSelectedDate(getLocalToday())
+    setSelectedDate(getKoreanToday())
   }
 
   // ✅ PICK 데이터 로드 함수 (NEW!)
@@ -439,12 +440,15 @@ export default function MatchResultsPage() {
     return code
   }
 
-  // 브라우저 로컬 시간대로 자동 변환
+  // ✅ UTC → KST 변환 (DB는 timestamp without time zone = UTC)
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr + 'Z')  // 'Z' 붙여서 UTC임을 명시
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${hours}:${minutes}`
+    return date.toLocaleTimeString('ko-KR', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: false,
+      timeZone: 'Asia/Seoul'  // KST로 변환
+    })
   }
 
   if (loading) {

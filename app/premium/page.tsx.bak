@@ -1347,8 +1347,8 @@ export default function PremiumPredictPage() {
                   <span className="text-[10px] text-green-400 bg-green-500/20 px-2 py-0.5 rounded animate-pulse">LIVE</span>
                 </div>
                 
-                {/* 6개 리그 - 가로 한 줄 */}
-                <div className="flex items-center justify-center flex-wrap gap-x-10 md:gap-x-12 gap-y-3">
+                {/* 6개 리그 - 모바일 2열(균등), PC 6열 */}
+                <div className="grid grid-cols-2 md:flex md:items-center md:justify-center gap-y-2 gap-x-4 md:gap-x-8">
                   {pickAccuracy.slice(0, 6).map((league) => {
                     const leagueLogos: Record<string, string> = {
                       'PL': 'https://media.api-sports.io/football/leagues/39.png',
@@ -1359,24 +1359,26 @@ export default function PremiumPredictPage() {
                       'DED': 'https://media.api-sports.io/football/leagues/88.png',
                     }
                     const leagueNamesKo: Record<string, string> = {
-                      'PL': 'EPL', 'PD': '라리가', 'BL1': '분데스', 'SA': '세리에', 'FL1': '리그1', 'DED': '에레디',
+                      'PL': '프리미어리그', 'PD': '라리가', 'BL1': '분데스리가', 'SA': '세리에A', 'FL1': '리그1', 'DED': '에레디비지',
                     }
                     const leagueNamesEn: Record<string, string> = {
                       'PL': 'EPL', 'PD': 'LaLiga', 'BL1': 'Bundes', 'SA': 'SerieA', 'FL1': 'Ligue1', 'DED': 'Erediv',
                     }
                     return (
-                      <div key={league.league_code} className="flex items-center gap-2 px-2">
-                        <div className="w-6 h-6 bg-white rounded p-0.5">
-                          <img 
-                            src={leagueLogos[league.league_code] || ''} 
-                            alt={league.league_code}
-                            className="w-full h-full object-contain"
-                          />
+                      <div key={league.league_code} className="flex items-center justify-between md:justify-start gap-2 px-2 md:px-0">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 md:w-6 md:h-6 bg-white rounded p-0.5 flex-shrink-0">
+                            <img 
+                              src={leagueLogos[league.league_code] || ''} 
+                              alt={league.league_code}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <span className="text-gray-300 text-xs md:text-sm font-medium">
+                            {language === 'ko' ? leagueNamesKo[league.league_code] : leagueNamesEn[league.league_code]}
+                          </span>
                         </div>
-                        <span className="text-gray-300 text-sm font-medium">
-                          {language === 'ko' ? leagueNamesKo[league.league_code] : leagueNamesEn[league.league_code]}
-                        </span>
-                        <span className="text-yellow-400 font-bold text-lg">{league.displayAccuracy}%</span>
+                        <span className="text-yellow-400 font-bold text-base md:text-lg">{league.displayAccuracy}%</span>
                       </div>
                     )
                   })}
@@ -1387,7 +1389,7 @@ export default function PremiumPredictPage() {
                   <div className="mt-3 pt-3 border-t border-gray-700/50">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs text-gray-400">
-                        {language === 'ko' ? '✨ 최근 적중' : '✨ Recent Hits'}
+                        {language === 'ko' ? '✨ 최근 적중 경기' : '✨ Recent Hits'}
                       </span>
                     </div>
                     <div className="relative overflow-hidden">
@@ -1504,16 +1506,30 @@ export default function PremiumPredictPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredMatches.map((match, index) => (
-                  <MatchPredictionCard
-                    key={match.match_id || index}
-                    match={match}
-                    onAnalyze={() => analyzeMatch(matches.indexOf(match))}
-                    onClear={() => clearPrediction(matches.indexOf(match))}
-                    language={language}
-                    t={t}
-                  />
-                ))}
+                {filteredMatches.flatMap((match, index) => {
+                  const card = (
+                    <MatchPredictionCard
+                      key={match.match_id || `match-${index}`}
+                      match={match}
+                      onAnalyze={() => analyzeMatch(matches.indexOf(match))}
+                      onClear={() => clearPrediction(matches.indexOf(match))}
+                      language={language}
+                      t={t}
+                    />
+                  )
+                  
+                  // 첫 번째 카드 다음에 모바일 광고 삽입
+                  if (index === 0) {
+                    return [
+                      card,
+                      <div key="mobile-ad-1" className="block lg:hidden col-span-1 flex justify-center">
+                        <AdBanner slot="mobile_bottom" />
+                      </div>
+                    ]
+                  }
+                  
+                  return [card]
+                })}
               </div>
             )}
           </main>

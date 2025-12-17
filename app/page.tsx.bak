@@ -1862,7 +1862,7 @@ export default function Home() {
       
       {/* 데스크톱: 세로형 카드 */}
       <div className="hidden md:block bg-[#0f0f0f] border-b border-gray-900">
-        <div className="py-4 overflow-hidden">
+        <div className="py-2 overflow-hidden">
           <div 
             ref={desktopScrollRef}
             className="flex gap-4 px-4 overflow-x-auto scrollbar-hide"
@@ -1914,15 +1914,15 @@ export default function Home() {
                     // 경기 확장
                     handleMatchClick(match)
                   }}
-                  className={`flex flex-col p-3 rounded-lg min-w-[160px] cursor-pointer transition-all bg-[#1a1a1a] border border-gray-800 ${
+                  className={`flex flex-col p-2 rounded-lg min-w-[140px] cursor-pointer transition-all bg-[#1a1a1a] border border-gray-800 ${
                     expandedMatchId === match.id ? 'ring-2 ring-blue-500' : 'hover:scale-105 hover:border-gray-700'
                   }`}
                 >
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-1">
                     <img 
                       src={winningCrest} 
                       alt={winningTeam} 
-                      className="w-8 h-8"
+                      className="w-6 h-6"
                       onError={(e) => {
                         e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><text y="24" font-size="24">⚽</text></svg>'
                       }}
@@ -1937,7 +1937,7 @@ export default function Home() {
                     </div>
                   </div>
                   
-                  <div className={`text-2xl font-black mb-1 ${
+                  <div className={`text-xl font-black ${
                     darkMode ? 'text-white' : 'text-black'
                   }`}>
                     {winProbability}%
@@ -1946,7 +1946,7 @@ export default function Home() {
                     {currentLanguage === 'ko' ? '승률' : 'Win Probability'}
                   </div>
                   
-                  <div className={`text-xs font-medium mt-2 pt-2 border-t ${
+                  <div className={`text-xs font-medium mt-1 pt-1 border-t ${
                     darkMode ? 'border-gray-800 text-gray-400' : 'border-gray-200 text-gray-600'
                   }`}>
                     {match.homeTeam} - {match.awayTeam}
