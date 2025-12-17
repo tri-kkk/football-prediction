@@ -1,5 +1,5 @@
 // app/api/cron/calculate-patterns-v3/route.ts
-// 패턴 계산 API v3 - UPSERT 방식 (누적 가능)
+// 패턴 계산 API v3 - 누적 방식 (리그별 실행해도 전체 통합에 누적)
 // 타임아웃 방지를 위한 배치 처리 지원
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -11,7 +11,7 @@ const supabase = createClient(
 )
 
 // ============================================
-// 유틸 함수 (기존과 동일)
+// 유틸 함수
 // ============================================
 
 function calcPA(goals_for: number, goals_against: number): number {
@@ -229,10 +229,10 @@ function calculateMatchProbability(
 }
 
 // ============================================
-// UPSERT 함수 (핵심 변경!)
+// 누적 UPSERT 함수 (핵심 변경!)
 // ============================================
 
-async function upsertPattern(patternData: {
+async function upsertPatternAccumulate(patternData: {
   pattern: string
   league_id: number | null
   league_code: string | null
@@ -240,37 +240,16 @@ async function upsertPattern(patternData: {
   home_wins: number
   draws: number
   away_wins: number
+  isGlobal: boolean  // 전체 통합 패턴인지 여부
+  sourceLeagueId?: number  // 어느 리그에서 온 데이터인지
 }): Promise<boolean> {
   
-  const { pattern, league_id, total_matches, home_wins, draws, away_wins } = patternData
+  const { pattern, league_id, total_matches, home_wins, draws, away_wins, isGlobal, sourceLeagueId } = patternData
   
-  const homeWinRate = total_matches > 0 ? home_wins / total_matches : 0
-  const drawRate = total_matches > 0 ? draws / total_matches : 0
-  const awayWinRate = total_matches > 0 ? away_wins / total_matches : 0
-  const confidence = evaluateConfidence(total_matches)
-  
-  const record = {
-    pattern,
-    league_id: patternData.league_id,
-    league_code: patternData.league_code,
-    season: null,
-    total_matches,
-    home_wins,
-    draws,
-    away_wins,
-    home_win_rate: homeWinRate,
-    draw_rate: drawRate,
-    away_win_rate: awayWinRate,
-    confidence,
-    description: generateDescription(pattern, homeWinRate, drawRate, awayWinRate),
-    recommendation: generateRecommendation(homeWinRate, drawRate, awayWinRate, confidence),
-    updated_at: new Date().toISOString(),
-  }
-  
-  // 기존 패턴 있는지 확인
+  // 기존 패턴 조회
   let query = supabase
     .from('fg_patterns')
-    .select('id')
+    .select('*')
     .eq('pattern', pattern)
   
   if (league_id === null) {
@@ -280,6 +259,48 @@ async function upsertPattern(patternData: {
   }
   
   const { data: existing } = await query.single()
+  
+  let finalTotal: number
+  let finalHomeWins: number
+  let finalDraws: number
+  let finalAwayWins: number
+  
+  if (existing && isGlobal) {
+    // 전체 통합 패턴: 누적 (기존 + 새로운)
+    finalTotal = existing.total_matches + total_matches
+    finalHomeWins = existing.home_wins + home_wins
+    finalDraws = existing.draws + draws
+    finalAwayWins = existing.away_wins + away_wins
+  } else {
+    // 리그별 패턴 또는 신규: 새 값으로 설정
+    finalTotal = total_matches
+    finalHomeWins = home_wins
+    finalDraws = draws
+    finalAwayWins = away_wins
+  }
+  
+  const homeWinRate = finalTotal > 0 ? finalHomeWins / finalTotal : 0
+  const drawRate = finalTotal > 0 ? finalDraws / finalTotal : 0
+  const awayWinRate = finalTotal > 0 ? finalAwayWins / finalTotal : 0
+  const confidence = evaluateConfidence(finalTotal)
+  
+  const record = {
+    pattern,
+    league_id: patternData.league_id,
+    league_code: patternData.league_code,
+    season: null,
+    total_matches: finalTotal,
+    home_wins: finalHomeWins,
+    draws: finalDraws,
+    away_wins: finalAwayWins,
+    home_win_rate: homeWinRate,
+    draw_rate: drawRate,
+    away_win_rate: awayWinRate,
+    confidence,
+    description: generateDescription(pattern, homeWinRate, drawRate, awayWinRate),
+    recommendation: generateRecommendation(homeWinRate, drawRate, awayWinRate, confidence),
+    updated_at: new Date().toISOString(),
+  }
   
   if (existing) {
     // UPDATE
@@ -300,15 +321,21 @@ async function upsertPattern(patternData: {
 }
 
 // ============================================
-// 메인 로직 (개선된 버전)
+// 메인 로직
 // ============================================
 
 async function calculatePatterns(
   leagueId: number | null = null,
-  batchSize: number = 2000
+  resetGlobal: boolean = false
 ): Promise<{ patterns: number; updated: number; errors: number; skipped: number; processed: number }> {
   
-  console.log(`🚀 Starting pattern calculation (leagueId: ${leagueId || 'ALL'}, batchSize: ${batchSize})`)
+  console.log(`🚀 Starting pattern calculation (leagueId: ${leagueId || 'ALL'}, resetGlobal: ${resetGlobal})`)
+  
+  // 전체 리셋 모드면 글로벌 패턴 삭제
+  if (resetGlobal) {
+    console.log('🗑️ Resetting global patterns...')
+    await supabase.from('fg_patterns').delete().is('league_id', null)
+  }
   
   // 1. 팀 통계 미리 로드 (캐시)
   const teamStatsCache = await loadTeamStatsCache(leagueId)
@@ -320,7 +347,6 @@ async function calculatePatterns(
     .eq('status', 'FINISHED')
     .not('result', 'is', null)
     .order('match_date', { ascending: true })
-    .limit(batchSize)
   
   if (leagueId) {
     query = query.eq('league_id', leagueId)
@@ -344,7 +370,7 @@ async function calculatePatterns(
     leagueCode: string | null
   }
   
-  // 전체 통합 패턴
+  // 전체 통합 패턴 (이번 리그에서 나온 것만)
   const globalPatterns: Map<string, PatternData> = new Map()
   // 리그별 패턴
   const leaguePatterns: Map<string, Map<string, PatternData>> = new Map()
@@ -361,7 +387,7 @@ async function calculatePatterns(
     }
     
     const pattern = calculatePattern(prob.home, prob.draw, prob.away)
-    const { result, league_id, league_code } = match
+    const { result, league_id: matchLeagueId, league_code } = match
     
     // 전체 통합 집계
     if (!globalPatterns.has(pattern)) {
@@ -374,7 +400,7 @@ async function calculatePatterns(
     else if (result === 'AWAY') gData.awayWins++
     
     // 리그별 집계
-    const leagueKey = String(league_id)
+    const leagueKey = String(matchLeagueId)
     if (!leaguePatterns.has(leagueKey)) {
       leaguePatterns.set(leagueKey, new Map())
     }
@@ -391,15 +417,15 @@ async function calculatePatterns(
     processed++
   }
   
-  console.log(`📊 Found ${globalPatterns.size} global patterns, ${skipped} skipped`)
+  console.log(`📊 Found ${globalPatterns.size} patterns from this batch, ${skipped} skipped`)
   
-  // 4. DB 저장 (UPSERT)
+  // 4. DB 저장 (누적 UPSERT)
   let updated = 0
   let errors = 0
   
-  // 전체 통합 패턴 저장
+  // 전체 통합 패턴 저장 (누적!)
   for (const [pattern, data] of globalPatterns) {
-    const success = await upsertPattern({
+    const success = await upsertPatternAccumulate({
       pattern,
       league_id: null,
       league_code: null,
@@ -407,20 +433,25 @@ async function calculatePatterns(
       home_wins: data.homeWins,
       draws: data.draws,
       away_wins: data.awayWins,
+      isGlobal: true,  // 누적 모드
+      sourceLeagueId: leagueId || undefined,
     })
     
     if (success) updated++
     else errors++
   }
   
-  // 리그별 패턴 저장 (최소 5경기 이상)
+  // 리그별 패턴 저장 (해당 리그만, 최소 5경기 이상)
   for (const [leagueIdStr, patterns] of leaguePatterns) {
     const lid = parseInt(leagueIdStr)
+    
+    // 현재 실행 중인 리그만 업데이트 (다른 리그 건드리지 않음)
+    if (leagueId && lid !== leagueId) continue
     
     for (const [pattern, data] of patterns) {
       if (data.total < 5) continue
       
-      const success = await upsertPattern({
+      const success = await upsertPatternAccumulate({
         pattern,
         league_id: lid,
         league_code: data.leagueCode,
@@ -428,6 +459,7 @@ async function calculatePatterns(
         home_wins: data.homeWins,
         draws: data.draws,
         away_wins: data.awayWins,
+        isGlobal: false,  // 덮어쓰기 모드
       })
       
       if (success) updated++
@@ -467,7 +499,7 @@ export async function GET(request: NextRequest) {
   
   return NextResponse.json({
     status: 'ready',
-    version: 'v3-upsert',
+    version: 'v3-accumulate',
     globalPatterns: globalCount || 0,
     leaguePatterns: leagueCount || 0,
     totalProcessed,
@@ -480,9 +512,8 @@ export async function GET(request: NextRequest) {
       confidence: p.confidence,
     })),
     usage: {
-      all: 'POST { "mode": "all" }',
-      league: 'POST { "mode": "league", "leagueId": 39 }',
-      batch: 'POST { "mode": "all", "batchSize": 3000 }',
+      reset_and_all: 'POST { "mode": "reset" } - 전체 리셋 후 전체 계산',
+      league: 'POST { "mode": "league", "leagueId": 39 } - 리그별 누적',
     }
   })
 }
@@ -490,33 +521,46 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { mode, leagueId, batchSize = 2000 } = body
+    const { mode, leagueId } = body
     
     const startTime = Date.now()
     
-    if (mode === 'all') {
-      // 전체 계산 (배치 사이즈 적용)
-      const result = await calculatePatterns(null, batchSize)
+    if (mode === 'reset') {
+      // 전체 리셋 후 모든 리그 계산
+      // 글로벌 패턴만 삭제하고 하나씩 누적
+      await supabase.from('fg_patterns').delete().is('league_id', null)
+      
+      const leagues = [39, 140, 78, 135, 61, 88]  // PL, PD, BL1, SA, FL1, DED
+      let totalResult = { patterns: 0, updated: 0, errors: 0, skipped: 0, processed: 0 }
+      
+      for (const lid of leagues) {
+        console.log(`📊 Processing league ${lid}...`)
+        const result = await calculatePatterns(lid, false)
+        totalResult.patterns = Math.max(totalResult.patterns, result.patterns)
+        totalResult.updated += result.updated
+        totalResult.errors += result.errors
+        totalResult.skipped += result.skipped
+        totalResult.processed += result.processed
+      }
+      
       const duration = Math.round((Date.now() - startTime) / 1000)
       
       return NextResponse.json({
         success: true,
-        mode: 'all',
-        batchSize,
-        ...result,
+        mode: 'reset',
+        ...totalResult,
         duration: `${duration}s`,
       })
       
     } else if (mode === 'league' && leagueId) {
-      // 리그별 계산
-      const result = await calculatePatterns(leagueId, batchSize)
+      // 리그별 계산 (글로벌에 누적)
+      const result = await calculatePatterns(leagueId, false)
       const duration = Math.round((Date.now() - startTime) / 1000)
       
       return NextResponse.json({
         success: true,
         mode: 'league',
         leagueId,
-        batchSize,
         ...result,
         duration: `${duration}s`,
       })
@@ -525,8 +569,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         error: 'Invalid mode',
         examples: {
-          all: { mode: 'all' },
-          allWithBatch: { mode: 'all', batchSize: 3000 },
+          reset: { mode: 'reset' },
           league: { mode: 'league', leagueId: 39 },
         }
       }, { status: 400 })
