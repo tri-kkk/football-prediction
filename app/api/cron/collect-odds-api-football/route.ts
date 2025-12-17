@@ -22,7 +22,7 @@ const LEAGUES = [
   { code: 'PL', id: 39, name: 'Premier League' },
   { code: 'ELC', id: 40, name: 'Championship' },
   { code: 'FAC', id: 45, name: 'FA Cup' },           // 🆕 컵대회
-  { code: 'EFL', id: 46, name: 'EFL Cup' },          // 🆕 컵대회
+  { code: 'EFL', id: 48, name: 'EFL Cup' },          // 🆕 컵대회
   
   // ===== 스페인 =====
   { code: 'PD', id: 140, name: 'La Liga' },
