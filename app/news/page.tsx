@@ -88,6 +88,16 @@ export default function NewsPage() {
     fetchMatches()
   }, [language])
 
+  // 30분마다 자동 갱신
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchNews()
+      console.log('🔄 뉴스 자동 갱신:', new Date().toLocaleTimeString())
+    }, 30 * 60 * 1000) // 30분
+
+    return () => clearInterval(interval)
+  }, [uiLang])
+
   const fetchNews = async () => {
     setLoading(true)
     try {
