@@ -7,6 +7,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true,  // 이미지 최적화 끄기 - Vercel 한도 절약
     remotePatterns: [
       // 축구 데이터
       { protocol: 'https', hostname: 'crests.football-data.org', pathname: '/**' },
