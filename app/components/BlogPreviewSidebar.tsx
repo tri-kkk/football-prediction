@@ -36,8 +36,8 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
 
   const fetchPosts = async () => {
     try {
-      // '경기 프리뷰' 카테고리만, 최신 9개 (롤링용으로 더 많이)
-      const res = await fetch('/api/blog/posts?published=true&category=preview&limit=9&offset=0')
+      // 최신 9개 (롤링용으로 더 많이)
+      const res = await fetch('/api/blog/posts?published=true&limit=9&offset=0')
       const result = await res.json()
       
       if (result.success && result.data) {
@@ -172,9 +172,31 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
                   />
                   {/* 카테고리 배지 */}
                   <div className="absolute top-2 left-2">
-                    <span className="px-2 py-0.5 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-full">
-                      {language === 'ko' ? '경기 프리뷰' : 'Preview'}
-                    </span>
+                    {(() => {
+                      const cat = post.category?.toLowerCase().trim()
+                      return (
+                        <span className={`px-2 py-1 text-white text-xs font-bold rounded-full shadow-lg ${
+                          cat === 'preview' 
+                            ? 'bg-gradient-to-r from-rose-500 to-pink-500' 
+                            : cat === 'weekly' 
+                            ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                            : cat === 'news'
+                            ? 'bg-green-500/90'
+                            : 'bg-gray-500/90'
+                        }`}>
+                          {language === 'ko' 
+                            ? (cat === 'preview' ? '경기 프리뷰' 
+                              : cat === 'weekly' ? '주간 분석' 
+                              : cat === 'news' ? '뉴스' 
+                              : post.category)
+                            : (cat === 'preview' ? 'Preview' 
+                              : cat === 'weekly' ? 'Weekly' 
+                              : cat === 'news' ? 'News' 
+                              : post.category)
+                          }
+                        </span>
+                      )
+                    })()}
                   </div>
                 </div>
               )}
