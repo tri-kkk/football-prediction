@@ -698,6 +698,7 @@ export default function Home() {
   const { t, language: currentLanguage } = useLanguage()
   const [selectedLeague, setSelectedLeague] = useState('ALL')
   const [matches, setMatches] = useState<Match[]>([])
+  const [allMatchesForBanner, setAllMatchesForBanner] = useState<Match[]>([]) // 🆕 상단 롤링용 전체 경기
     const [h2hModalOpen, setH2hModalOpen] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [loading, setLoading] = useState(true)
@@ -743,8 +744,9 @@ export default function Home() {
   // 전체 리그 목록 (전체 제외)
   const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
   
-  // 순위표용 리그 목록 (Nations League 제외)
-  const standingsLeagues = availableLeagues.filter(l => l.code !== 'UNL')
+  // 순위표용 리그 목록 (컵대회 제외)
+  const CUP_COMPETITIONS = ['UNL', 'FAC', 'EFL', 'CDR', 'DFB', 'CIT', 'KNV', 'AFCON', 'CDF', 'TDP']
+  const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes(l.code))
 
   // 🆕 날짜 네비게이션 함수들
   const formatDateKey = (date: Date): string => {
@@ -953,8 +955,8 @@ export default function Home() {
   useEffect(() => {
     if (selectedLeague === 'ALL') return
     
-    // Nations League 선택 시 순위표 숨김
-    if (selectedLeague === 'UNL') {
+    // 컵대회 선택 시 순위표 숨김
+    if (CUP_COMPETITIONS.includes(selectedLeague)) {
       setStandings([])
       return
     }
@@ -964,7 +966,7 @@ export default function Home() {
       setCurrentLeagueIndex(leagueIndex)
       setStandings(allLeagueStandings[selectedLeague] || [])
     }
-  }, [selectedLeague, standingsLeagues, allLeagueStandings, currentLeagueIndex])
+  }, [selectedLeague])
 
   // 자동 스크롤 효과 + 터치/마우스 드래그 지원 (데스크톱 & 모바일)
   useEffect(() => {
@@ -1112,6 +1114,10 @@ export default function Home() {
           // 캐시된 데이터도 번역 처리 🆕
           const translatedCached = await translateMatches(cachedMatches)
           setMatches(translatedCached)
+          // 🆕 전체 리그면 상단 롤링용으로도 저장
+          if (selectedLeague === 'ALL') {
+            setAllMatchesForBanner(translatedCached)
+          }
           setLoading(false)
           console.log('✅ 캐시에서 경기 로드 (번역 완료):', translatedCached.length)
           return
@@ -1295,6 +1301,11 @@ export default function Home() {
         const translatedMatches = await translateMatches(futureMatches)
         
         setMatches(translatedMatches)
+        
+        // 🆕 전체 리그면 상단 롤링용으로도 저장
+        if (selectedLeague === 'ALL') {
+          setAllMatchesForBanner(translatedMatches)
+        }
         
         // 🆕 라인업 상태 체크
         if (translatedMatches.length > 0) {
@@ -1877,8 +1888,9 @@ export default function Home() {
             style={{ scrollBehavior: 'auto' }}
           >
             {(() => {
-              // 필터링된 경기에서 20개 추출 (중복 제거)
-              const uniqueMatches = matches.slice(0, 20)
+              // 🆕 상단 롤링은 항상 전체 경기 기준
+              const bannerMatches = allMatchesForBanner.length > 0 ? allMatchesForBanner : matches
+              const uniqueMatches = bannerMatches.slice(0, 20)
               // 무한 스크롤을 위해 2번 반복
               return [...uniqueMatches, ...uniqueMatches].map((match, index) => {
               const currentTrend = trendData[match.id]
@@ -2966,8 +2978,8 @@ export default function Home() {
               </div>
             )}
             
-            {/* 특정 리그 선택 시 - 기존 순위표 */}
-            {selectedLeague !== 'ALL' && (
+            {/* 특정 리그 선택 시 - 기존 순위표 (컵대회 제외) */}
+            {selectedLeague !== 'ALL' && !CUP_COMPETITIONS.includes(selectedLeague) && (
               <div className={`rounded-xl overflow-hidden select-none ${
                 darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
               }`}>
