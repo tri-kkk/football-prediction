@@ -9,6 +9,7 @@ import { useLanguage } from './contexts/LanguageContext'
 import LineupModal from './components/LineupModal'
 import BlogPreviewSidebar from './components/BlogPreviewSidebar'  
 import AdBanner from './components/AdBanner'
+import MobileMatchReports from './components/MobileMatchReports'
 
 import TopHighlights from './components/TopHighlights'
 
@@ -1970,7 +1971,7 @@ export default function Home() {
       </div>
 
       {/* 모바일: 콤팩트 가로형 */}
-      <div className="md:hidden bg-[#0f0f0f] border-b border-gray-900">
+      <div className="hidden bg-[#0f0f0f] border-b border-gray-900">
         <div className="py-2 overflow-hidden">
           <div 
             ref={scrollContainerRef}
@@ -2047,11 +2048,7 @@ export default function Home() {
       {/* 트렌드 컨텐츠 영역 */}
       <div className="container mx-auto px-4 pt-0 md:py-3 pb-20 lg:pb-3">
         {/* TOP 하이라이트 섹션 - 메인 레이아웃과 동일한 너비 */}
-        <div className="mb-4">
-          <TopHighlights 
-            darkMode={darkMode}
-          />
-        </div>
+
         
         <div className="flex gap-8 relative">
           {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
@@ -2233,6 +2230,47 @@ export default function Home() {
               <AdBanner slot="desktop_banner" />
             </div>
 
+        {/* 🔥 모바일 PICK 배너 - 컴팩트 버전 (최상단) */}
+        <a 
+          href="/premium"
+          className="lg:hidden block mb-3 active:scale-[0.98] transition-transform"
+        >
+          <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-xl p-[1.5px] shadow-lg shadow-orange-500/20">
+            <div className="bg-[#0a0a0f] rounded-xl px-4 py-3">
+              <div className="flex items-center justify-between">
+                {/* 왼쪽: 타이틀 + 적중률 */}
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🔥</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-bold text-sm">
+                        {currentLanguage === 'ko' ? '트렌드 PICK' : 'Trend PICK'}
+                      </span>
+                      <span className="text-[9px] text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded-full animate-pulse font-medium">
+                        ● LIVE
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-yellow-400 font-black text-lg">67%</span>
+                      <span className="text-gray-500 text-[10px]">적중률</span>
+                      <span className="text-gray-600">|</span>
+                      <span className="text-white font-bold text-xs">8,200+</span>
+                      <span className="text-gray-500 text-[10px]">경기</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* 오른쪽: CTA */}
+                <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg px-3 py-2">
+                  <span className="text-white font-bold text-xs whitespace-nowrap">
+                    {currentLanguage === 'ko' ? '확인하기 →' : 'View →'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a>
+
         {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
         <div className="mb-4 md:mb-8">
           <div className="flex items-center justify-center gap-4">
@@ -2288,55 +2326,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 🔥 모바일 PICK 배너 (날짜 필터 아래) - 마케팅 최적화 */}
-        <a 
-          href="/premium"
-          className="lg:hidden block mb-4 active:scale-[0.98] transition-transform"
-        >
-          <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-2xl p-[2px] shadow-lg shadow-orange-500/20">
-            <div className="bg-[#0a0a0f] rounded-2xl p-4">
-              {/* 상단: 타이틀 + LIVE */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🔥</span>
-                  <span className="text-white font-bold text-base">
-                    {currentLanguage === 'ko' ? '트렌드 PICK' : 'Trend PICK'}
-                  </span>
-                </div>
-                <span className="text-[10px] text-green-400 bg-green-500/20 px-2 py-1 rounded-full animate-pulse font-medium">
-                  ● LIVE
-                </span>
-              </div>
-              
-              {/* 중앙: 적중률 강조 */}
-              <div className="flex items-center justify-center gap-4 mb-3">
-                <div className="text-center">
-                  <div className="text-gray-400 text-xs mb-1">
-                    {currentLanguage === 'ko' ? '평균 적중률' : 'Accuracy'}
-                  </div>
-                  <div className="flex items-baseline justify-center">
-                    <span className="text-yellow-400 font-black text-4xl">67</span>
-                    <span className="text-yellow-400 font-bold text-xl ml-0.5">%</span>
-                  </div>
-                </div>
-                <div className="w-px h-12 bg-gray-700" />
-                <div className="text-center">
-                  <div className="text-gray-400 text-xs mb-1">
-                    {currentLanguage === 'ko' ? '분석 경기' : 'Matches'}
-                  </div>
-                  <div className="text-white font-bold text-2xl">8,200+</div>
-                </div>
-              </div>
-              
-              {/* 하단: CTA 버튼 */}
-              <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl py-3 text-center shadow-lg shadow-orange-500/30">
-                <span className="text-white font-bold text-sm">
-                  {currentLanguage === 'ko' ? '무료로 예측 확인하기' : 'View Free Predictions'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </a>
+{/* 💻 PC: 유튜브 하이라이트 */}
+<div className="hidden md:block mb-4">
+  <TopHighlights darkMode={darkMode} />
+</div>
 
         {/* 상단 광고 배너 */}
         
@@ -2432,6 +2425,12 @@ export default function Home() {
 
                           return (
                             <React.Fragment key={leagueCode}>
+                              {/* 첫 번째 리그 다음에 매치 리포트 삽입 (모바일만) */}
+                              {leagueIndex === 1 && (
+                                <div className="md:hidden mb-4">
+                                  <MobileMatchReports darkMode={darkMode} />
+                                </div>
+                              )}
                               <div 
                                 className={`rounded-xl overflow-hidden mb-4 ${
                                   darkMode ? 'bg-[#111]' : 'bg-white shadow-sm border border-gray-100'
