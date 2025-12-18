@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
   title: 'Trend Soccer - 실시간 해외축구 경기 예측 & 프리뷰 플랫폼',
   description: '실시간 확률 기반 축구 경기 예측 분석. 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그 승률 및 트렌드 분석 제공',
-  // ✅ 영문 키워드 추가
   keywords: '축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, Soccer Prediction, Football Analysis, EPL Predictions, Match Preview, Live Score',
   authors: [{ name: 'Trend Soccer' }],
   robots: {
@@ -28,7 +27,6 @@ export const metadata: Metadata = {
     description: '실시간 확률 기반 축구 경기 예측 분석 플랫폼',
     type: 'website',
     locale: 'ko_KR',
-    // ✅ 다국어 지원 알림 태그 추가
     alternateLocale: ['en_US'],
     url: 'https://www.trendsoccer.com',
     siteName: 'Trend Soccer',
@@ -57,7 +55,7 @@ export const metadata: Metadata = {
   },
 }
 
-// ✅ JSON-LD 구조화 데이터 - 사이트 네비게이션 (Google 사이트링크용)
+// ✅ JSON-LD 구조화 데이터 - 사이트 네비게이션 (Google 사이트링크용) - 한/영 지원
 const siteNavigationSchema = {
   "@context": "http://schema.org",
   "@type": "ItemList",
@@ -65,29 +63,33 @@ const siteNavigationSchema = {
     {
       "@type": "SiteNavigationElement",
       "position": 1,
-      "name": "Predict",
-      "description": "AI Match Predictions",
+      "name": "프리미엄 경기 예측",
+      "alternateName": "Premium Match Predictions",
+      "description": "6대 리그, 최근 4시즌 데이터 기반 AI 승률 예측 | AI-powered predictions based on 4 seasons data",
       "url": "https://www.trendsoccer.com/premium"
     },
     {
       "@type": "SiteNavigationElement",
       "position": 2,
-      "name": "Results",
-      "description": "Live Match Results",
+      "name": "경기결과",
+      "alternateName": "Match Results",
+      "description": "경기 스코어 및 하이라이트 제공 | Live scores and highlights",
       "url": "https://www.trendsoccer.com/results"
     },
     {
       "@type": "SiteNavigationElement",
       "position": 3,
-      "name": "Report",
-      "description": "Analysis Blog",
+      "name": "경기 분석",
+      "alternateName": "Match Analysis",
+      "description": "주요 리그 경기 심층 분석 리포트 | In-depth match analysis reports",
       "url": "https://www.trendsoccer.com/blog"
     },
     {
       "@type": "SiteNavigationElement",
       "position": 4,
-      "name": "News",
-      "description": "Latest Football News",
+      "name": "최신 축구 뉴스",
+      "alternateName": "Latest Football News",
+      "description": "최신 국내 및 해외 축구뉴스 | Latest domestic and international football news",
       "url": "https://www.trendsoccer.com/news"
     }
   ]
@@ -100,7 +102,7 @@ const websiteSchema = {
   "name": "Trend Soccer",
   "alternateName": "트렌드사커",
   "url": "https://www.trendsoccer.com",
-  "description": "실시간 확률 기반 축구 경기 예측 분석 플랫폼",
+  "description": "실시간 확률 기반 축구 경기 예측 분석 플랫폼 | Real-time football match prediction platform",
   "inLanguage": ["ko-KR", "en-US"],
   "potentialAction": {
     "@type": "SearchAction",
@@ -114,6 +116,7 @@ const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "Trend Soccer",
+  "alternateName": "트렌드사커",
   "url": "https://www.trendsoccer.com",
   "logo": "https://www.trendsoccer.com/logo.svg",
   "sameAs": []

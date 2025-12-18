@@ -11,6 +11,7 @@ import BlogPreviewSidebar from './components/BlogPreviewSidebar'
 import AdBanner from './components/AdBanner'
 
 import TopHighlights from './components/TopHighlights'
+
 // 리그 정보 (국기 이미지 포함)
 const LEAGUES = [
   { 
@@ -453,49 +454,33 @@ async function translateMatches(matches: any[]): Promise<any[]> {
   }))
 }
 
-// 시간 포맷 함수 (UTC를 KST로 변환)
+// 시간 포맷 함수 (브라우저 로컬 시간대 자동 적용)
 function formatTime(utcDateString: string): string {
-  // API에서 UTC ISO 문자열을 받음: "2025-11-22T12:30:00+00:00" 또는 "2025-11-22T12:30:00Z"
-  const utcDate = new Date(utcDateString)
-  
-  // UTC 시간에 9시간(KST 오프셋)을 더함
-  const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000))
-  
-  // UTC 메서드를 사용하여 KST 시간 추출 (로컬 시간대 영향 받지 않음)
-  const hours = String(kstDate.getUTCHours()).padStart(2, '0')
-  const minutes = String(kstDate.getUTCMinutes()).padStart(2, '0')
-  
+  const date = new Date(utcDateString)
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${hours}:${minutes}`
 }
 
-// 날짜 포맷 (UTC를 KST로 변환)
+// 날짜 포맷 (브라우저 로컬 시간대 자동 적용)
 function formatDate(utcDateString: string, language: string = 'ko'): string {
-  // API에서 UTC ISO 문자열을 받음: "2025-11-22T12:30:00+00:00" 또는 "2025-11-22T12:30:00Z"
-  const utcDate = new Date(utcDateString)
-  
-  // UTC 시간에 9시간(KST 오프셋)을 더함
-  const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000))
-  
-  // 현재 한국 시간 계산
+  const date = new Date(utcDateString)
   const now = new Date()
-  const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000))
   
-  // 오늘/내일 비교를 위해 날짜만 추출 (시간 제거)
-  const todayKST = new Date(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate())
-  const tomorrowKST = new Date(todayKST)
-  tomorrowKST.setDate(tomorrowKST.getDate() + 1)
+  // 날짜만 비교 (시간 제거)
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const tomorrowDate = new Date(todayDate)
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+  const matchDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   
-  const matchDateKST = new Date(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate())
-  
-  if (matchDateKST.getTime() === todayKST.getTime()) {
+  if (matchDate.getTime() === todayDate.getTime()) {
     return language === 'ko' ? '오늘' : 'Today'
-  } else if (matchDateKST.getTime() === tomorrowKST.getTime()) {
+  } else if (matchDate.getTime() === tomorrowDate.getTime()) {
     return language === 'ko' ? '내일' : 'Tomorrow'
   } else {
-    // YYYY/MM/DD 형식으로 변환
-    const year = kstDate.getUTCFullYear()
-    const month = String(kstDate.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(kstDate.getUTCDate()).padStart(2, '0')
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
     return `${year}/${month}/${day}`
   }
 }
@@ -1952,7 +1937,7 @@ export default function Home() {
                     {match.homeTeam} - {match.awayTeam}
                   </div>
                   <div className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
-                    {match.time}
+                    {formatTime(match.utcDate)}
                   </div>
                 </div>
               )

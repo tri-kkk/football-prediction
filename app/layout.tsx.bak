@@ -7,12 +7,14 @@ import Navigation from './components/Navigation'
 import BottomNavigation from './components/BottomNavigation'
 import { LanguageProvider } from './contexts/LanguageContext'
 import LanguageToggle from './components/LanguageToggle'
+import HtmlLangUpdater from './components/HtmlLangUpdater'  // ✅ 동적 언어 처리
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
   title: 'Trend Soccer - 실시간 해외축구 경기 예측 & 프리뷰 플랫폼',
   description: '실시간 확률 기반 축구 경기 예측 분석. 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그 승률 및 트렌드 분석 제공',
-  keywords: '축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰',
+  // ✅ 영문 키워드 추가
+  keywords: '축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, Soccer Prediction, Football Analysis, EPL Predictions, Match Preview, Live Score',
   authors: [{ name: 'Trend Soccer' }],
   robots: {
     index: true,
@@ -26,6 +28,8 @@ export const metadata: Metadata = {
     description: '실시간 확률 기반 축구 경기 예측 분석 플랫폼',
     type: 'website',
     locale: 'ko_KR',
+    // ✅ 다국어 지원 알림 태그 추가
+    alternateLocale: ['en_US'],
     url: 'https://www.trendsoccer.com',
     siteName: 'Trend Soccer',
     images: [
@@ -53,6 +57,68 @@ export const metadata: Metadata = {
   },
 }
 
+// ✅ JSON-LD 구조화 데이터 - 사이트 네비게이션 (Google 사이트링크용)
+const siteNavigationSchema = {
+  "@context": "http://schema.org",
+  "@type": "ItemList",
+  "itemListElement": [
+    {
+      "@type": "SiteNavigationElement",
+      "position": 1,
+      "name": "Predict",
+      "description": "AI Match Predictions",
+      "url": "https://www.trendsoccer.com/premium"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "position": 2,
+      "name": "Results",
+      "description": "Live Match Results",
+      "url": "https://www.trendsoccer.com/results"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "position": 3,
+      "name": "Report",
+      "description": "Analysis Blog",
+      "url": "https://www.trendsoccer.com/blog"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "position": 4,
+      "name": "News",
+      "description": "Latest Football News",
+      "url": "https://www.trendsoccer.com/news"
+    }
+  ]
+}
+
+// ✅ JSON-LD 구조화 데이터 - 웹사이트 (검색 기능 표시)
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Trend Soccer",
+  "alternateName": "트렌드사커",
+  "url": "https://www.trendsoccer.com",
+  "description": "실시간 확률 기반 축구 경기 예측 분석 플랫폼",
+  "inLanguage": ["ko-KR", "en-US"],
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://www.trendsoccer.com/search?q={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+
+// ✅ JSON-LD 구조화 데이터 - 조직 (브랜드 인식)
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Trend Soccer",
+  "url": "https://www.trendsoccer.com",
+  "logo": "https://www.trendsoccer.com/logo.svg",
+  "sameAs": []
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -60,12 +126,46 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
+      <head>
+        {/* ✅ JSON-LD 구조화 데이터 - 사이트 네비게이션 */}
+        <Script
+          id="site-navigation-schema"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(siteNavigationSchema)
+          }}
+        />
+        
+        {/* ✅ JSON-LD 구조화 데이터 - 웹사이트 */}
+        <Script
+          id="website-schema"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(websiteSchema)
+          }}
+        />
+        
+        {/* ✅ JSON-LD 구조화 데이터 - 조직 */}
+        <Script
+          id="organization-schema"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationSchema)
+          }}
+        />
+      </head>
       <body className="bg-[#0f0f0f] text-white">
         <LanguageProvider>
+        {/* ✅ 동적 html lang 속성 변경 */}
+        <HtmlLangUpdater />
+        
         {/* Google Tag Manager */}
         <GoogleTagManager />
 
-        {/* Google AdSense - 수정된 pub ID */}
+        {/* Google AdSense */}
         <Script
           id="google-adsense"
           async
