@@ -24,6 +24,11 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
   const { language } = useLanguage()
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
+  
+  // 🎡 롤링 설정
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const DISPLAY_COUNT = 3      // 한 번에 보여줄 개수
+  const ROTATE_INTERVAL = 8000 // 8초마다 교체
 
   useEffect(() => {
     fetchPosts()
@@ -31,8 +36,8 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
 
   const fetchPosts = async () => {
     try {
-      // '경기 프리뷰' 카테고리만, 최신 3개
-      const res = await fetch('/api/blog/posts?published=true&category=preview&limit=3&offset=0')
+      // '경기 프리뷰' 카테고리만, 최신 9개 (롤링용으로 더 많이)
+      const res = await fetch('/api/blog/posts?published=true&category=preview&limit=9&offset=0')
       const result = await res.json()
       
       if (result.success && result.data) {
@@ -44,6 +49,43 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
       setLoading(false)
     }
   }
+
+  // 🎡 자동 롤링 효과
+  useEffect(() => {
+    // 포스트가 3개 이하면 롤링 필요 없음
+    if (posts.length <= DISPLAY_COUNT) return
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => {
+        const nextIndex = prev + DISPLAY_COUNT
+        // 다음 그룹이 없으면 처음으로
+        if (nextIndex >= posts.length) {
+          return 0
+        }
+        return nextIndex
+      })
+    }, ROTATE_INTERVAL)
+
+    return () => clearInterval(interval)
+  }, [posts.length])
+
+  // 현재 표시할 포스트들
+  const getVisiblePosts = () => {
+    if (posts.length <= DISPLAY_COUNT) return posts
+    
+    const visible = posts.slice(currentIndex, currentIndex + DISPLAY_COUNT)
+    // 부족하면 앞에서 채우기 (순환)
+    if (visible.length < DISPLAY_COUNT) {
+      return [...visible, ...posts.slice(0, DISPLAY_COUNT - visible.length)]
+    }
+    return visible
+  }
+
+  const visiblePosts = getVisiblePosts()
+
+  // 총 그룹 수와 현재 그룹 계산
+  const totalGroups = Math.ceil(posts.length / DISPLAY_COUNT)
+  const currentGroup = Math.floor(currentIndex / DISPLAY_COUNT)
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -71,19 +113,41 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
       <div className={`px-4 py-3 border-b ${
         darkMode ? 'border-gray-800' : 'border-gray-200'
       }`}>
-        <div className="flex items-center gap-2">
-          <span className="text-xl">📰</span>
-          <h3 className={`font-bold ${
-            darkMode ? 'text-white' : 'text-gray-900'
-          }`}>
-            {language === 'ko' ? '매치 리포트' : 'Match Reports'}
-          </h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📰</span>
+            <h3 className={`font-bold ${
+              darkMode ? 'text-white' : 'text-gray-900'
+            }`}>
+              {language === 'ko' ? '매치 리포트' : 'Match Reports'}
+            </h3>
+          </div>
+          
+          {/* 🎡 인디케이터 도트 (3개 초과일 때만 표시) */}
+          {posts.length > DISPLAY_COUNT && (
+            <div className="flex gap-1.5">
+              {Array.from({ length: totalGroups }).map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentIndex(idx * DISPLAY_COUNT)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    idx === currentGroup
+                      ? 'bg-blue-500 w-4'
+                      : darkMode 
+                        ? 'bg-gray-600 hover:bg-gray-500 w-2' 
+                        : 'bg-gray-300 hover:bg-gray-400 w-2'
+                  }`}
+                  aria-label={`Go to group ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* 포스트 목록 */}
       <div className="p-3 space-y-3">
-        {posts.map((post) => (
+        {visiblePosts.map((post) => (
           <Link 
             key={post.id} 
             href={`/blog/${post.slug}`}
