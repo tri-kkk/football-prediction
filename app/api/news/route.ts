@@ -4,37 +4,92 @@ import { NextRequest, NextResponse } from 'next/server'
 const NEWS_API_TOKEN = process.env.NEWS_API_TOKEN || 'Fh23c0qhklAz5xdPY35QlRJ41SaJEBDywe6uWfH7'
 const NEWS_API_BASE = 'https://api.thenewsapi.com/v1/news/all'
 
-const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || '4vRIttCnY29H4SdYztZU'
-const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET || 'MaqnBYPgKh'
-const NAVER_API_BASE = 'https://openapi.naver.com/v1/search/news.json'
+// 뉴스 카테고리 설정
+const NEWS_CATEGORIES = {
+  // 영어 뉴스 카테고리
+  en: [
+    { 
+      id: 'premier-league',
+      name: 'Premier League',
+      nameKo: '프리미어리그',
+      nameEn: 'Premier League',
+      search: 'Premier League',
+      logo: 'https://media.api-sports.io/football/leagues/39.png',
+    },
+    { 
+      id: 'champions-league',
+      name: 'Champions League',
+      nameKo: '챔피언스리그',
+      nameEn: 'Champions League',
+      search: 'Champions League UEFA',
+      logo: 'https://media.api-sports.io/football/leagues/2.png',
+    },
+    { 
+      id: 'la-liga',
+      name: 'La Liga',
+      nameKo: '라리가',
+      nameEn: 'La Liga',
+      search: 'La Liga Barcelona Real Madrid',
+      logo: 'https://media.api-sports.io/football/leagues/140.png',
+    },
+    { 
+      id: 'bundesliga',
+      name: 'Bundesliga',
+      nameKo: '분데스리가',
+      nameEn: 'Bundesliga',
+      search: 'Bundesliga Bayern',
+      logo: 'https://media.api-sports.io/football/leagues/78.png',
+    },
+    { 
+      id: 'serie-a',
+      name: 'Serie A',
+      nameKo: '세리에A',
+      nameEn: 'Serie A',
+      search: 'Serie A Inter Milan Juventus',
+      logo: 'https://media.api-sports.io/football/leagues/135.png',
+    },
+  ],
+  // 한국어 뉴스 카테고리
+  ko: [
+    { 
+      id: 'korean-football',
+      name: 'Korean Football',
+      nameKo: '국내 축구',
+      nameEn: 'K-League',
+      search: 'K리그',
+      logo: 'https://media.api-sports.io/football/leagues/292.png',
+    },
+    { 
+      id: 'premier-league-ko',
+      name: 'Premier League',
+      nameKo: '프리미어리그',
+      nameEn: 'Premier League',
+      search: '손흥민',
+      logo: 'https://media.api-sports.io/football/leagues/39.png',
+    },
+    { 
+      id: 'european-football-ko',
+      name: 'European Football',
+      nameKo: '해외 축구',
+      nameEn: 'European Football',
+      search: '해외축구',
+      logo: 'https://media.api-sports.io/football/leagues/2.png',
+    },
+  ]
+}
 
-// 해외 뉴스 카테고리 (이미지 있음)
-const INTERNATIONAL_CATEGORIES = [
-  { 
-    id: 'premier-league',
-    name: 'Premier League',
-    nameKo: '프리미어리그',
-    search: 'Premier League',
-    logo: 'https://crests.football-data.org/PL.png',
-    limit: 6
-  },
-  { 
-    id: 'champions-league',
-    name: 'Champions League',
-    nameKo: '챔피언스리그',
-    search: 'Champions League UEFA',
-    logo: 'https://crests.football-data.org/CL.png',
-    limit: 6
-  },
-  { 
-    id: 'la-liga',
-    name: 'La Liga',
-    nameKo: '라리가',
-    search: 'La Liga Spain Barcelona Real Madrid',
-    logo: 'https://crests.football-data.org/PD.png',
-    limit: 6
-  },
+// 필터링할 키워드 (토토, 베팅 관련) - 제목에서만 체크
+const BLOCKED_KEYWORDS = [
+  '승무패', '적중결과', '스포츠토토', '프로토', '배당률'
 ]
+
+// 기사 필터링 함수 - 제목만 체크
+function filterArticles(articles: ProcessedArticle[]): ProcessedArticle[] {
+  return articles.filter(article => {
+    const title = article.title
+    return !BLOCKED_KEYWORDS.some(keyword => title.includes(keyword))
+  })
+}
 
 interface ProcessedArticle {
   id: string
@@ -46,175 +101,165 @@ interface ProcessedArticle {
   publishedAt: string
 }
 
-// TheNewsAPI에서 뉴스 가져오기 (영어)
-async function fetchInternationalNews(search: string, limit: number): Promise<ProcessedArticle[]> {
+// TheNewsAPI에서 뉴스 가져오기
+async function fetchNews(
+  search: string, 
+  language: 'en' | 'ko' = 'en',
+  limit: number = 6
+): Promise<ProcessedArticle[]> {
   try {
-    const url = `${NEWS_API_BASE}?api_token=${NEWS_API_TOKEN}&categories=sports&search=${encodeURIComponent(search)}&language=en&limit=${limit}&sort=published_at`
+    const params = new URLSearchParams({
+      api_token: NEWS_API_TOKEN,
+      categories: 'sports',
+      search: search,
+      language: language,
+      limit: limit.toString(),
+      sort: 'published_at',
+      sort_order: 'desc'  // 최신순 (내림차순)
+    })
     
-    const response = await fetch(url, { next: { revalidate: 1800 } })
-    if (!response.ok) return []
+    const url = `${NEWS_API_BASE}?${params.toString()}`
+    
+    const response = await fetch(url, { 
+      next: { revalidate: 1800 } // 30분 캐시
+    })
+    
+    if (!response.ok) {
+      console.error(`NewsAPI Error: ${response.status}`)
+      return []
+    }
     
     const data = await response.json()
     
-    return data.data
-      .filter((article: any) => article.image_url)
-      .map((article: any) => ({
-        id: article.uuid,
-        title: article.title,
-        description: article.description || article.snippet,
-        imageUrl: article.image_url,
-        url: article.url,
-        source: article.source,
-        publishedAt: article.published_at,
-      }))
+    if (!data.data || !Array.isArray(data.data)) {
+      return []
+    }
+    
+    // 최신순 정렬 보장
+    const articles = data.data.map((article: any) => ({
+      id: article.uuid || `news-${Date.now()}-${Math.random()}`,
+      title: article.title || '',
+      description: article.description || article.snippet || '',
+      imageUrl: article.image_url || '',
+      url: article.url || '',
+      source: extractSource(article.source || article.url || ''),
+      publishedAt: article.published_at || new Date().toISOString(),
+    }))
+    
+    // 한번 더 최신순 정렬
+    return articles.sort((a: ProcessedArticle, b: ProcessedArticle) => 
+      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    )
   } catch (error) {
-    console.error('Error fetching international news:', error)
+    console.error('Error fetching news:', error)
     return []
   }
 }
 
-// 네이버 API에서 뉴스 가져오기 (한국어)
-async function fetchNaverNews(display: number = 10): Promise<ProcessedArticle[]> {
+// 소스 이름 추출
+function extractSource(source: string): string {
   try {
-    const url = `${NAVER_API_BASE}?query=${encodeURIComponent('축구')}&display=${display}&sort=date`
-    
-    const response = await fetch(url, {
-      headers: {
-        'X-Naver-Client-Id': NAVER_CLIENT_ID,
-        'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
-      },
-      next: { revalidate: 1800 }
-    })
-    
-    if (!response.ok) return []
-    
-    const data = await response.json()
-    
-    return data.items.map((item: any, index: number) => {
-      const cleanTitle = item.title
-        .replace(/<[^>]*>/g, '')
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-      
-      const cleanDesc = item.description
-        .replace(/<[^>]*>/g, '')
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, '&')
-      
-      let source = '뉴스'
-      try {
-        const urlObj = new URL(item.originallink)
-        source = urlObj.hostname
-          .replace('www.', '')
-          .replace('.co.kr', '')
-          .replace('.com', '')
-          .replace('sports.', '')
-          .replace('news.', '')
-      } catch {}
-      
-      return {
-        id: `naver-${index}-${Date.now()}`,
-        title: cleanTitle,
-        description: cleanDesc,
-        imageUrl: '',
-        url: item.link,
-        source: source,
-        publishedAt: item.pubDate,
-      }
-    })
-  } catch (error) {
-    console.error('Error fetching Naver news:', error)
-    return []
+    if (source.includes('.')) {
+      return source
+        .replace('www.', '')
+        .replace('.com', '')
+        .replace('.co.kr', '')
+        .replace('.net', '')
+        .replace('sports.', '')
+    }
+    return source
+  } catch {
+    return source
   }
+}
+
+// 중복 제거
+function deduplicateArticles(
+  articles: ProcessedArticle[], 
+  usedIds: Set<string>, 
+  usedTitles: Set<string>,
+  maxCount: number
+): ProcessedArticle[] {
+  const result: ProcessedArticle[] = []
+  
+  for (const article of articles) {
+    if (result.length >= maxCount) break
+    if (usedIds.has(article.id)) continue
+    
+    const normalizedTitle = article.title.toLowerCase().substring(0, 40)
+    if (usedTitles.has(normalizedTitle)) continue
+    
+    usedIds.add(article.id)
+    usedTitles.add(normalizedTitle)
+    result.push(article)
+  }
+  
+  return result
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const lang = searchParams.get('lang')
+    const lang = searchParams.get('lang') as 'en' | 'ko' | null
+    const uiLang = searchParams.get('ui') as 'en' | 'ko' || 'ko'
     
-    // 🔹 사이드바용: lang 파라미터가 있으면 단순 articles 반환
+    // 🔹 사이드바용: 단순 기사 목록
     if (lang) {
-      let articles: ProcessedArticle[] = []
+      const search = lang === 'ko' ? '축구 프리미어리그 K리그' : 'football Premier League'
+      const articles = await fetchNews(search, lang, 10)
       
-      if (lang === 'ko') {
-        articles = await fetchNaverNews(10)
-      } else {
-        articles = await fetchInternationalNews('football soccer', 10)
-      }
-      
-      // 중복 제거
-      const seenTitles = new Set<string>()
-      const uniqueArticles = articles.filter(article => {
-        const normalizedTitle = article.title.substring(0, 30).toLowerCase()
-        if (seenTitles.has(normalizedTitle)) return false
-        seenTitles.add(normalizedTitle)
-        return true
-      }).slice(0, 6)
+      // 이미지 있는 기사 우선
+      const sorted = [
+        ...articles.filter(a => a.imageUrl),
+        ...articles.filter(a => !a.imageUrl)
+      ].slice(0, 6)
       
       return NextResponse.json({
         success: true,
-        articles: uniqueArticles,
-        lang: lang,
+        articles: sorted,
+        lang,
         updatedAt: new Date().toISOString(),
       })
     }
     
-    // 🔹 뉴스 페이지용: categories 구조 반환
-    const usedArticleIds = new Set<string>()
+    // 🔹 뉴스 페이지용: UI 언어에 맞는 카테고리만 반환
+    const usedIds = new Set<string>()
     const usedTitles = new Set<string>()
     const results = []
     
-    // 1. 해외 뉴스 (TheNewsAPI)
-    for (const category of INTERNATIONAL_CATEGORIES) {
-      const articles = await fetchInternationalNews(category.search, category.limit)
+    // UI 언어에 맞는 카테고리만 선택
+    const categoriesToFetch = uiLang === 'ko' ? NEWS_CATEGORIES.ko : NEWS_CATEGORIES.en
+    const fetchLang = uiLang // 뉴스 언어도 UI 언어와 동일
+    
+    for (const category of categoriesToFetch) {
+      const articles = await fetchNews(category.search, fetchLang, 10)
       
-      const uniqueArticles = articles.filter(article => {
-        if (usedArticleIds.has(article.id)) return false
-        const normalizedTitle = article.title.toLowerCase().substring(0, 50)
-        if (usedTitles.has(normalizedTitle)) return false
-        usedArticleIds.add(article.id)
-        usedTitles.add(normalizedTitle)
-        return true
-      }).slice(0, 4)
+      // 토토/베팅 관련 기사 필터링
+      const filteredArticles = filterArticles(articles)
       
-      if (uniqueArticles.length > 0) {
+      const unique = deduplicateArticles(filteredArticles, usedIds, usedTitles, 6)
+      
+      if (unique.length > 0) {
+        const hasImages = unique.some(a => a.imageUrl)
+        
         results.push({
           id: category.id,
           name: category.name,
           nameKo: category.nameKo,
+          nameEn: category.nameEn,
+          displayName: uiLang === 'ko' ? category.nameKo : category.nameEn,
           logo: category.logo,
-          hasImage: true,
-          articles: uniqueArticles,
+          hasImage: hasImages,
+          articles: unique,
         })
       }
-    }
-    
-    // 2. 한국 뉴스 (네이버)
-    const koreanArticles = await fetchNaverNews(10)
-    const uniqueKoreanArticles = koreanArticles.filter(article => {
-      const normalizedTitle = article.title.substring(0, 30)
-      if (usedTitles.has(normalizedTitle)) return false
-      usedTitles.add(normalizedTitle)
-      return true
-    }).slice(0, 6)
-    
-    if (uniqueKoreanArticles.length > 0) {
-      results.push({
-        id: 'korean-football',
-        name: 'Korean Football',
-        nameKo: '국내 축구',
-        logo: 'https://flagcdn.com/w40/kr.png',
-        hasImage: false,
-        articles: uniqueKoreanArticles,
-      })
     }
     
     return NextResponse.json({
       success: true,
       categories: results,
+      uiLang,
+      totalArticles: results.reduce((sum, cat) => sum + cat.articles.length, 0),
       updatedAt: new Date().toISOString(),
     })
     
