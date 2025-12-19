@@ -1,5 +1,6 @@
 // app/api/pick-recommendations/route.ts
 // PICK 추천 경기 조회 및 결과 업데이트 API
+// ✅ v2: 리그별 적중률 서버 계산 추가
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -18,6 +19,37 @@ export async function GET(request: NextRequest) {
     const period = searchParams.get('period')  // 'today' | 'week' | 'month' | 'all'
     const status = searchParams.get('status')  // 'all' | 'correct' | 'incorrect' | 'pending'
     
+    // ✅ 1. 리그별 적중률 계산 (전체 데이터 기반, 확정된 것만)
+    const { data: allSettled, error: statsError } = await supabase
+      .from('pick_recommendations')
+      .select('league_code, is_correct')
+      .not('is_correct', 'is', null)
+    
+    // 리그별 통계 집계
+    const leagueAccuracy: Record<string, { total: number; correct: number; accuracy: number }> = {}
+    
+    if (allSettled && !statsError) {
+      allSettled.forEach(pick => {
+        const league = pick.league_code || 'OTHER'
+        if (!leagueAccuracy[league]) {
+          leagueAccuracy[league] = { total: 0, correct: 0, accuracy: 0 }
+        }
+        leagueAccuracy[league].total++
+        if (pick.is_correct === true) {
+          leagueAccuracy[league].correct++
+        }
+      })
+      
+      // 적중률 계산
+      Object.keys(leagueAccuracy).forEach(league => {
+        const stats = leagueAccuracy[league]
+        stats.accuracy = stats.total > 0 
+          ? Math.round((stats.correct / stats.total) * 100) 
+          : 0
+      })
+    }
+    
+    // ✅ 2. PICK 목록 조회 (필터 적용)
     let query = supabase
       .from('pick_recommendations')
       .select('*')
@@ -74,8 +106,8 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // 최대 100개 제한
-    query = query.limit(100)
+    // 최대 200개 제한 (증가)
+    query = query.limit(200)
     
     const { data: picks, error } = await query
     
@@ -84,7 +116,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     
-    // 통계 계산
+    // 통계 계산 (조회된 데이터 기준)
     const total = picks?.length || 0
     const correct = picks?.filter(p => p.is_correct === true).length || 0
     const incorrect = picks?.filter(p => p.is_correct === false).length || 0
@@ -101,7 +133,9 @@ export async function GET(request: NextRequest) {
         incorrect,
         pending,
         accuracy
-      }
+      },
+      // ✅ 리그별 적중률 추가 (전체 데이터 기반)
+      leagueAccuracy
     })
     
   } catch (error: any) {

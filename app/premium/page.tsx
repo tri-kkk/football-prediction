@@ -1173,7 +1173,7 @@ export default function PremiumPredictPage() {
     }
   }
   
-  // ✅ PICK 적중률 로드 함수
+// ✅ PICK 적중률 로드 함수 (수정됨 - 서버 계산 사용)
   async function loadPickAccuracy() {
     try {
       const response = await fetch('/api/pick-recommendations?period=all')
@@ -1181,27 +1181,12 @@ export default function PremiumPredictPage() {
       
       const data = await response.json()
       
-      if (data.picks && Array.isArray(data.picks)) {
-        const leagueStats: Record<string, { total: number; correct: number }> = {}
-        
-        data.picks.forEach((pick: any) => {
-          if (pick.is_correct === null) return  // 미확정 제외
-          
-          const league = pick.league_code || 'OTHER'
-          if (!leagueStats[league]) {
-            leagueStats[league] = { total: 0, correct: 0 }
-          }
-          leagueStats[league].total++
-          if (pick.is_correct === true) {
-            leagueStats[league].correct++
-          }
-        })
-        
-        // 배열로 변환 + 가산점 적용
-        const accuracyData = Object.entries(leagueStats)
-          .filter(([_, stats]) => stats.total >= 2)  // 최소 2경기 이상으로 완화
-          .map(([league_code, stats]) => {
-            const accuracy = Math.round((stats.correct / stats.total) * 100)
+      // ✅ 서버에서 계산된 리그별 적중률 사용
+      if (data.leagueAccuracy) {
+        const accuracyData = Object.entries(data.leagueAccuracy)
+          .filter(([_, stats]: [string, any]) => stats.total >= 2)  // 최소 2경기 이상
+          .map(([league_code, stats]: [string, any]) => {
+            const accuracy = stats.accuracy
             // 🔥 가산점: 기본 +5%, 적중률 낮으면 더 추가
             const bonus = accuracy < 50 ? 12 : accuracy < 60 ? 8 : 5
             return {
@@ -1213,10 +1198,12 @@ export default function PremiumPredictPage() {
           })
           .sort((a, b) => b.displayAccuracy - a.displayAccuracy)
         
-        console.log('📊 PICK Accuracy loaded:', accuracyData)  // 디버그
+        console.log('📊 PICK Accuracy loaded (server):', accuracyData)
         setPickAccuracy(accuracyData)
-        
-        // ✅ 최근 적중 경기 추출 (롤링용)
+      }
+      
+      // ✅ 최근 적중 경기 추출 (롤링용)
+      if (data.picks && Array.isArray(data.picks)) {
         const correctPicks = data.picks
           .filter((pick: any) => pick.is_correct === true)
           .slice(0, 10)
