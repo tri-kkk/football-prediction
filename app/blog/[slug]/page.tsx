@@ -205,87 +205,276 @@ export default function BlogPostPage() {
 
         {/* 본문 */}
         <div className="prose prose-invert prose-lg max-w-none">
-          <ReactMarkdown
-            components={{
-              h1: ({ children }) => (
-                <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">
-                  {children}
-                </h1>
-              ),
-              h2: ({ children }) => (
-                <h2 className="text-2xl font-bold mt-8 mb-4 text-white">
-                  {children}
-                </h2>
-              ),
-              h3: ({ children }) => (
-                <h3 className="text-xl font-bold mt-6 mb-3 text-white">
-                  {children}
-                </h3>
-              ),
-              p: ({ children }) => (
-                <p className="text-gray-300 leading-relaxed mb-4">
-                  {children}
-                </p>
-              ),
-              ul: ({ children }) => (
-                <ul className="list-disc list-inside text-gray-300 mb-4 space-y-2">
-                  {children}
-                </ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="list-decimal list-inside text-gray-300 mb-4 space-y-2">
-                  {children}
-                </ol>
-              ),
-              blockquote: ({ children }) => (
-                <blockquote className="border-l-4 border-[#A3FF4C] pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">
-                  {children}
-                </blockquote>
-              ),
-              code: ({ children }) => (
-                <code className="bg-gray-900 text-[#A3FF4C] px-2 py-1 rounded text-sm">
-                  {children}
-                </code>
-              ),
-              pre: ({ children }) => (
-                <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto my-4 border border-gray-800">
-                  {children}
-                </pre>
-              ),
-              table: ({ children }) => (
-                <div className="overflow-x-auto my-6">
-                  <table className="w-full border-collapse">
-                    {children}
-                  </table>
-                </div>
-              ),
-              th: ({ children }) => (
-                <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left font-bold">
-                  {children}
-                </th>
-              ),
-              td: ({ children }) => (
-                <td className="border border-gray-700 px-4 py-2">
-                  {children}
-                </td>
-              ),
-              a: ({ children, href }) => (
-                <a 
-                  href={href} 
-                  className="text-[#A3FF4C] hover:text-[#8FE040] underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {children}
-                </a>
-              ),
-              hr: () => (
-                <hr className="my-8 border-gray-800" />
+          {(() => {
+            const content = getContent()
+            // 본문을 문단 기준으로 나누기 (## 헤딩 또는 빈줄 2개)
+            const sections = content.split(/\n(?=##\s)/)
+            
+            // 2개 이상 섹션이 있으면 중간에 광고 삽입
+            if (sections.length >= 2) {
+              const midPoint = Math.floor(sections.length / 2)
+              const firstHalf = sections.slice(0, midPoint).join('\n')
+              const secondHalf = sections.slice(midPoint).join('\n')
+              
+              return (
+                <>
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ children }) => (
+                        <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">
+                          {children}
+                        </h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="text-2xl font-bold mt-8 mb-4 text-white">
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="text-xl font-bold mt-6 mb-3 text-white">
+                          {children}
+                        </h3>
+                      ),
+                      p: ({ children }) => (
+                        <p className="text-gray-300 leading-relaxed mb-4">
+                          {children}
+                        </p>
+                      ),
+                      ul: ({ children }) => (
+                        <ul className="list-disc list-inside text-gray-300 mb-4 space-y-2">
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="list-decimal list-inside text-gray-300 mb-4 space-y-2">
+                          {children}
+                        </ol>
+                      ),
+                      blockquote: ({ children }) => (
+                        <blockquote className="border-l-4 border-[#A3FF4C] pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({ children }) => (
+                        <code className="bg-gray-900 text-[#A3FF4C] px-2 py-1 rounded text-sm">
+                          {children}
+                        </code>
+                      ),
+                      pre: ({ children }) => (
+                        <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto my-4 border border-gray-800">
+                          {children}
+                        </pre>
+                      ),
+                      table: ({ children }) => (
+                        <div className="overflow-x-auto my-6">
+                          <table className="w-full border-collapse">
+                            {children}
+                          </table>
+                        </div>
+                      ),
+                      th: ({ children }) => (
+                        <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left font-bold">
+                          {children}
+                        </th>
+                      ),
+                      td: ({ children }) => (
+                        <td className="border border-gray-700 px-4 py-2">
+                          {children}
+                        </td>
+                      ),
+                      a: ({ children, href }) => (
+                        <a 
+                          href={href} 
+                          className="text-[#A3FF4C] hover:text-[#8FE040] underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {children}
+                        </a>
+                      ),
+                      hr: () => (
+                        <hr className="my-8 border-gray-800" />
+                      )
+                    }}
+                  >
+                    {firstHalf}
+                  </ReactMarkdown>
+                  
+                  {/* 📢 인아티클 광고 - 본문 중간 */}
+                  <div className="my-8">
+                    <AdSenseAd slot="in_article" darkMode={true} />
+                  </div>
+                  
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ children }) => (
+                        <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">
+                          {children}
+                        </h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="text-2xl font-bold mt-8 mb-4 text-white">
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="text-xl font-bold mt-6 mb-3 text-white">
+                          {children}
+                        </h3>
+                      ),
+                      p: ({ children }) => (
+                        <p className="text-gray-300 leading-relaxed mb-4">
+                          {children}
+                        </p>
+                      ),
+                      ul: ({ children }) => (
+                        <ul className="list-disc list-inside text-gray-300 mb-4 space-y-2">
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="list-decimal list-inside text-gray-300 mb-4 space-y-2">
+                          {children}
+                        </ol>
+                      ),
+                      blockquote: ({ children }) => (
+                        <blockquote className="border-l-4 border-[#A3FF4C] pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({ children }) => (
+                        <code className="bg-gray-900 text-[#A3FF4C] px-2 py-1 rounded text-sm">
+                          {children}
+                        </code>
+                      ),
+                      pre: ({ children }) => (
+                        <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto my-4 border border-gray-800">
+                          {children}
+                        </pre>
+                      ),
+                      table: ({ children }) => (
+                        <div className="overflow-x-auto my-6">
+                          <table className="w-full border-collapse">
+                            {children}
+                          </table>
+                        </div>
+                      ),
+                      th: ({ children }) => (
+                        <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left font-bold">
+                          {children}
+                        </th>
+                      ),
+                      td: ({ children }) => (
+                        <td className="border border-gray-700 px-4 py-2">
+                          {children}
+                        </td>
+                      ),
+                      a: ({ children, href }) => (
+                        <a 
+                          href={href} 
+                          className="text-[#A3FF4C] hover:text-[#8FE040] underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {children}
+                        </a>
+                      ),
+                      hr: () => (
+                        <hr className="my-8 border-gray-800" />
+                      )
+                    }}
+                  >
+                    {secondHalf}
+                  </ReactMarkdown>
+                </>
               )
-            }}
-          >
-            {getContent()}
-          </ReactMarkdown>
+            }
+            
+            // 섹션이 1개면 그냥 출력
+            return (
+              <ReactMarkdown
+                components={{
+                  h1: ({ children }) => (
+                    <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">
+                      {children}
+                    </h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="text-2xl font-bold mt-8 mb-4 text-white">
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-xl font-bold mt-6 mb-3 text-white">
+                      {children}
+                    </h3>
+                  ),
+                  p: ({ children }) => (
+                    <p className="text-gray-300 leading-relaxed mb-4">
+                      {children}
+                    </p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="list-disc list-inside text-gray-300 mb-4 space-y-2">
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="list-decimal list-inside text-gray-300 mb-4 space-y-2">
+                      {children}
+                    </ol>
+                  ),
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-[#A3FF4C] pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">
+                      {children}
+                    </blockquote>
+                  ),
+                  code: ({ children }) => (
+                    <code className="bg-gray-900 text-[#A3FF4C] px-2 py-1 rounded text-sm">
+                      {children}
+                    </code>
+                  ),
+                  pre: ({ children }) => (
+                    <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto my-4 border border-gray-800">
+                      {children}
+                    </pre>
+                  ),
+                  table: ({ children }) => (
+                    <div className="overflow-x-auto my-6">
+                      <table className="w-full border-collapse">
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  th: ({ children }) => (
+                    <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left font-bold">
+                      {children}
+                    </th>
+                  ),
+                  td: ({ children }) => (
+                    <td className="border border-gray-700 px-4 py-2">
+                      {children}
+                    </td>
+                  ),
+                  a: ({ children, href }) => (
+                    <a 
+                      href={href} 
+                      className="text-[#A3FF4C] hover:text-[#8FE040] underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {children}
+                    </a>
+                  ),
+                  hr: () => (
+                    <hr className="my-8 border-gray-800" />
+                  )
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            )
+          })()}
         </div>
 
         {/* 📢 광고 - 본문 하단 */}

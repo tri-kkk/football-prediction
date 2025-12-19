@@ -20,6 +20,9 @@ const ADSENSE_SLOTS = {
   // 모바일 전용 - 8741291685
   mobile_top: '8741291685',
   mobile_infeed: '8741291685',
+  
+  // 인아티클 (본문 중간) - 5614960119
+  in_article: '5614960119',
 }
 
 // 슬롯별 크기 설정
@@ -30,6 +33,7 @@ const SLOT_SIZES: Record<string, { width: string; minHeight: string; maxHeight?:
   horizontal: { width: '728px', minHeight: '90px', maxHeight: '90px' },
   mobile_top: { width: '320px', minHeight: '50px', maxHeight: '100px' },
   mobile_infeed: { width: '100%', minHeight: '100px', maxHeight: '150px' },
+  in_article: { width: '100%', minHeight: '100px' },
 }
 
 interface AdSenseAdProps {
@@ -143,10 +147,11 @@ export default function AdSenseAd({
     >
       <ins
         className="adsbygoogle"
-        style={{ display: 'block', width: '100%', height: '100%' }}
+        style={{ display: 'block', textAlign: 'center' }}
         data-ad-client={ADSENSE_CLIENT_ID}
         data-ad-slot={adSlot}
-        data-ad-format={format}
+        data-ad-format={slot === 'in_article' ? 'fluid' : format}
+        data-ad-layout={slot === 'in_article' ? 'in-article' : undefined}
         data-full-width-responsive={responsive ? 'true' : 'false'}
       />
     </div>
