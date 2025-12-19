@@ -9,6 +9,7 @@ import { useLanguage } from './contexts/LanguageContext'
 import LineupModal from './components/LineupModal'
 import BlogPreviewSidebar from './components/BlogPreviewSidebar'  
 import AdBanner from './components/AdBanner'
+import AdSenseAd from './components/AdSenseAd'
 import MobileMatchReports from './components/MobileMatchReports'
 
 import TopHighlights from './components/TopHighlights'
@@ -2494,6 +2495,22 @@ export default function Home() {
 
                           return (
                             <React.Fragment key={leagueCode}>
+                              {/* 📢 AdSense 인피드 광고 - 3번째, 6번째 리그 뒤 (PC만) */}
+                              {(leagueIndex === 2 || leagueIndex === 5) && (
+                                <div className={`hidden md:block py-3 rounded-xl mb-4 ${
+                                  darkMode ? 'bg-[#111]' : 'bg-gray-50'
+                                }`}>
+                                  <div className={`text-[10px] text-center mb-2 ${
+                                    darkMode ? 'text-gray-600' : 'text-gray-400'
+                                  }`}>
+                                    스폰서
+                                  </div>
+                                  <div className="px-4">
+                                    <AdSenseAd slot="infeed" format="auto" darkMode={darkMode} />
+                                  </div>
+                                </div>
+                              )}
+                              
                               {/* 첫 번째 리그 다음에 매치 리포트 삽입 (모바일만) */}
                               {leagueIndex === 1 && (
                                 <div className="md:hidden mb-4">
@@ -2830,16 +2847,19 @@ export default function Home() {
           {/* 우측 순위표 사이드바 */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
             <div className="sticky top-24 space-y-4">
-            {/* HilltopAds - 순위표 위 배너 (데스크톱 전용) - 임시 비활성화 */}
-            {/* 
-            <div className={`hidden lg:block mb-6 rounded-xl overflow-hidden ${
+            {/* 📢 AdSense - 우측 사이드바 상단 */}
+            <div className={`rounded-xl overflow-hidden ${
               darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
             }`}>
-              <div className="p-4">
-                <div id="hilltop-ad-container"></div>
+              <div className={`text-[10px] text-center py-1 ${
+                darkMode ? 'text-gray-600' : 'text-gray-400'
+              }`}>
+                AD
+              </div>
+              <div className="flex justify-center p-2">
+                <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={darkMode} />
               </div>
             </div>
-            */}
             
             {/* 전체 리그 선택 시 - 캐러셀 */}
             {selectedLeague === 'ALL' && (
@@ -3235,6 +3255,20 @@ export default function Home() {
                 </a>
               </div>
             )}
+
+            {/* 📢 AdSense - 우측 사이드바 하단 */}
+            <div className={`rounded-xl overflow-hidden ${
+              darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
+            }`}>
+              <div className={`text-[10px] text-center py-1 ${
+                darkMode ? 'text-gray-600' : 'text-gray-400'
+              }`}>
+                AD
+              </div>
+              <div className="flex justify-center p-2">
+                <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={darkMode} />
+              </div>
+            </div>
             </div>
           </aside>
         </div>
