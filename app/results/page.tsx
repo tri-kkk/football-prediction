@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import { useLanguage } from '../contexts/LanguageContext'
 import { TEAM_NAME_KR } from '../teamLogos'
+import AdSenseAd from '../components/AdSenseAd'
 
 // 🏆 리그 정보
 const LEAGUES = [
@@ -492,7 +493,7 @@ export default function MatchResultsPage() {
     <div className="min-h-screen bg-[#0f0f0f] text-white pb-20 md:pb-0">
       <div className="max-w-7xl mx-auto flex">
         {/* 좌측 사이드바 */}
-        <aside className="hidden md:block w-64 min-h-screen bg-[#1a1a1a] border-r border-gray-800 sticky top-0 overflow-y-auto">
+        <aside className="hidden md:block w-64 min-h-screen bg-[#1a1a1a] border-r border-gray-800 sticky top-0 overflow-y-auto flex-shrink-0">
           <div className="p-4">
             {/* ✅ PICK 적중률 통계 (NEW!) */}
             {pickStats.total > 0 && (
@@ -640,6 +641,12 @@ export default function MatchResultsPage() {
                   ))}
                 </div>
               </div>
+
+              {/* 📢 모바일 상단 광고 */}
+              <div className="md:hidden mt-3">
+                <div className="text-[10px] text-center mb-1 text-gray-600">AD</div>
+                <AdSenseAd slot="mobile_top" format="horizontal" responsive={true} darkMode={true} />
+              </div>
             </div>
           </div>
 
@@ -653,14 +660,23 @@ export default function MatchResultsPage() {
                 </p>
               </div>
             ) : (
-              Object.entries(groupedMatches).map(([leagueCode, leagueMatches]) => {
+              Object.entries(groupedMatches).map(([leagueCode, leagueMatches], leagueIndex) => {
                 const leagueInfo = getLeagueInfo(leagueCode)
                 const isCollapsed = collapsedLeagues.has(leagueCode)
                 // ✅ 해당 리그의 PICK 경기 수
                 const pickCount = leagueMatches.filter(m => m.isPick).length
 
                 return (
-                  <div key={leagueCode} className="bg-[#1a1a1a] rounded-xl overflow-hidden">
+                  <React.Fragment key={leagueCode}>
+                    {/* 📢 모바일 인피드 광고 - 2번째, 4번째 리그 뒤 */}
+                    {(leagueIndex === 1 || leagueIndex === 3) && (
+                      <div className="md:hidden py-2">
+                        <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
+                        <AdSenseAd slot="mobile_infeed" format="auto" responsive={true} darkMode={true} />
+                      </div>
+                    )}
+                    
+                    <div className="bg-[#1a1a1a] rounded-xl overflow-hidden">
                     <button
                       onClick={() => toggleLeague(leagueCode)}
                       className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#202020] transition-colors"
@@ -1051,11 +1067,33 @@ export default function MatchResultsPage() {
                       </>
                     )}
                   </div>
+                </React.Fragment>
                 )
               })
             )}
           </div>
         </main>
+
+        {/* 📢 우측 사이드바 - PC 전용 */}
+        <aside className="hidden lg:block w-[300px] flex-shrink-0 p-4">
+          <div className="sticky top-4 space-y-4">
+            {/* 상단 광고 */}
+            <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
+              <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
+              <div className="p-2">
+                <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={true} />
+              </div>
+            </div>
+
+            {/* 하단 광고 */}
+            <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
+              <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
+              <div className="p-2">
+                <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={true} />
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   )

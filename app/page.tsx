@@ -2115,6 +2115,14 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* 📢 모바일 상단 광고 - 첫 화면 노출 */}
+      <div className="md:hidden px-4 py-2 bg-[#0f0f0f]">
+        <div className="flex justify-center">
+          <AdSenseAd slot="mobile_top" format="horizontal" responsive={true} darkMode={true} />
+        </div>
+      </div>
+
       {/* 트렌드 컨텐츠 영역 */}
       <div className="container mx-auto px-4 pt-0 md:py-3 pb-20 lg:pb-3">
         {/* TOP 하이라이트 섹션 - 메인 레이아웃과 동일한 너비 */}
@@ -2495,7 +2503,17 @@ export default function Home() {
 
                           return (
                             <React.Fragment key={leagueCode}>
-                              {/* 📢 AdSense 인피드 광고 - 3번째, 6번째 리그 뒤 (PC만) */}
+                              {/* 📢 모바일 인피드 광고 - 2번째, 4번째 리그 뒤 */}
+                              {(leagueIndex === 1 || leagueIndex === 3) && (
+                                <div className="md:hidden py-2 mb-4">
+                                  <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
+                                  <div className="px-2">
+                                    <AdSenseAd slot="mobile_infeed" format="auto" responsive={true} darkMode={darkMode} />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* 📢 PC 인피드 광고 - 3번째, 6번째 리그 뒤 */}
                               {(leagueIndex === 2 || leagueIndex === 5) && (
                                 <div className={`hidden md:block py-2 rounded-xl mb-4 ${
                                   darkMode ? 'bg-[#111]' : 'bg-gray-50'

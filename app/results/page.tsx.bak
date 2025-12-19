@@ -36,6 +36,8 @@ const LEAGUES = [
   // 네덜란드
   { code: 'DED', nameKo: '네덜란드', nameEn: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png', isEmoji: false },
   { code: 'KNV', nameKo: 'KNVB컵', nameEn: 'KNVB Cup', logo: 'https://media.api-sports.io/football/leagues/90.png', isEmoji: false },
+  // 🆕 아프리카
+  { code: 'AFCON', nameKo: '아프리카컵', nameEn: 'Africa Cup of Nations', logo: 'https://media.api-sports.io/football/leagues/6.png', isEmoji: false },
 ]
 
 // 예측 정보 인터페이스
@@ -120,22 +122,21 @@ interface PickStats {
 }
 
 export default function MatchResultsPage() {
-  const getKoreanDate = (date: Date = new Date()): Date => {
-    const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
-    const kst = new Date(utc + (9 * 60 * 60 * 1000))
-    return kst
+  // 브라우저 로컬 시간대 자동 적용
+  const getLocalDate = (date: Date = new Date()): Date => {
+    return date
   }
 
-  const getKoreanToday = (): Date => {
-    const kst = getKoreanDate()
-    return new Date(kst.getFullYear(), kst.getMonth(), kst.getDate())
+  const getLocalToday = (): Date => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate())
   }
 
   const { language: currentLanguage } = useLanguage()
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL')
-  const [selectedDate, setSelectedDate] = useState<Date>(getKoreanToday())
+  const [selectedDate, setSelectedDate] = useState<Date>(getLocalToday())
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set())
   
@@ -177,7 +178,7 @@ export default function MatchResultsPage() {
   }
 
   const formatDateDisplay = (date: Date): string => {
-    const today = getKoreanToday()
+    const today = getLocalToday()
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
     const tomorrow = new Date(today)
@@ -215,7 +216,7 @@ export default function MatchResultsPage() {
   }
 
   const goToToday = () => {
-    setSelectedDate(getKoreanToday())
+    setSelectedDate(getLocalToday())
   }
 
   // ✅ PICK 데이터 로드 함수 (NEW!)
@@ -440,15 +441,12 @@ export default function MatchResultsPage() {
     return code
   }
 
-  // ✅ UTC → KST 변환 (DB는 timestamp without time zone = UTC)
+  // 브라우저 로컬 시간대로 자동 변환
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr + 'Z')  // 'Z' 붙여서 UTC임을 명시
-    return date.toLocaleTimeString('ko-KR', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      hour12: false,
-      timeZone: 'Asia/Seoul'  // KST로 변환
-    })
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${hours}:${minutes}`
   }
 
   if (loading) {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import AdBanner from '../components/AdBanner'
+import AdSenseAd from '../components/AdSenseAd'
 
 // ============================================
 // 다국어 텍스트
@@ -1524,6 +1525,30 @@ export default function PremiumPredictPage() {
                       card,
                       <div key="mobile-ad-1" className="block lg:hidden col-span-1 flex justify-center">
                         <AdBanner slot="mobile_bottom" />
+                      </div>
+                    ]
+                  }
+                  
+                  // 3번째, 6번째 카드 다음에 모바일 AdSense 인피드 광고
+                  if (index === 2 || index === 5) {
+                    return [
+                      card,
+                      <div key={`mobile-adsense-${index}`} className="block md:hidden col-span-1 py-2">
+                        <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
+                        <AdSenseAd slot="mobile_infeed" format="auto" responsive={true} darkMode={true} />
+                      </div>
+                    ]
+                  }
+                  
+                  // 6번째, 12번째 카드 다음에 AdSense 가로 배너 삽입 (PC만)
+                  if (index === 5 || index === 11) {
+                    return [
+                      card,
+                      <div key={`adsense-${index}`} className="hidden md:flex col-span-full justify-center py-2">
+                        <div className="w-full max-w-[728px] rounded-lg overflow-hidden bg-[#111]">
+                          <div className="text-[10px] text-center py-1 text-gray-600">스폰서</div>
+                          <AdSenseAd slot="horizontal" format="horizontal" responsive={false} darkMode={true} />
+                        </div>
                       </div>
                     ]
                   }

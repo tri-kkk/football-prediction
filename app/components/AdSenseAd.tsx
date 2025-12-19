@@ -16,6 +16,10 @@ const ADSENSE_SLOTS = {
   // 가로 배너 - 8741291685
   infeed: '8741291685',
   horizontal: '8741291685',
+  
+  // 모바일 전용 - 8741291685
+  mobile_top: '8741291685',
+  mobile_infeed: '8741291685',
 }
 
 // 슬롯별 크기 설정
@@ -24,6 +28,8 @@ const SLOT_SIZES: Record<string, { width: string; minHeight: string; maxHeight?:
   sidebar_right_bottom: { width: '300px', minHeight: '250px' },
   infeed: { width: '100%', minHeight: '100px', maxHeight: '250px' },
   horizontal: { width: '728px', minHeight: '90px', maxHeight: '90px' },
+  mobile_top: { width: '320px', minHeight: '50px', maxHeight: '100px' },
+  mobile_infeed: { width: '100%', minHeight: '100px', maxHeight: '150px' },
 }
 
 interface AdSenseAdProps {
@@ -99,8 +105,8 @@ export default function AdSenseAd({
     return (
       <div 
         ref={adRef}
-        className={`flex items-center justify-center border-2 border-dashed rounded-lg ${
-          darkMode ? 'border-gray-700 bg-gray-800/30' : 'border-gray-300 bg-gray-100'
+        className={`flex items-center justify-center border border-dashed rounded-lg ${
+          darkMode ? 'border-gray-700 bg-gray-800/20' : 'border-gray-300 bg-gray-100'
         } ${className}`}
         style={{ 
           width: slotSize.width,
@@ -109,14 +115,11 @@ export default function AdSenseAd({
           ...style 
         }}
       >
-        <div className="text-center p-4">
-          <div className="text-2xl mb-2">📢</div>
-          <div className={`text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            AdSense
-          </div>
-          <div className={`text-[10px] mt-1 ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
+        <div className="text-center py-2">
+          <span className="text-lg">📢</span>
+          <span className={`text-[10px] ml-2 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
             {slot}
-          </div>
+          </span>
         </div>
       </div>
     )
