@@ -211,12 +211,6 @@ export default function BlogPage() {
       {/* 메인 콘텐츠 */}
       {!loading && (
         <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* 📢 모바일 상단 광고 */}
-          <div className="lg:hidden mb-4">
-            <div className="text-[10px] text-center mb-1 text-gray-600">AD</div>
-            <AdSenseAd slot="mobile_top" format="horizontal" responsive={true} darkMode={true} />
-          </div>
-
           <div className="flex gap-8">
             {/* 메인 콘텐츠 영역 */}
             <main className="flex-1 min-w-0">

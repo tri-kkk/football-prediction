@@ -641,12 +641,6 @@ export default function MatchResultsPage() {
                   ))}
                 </div>
               </div>
-
-              {/* 📢 모바일 상단 광고 */}
-              <div className="md:hidden mt-3">
-                <div className="text-[10px] text-center mb-1 text-gray-600">AD</div>
-                <AdSenseAd slot="mobile_top" format="horizontal" responsive={true} darkMode={true} />
-              </div>
             </div>
           </div>
 

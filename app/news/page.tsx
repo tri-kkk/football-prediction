@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
+import AdSenseAd from '../components/AdSenseAd'
 
 // 타입 정의
 interface NewsArticle {
@@ -316,9 +317,44 @@ export default function NewsPage() {
           </div>
         </section>
 
+        {/* 📢 광고 - 카드 섹션과 카테고리 사이 */}
+        <section className="mb-10">
+          {/* 모바일: 인피드 */}
+          <div className="lg:hidden">
+            <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
+            <AdSenseAd slot="mobile_infeed" format="auto" responsive={true} darkMode={true} />
+          </div>
+          {/* PC: 가로 배너 */}
+          <div className="hidden lg:flex justify-center">
+            <div className="w-full max-w-[728px]">
+              <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
+              <AdSenseAd slot="horizontal" format="horizontal" responsive={false} darkMode={true} />
+            </div>
+          </div>
+        </section>
+
         {/* 카테고리별 섹션 */}
-        {categories.map((category) => (
-          <section key={category.id} className="mb-10">
+        {categories.map((category, categoryIndex) => (
+          <React.Fragment key={category.id}>
+            {/* 📢 2번째 카테고리 뒤에 광고 */}
+            {categoryIndex === 1 && (
+              <section className="mb-10">
+                {/* 모바일: 인피드 */}
+                <div className="lg:hidden">
+                  <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
+                  <AdSenseAd slot="mobile_infeed" format="auto" responsive={true} darkMode={true} />
+                </div>
+                {/* PC: 가로 배너 */}
+                <div className="hidden lg:flex justify-center">
+                  <div className="w-full max-w-[728px]">
+                    <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
+                    <AdSenseAd slot="horizontal" format="horizontal" responsive={false} darkMode={true} />
+                  </div>
+                </div>
+              </section>
+            )}
+            
+            <section className="mb-10">
             {/* 카테고리 헤더 */}
             <div className="flex items-center gap-2 mb-4">
               <h2 
@@ -436,6 +472,7 @@ export default function NewsPage() {
               </div>
             </div>
           </section>
+          </React.Fragment>
         ))}
 
       </div>

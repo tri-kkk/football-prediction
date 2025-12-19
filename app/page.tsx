@@ -2116,13 +2116,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 📢 모바일 상단 광고 - 첫 화면 노출 */}
-      <div className="md:hidden px-4 py-2 bg-[#0f0f0f]">
-        <div className="flex justify-center">
-          <AdSenseAd slot="mobile_top" format="horizontal" responsive={true} darkMode={true} />
-        </div>
-      </div>
-
       {/* 트렌드 컨텐츠 영역 */}
       <div className="container mx-auto px-4 pt-0 md:py-3 pb-20 lg:pb-3">
         {/* TOP 하이라이트 섹션 - 메인 레이아웃과 동일한 너비 */}
