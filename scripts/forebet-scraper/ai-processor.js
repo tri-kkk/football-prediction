@@ -1,17 +1,17 @@
 /**
- * AI Processor v5 - Bilingual Edition
- * - Google Gemini API 사용 (무료 1,500회/일)
+ * AI Processor v6 - Claude Edition
+ * - Anthropic Claude API 사용
  * - 한글 + 영문 동시 생성
  * - 1500-2000자 분량 (각 언어별)
  * - 구조화된 섹션
- * - 자연스러운 문체 (AI 티 제거)
+ * - 자연스러운 문체
  */
 
 const fs = require('fs');
 
-// Gemini API 설정
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+// Claude API 설정
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
 
 const TEAM_KR = {
   'Manchester United': '맨유', 'Manchester City': '맨시티',
@@ -44,7 +44,6 @@ const TEAM_KR = {
   'København': '코펜하겐', 'Club Brugge': '클럽 브뤼헤',
 };
 
-// 리그명 영문 매핑
 const LEAGUE_EN = {
   '프리미어리그': 'Premier League',
   '라리가': 'La Liga',
@@ -72,9 +71,61 @@ function getLeagueEn(leagueKr) {
   return LEAGUE_EN[leagueKr] || leagueKr;
 }
 
+// 🎲 다양성 알고리즘 - 매번 다른 스타일로 작성
+function getRandomStyle() {
+  // 인트로 스타일 (5가지)
+  const introStyles = [
+    '질문형: "과연 누가 웃을까요?" 같은 질문으로 시작',
+    '통계형: 핵심 수치나 기록으로 시작 (예: "최근 10경기 7승...")',
+    '스토리형: 양팀의 상황이나 배경 설명으로 시작',
+    '긴장감형: 경기의 중요성과 긴장감을 강조하며 시작',
+    '비유형: 비유나 은유를 활용해 시작 (예: "프리미어리그의 엘클라시코...")'
+  ];
+  
+  // 문체 스타일 (4가지)
+  const toneStyles = [
+    '분석적: 데이터와 전술 중심의 객관적 톤',
+    '열정적: 팬의 시선에서 감정을 담아 서술',
+    '해설자형: 중계하듯 생동감 있게 서술',
+    '칼럼니스트형: 깊이 있는 통찰과 견해 제시'
+  ];
+  
+  // 구조 변형 (4가지)
+  const structureStyles = [
+    '기본형: 폼비교 → 전술분석 → 승부처 → 예측',
+    '전술우선형: 전술분석 → 폼비교 → 키플레이어 → 예측',
+    '스토리형: 배경설명 → 양팀현황 → 맞대결포인트 → 전망',
+    '데이터형: 핵심통계 → 트렌드분석 → 변수 → 예측'
+  ];
+  
+  // 승부처 표현 (4가지)
+  const keyPointStyles = [
+    '3가지 승부처를 ### 소제목으로 나눠서',
+    '4가지 핵심 포인트를 간결하게',
+    '2가지 핵심 + 1가지 변수 형태로',
+    '선수 vs 선수 매치업 중심으로 3개'
+  ];
+  
+  // 마무리 스타일 (4가지)  
+  const endingStyles = [
+    '확신형: 예측에 대한 근거를 명확히 제시',
+    '조심스러운형: 변수를 언급하며 열린 결말',
+    '팬심자극형: 응원 포인트나 관전 포인트 제시',
+    '기대감형: 경기에 대한 기대감으로 마무리'
+  ];
+
+  return {
+    intro: introStyles[Math.floor(Math.random() * introStyles.length)],
+    tone: toneStyles[Math.floor(Math.random() * toneStyles.length)],
+    structure: structureStyles[Math.floor(Math.random() * structureStyles.length)],
+    keyPoints: keyPointStyles[Math.floor(Math.random() * keyPointStyles.length)],
+    ending: endingStyles[Math.floor(Math.random() * endingStyles.length)]
+  };
+}
+
 async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-async function processWithGemini(match) {
+async function processWithClaude(match) {
   const homeKr = getTeamKr(match.homeTeam);
   const awayKr = getTeamKr(match.awayTeam);
   const homeEn = match.homeTeam;
@@ -84,8 +135,21 @@ async function processWithGemini(match) {
   const previewText = match.previewParagraphs?.join('\n\n') || '';
   const h2hText = match.h2h?.slice(0,5).join('\n') || '';
   const injuriesText = match.injuries?.slice(0,5).join('\n') || '';
+  
+  // 🎲 이번 포스트에 적용할 랜덤 스타일 선택
+  const style = getRandomStyle();
+  console.log(`    🎨 Style: ${style.tone.split(':')[0]} / ${style.intro.split(':')[0]}`);
 
   const prompt = `당신은 TrendSoccer의 전문 축구 분석 블로그 작성자입니다. 한글과 영문 버전을 동시에 작성합니다.
+
+## 🎲 이번 포스트 스타일 (반드시 적용!)
+- **인트로**: ${style.intro}
+- **전체 문체**: ${style.tone}
+- **글 구조**: ${style.structure}
+- **승부처 표현**: ${style.keyPoints}
+- **마무리**: ${style.ending}
+
+⚠️ 위 스타일을 반드시 반영해서 작성하세요. 매번 같은 패턴은 안 됩니다!
 
 ## 📋 경기 정보
 - 리그: ${match.leagueKr} (${leagueEn})
@@ -108,137 +172,187 @@ ${h2hText || '정보 없음'}
 ## 🤕 부상자
 ${injuriesText || '주요 부상자 없음'}
 
-## 📝 참고 자료 (원본 분석 - 영어)
-${previewText.substring(0, 1500) || '없음'}
+## 📝 참고 자료
+${previewText.substring(0, 2000) || '없음'}
 
 ---
 
 ## ✍️ 작성 지침
 
-### 필수 출력 (JSON만 출력하세요)
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.
+
 {
   "title_kr": "SEO 친화적 한글 제목 (25-40자)",
   "title": "SEO-friendly English title (50-80 chars)",
   "slug": "english-url-slug-format",
   "excerpt": "한글 요약 (80-120자)",
   "excerpt_en": "English excerpt (100-150 chars)",
-  "content": "한글 마크다운 본문 (1500-2000자)",
-  "content_en": "English markdown content (1500-2000 chars)",
+  "content": "한글 마크다운 본문 (반드시 1800-2200자, 짧으면 안됨)",
+  "content_en": "English markdown content (must be 1800-2200 chars)",
   "tags": ["Tag1", "Tag2", "Tag3", "Tag4", "Tag5"]
 }
 
-### 한글 본문 구조 (content)
+---
 
-# ${homeKr} vs ${awayKr}: [부제]
+## ⚠️ 분량 필수 (최우선!)
+- 한글 content: **반드시 1800자 이상** (각 섹션 충분히 작성)
+- 영문 content_en: **반드시 1800자 이상**
+- 짧게 쓰면 실패로 간주됨
+- 각 섹션별로 2-3문단씩 충분히 작성할 것
 
-[인트로 2-3문장]
+---
 
-## 📊 양팀 현황
+## 🚫 AI 문체 회피 (매우 중요!)
+
+### ❌ 절대 하지 말 것
+- "첫째, 둘째, 셋째" 나열식 금지
+- "또한", "더불어", "아울러" 과도한 사용 금지
+- "~할 것으로 예상됩니다" 반복 금지
+- "~에 대해 살펴보겠습니다" 금지
+- "In conclusion", "To summarize" 금지
+- 인사말 금지: "안녕하세요", "TrendSoccer입니다"
+- 마무리 인사 금지: "감사합니다", "다음에 또 만나요"
+- 면책조항 금지
+- 마크다운 표(테이블) 사용 금지
+
+### ✅ 반드시 할 것
+- 자연스러운 구어체: "~네요", "~죠", "~거든요", "~할 것 같아요"
+- 독자에게 말 걸기: "어떻게 보시나요?", "주목해야 합니다"
+- 다양한 문장 길이 (짧은 문장 → 중간 → 긴 문장 리듬감)
+- 비유와 예시 활용
+- 통계는 리스트로 표현 (표 대신)
+- **굵게**로 핵심 수치 강조
+
+---
+
+## 📝 한글 본문 구조 (content) - 1800-2200자
+⚠️ 아래는 기본 구조이며, 위에서 지정된 "글 구조" 스타일에 맞게 변형하세요!
+
+# ${homeKr} vs ${awayKr}: [임팩트 있는 부제]
+
+[인트로 - 위에서 지정된 인트로 스타일 적용!]
+
+## 📊 양팀 최근 폼 비교
 
 **${homeKr}**
-- 최근 폼: X승 X무 X패
-- 강점/약점 분석
+- 최근 5경기: **X승 X무 X패**
+- 평균 득점: **X.X골**
+- 강점/약점 자연스럽게 설명
 
 **${awayKr}**
-- 최근 폼: X승 X무 X패
-- 강점/약점 분석
+- 최근 5경기: **X승 X무 X패**
+- 평균 득점: **X.X골**
+- 강점/약점 자연스럽게 설명
+
+[폼 비교 코멘트 1-2문장]
 
 ## 🎯 전술 분석
 
 ### ${homeKr}의 전략
-[분석]
+[2-3문단, 포메이션, 핵심 선수, 공격/수비 패턴]
 
 ### ${awayKr}의 대응
-[분석]
+[2-3문단, 어떻게 맞설지 분석]
 
 ## 💡 승부처
 
-1. [핵심 포인트 1]
-2. [핵심 포인트 2]
-3. [핵심 포인트 3]
+### 1. [핵심 매치업 제목]
+[설명 2-3문장]
+
+### 2. [두 번째 포인트]
+[설명 2-3문장]
+
+### 3. [세 번째 포인트]
+[설명 2-3문장]
 
 ## 📈 예측
 
-**예상 스코어**: [X-X]
-[근거 설명]
+**예상 스코어**: ${match.predictedScore || 'X-X'}
 
-### 영문 본문 구조 (content_en)
+[예측 근거 2-3문장, 자연스러운 마무리]
 
-# ${homeEn} vs ${awayEn}: [Subtitle]
+---
+
+## 📝 영문 본문 구조 (content_en) - 1800-2200 chars
+
+# ${homeEn} vs ${awayEn}: [Engaging Subtitle]
 
 [Intro 2-3 sentences]
 
-## 📊 Team Analysis
+## 📊 Form Guide
 
 **${homeEn}**
-- Recent form: X wins, X draws, X losses
-- Strengths/weaknesses
+- Last 5 matches: **X wins, X draws, X losses**
+- Goals per game: **X.X**
+- Key strengths/weaknesses
 
 **${awayEn}**
-- Recent form: X wins, X draws, X losses
-- Strengths/weaknesses
+- Last 5 matches: **X wins, X draws, X losses**
+- Goals per game: **X.X**
+- Key strengths/weaknesses
 
 ## 🎯 Tactical Preview
 
 ### ${homeEn}'s Approach
-[Analysis]
+[2-3 paragraphs]
 
-### ${awayEn}'s Counter
-[Analysis]
+### ${awayEn}'s Game Plan
+[2-3 paragraphs]
 
 ## 💡 Key Battles
 
-1. [Key point 1]
-2. [Key point 2]
-3. [Key point 3]
+### 1. [First key matchup]
+[2-3 sentences]
+
+### 2. [Second point]
+[2-3 sentences]
+
+### 3. [Third point]
+[2-3 sentences]
 
 ## 📈 Prediction
 
-**Expected Score**: [X-X]
-[Reasoning]
+**Expected Score**: ${match.predictedScore || 'X-X'}
 
-### 문체 규칙
+[Reasoning 2-3 sentences]
 
-✅ 한글:
-- 자연스러운 구어체: "~네요", "~죠", "~거든요"
-- 독자에게 말 걸기: "주목해야 합니다"
-- 다양한 문장 길이
+---
 
-✅ English:
-- Professional but engaging tone
-- Active voice preferred
-- Varied sentence structure
-
-❌ 피해야 할 것:
-- "첫째, 둘째, 셋째" 나열식
-- "In conclusion", "To summarize" 등 AI스러운 표현
-- 인사말/마무리 인사
-- 면책조항
-
-반드시 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.`;
+## 🏷️ 태그 규칙
+- 반드시 5개 태그
+- 영문으로 작성
+- 리그명, 양팀명, 분석 유형 포함
+- 예: ["Premier League", "Liverpool", "Manchester City", "Match Preview", "Big Match"]`;
 
   try {
-    const response = await fetch(GEMINI_URL, {
+    const response = await fetch(CLAUDE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8000,  // 더 긴 출력을 위해 증가
-        }
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 12000,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
       })
     });
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Gemini API error: ${response.status} - ${error}`);
+      throw new Error(`Claude API error: ${response.status} - ${error}`);
     }
 
     const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const responseText = data.content?.[0]?.text || '';
     
-    // JSON 추출 (코드블록 안에 있을 수 있음)
+    // JSON 추출
     let jsonStr = responseText;
     const codeBlockMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (codeBlockMatch) {
@@ -253,15 +367,12 @@ ${previewText.substring(0, 1500) || '없음'}
     try {
       result = JSON.parse(jsonStr);
     } catch (parseError) {
-      // 문자열 값 내부의 줄바꿈 처리
+      console.log(`  ⚠️ JSON parse error, trying to fix...`);
+      // 줄바꿈 이스케이프 처리
       const fixedJson = jsonStr
-        .replace(/"([^"]*?)"/g, (match, content) => {
-          const fixed = content
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t');
-          return `"${fixed}"`;
-        });
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '')
+        .replace(/\t/g, '\\t');
       
       try {
         result = JSON.parse(fixedJson);
@@ -270,16 +381,15 @@ ${previewText.substring(0, 1500) || '없음'}
         const titleKrMatch = jsonStr.match(/"title_kr"\s*:\s*"([^"]+)"/);
         const titleMatch = jsonStr.match(/"title"\s*:\s*"([^"]+)"/);
         const slugMatch = jsonStr.match(/"slug"\s*:\s*"([^"]+)"/);
-        const excerptMatch = jsonStr.match(/"excerpt"\s*:\s*"([^"]+)"/);
-        const excerptEnMatch = jsonStr.match(/"excerpt_en"\s*:\s*"([^"]+)"/);
         
         if (titleKrMatch || titleMatch) {
+          console.log(`  ⚠️ Partial extraction used`);
           result = {
             title_kr: titleKrMatch?.[1] || '',
             title: titleMatch?.[1] || '',
-            slug: slugMatch?.[1] || '',
-            excerpt: excerptMatch?.[1] || '',
-            excerpt_en: excerptEnMatch?.[1] || '',
+            slug: slugMatch?.[1] || generateSlug(homeEn, awayEn),
+            excerpt: '',
+            excerpt_en: '',
             content: '',
             content_en: '',
             tags: []
@@ -290,7 +400,7 @@ ${previewText.substring(0, 1500) || '없음'}
       }
     }
     
-    // 태그 정리 (영문으로)
+    // 태그 정리
     let tags = result.tags || [leagueEn, homeEn, awayEn, 'Preview', 'Analysis'];
     if (typeof tags === 'string') tags = tags.split(',').map(t => t.trim());
     
@@ -316,7 +426,7 @@ ${previewText.substring(0, 1500) || '없음'}
       published: true,
       published_en: true,
       // 메타
-      ai_model: 'gemini-2.0-flash',
+      ai_model: 'claude-sonnet-4',
       processed_at: new Date().toISOString()
     };
   } catch (e) {
@@ -328,11 +438,11 @@ ${previewText.substring(0, 1500) || '없음'}
 function generateSlug(home, away) {
   const h = home.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/--+/g, '-');
   const a = away.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/--+/g, '-');
-  return `${h}-vs-${a}-preview`;
+  const date = new Date().toISOString().slice(0, 10);
+  return `${h}-vs-${a}-preview-${date}`;
 }
 
 function createFallback(match, homeKr, awayKr, homeEn, awayEn, leagueEn) {
-  // 한글 본문
   const contentKr = `# ${homeKr} vs ${awayKr}: ${match.leagueKr} 프리뷰
 
 ${match.leagueKr}에서 ${homeKr}와 ${awayKr}의 경기가 예정되어 있습니다.
@@ -350,7 +460,6 @@ ${match.leagueKr}에서 ${homeKr}와 ${awayKr}의 경기가 예정되어 있습�
 예상 결과: ${match.prediction || '미정'}
 예상 스코어: ${match.predictedScore || '미정'}`;
 
-  // 영문 본문
   const contentEn = `# ${homeEn} vs ${awayEn}: ${leagueEn} Preview
 
 ${homeEn} faces ${awayEn} in an upcoming ${leagueEn} match.
@@ -370,34 +479,29 @@ Expected Score: ${match.predictedScore || 'TBD'}`;
 
   return {
     ...match,
-    // 한글
     title_kr: `${homeKr} vs ${awayKr} 프리뷰`,
     excerpt: `${match.leagueKr} ${homeKr} vs ${awayKr} 경기 분석`,
     content: contentKr,
     summary: `${match.leagueKr} ${homeKr} vs ${awayKr} 경기 분석`,
-    // 영문
     title: `${homeEn} vs ${awayEn} Preview`,
     excerpt_en: `${leagueEn} ${homeEn} vs ${awayEn} match analysis`,
     content_en: contentEn,
-    // 공통
     slug: generateSlug(homeEn, awayEn),
     tags: [leagueEn, homeEn, awayEn, 'Preview'],
     homeTeamKr: homeKr,
     awayTeamKr: awayKr,
     homeTeam: homeEn,
     awayTeam: awayEn,
-    // 발행 설정
     published: true,
     published_en: true,
-    // 메타
     ai_model: 'fallback',
     processed_at: new Date().toISOString()
   };
 }
 
 async function processAll() {
-  console.log('🤖 AI Processing v5 (Bilingual Edition)\n');
-  console.log('📦 Model: gemini-2.0-flash');
+  console.log('🤖 AI Processing v6 (Claude Edition)\n');
+  console.log('📦 Model: claude-sonnet-4');
   console.log('🌐 Output: 한글 + English\n');
   
   if (!fs.existsSync('scraped-previews.json')) {
@@ -417,18 +521,18 @@ async function processAll() {
   const processed = [];
   for (let i = 0; i < matches.length; i++) {
     console.log(`[${i+1}/${matches.length}] ${matches[i].homeTeam} vs ${matches[i].awayTeam}`);
-    const result = await processWithGemini(matches[i]);
+    const result = await processWithClaude(matches[i]);
     processed.push(result);
     
     const contentKrLen = (result.content || '').length;
     const contentEnLen = (result.content_en || '').length;
-    const model = result.ai_model === 'fallback' ? '⚠️ fallback' : '✅ gemini';
+    const model = result.ai_model === 'fallback' ? '⚠️ fallback' : '✅ claude';
     console.log(`  ${model}`);
     console.log(`    🇰🇷 "${result.title_kr}" (${contentKrLen}자)`);
     console.log(`    🇺🇸 "${result.title}" (${contentEnLen} chars)`);
     
-    // Rate limit 대비 2초 대기 (더 긴 응답이므로)
-    if (i < matches.length - 1) await delay(2000);
+    // Rate limit 대비 1초 대기
+    if (i < matches.length - 1) await delay(1000);
   }
   
   fs.writeFileSync('processed-previews.json', JSON.stringify(processed, null, 2));
@@ -439,9 +543,9 @@ async function processAll() {
   console.log(`🌐 각 포스트: 한글 + 영문 버전 포함`);
 }
 
-if (!GEMINI_API_KEY) { 
-  console.error('❌ GEMINI_API_KEY required');
-  console.error('   Set: $env:GEMINI_API_KEY="your-api-key"');
+if (!ANTHROPIC_API_KEY) { 
+  console.error('❌ ANTHROPIC_API_KEY required');
+  console.error('   Set: $env:ANTHROPIC_API_KEY="your-api-key"');
   process.exit(1); 
 }
 

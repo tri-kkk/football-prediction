@@ -6,7 +6,7 @@ echo ========================================
 
 cd /d C:\Users\SPOFEED\Desktop\football-prediction\scripts\forebet-scraper
 
-set GEMINI_API_KEY=AIzaSyCnq4WWV8Sz-0iENxaXp2tzE-DoME3FgNc
+set ANTHROPIC_API_KEY=%ANTHROPIC_API_KEY%
 set SUPABASE_URL=https://riqvjiiwjyynvhuynisv.supabase.co
 set SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpcXZqaWl3anl5bnZodXluaXN2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTYzODI0MiwiZXhwIjoyMDc3MjE0MjQyfQ.FgeTgtbg3RR1zZ9Qo1i7gtxwJ54jbRZK6HXxx9PaV-A
 set THESPORTSDB_API_KEY=166885
@@ -28,7 +28,7 @@ if %errorlevel% neq 0 (
 echo [OK] Scraping complete
 
 echo.
-echo [2/3] AI Processing...
+echo [2/3] AI Processing (Claude)...
 echo [%time%] Starting AI processor >> "%LOGFILE%"
 node ai-processor.js >> "%LOGFILE%" 2>&1
 if %errorlevel% neq 0 (

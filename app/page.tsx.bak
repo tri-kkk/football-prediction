@@ -9,6 +9,7 @@ import { useLanguage } from './contexts/LanguageContext'
 import LineupModal from './components/LineupModal'
 import BlogPreviewSidebar from './components/BlogPreviewSidebar'  
 import AdBanner from './components/AdBanner'
+import MobileMatchReports from './components/MobileMatchReports'
 
 import TopHighlights from './components/TopHighlights'
 
@@ -183,6 +184,15 @@ const LEAGUES = [
     logo: 'https://media.api-sports.io/football/leagues/90.png',
     isEmoji: false
   },
+  // 🆕 아프리카 네이션스컵
+  { 
+    code: 'AFCON', 
+    name: '아프리카 네이션스컵',
+    nameEn: 'Africa Cup of Nations',
+    flag: 'https://img.icons8.com/color/48/africa.png',
+    logo: 'https://media.api-sports.io/football/leagues/6.png',
+    isEmoji: false
+  },
 ]
 
 // 🆕 국가/지역별 계층형 리그 그룹
@@ -280,6 +290,16 @@ const LEAGUE_GROUPS = [
       { code: 'KNV', name: 'KNVB컵', nameEn: 'KNVB Cup', logo: 'https://media.api-sports.io/football/leagues/90.png' },
     ]
   },
+  // 🆕 아프리카
+  {
+    id: 'africa',
+    region: '아프리카',
+    regionEn: 'Africa',
+    flag: 'https://img.icons8.com/color/48/africa.png',
+    leagues: [
+      { code: 'AFCON', name: '아프리카 네이션스컵', nameEn: 'Africa Cup of Nations', logo: 'https://media.api-sports.io/football/leagues/6.png' },
+    ]
+  },
 ]
 
 // 오즈 데이터가 있는 리그만 (경기 목록 필터용)
@@ -291,7 +311,8 @@ const LEAGUES_WITH_ODDS = [
   'SA', 'CIT',                 // 이탈리아
   'FL1', 'CDF',                // 프랑스
   'PPL', 'TDP',                // 포르투갈
-  'DED', 'KNV'                 // 네덜란드
+  'DED', 'KNV',                // 네덜란드
+  'AFCON'                      // 🆕 아프리카
 ]
 
 // 헬퍼 함수들
@@ -318,6 +339,7 @@ function getLeagueLogo(league: string): string {
     'CDF': 'https://media.api-sports.io/football/leagues/66.png',
     'TDP': 'https://media.api-sports.io/football/leagues/96.png',
     'KNV': 'https://media.api-sports.io/football/leagues/90.png',
+    'AFCON': 'https://media.api-sports.io/football/leagues/6.png',  // 🆕 아프리카 네이션스컵
   }
   return leagueMap[league] || ''
 }
@@ -346,6 +368,7 @@ function getLeagueFlag(leagueCode: string): { url: string; isEmoji: boolean } {
     'CDF': { url: 'https://flagcdn.com/w40/fr.png', isEmoji: false },
     'TDP': { url: 'https://flagcdn.com/w40/pt.png', isEmoji: false },
     'KNV': { url: 'https://flagcdn.com/w40/nl.png', isEmoji: false },
+    'AFCON': { url: 'https://img.icons8.com/color/48/africa.png', isEmoji: false },  // 🆕 아프리카 네이션스컵
   }
   return flagMap[leagueCode] || { url: 'https://flagcdn.com/w40/eu.png', isEmoji: false }
 }
@@ -675,6 +698,7 @@ export default function Home() {
   const { t, language: currentLanguage } = useLanguage()
   const [selectedLeague, setSelectedLeague] = useState('ALL')
   const [matches, setMatches] = useState<Match[]>([])
+  const [allMatchesForBanner, setAllMatchesForBanner] = useState<Match[]>([]) // 🆕 상단 롤링용 전체 경기
     const [h2hModalOpen, setH2hModalOpen] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [loading, setLoading] = useState(true)
@@ -720,8 +744,9 @@ export default function Home() {
   // 전체 리그 목록 (전체 제외)
   const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
   
-  // 순위표용 리그 목록 (Nations League 제외)
-  const standingsLeagues = availableLeagues.filter(l => l.code !== 'UNL')
+  // 순위표용 리그 목록 (컵대회 제외)
+  const CUP_COMPETITIONS = ['UNL', 'FAC', 'EFL', 'CDR', 'DFB', 'CIT', 'KNV', 'AFCON', 'CDF', 'TDP']
+  const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes(l.code))
 
   // 🆕 날짜 네비게이션 함수들
   const formatDateKey = (date: Date): string => {
@@ -930,8 +955,8 @@ export default function Home() {
   useEffect(() => {
     if (selectedLeague === 'ALL') return
     
-    // Nations League 선택 시 순위표 숨김
-    if (selectedLeague === 'UNL') {
+    // 컵대회 선택 시 순위표 숨김
+    if (CUP_COMPETITIONS.includes(selectedLeague)) {
       setStandings([])
       return
     }
@@ -941,7 +966,7 @@ export default function Home() {
       setCurrentLeagueIndex(leagueIndex)
       setStandings(allLeagueStandings[selectedLeague] || [])
     }
-  }, [selectedLeague, standingsLeagues, allLeagueStandings, currentLeagueIndex])
+  }, [selectedLeague])
 
   // 자동 스크롤 효과 + 터치/마우스 드래그 지원 (데스크톱 & 모바일)
   useEffect(() => {
@@ -1089,6 +1114,10 @@ export default function Home() {
           // 캐시된 데이터도 번역 처리 🆕
           const translatedCached = await translateMatches(cachedMatches)
           setMatches(translatedCached)
+          // 🆕 전체 리그면 상단 롤링용으로도 저장
+          if (selectedLeague === 'ALL') {
+            setAllMatchesForBanner(translatedCached)
+          }
           setLoading(false)
           console.log('✅ 캐시에서 경기 로드 (번역 완료):', translatedCached.length)
           return
@@ -1272,6 +1301,11 @@ export default function Home() {
         const translatedMatches = await translateMatches(futureMatches)
         
         setMatches(translatedMatches)
+        
+        // 🆕 전체 리그면 상단 롤링용으로도 저장
+        if (selectedLeague === 'ALL') {
+          setAllMatchesForBanner(translatedMatches)
+        }
         
         // 🆕 라인업 상태 체크
         if (translatedMatches.length > 0) {
@@ -1854,8 +1888,9 @@ export default function Home() {
             style={{ scrollBehavior: 'auto' }}
           >
             {(() => {
-              // 필터링된 경기에서 20개 추출 (중복 제거)
-              const uniqueMatches = matches.slice(0, 20)
+              // 🆕 상단 롤링은 항상 전체 경기 기준
+              const bannerMatches = allMatchesForBanner.length > 0 ? allMatchesForBanner : matches
+              const uniqueMatches = bannerMatches.slice(0, 20)
               // 무한 스크롤을 위해 2번 반복
               return [...uniqueMatches, ...uniqueMatches].map((match, index) => {
               const currentTrend = trendData[match.id]
@@ -1948,7 +1983,7 @@ export default function Home() {
       </div>
 
       {/* 모바일: 콤팩트 가로형 */}
-      <div className="md:hidden bg-[#0f0f0f] border-b border-gray-900">
+      <div className="hidden bg-[#0f0f0f] border-b border-gray-900">
         <div className="py-2 overflow-hidden">
           <div 
             ref={scrollContainerRef}
@@ -2025,11 +2060,7 @@ export default function Home() {
       {/* 트렌드 컨텐츠 영역 */}
       <div className="container mx-auto px-4 pt-0 md:py-3 pb-20 lg:pb-3">
         {/* TOP 하이라이트 섹션 - 메인 레이아웃과 동일한 너비 */}
-        <div className="mb-4">
-          <TopHighlights 
-            darkMode={darkMode}
-          />
-        </div>
+
         
         <div className="flex gap-8 relative">
           {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
@@ -2211,6 +2242,47 @@ export default function Home() {
               <AdBanner slot="desktop_banner" />
             </div>
 
+        {/* 🔥 모바일 PICK 배너 - 컴팩트 버전 (최상단) */}
+        <a 
+          href="/premium"
+          className="lg:hidden block mb-3 active:scale-[0.98] transition-transform"
+        >
+          <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-xl p-[1.5px] shadow-lg shadow-orange-500/20">
+            <div className="bg-[#0a0a0f] rounded-xl px-4 py-3">
+              <div className="flex items-center justify-between">
+                {/* 왼쪽: 타이틀 + 적중률 */}
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🔥</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-bold text-sm">
+                        {currentLanguage === 'ko' ? '트렌드 PICK' : 'Trend PICK'}
+                      </span>
+                      <span className="text-[9px] text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded-full animate-pulse font-medium">
+                        ● LIVE
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-yellow-400 font-black text-lg">67%</span>
+                      <span className="text-gray-500 text-[10px]">적중률</span>
+                      <span className="text-gray-600">|</span>
+                      <span className="text-white font-bold text-xs">8,200+</span>
+                      <span className="text-gray-500 text-[10px]">경기</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* 오른쪽: CTA */}
+                <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg px-3 py-2">
+                  <span className="text-white font-bold text-xs whitespace-nowrap">
+                    {currentLanguage === 'ko' ? '확인하기 →' : 'View →'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a>
+
         {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
         <div className="mb-4 md:mb-8">
           <div className="flex items-center justify-center gap-4">
@@ -2266,55 +2338,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 🔥 모바일 PICK 배너 (날짜 필터 아래) - 마케팅 최적화 */}
-        <a 
-          href="/premium"
-          className="lg:hidden block mb-4 active:scale-[0.98] transition-transform"
-        >
-          <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-2xl p-[2px] shadow-lg shadow-orange-500/20">
-            <div className="bg-[#0a0a0f] rounded-2xl p-4">
-              {/* 상단: 타이틀 + LIVE */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🔥</span>
-                  <span className="text-white font-bold text-base">
-                    {currentLanguage === 'ko' ? '트렌드 PICK' : 'Trend PICK'}
-                  </span>
-                </div>
-                <span className="text-[10px] text-green-400 bg-green-500/20 px-2 py-1 rounded-full animate-pulse font-medium">
-                  ● LIVE
-                </span>
-              </div>
-              
-              {/* 중앙: 적중률 강조 */}
-              <div className="flex items-center justify-center gap-4 mb-3">
-                <div className="text-center">
-                  <div className="text-gray-400 text-xs mb-1">
-                    {currentLanguage === 'ko' ? '평균 적중률' : 'Accuracy'}
-                  </div>
-                  <div className="flex items-baseline justify-center">
-                    <span className="text-yellow-400 font-black text-4xl">67</span>
-                    <span className="text-yellow-400 font-bold text-xl ml-0.5">%</span>
-                  </div>
-                </div>
-                <div className="w-px h-12 bg-gray-700" />
-                <div className="text-center">
-                  <div className="text-gray-400 text-xs mb-1">
-                    {currentLanguage === 'ko' ? '분석 경기' : 'Matches'}
-                  </div>
-                  <div className="text-white font-bold text-2xl">8,200+</div>
-                </div>
-              </div>
-              
-              {/* 하단: CTA 버튼 */}
-              <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl py-3 text-center shadow-lg shadow-orange-500/30">
-                <span className="text-white font-bold text-sm">
-                  {currentLanguage === 'ko' ? '무료로 예측 확인하기' : 'View Free Predictions'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </a>
+{/* 💻 PC: 유튜브 하이라이트 */}
+<div className="hidden md:block mb-4">
+  <TopHighlights darkMode={darkMode} />
+</div>
 
         {/* 상단 광고 배너 */}
         
@@ -2410,6 +2437,12 @@ export default function Home() {
 
                           return (
                             <React.Fragment key={leagueCode}>
+                              {/* 첫 번째 리그 다음에 매치 리포트 삽입 (모바일만) */}
+                              {leagueIndex === 1 && (
+                                <div className="md:hidden mb-4">
+                                  <MobileMatchReports darkMode={darkMode} />
+                                </div>
+                              )}
                               <div 
                                 className={`rounded-xl overflow-hidden mb-4 ${
                                   darkMode ? 'bg-[#111]' : 'bg-white shadow-sm border border-gray-100'
@@ -2945,8 +2978,8 @@ export default function Home() {
               </div>
             )}
             
-            {/* 특정 리그 선택 시 - 기존 순위표 */}
-            {selectedLeague !== 'ALL' && (
+            {/* 특정 리그 선택 시 - 기존 순위표 (컵대회 제외) */}
+            {selectedLeague !== 'ALL' && !CUP_COMPETITIONS.includes(selectedLeague) && (
               <div className={`rounded-xl overflow-hidden select-none ${
                 darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
               }`}>

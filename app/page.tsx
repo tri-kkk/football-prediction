@@ -1876,6 +1876,63 @@ export default function Home() {
         실시간 해외축구 경기 예측 & 프리뷰 플랫폼 · Trend Soccer
       </h1>
       
+      {/* 🔥 SEO용 정적 콘텐츠 - 애드센스/검색엔진 봇용 */}
+      <section className="sr-only">
+        <h2>해외축구 실시간 배당 분석</h2>
+        <p>
+          Trend Soccer는 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 
+          챔피언스리그 등 주요 유럽 축구 리그의 실시간 배당 분석과 
+          경기 예측을 제공하는 전문 플랫폼입니다.
+        </p>
+        <p>
+          데이터 기반 승률 분석, 24시간 트렌드 차트, AI 예측 알고리즘으로 
+          스마트한 축구 분석을 경험하세요. 매일 업데이트되는 경기 일정과 
+          상세한 팀 통계, H2H 전적 분석을 무료로 제공합니다.
+        </p>
+        <h3>주요 기능</h3>
+        <ul>
+          <li>실시간 배당률 변동 추적 및 트렌드 분석</li>
+          <li>24시간 승률 트렌드 차트 시각화</li>
+          <li>AI 기반 경기 예측 및 PICK 추천</li>
+          <li>팀 순위표 및 리그 통계</li>
+          <li>H2H 상대전적 분석</li>
+          <li>실시간 라인업 및 선발 명단</li>
+        </ul>
+        <h3>지원 리그</h3>
+        <p>
+          UEFA 챔피언스리그, UEFA 유로파리그, UEFA 컨퍼런스리그,
+          잉글랜드 프리미어리그, 스페인 라리가, 독일 분데스리가, 
+          이탈리아 세리에A, 프랑스 리그1, 네덜란드 에레디비시, 
+          포르투갈 프리메이라리가, FA컵, 코파델레이, DFB포칼, 
+          코파이탈리아 등 20개 이상의 리그를 지원합니다.
+        </p>
+        <h3>서비스 소개</h3>
+        <p>
+          Trend Soccer는 축구 팬들을 위한 무료 경기 분석 플랫폼입니다. 
+          실시간으로 업데이트되는 배당률 데이터를 바탕으로 승률을 계산하고, 
+          지난 24시간 동안의 배당 변동을 차트로 시각화하여 제공합니다. 
+          경기 전 팀의 최근 폼, 상대 전적, 예상 라인업까지 
+          한눈에 확인할 수 있습니다.
+        </p>
+      </section>
+      <section className="sr-only" lang="en">
+  <h2>Real-Time Football Betting Odds Analysis</h2>
+  <p>Trend Soccer provides real-time betting odds analysis and match predictions 
+     for major European football leagues including Premier League, La Liga, 
+     Bundesliga, Serie A, Ligue 1, and UEFA Champions League.</p>
+  <p>Experience smart football analysis with data-driven win probability calculations, 
+     24-hour trend charts, and AI prediction algorithms. Free daily match schedules, 
+     detailed team statistics, and H2H analysis.</p>
+  <h3>Key Features</h3>
+  <ul>
+    <li>Real-time betting odds tracking and trend analysis</li>
+    <li>24-hour win probability trend chart visualization</li>
+    <li>AI-powered match predictions and PICK recommendations</li>
+    <li>League standings and team statistics</li>
+    <li>Head-to-head analysis</li>
+    <li>Live lineups and starting XI</li>
+  </ul>
+</section>
 
       {/* 승률 배너 (자동 스크롤) */}
       
