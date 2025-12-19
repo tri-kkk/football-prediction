@@ -2497,16 +2497,16 @@ export default function Home() {
                             <React.Fragment key={leagueCode}>
                               {/* 📢 AdSense 인피드 광고 - 3번째, 6번째 리그 뒤 (PC만) */}
                               {(leagueIndex === 2 || leagueIndex === 5) && (
-                                <div className={`hidden md:block py-3 rounded-xl mb-4 ${
+                                <div className={`hidden md:block py-2 rounded-xl mb-4 ${
                                   darkMode ? 'bg-[#111]' : 'bg-gray-50'
                                 }`}>
-                                  <div className={`text-[10px] text-center mb-2 ${
+                                  <div className={`text-[10px] text-center mb-1 ${
                                     darkMode ? 'text-gray-600' : 'text-gray-400'
                                   }`}>
                                     스폰서
                                   </div>
-                                  <div className="px-4">
-                                    <AdSenseAd slot="infeed" format="auto" darkMode={darkMode} />
+                                  <div className="px-4 flex justify-center">
+                                    <AdSenseAd slot="horizontal" format="horizontal" responsive={false} darkMode={darkMode} />
                                   </div>
                                 </div>
                               )}

@@ -19,11 +19,11 @@ const ADSENSE_SLOTS = {
 }
 
 // 슬롯별 크기 설정
-const SLOT_SIZES: Record<string, { width: string; minHeight: string }> = {
+const SLOT_SIZES: Record<string, { width: string; minHeight: string; maxHeight?: string }> = {
   sidebar_right_top: { width: '300px', minHeight: '250px' },
   sidebar_right_bottom: { width: '300px', minHeight: '250px' },
-  infeed: { width: '100%', minHeight: '250px' },
-  horizontal: { width: '100%', minHeight: '90px' },
+  infeed: { width: '100%', minHeight: '100px', maxHeight: '250px' },
+  horizontal: { width: '728px', minHeight: '90px', maxHeight: '90px' },
 }
 
 interface AdSenseAdProps {
@@ -55,7 +55,7 @@ export default function AdSenseAd({
   const [isProduction, setIsProduction] = useState(false)
 
   const adSlot = ADSENSE_SLOTS[slot]
-  const slotSize = SLOT_SIZES[slot] || { width: '100%', minHeight: '250px' }
+  const slotSize = SLOT_SIZES[slot] || { width: '100%', minHeight: '90px', maxHeight: '90px' }
 
   useEffect(() => {
     // 프로덕션 환경 체크
@@ -105,6 +105,7 @@ export default function AdSenseAd({
         style={{ 
           width: slotSize.width,
           minHeight: slotSize.minHeight,
+          maxHeight: slotSize.maxHeight,
           ...style 
         }}
       >
@@ -129,10 +130,11 @@ export default function AdSenseAd({
   return (
     <div 
       ref={adRef}
-      className={className}
+      className={`overflow-hidden ${className}`}
       style={{ 
         width: slotSize.width,
         minHeight: slotSize.minHeight,
+        maxHeight: slotSize.maxHeight,
         ...style 
       }}
     >
