@@ -961,20 +961,40 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  // 📰 사이드바 뉴스 로드
+  // 📰 사이드바 뉴스 로드 (뉴스 페이지 방식 - 카테고리별 최신 기사 통합)
   useEffect(() => {
     async function fetchSidebarNews() {
       try {
-        const response = await fetch(`/api/news?lang=${currentLanguage}`)
+        const response = await fetch(`/api/news?ui=${currentLanguage}`)
         const data = await response.json()
-        if (data.success && data.articles) {
-          setSidebarNews(data.articles.slice(0, 5))
+        if (data.success && data.categories) {
+          // 모든 카테고리에서 기사 추출하여 최신순 정렬
+          const allArticles: any[] = []
+          data.categories.forEach((cat: any) => {
+            if (cat.articles && Array.isArray(cat.articles)) {
+              cat.articles.forEach((article: any) => {
+                allArticles.push({
+                  ...article,
+                  categoryName: cat.displayName || (currentLanguage === 'ko' ? cat.nameKo : cat.nameEn)
+                })
+              })
+            }
+          })
+          // 최신순 정렬
+          allArticles.sort((a, b) => 
+            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+          )
+          setSidebarNews(allArticles.slice(0, 6))
         }
       } catch (error) {
         console.error('뉴스 로드 실패:', error)
       }
     }
     fetchSidebarNews()
+    
+    // 30분마다 자동 갱신
+    const interval = setInterval(fetchSidebarNews, 30 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [currentLanguage])
 
   // selectedLeague 변경 시 순위표 인덱스 동기화
@@ -3262,23 +3282,47 @@ export default function Home() {
                   </h3>
                 </div>
                 <div className="p-2">
-                  {sidebarNews.map((news: any, idx: number) => (
-                    <a
-                      key={news.id || idx}
-                      href={news.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`block px-3 py-2.5 rounded-lg transition-colors ${
-                        darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <p className={`text-sm leading-snug line-clamp-2 ${
-                        darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
-                      }`}>
-                        {news.title}
-                      </p>
-                    </a>
-                  ))}
+                  {sidebarNews.map((news: any, idx: number) => {
+                    // 시간 계산
+                    const getTimeAgo = (dateString: string) => {
+                      if (!dateString) return ''
+                      const now = new Date()
+                      const date = new Date(dateString)
+                      const diffMs = now.getTime() - date.getTime()
+                      const diffMins = Math.floor(diffMs / 60000)
+                      const diffHours = Math.floor(diffMins / 60)
+                      const diffDays = Math.floor(diffHours / 24)
+                      
+                      if (diffMins < 60) return `${diffMins}분 전`
+                      if (diffHours < 24) return `${diffHours}시간 전`
+                      return `${diffDays}일 전`
+                    }
+                    
+                    return (
+                      <a
+                        key={news.id || idx}
+                        href={news.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`block px-3 py-2.5 rounded-lg transition-colors ${
+                          darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <p className={`text-sm leading-snug line-clamp-2 ${
+                          darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                        }`}>
+                          {news.title}
+                        </p>
+                        {news.publishedAt && (
+                          <span className={`text-[10px] mt-1 block ${
+                            darkMode ? 'text-gray-500' : 'text-gray-400'
+                          }`}>
+                            {getTimeAgo(news.publishedAt)}
+                          </span>
+                        )}
+                      </a>
+                    )
+                  })}
                 </div>
                 <a
                   href="/news"
