@@ -83,45 +83,15 @@ export default function AdSenseAd({
     // 이미 로드되었으면 스킵
     if (isLoaded) return
 
-    let retryCount = 0
-    const maxRetries = 5
-
     const loadAd = () => {
       try {
-        // 컨테이너 체크
         const container = adRef.current
-        if (!container) {
-          return
-        }
+        if (!container) return
 
-        // ✅ ins 요소 찾기
+        // ✅ ins 요소가 이미 로드됐는지 확인
         const insElement = container.querySelector('ins.adsbygoogle')
-        
-        // ✅ 이미 광고가 로드되었는지 확인 (중복 방지!)
-        if (insElement && insElement.getAttribute('data-adsbygoogle-status') === 'done') {
+        if (insElement?.getAttribute('data-adsbygoogle-status') === 'done') {
           setIsLoaded(true)
-          return
-        }
-
-        // ✅ display: none 체크 (Tailwind hidden 클래스 등)
-        const computedStyle = window.getComputedStyle(container)
-        if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
-          console.log(`[AdSenseAd] ${slot}: 숨겨진 요소, 광고 로드 스킵`)
-          return  // 재시도 없이 완전 스킵
-        }
-
-        // ✅ 요소가 보이는지 확인
-        const rect = container.getBoundingClientRect()
-        const isVisible = rect.width > 0 && rect.height > 0
-        
-        // ✅ 너비가 0이거나 안 보이면 재시도 (최대 5회)
-        if (!isVisible || container.offsetWidth === 0) {
-          retryCount++
-          if (retryCount < maxRetries) {
-            setTimeout(loadAd, 200)
-          } else {
-            console.log(`[AdSenseAd] ${slot}: 표시 공간 없음, 광고 로드 스킵`)
-          }
           return
         }
 
@@ -129,21 +99,50 @@ export default function AdSenseAd({
         window.adsbygoogle.push({})
         setIsLoaded(true)
       } catch (error: any) {
-        // ✅ 모든 에러 조용히 처리 (콘솔에 에러 대신 로그)
+        // 모든 에러 조용히 처리
         if (error?.message?.includes('already have ads')) {
           setIsLoaded(true)
-          return
         }
-        if (error?.message?.includes('No slot size') || error?.message?.includes('availableWidth')) {
-          console.log(`[AdSenseAd] ${slot}: 광고 공간 부족, 스킵`)
-          return
-        }
-        console.log('[AdSenseAd] 로드 스킵:', slot)
+        // 다른 에러는 무시 (로그도 안 남김)
       }
     }
 
-    const timer = setTimeout(loadAd, 300)
-    return () => clearTimeout(timer)
+    // ✅ ResizeObserver로 컨테이너 크기가 잡히면 로드
+    const container = adRef.current
+    if (!container) return
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        
+        // 너비와 높이가 둘 다 0보다 크면 로드 시도
+        if (width > 50 && height > 50 && !isLoaded) {
+          // display: none 체크
+          const computedStyle = window.getComputedStyle(container)
+          if (computedStyle.display === 'none') {
+            return
+          }
+          
+          // 약간의 딜레이 후 로드
+          setTimeout(loadAd, 100)
+          observer.disconnect()
+        }
+      }
+    })
+
+    observer.observe(container)
+
+    // 폴백: 2초 후에도 안 됐으면 한 번 시도
+    const fallbackTimer = setTimeout(() => {
+      if (!isLoaded && container.offsetWidth > 50) {
+        loadAd()
+      }
+    }, 2000)
+
+    return () => {
+      observer.disconnect()
+      clearTimeout(fallbackTimer)
+    }
   }, [isLoaded, slot])
 
   // 로컬 환경 플레이스홀더
