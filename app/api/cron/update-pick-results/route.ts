@@ -105,16 +105,8 @@ export async function GET(request: NextRequest) {
           continue
         }
         
-        // API-Football에서 경기 결과 조회
-        const leagueId = LEAGUE_ID_MAP[pick.league_code]
-        if (!leagueId) {
-          console.log(`⚠️ Unknown league: ${pick.league_code}`)
-          skipped++
-          continue
-        }
-        
-        const dateStr = pick.commence_time.split('T')[0]
-        const apiUrl = `https://${API_FOOTBALL_HOST}/fixtures?league=${leagueId}&date=${dateStr}&timezone=UTC`
+        // 🔧 match_id로 직접 경기 조회 (팀 이름 매칭 문제 해결!)
+        const apiUrl = `https://${API_FOOTBALL_HOST}/fixtures?id=${pick.match_id}`
         
         const response = await fetch(apiUrl, {
           headers: {
@@ -131,17 +123,11 @@ export async function GET(request: NextRequest) {
         const data = await response.json()
         const fixtures = data.response || []
         
-        // 팀 이름으로 경기 찾기
-        const fixture = fixtures.find((f: any) => {
-          const homeMatch = f.teams.home.name.toLowerCase().includes(pick.home_team.toLowerCase().split(' ')[0]) ||
-                           pick.home_team.toLowerCase().includes(f.teams.home.name.toLowerCase().split(' ')[0])
-          const awayMatch = f.teams.away.name.toLowerCase().includes(pick.away_team.toLowerCase().split(' ')[0]) ||
-                           pick.away_team.toLowerCase().includes(f.teams.away.name.toLowerCase().split(' ')[0])
-          return homeMatch && awayMatch
-        })
+        // 🔧 match_id로 직접 조회했으므로 첫 번째 결과 사용
+        const fixture = fixtures[0]
         
         if (!fixture) {
-          console.log(`⚠️ Fixture not found: ${pick.home_team} vs ${pick.away_team}`)
+          console.log(`⚠️ Fixture not found for match_id: ${pick.match_id}`)
           skipped++
           continue
         }
