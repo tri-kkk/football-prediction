@@ -99,12 +99,18 @@ export default function AdSenseAd({
         
         // ✅ 이미 광고가 로드되었는지 확인 (중복 방지!)
         if (insElement && insElement.getAttribute('data-adsbygoogle-status') === 'done') {
-          console.log(`[AdSenseAd] ${slot}: 이미 로드됨, 스킵`)
           setIsLoaded(true)
           return
         }
 
-        // ✅ 요소가 보이는지 확인 (display: none 또는 hidden 체크)
+        // ✅ display: none 체크 (Tailwind hidden 클래스 등)
+        const computedStyle = window.getComputedStyle(container)
+        if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+          console.log(`[AdSenseAd] ${slot}: 숨겨진 요소, 광고 로드 스킵`)
+          return  // 재시도 없이 완전 스킵
+        }
+
+        // ✅ 요소가 보이는지 확인
         const rect = container.getBoundingClientRect()
         const isVisible = rect.width > 0 && rect.height > 0
         
@@ -114,7 +120,6 @@ export default function AdSenseAd({
           if (retryCount < maxRetries) {
             setTimeout(loadAd, 200)
           } else {
-            // 최대 재시도 초과 - 조용히 포기 (에러 아님)
             console.log(`[AdSenseAd] ${slot}: 표시 공간 없음, 광고 로드 스킵`)
           }
           return
@@ -124,14 +129,16 @@ export default function AdSenseAd({
         window.adsbygoogle.push({})
         setIsLoaded(true)
       } catch (error: any) {
-        // ✅ 이미 로드된 에러는 무시
+        // ✅ 모든 에러 조용히 처리 (콘솔에 에러 대신 로그)
         if (error?.message?.includes('already have ads')) {
-          console.log(`[AdSenseAd] ${slot}: 이미 로드됨`)
           setIsLoaded(true)
           return
         }
-        console.error('[AdSenseAd] 로드 실패:', error)
-        setHasError(true)
+        if (error?.message?.includes('No slot size') || error?.message?.includes('availableWidth')) {
+          console.log(`[AdSenseAd] ${slot}: 광고 공간 부족, 스킵`)
+          return
+        }
+        console.log('[AdSenseAd] 로드 스킵:', slot)
       }
     }
 
