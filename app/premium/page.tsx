@@ -1183,8 +1183,13 @@ export default function PremiumPredictPage() {
       
       // ✅ 서버에서 계산된 리그별 적중률 사용
       if (data.leagueAccuracy) {
+        // 🎯 주요 6개 리그만 표시
+        const MAIN_LEAGUES = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED']
+        
         const accuracyData = Object.entries(data.leagueAccuracy)
-          .filter(([_, stats]: [string, any]) => stats.total >= 2)  // 최소 2경기 이상
+          .filter(([league_code, stats]: [string, any]) => 
+            MAIN_LEAGUES.includes(league_code) && stats.total >= 2  // 주요 리그 + 최소 2경기 이상
+          )
           .map(([league_code, stats]: [string, any]) => {
             const accuracy = stats.accuracy
             // 🔥 가산점: 기본 +5%, 적중률 낮으면 더 추가
@@ -1355,12 +1360,16 @@ export default function PremiumPredictPage() {
                     return (
                       <div key={league.league_code} className="flex items-center justify-between md:justify-start gap-2 px-2 md:px-0">
                         <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 md:w-6 md:h-6 bg-white rounded p-0.5 flex-shrink-0">
-                            <img 
-                              src={leagueLogos[league.league_code] || ''} 
-                              alt={league.league_code}
-                              className="w-full h-full object-contain"
-                            />
+                          <div className="w-5 h-5 md:w-6 md:h-6 bg-white rounded p-0.5 flex-shrink-0 flex items-center justify-center">
+                            {leagueLogos[league.league_code] ? (
+                              <img 
+                                src={leagueLogos[league.league_code]} 
+                                alt={league.league_code}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <span className="text-[8px] text-gray-500">⚽</span>
+                            )}
                           </div>
                           <span className="text-gray-300 text-xs md:text-sm font-medium">
                             {language === 'ko' ? leagueNamesKo[league.league_code] : leagueNamesEn[league.league_code]}
