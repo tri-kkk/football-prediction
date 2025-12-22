@@ -83,18 +83,53 @@ export default function AdSenseAd({
     // 이미 로드되었으면 스킵
     if (isLoaded) return
 
+    let retryCount = 0
+    const maxRetries = 5
+
     const loadAd = () => {
       try {
-        // 컨테이너 너비 체크
-        if (adRef.current && adRef.current.offsetWidth === 0) {
-          setTimeout(loadAd, 100)
+        // 컨테이너 체크
+        const container = adRef.current
+        if (!container) {
+          return
+        }
+
+        // ✅ ins 요소 찾기
+        const insElement = container.querySelector('ins.adsbygoogle')
+        
+        // ✅ 이미 광고가 로드되었는지 확인 (중복 방지!)
+        if (insElement && insElement.getAttribute('data-adsbygoogle-status') === 'done') {
+          console.log(`[AdSenseAd] ${slot}: 이미 로드됨, 스킵`)
+          setIsLoaded(true)
+          return
+        }
+
+        // ✅ 요소가 보이는지 확인 (display: none 또는 hidden 체크)
+        const rect = container.getBoundingClientRect()
+        const isVisible = rect.width > 0 && rect.height > 0
+        
+        // ✅ 너비가 0이거나 안 보이면 재시도 (최대 5회)
+        if (!isVisible || container.offsetWidth === 0) {
+          retryCount++
+          if (retryCount < maxRetries) {
+            setTimeout(loadAd, 200)
+          } else {
+            // 최대 재시도 초과 - 조용히 포기 (에러 아님)
+            console.log(`[AdSenseAd] ${slot}: 표시 공간 없음, 광고 로드 스킵`)
+          }
           return
         }
 
         window.adsbygoogle = window.adsbygoogle || []
         window.adsbygoogle.push({})
         setIsLoaded(true)
-      } catch (error) {
+      } catch (error: any) {
+        // ✅ 이미 로드된 에러는 무시
+        if (error?.message?.includes('already have ads')) {
+          console.log(`[AdSenseAd] ${slot}: 이미 로드됨`)
+          setIsLoaded(true)
+          return
+        }
         console.error('[AdSenseAd] 로드 실패:', error)
         setHasError(true)
       }
@@ -145,7 +180,9 @@ export default function AdSenseAd({
         ...style 
       }}
     >
+      {/* ✅ key로 중복 렌더링 방지 */}
       <ins
+        key={`adsense-${slot}-${adSlot}`}
         className="adsbygoogle"
         style={{ display: 'block', textAlign: 'center' }}
         data-ad-client={ADSENSE_CLIENT_ID}
