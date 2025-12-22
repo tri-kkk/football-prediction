@@ -1137,7 +1137,8 @@ export default function Home() {
             'SA', 'CIT',                          // 이탈리아
             'FL1', 'CDF',                         // 프랑스
             'PPL', 'TDP',                         // 포르투갈
-            'DED', 'KNV'                          // 네덜란드
+            'DED', 'KNV',                          // 네덜란드
+              'AFCON'                               // 🆕 아프리카 네이션스컵
           ]
           const promises = leagues.map(league => 
             fetch(`/api/odds-from-db?league=${league}`, {

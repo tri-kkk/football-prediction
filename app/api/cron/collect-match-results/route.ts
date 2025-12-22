@@ -39,6 +39,7 @@ const LEAGUES = [
   // 네덜란드
   { code: 'DED', apiId: 88, name: 'Eredivisie' },
   { code: 'KNV', apiId: 90, name: 'KNVB Beker' },       // 🆕
+    { code: 'AFCON', apiId: 6, name: 'Africa Cup of Nations' },
 ]
 
 // 🌐 팀명 한글 매핑 (UTF-8 인코딩 수정)
