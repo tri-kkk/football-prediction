@@ -649,6 +649,19 @@ function generateRecommendation(
 
 async function savePick(input: PredictionInput, result: PredictionResult): Promise<void> {
   try {
+    // ✅ matchId가 없거나 숫자 형식이 아니면 저장하지 않음
+    if (!input.matchId) {
+      console.log(`⚠️ PICK not saved: No matchId for ${input.homeTeam} vs ${input.awayTeam}`)
+      return
+    }
+    
+    // matchId가 숫자인지 확인 (문자열 숫자도 허용)
+    const matchIdNum = Number(input.matchId)
+    if (isNaN(matchIdNum)) {
+      console.log(`⚠️ PICK not saved: Invalid matchId "${input.matchId}" for ${input.homeTeam} vs ${input.awayTeam}`)
+      return
+    }
+    
     // pick_result에 따른 확률 가져오기
     const pickKey = result.recommendation.pick.toLowerCase() as 'home' | 'draw' | 'away'
     const pickProbability = result.finalProb[pickKey] * 100
@@ -656,7 +669,7 @@ async function savePick(input: PredictionInput, result: PredictionResult): Promi
     const { data, error } = await supabase
       .from('pick_recommendations')
       .upsert({
-        match_id: String(input.matchId || `${input.homeTeam}-vs-${input.awayTeam}-${Date.now()}`),
+        match_id: String(matchIdNum),  // ✅ 숫자 ID만 저장
         league_code: input.leagueCode,
         home_team: input.homeTeam,
         away_team: input.awayTeam,
