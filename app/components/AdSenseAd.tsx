@@ -27,11 +27,11 @@ const ADSENSE_SLOTS = {
 
 // 슬롯별 크기 설정
 const SLOT_SIZES: Record<string, { width: string; minHeight: string; maxHeight?: string }> = {
-  sidebar_right_top: { width: '300px', minHeight: '250px' },
-  sidebar_right_bottom: { width: '300px', minHeight: '250px' },
+  sidebar_right_top: { width: '100%', minHeight: '250px' },
+  sidebar_right_bottom: { width: '100%', minHeight: '250px' },
   infeed: { width: '100%', minHeight: '100px', maxHeight: '250px' },
-  horizontal: { width: '728px', minHeight: '90px', maxHeight: '90px' },
-  mobile_top: { width: '320px', minHeight: '50px', maxHeight: '100px' },
+  horizontal: { width: '100%', minHeight: '90px', maxHeight: '90px' },
+  mobile_top: { width: '100%', minHeight: '50px', maxHeight: '100px' },
   mobile_infeed: { width: '100%', minHeight: '100px', maxHeight: '150px' },
   in_article: { width: '100%', minHeight: '100px' },
 }
