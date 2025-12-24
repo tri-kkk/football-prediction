@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useLanguage } from '../contexts/LanguageContext'
 
@@ -18,16 +18,12 @@ interface BlogPost {
 
 interface MobileMatchReportsProps {
   darkMode: boolean
-  autoSlideInterval?: number // ms, default 4000
 }
 
-export default function MobileMatchReports({ darkMode, autoSlideInterval = 4000 }: MobileMatchReportsProps) {
+export default function MobileMatchReports({ darkMode }: MobileMatchReportsProps) {
   const { language } = useLanguage()
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isTransitioning, setIsTransitioning] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
 
   useEffect(() => {
     fetchPosts()
@@ -35,17 +31,11 @@ export default function MobileMatchReports({ darkMode, autoSlideInterval = 4000 
 
   const fetchPosts = async () => {
     try {
-      // 롤링을 위해 더 많은 포스트 가져오기 (최대 10개)
-      const res = await fetch('/api/blog/posts?published=true&limit=10&offset=0')
+      const res = await fetch('/api/blog/posts?published=true&limit=2&offset=0')
       const result = await res.json()
       
       if (result.success && result.data) {
         setPosts(result.data)
-        // 🎲 랜덤 시작 위치 설정
-        if (result.data.length > 2) {
-          const maxStartIndex = Math.max(0, result.data.length - 2)
-          setCurrentIndex(Math.floor(Math.random() * (maxStartIndex + 1)))
-        }
       }
     } catch (error) {
       console.error('Failed to fetch blog posts:', error)
@@ -53,25 +43,6 @@ export default function MobileMatchReports({ darkMode, autoSlideInterval = 4000 
       setLoading(false)
     }
   }
-
-  // 자동 롤링
-  useEffect(() => {
-    if (posts.length <= 2 || isPaused) return
-
-    const timer = setInterval(() => {
-      setIsTransitioning(true)
-      setTimeout(() => {
-        setCurrentIndex(prev => {
-          // 2개씩 보여주므로, 마지막 2개 전까지만 이동
-          const maxIndex = Math.max(0, posts.length - 2)
-          return prev >= maxIndex ? 0 : prev + 1
-        })
-        setIsTransitioning(false)
-      }, 300)
-    }, autoSlideInterval)
-
-    return () => clearInterval(timer)
-  }, [posts.length, autoSlideInterval, isPaused])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -114,13 +85,6 @@ export default function MobileMatchReports({ darkMode, autoSlideInterval = 4000 
     }
   }
 
-  // 현재 보여줄 2개의 포스트
-  const visiblePosts = posts.slice(currentIndex, currentIndex + 2)
-  // 만약 끝에서 1개만 남았다면 처음 것을 추가
-  if (visiblePosts.length === 1 && posts.length > 1) {
-    visiblePosts.push(posts[0])
-  }
-
   if (loading) {
     return (
       <div className={`rounded-xl p-3 mb-3 ${darkMode ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
@@ -149,15 +113,9 @@ export default function MobileMatchReports({ darkMode, autoSlideInterval = 4000 
   if (posts.length === 0) return null
 
   return (
-    <div 
-      className={`rounded-xl overflow-hidden mb-3 ${
-        darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
-      }`}
-      onTouchStart={() => setIsPaused(true)}
-      onTouchEnd={() => setTimeout(() => setIsPaused(false), 2000)}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-    >
+    <div className={`rounded-xl overflow-hidden mb-3 ${
+      darkMode ? 'bg-[#1a1a1a] border border-gray-800' : 'bg-white border border-gray-200'
+    }`}>
       {/* 헤더 */}
       <div className={`flex items-center justify-between px-3 py-2.5 border-b ${
         darkMode ? 'border-gray-800' : 'border-gray-200'
@@ -176,15 +134,11 @@ export default function MobileMatchReports({ darkMode, autoSlideInterval = 4000 
         </Link>
       </div>
 
-      {/* 리스트 - 롤링 애니메이션 적용 */}
-      <div 
-        className={`divide-y transition-opacity duration-300 ${
-          darkMode ? 'divide-gray-800' : 'divide-gray-200'
-        } ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
-      >
-        {visiblePosts.map((post) => (
+      {/* 리스트 */}
+      <div className="divide-y divide-gray-800">
+        {posts.map((post) => (
           <Link
-            key={`${post.id}-${currentIndex}`}
+            key={post.id}
             href={`/blog/${post.slug}`}
             className={`flex items-center gap-2.5 px-3 py-2.5 transition-colors ${
               darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
@@ -213,24 +167,6 @@ export default function MobileMatchReports({ darkMode, autoSlideInterval = 4000 
           </Link>
         ))}
       </div>
-
-      {/* 하단 프로그레스 바 (3개 이상일 때만) - 미니멀 스타일 */}
-      {posts.length > 2 && (
-        <div className={`px-3 pb-2 pt-1`}>
-          <div className={`flex gap-0.5 ${darkMode ? 'opacity-40' : 'opacity-30'}`}>
-            {Array.from({ length: Math.min(posts.length - 1, 6) }).map((_, idx) => (
-              <div
-                key={idx}
-                className={`h-[2px] flex-1 rounded-full transition-colors ${
-                  idx === currentIndex % Math.min(posts.length - 1, 6)
-                    ? darkMode ? 'bg-white' : 'bg-gray-900'
-                    : darkMode ? 'bg-gray-700' : 'bg-gray-300'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -2568,7 +2568,8 @@ export default function Home() {
                                 </div>
                               )}
                               
-                              {/* 첫 번째 리그 다음에 매치 리포트 삽입 (모바일만) */}
+                              {/* 매치 리포트 삽입 (모바일만) */}
+                              {/* 리그가 2개 이상이면 두 번째 리그 전에, 1개면 첫 번째 리그 후에 표시 */}
                               {leagueIndex === 1 && (
                                 <div className="md:hidden mb-4">
                                   <MobileMatchReports darkMode={darkMode} />
@@ -2788,6 +2789,13 @@ export default function Home() {
                             {leagueIndex === 0 && (
                               <div className="block lg:hidden mb-4 flex justify-center">
                                 <AdBanner slot="mobile_bottom" />
+                              </div>
+                            )}
+                            
+                            {/* 📱 매치 리포트 - 리그가 1개뿐일 때 첫 번째 리그 후에 표시 (모바일만) */}
+                            {orderedLeagues.length === 1 && leagueIndex === 0 && (
+                              <div className="md:hidden mb-4">
+                                <MobileMatchReports darkMode={darkMode} />
                               </div>
                             )}
                           </React.Fragment>
