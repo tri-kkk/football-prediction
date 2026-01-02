@@ -1,3 +1,7 @@
+// ✅ 수정된 match-results API (v2)
+// 🎯 주요 변경: 데이터 없는 날짜 요청 시 자동으로 최신 데이터 날짜로 폴백
+// 📅 2026년 새해 문제 해결!
+
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -12,10 +16,48 @@ export async function GET(request: NextRequest) {
     const league = searchParams.get('league') || 'ALL'
     const specificDate = searchParams.get('date') // YYYY-MM-DD 형식
     const period = searchParams.get('period') || 'week'
+    const autoLatest = searchParams.get('autoLatest') !== 'false' // 기본값 true
     
-    console.log(`📊 Fetching match results from Supabase: league=${league}, date=${specificDate}`)
+    console.log(`📊 Fetching match results: league=${league}, date=${specificDate}, autoLatest=${autoLatest}`)
     
-    // 🔧 Supabase에서 모든 컬럼 선택 (예측 데이터 포함!)
+    // ✅ 1단계: 가장 최근 데이터 날짜 조회 (항상 실행)
+    const { data: latestData } = await supabase
+      .from('match_results')
+      .select('match_date')
+      .order('match_date', { ascending: false })
+      .limit(1)
+    
+    const latestMatchDate = latestData?.[0]?.match_date 
+      ? new Date(latestData[0].match_date + 'Z').toISOString().split('T')[0]
+      : null
+    
+    console.log(`📅 Latest data date in DB: ${latestMatchDate}`)
+
+    // ✅ 2단계: 쿼리 날짜 결정
+    let queryDate = specificDate
+    let usedLatestFallback = false
+    
+    // specificDate가 지정되었지만 데이터가 없을 수 있음
+    // autoLatest=true면 데이터 없을 때 최신 날짜로 폴백
+    if (specificDate && autoLatest) {
+      // 먼저 해당 날짜에 데이터가 있는지 체크
+      const startKST = new Date(`${specificDate}T00:00:00+09:00`)
+      const endKST = new Date(`${specificDate}T23:59:59+09:00`)
+      
+      const { count } = await supabase
+        .from('match_results')
+        .select('*', { count: 'exact', head: true })
+        .gte('match_date', startKST.toISOString())
+        .lte('match_date', endKST.toISOString())
+      
+      if (count === 0 && latestMatchDate) {
+        console.log(`⚠️ No data for ${specificDate}, falling back to ${latestMatchDate}`)
+        queryDate = latestMatchDate
+        usedLatestFallback = true
+      }
+    }
+    
+    // ✅ 3단계: 메인 쿼리 실행
     let query = supabase
       .from('match_results')
       .select('*')
@@ -27,12 +69,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 날짜 필터
-    if (specificDate) {
+    if (queryDate) {
       // 한국 시간 기준 해당 날짜의 시작/끝
-      // KST 00:00 = UTC 전날 15:00
-      // KST 23:59 = UTC 당일 14:59
-      const startKST = new Date(`${specificDate}T00:00:00+09:00`)
-      const endKST = new Date(`${specificDate}T23:59:59+09:00`)
+      const startKST = new Date(`${queryDate}T00:00:00+09:00`)
+      const endKST = new Date(`${queryDate}T23:59:59+09:00`)
       
       query = query
         .gte('match_date', startKST.toISOString())
@@ -72,14 +112,13 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log(`✅ Found ${data?.length || 0} matches in Supabase`)
+    console.log(`✅ Found ${data?.length || 0} matches`)
 
-    // 데이터 변환 (기존 프론트엔드 호환 유지)
+    // 데이터 변환
     const matches = (data || []).map(row => {
-      // ✅ KST 시간 변환 (DB는 timestamp without time zone = UTC)
+      // KST 시간 변환
       let matchTimeKST = ''
       if (row.match_date) {
-        // 'Z' 붙여서 UTC임을 명시 → Asia/Seoul로 변환
         const date = new Date(row.match_date + 'Z')
         matchTimeKST = date.toLocaleTimeString('ko-KR', {
           hour: '2-digit',
@@ -90,35 +129,35 @@ export async function GET(request: NextRequest) {
       }
       
       return {
-      // 기본 정보
-      match_id: row.match_id?.toString() || '',
-      league: row.league || '',
-      home_team: row.home_team || '',
-      away_team: row.away_team || '',
-      home_team_kr: row.home_team_kr || null,
-      away_team_kr: row.away_team_kr || null,
-      home_crest: row.home_crest || '',
-      away_crest: row.away_crest || '',
-      match_date: row.match_date || '',
-      match_time_kst: matchTimeKST,  // ✅ KST 시간 추가
-      match_status: row.match_status || 'FT',
-      
-      // 실제 결과
-      final_score_home: row.final_score_home ?? 0,
-      final_score_away: row.final_score_away ?? 0,
-      
-      // 🔧 예측 데이터 (match_results 테이블 컬럼명 그대로!)
-      predicted_winner: row.predicted_winner || null,
-      predicted_score_home: row.predicted_score_home ?? null,
-      predicted_score_away: row.predicted_score_away ?? null,
-      predicted_home_probability: row.predicted_home_probability ?? null,
-      predicted_draw_probability: row.predicted_draw_probability ?? null,
-      predicted_away_probability: row.predicted_away_probability ?? null,
-      
-      // 적중 여부
-      is_correct: row.is_correct ?? null,
-      prediction_type: row.prediction_type || null,
-    }
+        // 기본 정보
+        match_id: row.match_id?.toString() || '',
+        league: row.league || '',
+        home_team: row.home_team || '',
+        away_team: row.away_team || '',
+        home_team_kr: row.home_team_kr || null,
+        away_team_kr: row.away_team_kr || null,
+        home_crest: row.home_crest || '',
+        away_crest: row.away_crest || '',
+        match_date: row.match_date || '',
+        match_time_kst: matchTimeKST,
+        match_status: row.match_status || 'FT',
+        
+        // 실제 결과
+        final_score_home: row.final_score_home ?? 0,
+        final_score_away: row.final_score_away ?? 0,
+        
+        // 예측 데이터
+        predicted_winner: row.predicted_winner || null,
+        predicted_score_home: row.predicted_score_home ?? null,
+        predicted_score_away: row.predicted_score_away ?? null,
+        predicted_home_probability: row.predicted_home_probability ?? null,
+        predicted_draw_probability: row.predicted_draw_probability ?? null,
+        predicted_away_probability: row.predicted_away_probability ?? null,
+        
+        // 적중 여부
+        is_correct: row.is_correct ?? null,
+        prediction_type: row.prediction_type || null,
+      }
     })
 
     // 예측 데이터 있는 경기 수 로깅
@@ -129,7 +168,13 @@ export async function GET(request: NextRequest) {
       success: true,
       matches,
       count: matches.length,
-      date: specificDate || null,
+      
+      // ✅ 새로운 필드들
+      requestedDate: specificDate || null,      // 원래 요청한 날짜
+      actualDate: queryDate || null,            // 실제 조회된 날짜
+      latestDate: latestMatchDate,              // DB에서 가장 최근 데이터 날짜
+      usedFallback: usedLatestFallback,         // 폴백 사용 여부
+      
       period: specificDate ? null : period
     })
 
