@@ -19,36 +19,35 @@ const LEAGUES = [
   // 잉글랜드
   { code: 'PL', apiId: 39, name: 'Premier League' },
   { code: 'ELC', apiId: 40, name: 'Championship' },
-  { code: 'FAC', apiId: 45, name: 'FA Cup' },
-  { code: 'EFL', apiId: 48, name: 'EFL Cup' },
+  { code: 'FAC', apiId: 45, name: 'FA Cup' },           // 🆕
+  { code: 'EFL', apiId: 48, name: 'EFL Cup' },          // 🆕
   // 스페인
   { code: 'PD', apiId: 140, name: 'La Liga' },
-  { code: 'CDR', apiId: 143, name: 'Copa del Rey' },
+  { code: 'CDR', apiId: 143, name: 'Copa del Rey' },    // 🆕
   // 독일
   { code: 'BL1', apiId: 78, name: 'Bundesliga' },
-  { code: 'DFB', apiId: 81, name: 'DFB Pokal' },
+  { code: 'DFB', apiId: 81, name: 'DFB Pokal' },        // 🆕
   // 이탈리아
   { code: 'SA', apiId: 135, name: 'Serie A' },
-  { code: 'CIT', apiId: 137, name: 'Coppa Italia' },
+  { code: 'CIT', apiId: 137, name: 'Coppa Italia' },    // 🆕
   // 프랑스
   { code: 'FL1', apiId: 61, name: 'Ligue 1' },
-  { code: 'CDF', apiId: 66, name: 'Coupe de France' },
+  { code: 'CDF', apiId: 66, name: 'Coupe de France' },  // 🆕
   // 포르투갈
   { code: 'PPL', apiId: 94, name: 'Primeira Liga' },
-  { code: 'TDP', apiId: 96, name: 'Taca de Portugal' },
+  { code: 'TDP', apiId: 96, name: 'Taca de Portugal' }, // 🆕
   // 네덜란드
   { code: 'DED', apiId: 88, name: 'Eredivisie' },
-  { code: 'KNV', apiId: 90, name: 'KNVB Beker' },
-  // 아프리카
-  { code: 'AFCON', apiId: 6, name: 'Africa Cup of Nations' },
+  { code: 'KNV', apiId: 90, name: 'KNVB Beker' },       // 🆕
+    { code: 'AFCON', apiId: 6, name: 'Africa Cup of Nations' },
 ]
 
-// 🌍 팀명 한글 매핑
+// 🌐 팀명 한글 매핑 (UTF-8 인코딩 수정)
 const TEAM_KR_MAP: { [key: string]: string } = {
   // 프리미어리그
   'Manchester City': '맨체스터 시티',
   'Liverpool': '리버풀',
-  'Arsenal': '아스널',
+  'Arsenal': '아스날',
   'Chelsea': '첼시',
   'Manchester United': '맨체스터 유나이티드',
   'Tottenham': '토트넘',
@@ -56,16 +55,6 @@ const TEAM_KR_MAP: { [key: string]: string } = {
   'Brighton': '브라이튼',
   'Aston Villa': '애스턴 빌라',
   'West Ham': '웨스트햄',
-  'Bournemouth': '본머스',
-  'Fulham': '풀럼',
-  'Wolves': '울버햄튼',
-  'Crystal Palace': '크리스탈 팰리스',
-  'Everton': '에버턴',
-  'Brentford': '브렌트퍼드',
-  'Nottingham Forest': '노팅엄 포레스트',
-  'Burnley': '번리',
-  'Sheffield Utd': '셰필드 유나이티드',
-  'Luton': '루턴',
   
   // 라리가
   'Barcelona': '바르셀로나',
@@ -112,21 +101,6 @@ const TEAM_KR_MAP: { [key: string]: string } = {
   'Rennes': '렌',
 }
 
-// ✅ 시즌 계산 함수 (2026년 새해 버그 수정!)
-function getCurrentSeason(): number {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1  // 0-indexed → 1-indexed
-  
-  // 유럽 축구 시즌: 8월 ~ 이듬해 5월
-  // 1월~6월: 전년도 시즌 (예: 2026년 1월 → 2025 시즌)
-  // 7월~12월: 당해년도 시즌 (예: 2025년 9월 → 2025 시즌)
-  if (month <= 6) {
-    return year - 1
-  }
-  return year
-}
-
 export async function GET(request: NextRequest) {
   try {
     console.log('🔄 경기 결과 수집 시작...')
@@ -139,10 +113,7 @@ export async function GET(request: NextRequest) {
     const fromDate = threeDaysAgo.toISOString().split('T')[0]
     const toDate = today.toISOString().split('T')[0]
 
-    // ✅ 수정된 시즌 계산
-    const season = getCurrentSeason()
     console.log(`📅 수집 기간: ${fromDate} ~ ${toDate}`)
-    console.log(`🏆 시즌: ${season} (${season}-${season + 1} 시즌)`)
 
     let allFinishedMatches: any[] = []
 
@@ -151,7 +122,7 @@ export async function GET(request: NextRequest) {
       console.log(`\n🏆 ${league.name} 처리 중...`)
       
       try {
-        const matches = await fetchFinishedMatches(league.apiId, fromDate, toDate, season)
+        const matches = await fetchFinishedMatches(league.apiId, fromDate, toDate)
         console.log(`  ✅ ${matches.length}개 종료 경기 발견`)
         
         allFinishedMatches = [
@@ -198,7 +169,7 @@ export async function GET(request: NextRequest) {
 
         // 예측 데이터 없으면 스킵
         if (!prediction) {
-          console.log(`⭕ ${match.teams.home.name} vs ${match.teams.away.name} - 예측 없음`)
+          console.log(`⏭️  ${match.teams.home.name} vs ${match.teams.away.name} - 예측 없음`)
           skippedCount++
           continue
         }
@@ -270,7 +241,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      season: season,
       dateRange: `${fromDate} ~ ${toDate}`,
       finishedMatches: allFinishedMatches.length,
       uniqueMatches: uniqueMatches.length,
@@ -297,8 +267,9 @@ export async function POST(request: NextRequest) {
   return GET(request)
 }
 
-// 🔍 종료된 경기 가져오기 (시즌 파라미터 추가!)
-async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: string, season: number) {
+// 🔍 종료된 경기 가져오기
+async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: string) {
+  const season = new Date().getFullYear()
   const url = `https://${API_FOOTBALL_HOST}/fixtures?league=${leagueId}&season=${season}&from=${fromDate}&to=${toDate}`
   
   console.log(`  📡 API 호출: league=${leagueId}, season=${season}`)
@@ -322,7 +293,7 @@ async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: 
   
   if (allMatches.length > 0) {
     const statuses = [...new Set(allMatches.map((m: any) => m.fixture.status.short))]
-    console.log(`  ℹ️ 상태:`, statuses.join(', '))
+    console.log(`  ℹ️  상태:`, statuses.join(', '))
   }
   
   // 종료된 경기만 필터링
