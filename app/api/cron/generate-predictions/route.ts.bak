@@ -4,121 +4,36 @@ import { NextRequest, NextResponse } from 'next/server'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 
-// ============================================================
-// 🔥 리그 코드 매핑 (45개 - 대폭 확장!)
-// ============================================================
+// 리그 코드 매핑 (20개 - 12개 리그 + 8개 컵대회)
 const LEAGUE_IDS: { [key: string]: number } = {
-  // ===== 🏆 국제 대회 (5개) =====
-  'CL': 2,      // Champions League
-  'EL': 3,      // Europa League
-  'UECL': 848,  // Conference League
-  'UNL': 5,     // Nations League
-  'AFCON': 6,   // Africa Cup of Nations
-  
-  // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
-  'PL': 39,     // Premier League
-  'ELC': 40,    // Championship
-  'FAC': 45,    // FA Cup
-  'EFL': 48,    // EFL Cup
-  
-  // ===== 🇪🇸 스페인 (3개) =====
-  'PD': 140,    // La Liga
-  'SD': 141,    // La Liga 2
-  'CDR': 143,   // Copa del Rey
-  
-  // ===== 🇩🇪 독일 (3개) =====
-  'BL1': 78,    // Bundesliga
-  'BL2': 79,    // Bundesliga 2
-  'DFB': 81,    // DFB Pokal
-  
-  // ===== 🇮🇹 이탈리아 (3개) =====
-  'SA': 135,    // Serie A
-  'SB': 136,    // Serie B
-  'CIT': 137,   // Coppa Italia
-  
-  // ===== 🇫🇷 프랑스 (3개) =====
-  'FL1': 61,    // Ligue 1
-  'FL2': 62,    // Ligue 2
-  'CDF': 66,    // Coupe de France
-  
-  // ===== 🇵🇹 포르투갈 (2개) =====
-  'PPL': 94,    // Primeira Liga
-  'TDP': 96,    // Taca de Portugal
-  
-  // ===== 🇳🇱 네덜란드 (2개) =====
-  'DED': 88,    // Eredivisie
-  'KNV': 90,    // KNVB Beker
-  
-  // ===== 🇰🇷 한국 (2개) =====
-  'KL1': 292,   // K League 1
-  'KL2': 293,   // K League 2
-  
-  // ===== 🇯🇵 일본 (2개) =====
-  'J1': 98,     // J1 League
-  'J2': 99,     // J2 League
-  
-  // ===== 🇸🇦 사우디아라비아 (1개) =====
-  'SAL': 307,   // Saudi Pro League
-  
-  // ===== 🇦🇺 호주 (1개) =====
-  'ALG': 188,   // A-League
-  
-  // ===== 🇨🇳 중국 (1개) =====
-  'CSL': 169,   // Chinese Super League
-  
-  // ===== 🇹🇷 터키 (1개) =====
-  'TSL': 203,   // Süper Lig
-  
-  // ===== 🇧🇪 벨기에 (1개) =====
-  'JPL': 144,   // Jupiler Pro League
-  
-  // ===== 🏴󠁧󠁢󠁳󠁣󠁴󠁿 스코틀랜드 (1개) =====
-  'SPL': 179,   // Scottish Premiership
-  
-  // ===== 🇨🇭 스위스 (1개) =====
-  'SSL': 207,   // Swiss Super League
-  
-  // ===== 🇦🇹 오스트리아 (1개) =====
-  'ABL': 218,   // Austrian Bundesliga
-  
-  // ===== 🇬🇷 그리스 (1개) =====
-  'GSL': 197,   // Super League Greece
-  
-  // ===== 🇩🇰 덴마크 (1개) =====
-  'DSL': 119,   // Danish Superliga
-  
-  // ===== 🇧🇷 브라질 (1개) =====
-  'BSA': 71,    // Brasileirão Série A
-  
-  // ===== 🇦🇷 아르헨티나 (1개) =====
-  'ARG': 128,   // Liga Profesional Argentina
-  
-  // ===== 🌎 남미 국제대회 (2개) =====
-  'COP': 13,    // Copa Libertadores
-  'COS': 11,    // Copa Sudamericana
-  
-  // ===== 🇺🇸 미국/멕시코 (2개) =====
-  'MLS': 253,   // MLS
-  'LMX': 262,   // Liga MX
-}
-
-// 리그별 시즌 계산
-function getCurrentSeason(leagueCode: string): number {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
-
-  // 아시아/남미/북미 리그는 단일 연도 시즌
-  const singleYearLeagues = ['KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL', 'LMX']
-  if (singleYearLeagues.includes(leagueCode)) {
-    return year
-  }
-
-  // 유럽 리그: 1~6월은 전년도 시즌
-  if (month <= 6) {
-    return year - 1
-  }
-  return year
+  // 유럽 대항전
+  'CL': 2,     // Champions League
+  'EL': 3,     // Europa League
+  'UECL': 848, // Conference League
+  'UNL': 5,    // Nations League
+  // 잉글랜드
+  'PL': 39,    // Premier League
+  'ELC': 40,   // Championship
+  'FAC': 45,   // FA Cup 🆕
+  'EFL': 46,   // EFL Cup 🆕
+  // 스페인
+  'PD': 140,   // La Liga
+  'CDR': 143,  // Copa del Rey 🆕
+  // 독일
+  'BL1': 78,   // Bundesliga
+  'DFB': 81,   // DFB Pokal 🆕
+  // 이탈리아
+  'SA': 135,   // Serie A
+  'CIT': 137,  // Coppa Italia 🆕
+  // 프랑스
+  'FL1': 61,   // Ligue 1
+  'CDF': 66,   // Coupe de France 🆕
+  // 포르투갈
+  'PPL': 94,   // Primeira Liga
+  'TDP': 96,   // Taca de Portugal 🆕
+  // 네덜란드
+  'DED': 88,   // Eredivisie
+  'KNV': 90,   // KNVB Beker 🆕
 }
 
 // 예상 스코어 계산 (확률 기반)
@@ -281,14 +196,11 @@ async function savePrediction(prediction: {
 }
 
 // API-Football에서 예정된 경기 + 배당률 가져오기
-async function getUpcomingFixturesWithOdds(leagueCode: string, leagueId: number, days: number = 7) {
+async function getUpcomingFixturesWithOdds(leagueId: number, days: number = 3) {
   const apiKey = process.env.API_FOOTBALL_KEY
   if (!apiKey) throw new Error('API_FOOTBALL_KEY not set')
 
   const fixtures: any[] = []
-  const season = getCurrentSeason(leagueCode)
-
-  console.log(`  📅 시즌: ${season}`)
 
   // 오늘부터 N일간 경기 가져오기
   for (let i = 0; i <= days; i++) {
@@ -296,7 +208,9 @@ async function getUpcomingFixturesWithOdds(leagueCode: string, leagueId: number,
     date.setDate(date.getDate() + i)
     const dateStr = date.toISOString().split('T')[0]
 
-    const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=${season}&date=${dateStr}&timezone=Asia/Seoul`
+    console.log(`  📅 날짜 조회: ${dateStr}`)
+
+    const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=2025&date=${dateStr}&timezone=Asia/Seoul`
     
     const response = await fetch(url, {
       headers: { 'x-apisports-key': apiKey }
@@ -304,23 +218,30 @@ async function getUpcomingFixturesWithOdds(leagueCode: string, leagueId: number,
 
     if (response.ok) {
       const data = await response.json()
+      console.log(`  📦 API 응답: ${data.response?.length || 0}개 경기, errors: ${JSON.stringify(data.errors)}`)
       
       if (data.response && data.response.length > 0) {
+        // 모든 경기 상태 로깅
+        data.response.forEach((f: any) => {
+          console.log(`    - ${f.teams.home.name} vs ${f.teams.away.name} [${f.fixture.status.short}]`)
+        })
         fixtures.push(...data.response)
       }
+    } else {
+      console.log(`  ❌ API 오류: ${response.status}`)
     }
 
     // 레이트 리밋 방지
-    await new Promise(r => setTimeout(r, 150))
+    await new Promise(r => setTimeout(r, 200))
   }
 
-  // 예정된 경기만 필터링 (NS = Not Started, TBD, 또는 PST)
+  // 예정된 경기만 필터링 (NS = Not Started, TBD, 또는 1H 이전)
   const scheduled = fixtures.filter(f => {
     const status = f.fixture.status.short
-    return status === 'NS' || status === 'TBD' || status === 'PST'
+    return status === 'NS' || status === 'TBD' || status === 'PST' || status === 'CANC'
   })
   
-  console.log(`  ✅ 예정된 경기: ${scheduled.length}개`)
+  console.log(`  ✅ 예정된 경기: ${scheduled.length}개 (전체 ${fixtures.length}개 중)`)
 
   // 각 경기에 배당률 추가
   const fixturesWithOdds = []
@@ -328,7 +249,8 @@ async function getUpcomingFixturesWithOdds(leagueCode: string, leagueId: number,
   for (const fixture of scheduled) {
     try {
       const oddsResponse = await fetch(
-        `https://v3.football.api-sports.io/odds?fixture=${fixture.fixture.id}&bookmaker=8`,
+        `https://v3.football.api-sports.io/odds?` +
+        `fixture=${fixture.fixture.id}&bookmaker=8`,  // bet365
         {
           headers: { 'x-apisports-key': apiKey }
         }
@@ -372,7 +294,6 @@ async function getUpcomingFixturesWithOdds(leagueCode: string, leagueId: number,
 // 메인 핸들러
 export async function GET(request: NextRequest) {
   console.log('🎯 예측 생성 Cron 시작:', new Date().toISOString())
-  console.log(`📊 총 ${Object.keys(LEAGUE_IDS).length}개 리그 처리 예정`)
 
   const apiKey = process.env.API_FOOTBALL_KEY
   if (!apiKey) {
@@ -384,17 +305,16 @@ export async function GET(request: NextRequest) {
 
   try {
     let generatedCount = 0
+    let updatedCount = 0
     let errorCount = 0
-    const leagueStats: { league: string; count: number }[] = []
 
     // 각 리그별로 처리
     for (const [leagueCode, leagueId] of Object.entries(LEAGUE_IDS)) {
-      console.log(`\n📋 ${leagueCode} (ID: ${leagueId}) 처리 중...`)
+      console.log(`📋 ${leagueCode} (ID: ${leagueId}) 처리 중...`)
 
       try {
-        const fixtures = await getUpcomingFixturesWithOdds(leagueCode, leagueId, 7)
-        
-        let leagueCount = 0
+        const fixtures = await getUpcomingFixturesWithOdds(leagueId, 3)
+        console.log(`  - ${fixtures.length}개 경기 발견`)
 
         for (const fixture of fixtures) {
           try {
@@ -434,7 +354,6 @@ export async function GET(request: NextRequest) {
             if (saved) {
               console.log(`  ✅ ${homeTeam} vs ${awayTeam} → ${homeScore}-${awayScore} (${winner})`)
               generatedCount++
-              leagueCount++
             } else {
               errorCount++
             }
@@ -445,27 +364,22 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        leagueStats.push({ league: leagueCode, count: leagueCount })
-
-        // 리그 간 대기 (0.3초로 단축)
-        await new Promise(r => setTimeout(r, 300))
+        // 리그 간 대기
+        await new Promise(r => setTimeout(r, 500))
 
       } catch (err) {
         console.error(`❌ ${leagueCode} 리그 처리 오류:`, err)
-        leagueStats.push({ league: leagueCode, count: 0 })
       }
     }
 
-    console.log(`\n🎯 예측 생성 완료: ${generatedCount}개 생성, ${errorCount}개 오류`)
+    console.log(`🎯 예측 생성 완료: ${generatedCount}개 생성, ${errorCount}개 오류`)
 
     return NextResponse.json({
       success: true,
       message: '예측 생성 완료',
       stats: {
-        leaguesProcessed: Object.keys(LEAGUE_IDS).length,
         generated: generatedCount,
-        errors: errorCount,
-        byLeague: leagueStats.filter(s => s.count > 0)
+        errors: errorCount
       }
     })
 

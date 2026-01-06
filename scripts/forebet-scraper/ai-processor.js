@@ -1,5 +1,6 @@
 /**
- * AI Processor v6 - Claude Edition
+ * AI Processor v7 - Claude Edition
+ * - 🆕 에레디비시/챔피언십/분데스리가 팀 한글 번역 추가
  * - Anthropic Claude API 사용
  * - 한글 + 영문 동시 생성
  * - 1500-2000자 분량 (각 언어별)
@@ -14,34 +15,129 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
 
 const TEAM_KR = {
+  // 🏴󠁧󠁢󠁥󠁮󠁧󠁿 프리미어리그
   'Manchester United': '맨유', 'Manchester City': '맨시티',
   'Liverpool': '리버풀', 'Chelsea': '첼시', 'Arsenal': '아스날', 'Tottenham': '토트넘',
-  'Newcastle': '뉴캐슬', 'Aston Villa': '아스톤빌라', 'Brighton': '브라이튼',
+  'Newcastle': '뉴캐슬', 'Newcastle United': '뉴캐슬',
+  'Aston Villa': '아스톤빌라', 'Brighton': '브라이튼',
   'West Ham': '웨스트햄', 'Everton': '에버턴', 'Fulham': '풀럼',
   'Bournemouth': '본머스', 'Wolves': '울버햄튼', 'Crystal Palace': '크리스탈 팰리스',
   'Brentford': '브렌트포드', 'Nottingham Forest': '노팅엄', 'Ipswich': '입스위치',
-  'Leicester': '레스터', 'Southampton': '사우샘프턴',
+  'Ipswich Town': '입스위치', 'Leicester': '레스터', 'Leicester City': '레스터',
+  'Southampton': '사우샘프턴',
+  
+  // 🇪🇸 라리가
   'Real Madrid': '레알 마드리드', 'Barcelona': '바르셀로나',
   'Atletico Madrid': '아틀레티코', 'Sevilla': '세비야', 'Real Betis': '레알 베티스',
   'Real Sociedad': '레알 소시에다드', 'Villarreal': '비야레알', 'Athletic Bilbao': '빌바오',
   'Valencia': '발렌시아', 'Girona': '지로나', 'Celta Vigo': '셀타',
+  'Osasuna': '오사수나', 'Mallorca': '마요르카', 'Getafe': '헤타페',
+  'Rayo Vallecano': '라요 바예카노', 'Alaves': '알라베스', 'Las Palmas': '라스팔마스',
+  'Espanyol': '에스파뇰', 'Leganes': '레가네스', 'Valladolid': '바야돌리드',
+  
+  // 🇩🇪 분데스리가
   'Bayern Munich': '바이에른', 'Borussia Dortmund': '도르트문트',
   'RB Leipzig': '라이프치히', 'Bayer Leverkusen': '레버쿠젠',
-  'Eintracht Frankfurt': '프랑크푸르트', 'Stuttgart': '슈투트가르트',
-  'Freiburg': '프라이부르크', 'Wolfsburg': '볼프스부르크',
+  'Eintracht Frankfurt': '프랑크푸르트', 'VfB Stuttgart': '슈투트가르트', 'Stuttgart': '슈투트가르트',
+  'SC Freiburg': '프라이부르크', 'Freiburg': '프라이부르크',
+  'VfL Wolfsburg': '볼프스부르크', 'Wolfsburg': '볼프스부르크',
+  'Borussia Monchengladbach': '묀헨글라트바흐',
+  'Werder Bremen': '베르더 브레멘',
+  'TSG Hoffenheim': '호펜하임', 'Hoffenheim': '호펜하임',
+  'Union Berlin': '우니온 베를린',
+  'Mainz 05': '마인츠', 'Mainz': '마인츠',
+  'FC Augsburg': '아우크스부르크', 'Augsburg': '아우크스부르크',
+  'VfL Bochum': '보훔', 'Bochum': '보훔',
+  'FC Koln': '쾰른', 'Koln': '쾰른',
+  '1. FC Heidenheim': '하이덴하임', 'Heidenheim': '하이덴하임',
+  'FC St. Pauli': '장크트 파울리', 'St Pauli': '장크트 파울리', 'St. Pauli': '장크트 파울리',
+  'Holstein Kiel': '홀슈타인 킬',
+  'Hamburger SV': '함부르크', 'Hamburg': '함부르크',
+  'Hertha BSC': '헤르타 베를린',
+  'Schalke 04': '샬케',
+  'Fortuna Dusseldorf': '뒤셀도르프',
+  'Hannover 96': '하노버',
+  
+  // 🇮🇹 세리에A
   'Juventus': '유벤투스', 'Inter Milan': '인테르', 'Inter': '인테르',
   'AC Milan': 'AC밀란', 'Milan': 'AC밀란',
   'Napoli': '나폴리', 'Roma': '로마', 'Lazio': '라치오',
   'Atalanta': '아탈란타', 'Fiorentina': '피오렌티나', 'Bologna': '볼로냐',
   'Torino': '토리노', 'Monza': '몬차', 'Genoa': '제노아',
+  'Cagliari': '칼리아리', 'Empoli': '엠폴리', 'Udinese': '우디네세',
+  'Sassuolo': '사수올로', 'Lecce': '레체', 'Verona': '베로나',
+  'Parma': '파르마', 'Venezia': '베네치아', 'Como': '코모',
+  
+  // 🇫🇷 리그1
   'PSG': 'PSG', 'Paris Saint-Germain': 'PSG', 'Marseille': '마르세유',
   'Lyon': '리옹', 'Monaco': '모나코', 'Lille': '릴',
   'Nice': '니스', 'Lens': '랑스', 'Rennes': '렌',
   'Nantes': '낭트', 'Strasbourg': '스트라스부르',
-  'Sporting': '스포르팅', 'Benfica': '벤피카', 'Porto': '포르투',
-  'Ajax': '아약스', 'Feyenoord': '페예노르트', 'PSV': 'PSV',
+  'Montpellier': '몽펠리에', 'Reims': '랭스', 'Toulouse': '툴루즈',
+  'Brest': '브레스트', 'Le Havre': '르아브르', 'Auxerre': '오세르',
+  'Angers': '앙제', 'Saint-Etienne': '생테티엔',
+  
+  // 🇳🇱 에레디비시
+  'Ajax': '아약스', 'Feyenoord': '페예노르트', 'PSV': 'PSV', 'PSV Eindhoven': 'PSV',
+  'AZ Alkmaar': 'AZ 알크마르', 'AZ': 'AZ 알크마르',
+  'FC Twente': 'FC 트벤테', 'Twente': 'FC 트벤테',
+  'FC Utrecht': 'FC 위트레흐트', 'Utrecht': 'FC 위트레흐트',
+  'SC Heerenveen': '헤이렌베인', 'Heerenveen': '헤이렌베인',
+  'FC Groningen': '흐로닝언', 'Groningen': '흐로닝언',
+  'NEC Nijmegen': 'NEC 네이메헌', 'NEC': 'NEC 네이메헌', 'Nijmegen': 'NEC 네이메헌',
+  'Vitesse': '피테세',
+  'Go Ahead Eagles': '고 어헤드 이글스',
+  'Sparta Rotterdam': '스파르타 로테르담',
+  'Fortuna Sittard': '포르투나 시타르트',
+  'RKC Waalwijk': 'RKC 발베이크', 'Waalwijk': 'RKC 발베이크',
+  'Heracles Almelo': '헤라클레스', 'Heracles': '헤라클레스',
+  'PEC Zwolle': 'PEC 즈볼레', 'Zwolle': 'PEC 즈볼레',
+  'NAC Breda': 'NAC 브레다', 'Breda': 'NAC 브레다',
+  'FC Volendam': '폴렌담', 'Volendam': '폴렌담',
+  'SC Telstar': '텔스타르', 'Telstar': '텔스타르',
+  'Excelsior': '엑셀시오르',
+  'Willem II': '빌럼 II',
+  'Almere City': '알메르 시티',
+  
+  // 🏴󠁧󠁢󠁥󠁮󠁧󠁿 챔피언십
+  'Leeds United': '리즈', 'Leeds': '리즈',
+  'Burnley': '번리',
+  'Sunderland': '선덜랜드',
+  'Sheffield United': '셰필드 유나이티드', 'Sheffield Utd': '셰필드 유나이티드',
+  'West Brom': '웨스트 브롬', 'West Bromwich': '웨스트 브롬', 'West Bromwich Albion': '웨스트 브롬',
+  'Middlesbrough': '미들즈브러',
+  'Norwich City': '노리치', 'Norwich': '노리치',
+  'Coventry City': '코번트리', 'Coventry': '코번트리',
+  'Watford': '왓포드',
+  'Bristol City': '브리스톨 시티',
+  'Swansea City': '스완지', 'Swansea': '스완지',
+  'Cardiff City': '카디프', 'Cardiff': '카디프',
+  'Hull City': '헐 시티', 'Hull': '헐 시티',
+  'Stoke City': '스토크', 'Stoke': '스토크',
+  'Blackburn Rovers': '블랙번', 'Blackburn': '블랙번',
+  'Millwall': '밀월',
+  'Plymouth Argyle': '플리머스', 'Plymouth': '플리머스',
+  'Preston North End': '프레스턴', 'Preston': '프레스턴',
+  'QPR': 'QPR', 'Queens Park Rangers': 'QPR',
+  'Luton Town': '루턴', 'Luton': '루턴',
+  'Sheffield Wednesday': '셰필드 웬즈데이',
+  'Derby County': '더비', 'Derby': '더비',
+  'Oxford United': '옥스퍼드', 'Oxford': '옥스퍼드',
+  'Portsmouth': '포츠머스',
+  
+  // ⭐ 챔피언스리그 / 유로파
+  'Sporting': '스포르팅', 'Sporting CP': '스포르팅',
+  'Benfica': '벤피카', 'Porto': '포르투', 'FC Porto': '포르투',
   'Celtic': '셀틱', 'Rangers': '레인저스',
-  'København': '코펜하겐', 'Club Brugge': '클럽 브뤼헤',
+  'København': '코펜하겐', 'FC Copenhagen': '코펜하겐',
+  'Club Brugge': '클럽 브뤼헤',
+  'RB Salzburg': '잘츠부르크', 'Salzburg': '잘츠부르크',
+  'Shakhtar Donetsk': '샤흐타르', 'Shakhtar': '샤흐타르',
+  'Dinamo Zagreb': '디나모 자그레브',
+  'Olympiacos': '올림피아코스',
+  'Fenerbahce': '페네르바체',
+  'Galatasaray': '갈라타사라이',
+  'Besiktas': '베식타시',
 };
 
 const LEAGUE_EN = {
@@ -63,6 +159,7 @@ function getTeamKr(name) {
   if (TEAM_KR[name]) return TEAM_KR[name];
   for (const [eng, kr] of Object.entries(TEAM_KR)) {
     if (name.toLowerCase().includes(eng.toLowerCase())) return kr;
+    if (eng.toLowerCase().includes(name.toLowerCase())) return kr;
   }
   return name;
 }
@@ -132,7 +229,7 @@ async function processWithClaude(match) {
   const awayEn = match.awayTeam;
   const leagueEn = getLeagueEn(match.leagueKr);
   
-  const previewText = match.previewParagraphs?.join('\n\n') || '';
+  const previewText = match.previewParagraphs?.join('\n\n') || match.previewText || '';
   const h2hText = match.h2h?.slice(0,5).join('\n') || '';
   const injuriesText = match.injuries?.slice(0,5).join('\n') || '';
   
@@ -500,9 +597,10 @@ Expected Score: ${match.predictedScore || 'TBD'}`;
 }
 
 async function processAll() {
-  console.log('🤖 AI Processing v6 (Claude Edition)\n');
+  console.log('🤖 AI Processing v7 (Claude Edition)\n');
   console.log('📦 Model: claude-sonnet-4');
-  console.log('🌐 Output: 한글 + English\n');
+  console.log('🌐 Output: 한글 + English');
+  console.log('🆕 팀 번역: 에레디비시/챔피언십/분데스리가 추가\n');
   
   if (!fs.existsSync('scraped-previews.json')) {
     console.error('❌ scraped-previews.json not found');
@@ -520,16 +618,20 @@ async function processAll() {
   
   const processed = [];
   for (let i = 0; i < matches.length; i++) {
-    console.log(`[${i+1}/${matches.length}] ${matches[i].homeTeam} vs ${matches[i].awayTeam}`);
+    const homeKr = getTeamKr(matches[i].homeTeam);
+    const awayKr = getTeamKr(matches[i].awayTeam);
+    console.log(`[${i+1}/${matches.length}] ${homeKr} vs ${awayKr}`);
+    console.log(`    📍 ${matches[i].homeTeam} vs ${matches[i].awayTeam}`);
+    
     const result = await processWithClaude(matches[i]);
     processed.push(result);
     
     const contentKrLen = (result.content || '').length;
     const contentEnLen = (result.content_en || '').length;
     const model = result.ai_model === 'fallback' ? '⚠️ fallback' : '✅ claude';
-    console.log(`  ${model}`);
+    console.log(`    ${model}`);
     console.log(`    🇰🇷 "${result.title_kr}" (${contentKrLen}자)`);
-    console.log(`    🇺🇸 "${result.title}" (${contentEnLen} chars)`);
+    console.log(`    🇺🇸 "${result.title}" (${contentEnLen} chars)\n`);
     
     // Rate limit 대비 1초 대기
     if (i < matches.length - 1) await delay(1000);

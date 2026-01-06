@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "homeTeam": "Bologna",
+    "awayTeam": "Atalanta",
+    "previewParagraphs": [
+      "Bologna and Atalanta meet at the Stadio Renato Dall'Ara with just a single point separating them in the Serie A standings. Both sides have shown periods of strength throughout this campaign, making their clash a significant test as the season edges towards its midpoint.",
+      "Bologna have had mixed fortunes in their last six home meetings with Atalanta, winning two, drawing two, and losing two. This pattern speaks to the competitive edge between the sides and suggests that home field has offered only a minimal advantage over recent years.",
+      "Notably, neither side has found a consistent grip when facing the other in Bologna, underlining the balance in their head-to-head matchups at Dall'Ara.",
+      "Turning the focus to current form, Bologna have taken a dip in recent times. They've failed to win any of their last five matches in all competitions and remain winless in 6 of their last 7 outings. During their latest six matches, they've secured just one win, drawn twice, and lost three times, with an average of 0.83 goals scored and 1.5 conceded per game.",
+      "The situation at home mirrors their larger struggles. In their last three at Dall'Ara, Bologna have drawn two and lost one, managing only 0.67 goals on average while conceding one per match. Ball retention has hovered at just above 50%, and shots on target have been modest.",
+      "Atalanta, by contrast, approach this fixture with confidence from strong away performances. They've won four and lost two of their last six matches, hitting the net at a steady rate of 1.17 goals per game and conceding just once per outing. Their shot volume is slightly higher than Bologna's, averaging over 13 total shots per match in recent away games.",
+      "Bologna currently occupy seventh place in Serie A with 7 wins, 5 draws, and 5 defeats from 17 league matches. Their goal difference stands at +8, demonstrating solidity in defense and reasonable attacking efficiency over the course of the campaign. Yet, their recent slip in results has eroded momentum built early on."
+    ],
+    "previewText": "Bologna and Atalanta meet at the Stadio Renato Dall'Ara with just a single point separating them in the Serie A standings. Both sides have shown periods of strength throughout this campaign, making their clash a significant test as the season edges towards its midpoint.\n\nBologna have had mixed fortunes in their last six home meetings with Atalanta, winning two, drawing two, and losing two. This pattern speaks to the competitive edge between the sides and suggests that home field has offered only a minimal advantage over recent years.\n\nNotably, neither side has found a consistent grip when facing the other in Bologna, underlining the balance in their head-to-head matchups at Dall'Ara.\n\nTurning the focus to current form, Bologna have taken a dip in recent times. They've failed to win any of their last five matches in all competitions and remain winless in 6 of their last 7 outings. During their latest six matches, they've secured just one win, drawn twice, and lost three times, with an average of 0.83 goals scored and 1.5 conceded per game.\n\nThe situation at home mirrors their larger struggles. In their last three at Dall'Ara, Bologna have drawn two and lost one, managing only 0.67 goals on average while conceding one per match. Ball retention has hovered at just above 50%, and shots on target have been modest.\n\nAtalanta, by contrast, approach this fixture with confidence from strong away performances. They've won four and lost two of their last six matches, hitting the net at a steady rate of 1.17 goals per game and conceding just once per outing. Their shot volume is slightly higher than Bologna's, averaging over 13 total shots per match in recent away games.\n\nBologna currently occupy seventh place in Serie A with 7 wins, 5 draws, and 5 defeats from 17 league matches. Their goal difference stands at +8, demonstrating solidity in defense and reasonable attacking efficiency over the course of the campaign. Yet, their recent slip in results has eroded momentum built early on.",
+    "leagueCode": "SA",
+    "leagueKr": "세리에A",
+    "leagueKey": "serie a",
+    "sourceUrl": "https://www.forebet.com/en/football-match-previews/24913-bologna-vs-atalanta-stadio-renato-dallara-set-for-a-tactical-showdown",
+    "originalTitle": "https://www.forebet.com/en/football-match-previews/24913-bologna-vs-atalanta-stadio-renato-dallara-set-for-a-tactical-showdown",
+    "fullTextLength": 11921,
+    "scrapedAt": "2026-01-05T13:00:29.877Z",
+    "thumbnail": "https://r2.thesportsdb.com/images/media/event/thumb/zt5pla1755934441.jpg/medium",
+    "thumbnailType": "event",
+    "thumbnailSource": "searchevents",
+    "matchDate": "2026-01-07"
+  },
+  {
+    "homeTeam": "Inter Milan",
+    "awayTeam": "Parma",
+    "previewParagraphs": [],
+    "previewText": "",
+    "leagueCode": "SA",
+    "leagueKr": "세리에A",
+    "leagueKey": "serie a",
+    "sourceUrl": "https://www.forebet.com/en/football-match-previews/24915-inter-looking-to-extend-serie-a-lead-against-struggling-parma",
+    "originalTitle": "https://www.forebet.com/en/football-match-previews/24915-inter-looking-to-extend-serie-a-lead-against-struggling-parma",
+    "fullTextLength": 215,
+    "scrapedAt": "2026-01-05T13:00:53.782Z",
+    "thumbnail": "https://r2.thesportsdb.com/images/media/event/thumb/2s8b7j1755934462.jpg/medium",
+    "thumbnailType": "event",
+    "thumbnailSource": "searchevents",
+    "matchDate": "2026-01-07"
+  }
+]

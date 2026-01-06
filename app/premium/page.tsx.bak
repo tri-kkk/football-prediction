@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import AdBanner from '../components/AdBanner'
+import AdSenseAd from '../components/AdSenseAd'
 
 // ============================================
 // 다국어 텍스트
@@ -1172,7 +1173,7 @@ export default function PremiumPredictPage() {
     }
   }
   
-  // ✅ PICK 적중률 로드 함수
+// ✅ PICK 적중률 로드 함수 (수정됨 - 서버 계산 사용)
   async function loadPickAccuracy() {
     try {
       const response = await fetch('/api/pick-recommendations?period=all')
@@ -1180,27 +1181,17 @@ export default function PremiumPredictPage() {
       
       const data = await response.json()
       
-      if (data.picks && Array.isArray(data.picks)) {
-        const leagueStats: Record<string, { total: number; correct: number }> = {}
+      // ✅ 서버에서 계산된 리그별 적중률 사용
+      if (data.leagueAccuracy) {
+        // 🎯 주요 6개 리그만 표시
+        const MAIN_LEAGUES = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED']
         
-        data.picks.forEach((pick: any) => {
-          if (pick.is_correct === null) return  // 미확정 제외
-          
-          const league = pick.league_code || 'OTHER'
-          if (!leagueStats[league]) {
-            leagueStats[league] = { total: 0, correct: 0 }
-          }
-          leagueStats[league].total++
-          if (pick.is_correct === true) {
-            leagueStats[league].correct++
-          }
-        })
-        
-        // 배열로 변환 + 가산점 적용
-        const accuracyData = Object.entries(leagueStats)
-          .filter(([_, stats]) => stats.total >= 2)  // 최소 2경기 이상으로 완화
-          .map(([league_code, stats]) => {
-            const accuracy = Math.round((stats.correct / stats.total) * 100)
+        const accuracyData = Object.entries(data.leagueAccuracy)
+          .filter(([league_code, stats]: [string, any]) => 
+            MAIN_LEAGUES.includes(league_code) && stats.total >= 2  // 주요 리그 + 최소 2경기 이상
+          )
+          .map(([league_code, stats]: [string, any]) => {
+            const accuracy = stats.accuracy
             // 🔥 가산점: 기본 +5%, 적중률 낮으면 더 추가
             const bonus = accuracy < 50 ? 12 : accuracy < 60 ? 8 : 5
             return {
@@ -1212,10 +1203,12 @@ export default function PremiumPredictPage() {
           })
           .sort((a, b) => b.displayAccuracy - a.displayAccuracy)
         
-        console.log('📊 PICK Accuracy loaded:', accuracyData)  // 디버그
+        console.log('📊 PICK Accuracy loaded (server):', accuracyData)
         setPickAccuracy(accuracyData)
-        
-        // ✅ 최근 적중 경기 추출 (롤링용)
+      }
+      
+      // ✅ 최근 적중 경기 추출 (롤링용)
+      if (data.picks && Array.isArray(data.picks)) {
         const correctPicks = data.picks
           .filter((pick: any) => pick.is_correct === true)
           .slice(0, 10)
@@ -1367,12 +1360,16 @@ export default function PremiumPredictPage() {
                     return (
                       <div key={league.league_code} className="flex items-center justify-between md:justify-start gap-2 px-2 md:px-0">
                         <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 md:w-6 md:h-6 bg-white rounded p-0.5 flex-shrink-0">
-                            <img 
-                              src={leagueLogos[league.league_code] || ''} 
-                              alt={league.league_code}
-                              className="w-full h-full object-contain"
-                            />
+                          <div className="w-5 h-5 md:w-6 md:h-6 bg-white rounded p-0.5 flex-shrink-0 flex items-center justify-center">
+                            {leagueLogos[league.league_code] ? (
+                              <img 
+                                src={leagueLogos[league.league_code]} 
+                                alt={league.league_code}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <span className="text-[8px] text-gray-500">⚽</span>
+                            )}
                           </div>
                           <span className="text-gray-300 text-xs md:text-sm font-medium">
                             {language === 'ko' ? leagueNamesKo[league.league_code] : leagueNamesEn[league.league_code]}
@@ -1524,6 +1521,30 @@ export default function PremiumPredictPage() {
                       card,
                       <div key="mobile-ad-1" className="block lg:hidden col-span-1 flex justify-center">
                         <AdBanner slot="mobile_bottom" />
+                      </div>
+                    ]
+                  }
+                  
+                  // 3번째, 6번째 카드 다음에 모바일 AdSense 인피드 광고
+                  if (index === 2 || index === 5) {
+                    return [
+                      card,
+                      <div key={`mobile-adsense-${index}`} className="block md:hidden col-span-1 py-2">
+                        <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
+                        <AdSenseAd slot="mobile_infeed" format="auto" responsive={true} darkMode={true} />
+                      </div>
+                    ]
+                  }
+                  
+                  // 6번째, 12번째 카드 다음에 AdSense 가로 배너 삽입 (PC만)
+                  if (index === 5 || index === 11) {
+                    return [
+                      card,
+                      <div key={`adsense-${index}`} className="hidden md:flex col-span-full justify-center py-2">
+                        <div className="w-full max-w-[728px] rounded-lg overflow-hidden bg-[#111]">
+                          <div className="text-[10px] text-center py-1 text-gray-600">스폰서</div>
+                          <AdSenseAd slot="horizontal" format="horizontal" responsive={false} darkMode={true} />
+                        </div>
                       </div>
                     ]
                   }

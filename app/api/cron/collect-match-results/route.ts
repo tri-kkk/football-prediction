@@ -9,115 +9,424 @@ const supabase = createClient(
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY!
 const API_FOOTBALL_HOST = 'v3.football.api-sports.io'
 
-// 🏆 리그 설정 (20개 - 12개 리그 + 8개 컵대회)
+// ============================================================
+// 🔥 리그 설정 (45개 - 대폭 확장!)
+// ============================================================
 const LEAGUES = [
-  // 유럽 대항전
+  // ===== 🏆 국제 대회 (5개) =====
   { code: 'CL', apiId: 2, name: 'Champions League' },
   { code: 'EL', apiId: 3, name: 'Europa League' },
   { code: 'UECL', apiId: 848, name: 'Conference League' },
   { code: 'UNL', apiId: 5, name: 'Nations League' },
-  // 잉글랜드
+  { code: 'AFCON', apiId: 6, name: 'Africa Cup of Nations' },
+  
+  // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
   { code: 'PL', apiId: 39, name: 'Premier League' },
   { code: 'ELC', apiId: 40, name: 'Championship' },
   { code: 'FAC', apiId: 45, name: 'FA Cup' },
   { code: 'EFL', apiId: 48, name: 'EFL Cup' },
-  // 스페인
+  
+  // ===== 🇪🇸 스페인 (3개) =====
   { code: 'PD', apiId: 140, name: 'La Liga' },
+  { code: 'SD', apiId: 141, name: 'La Liga 2' },
   { code: 'CDR', apiId: 143, name: 'Copa del Rey' },
-  // 독일
+  
+  // ===== 🇩🇪 독일 (3개) =====
   { code: 'BL1', apiId: 78, name: 'Bundesliga' },
+  { code: 'BL2', apiId: 79, name: 'Bundesliga 2' },
   { code: 'DFB', apiId: 81, name: 'DFB Pokal' },
-  // 이탈리아
+  
+  // ===== 🇮🇹 이탈리아 (3개) =====
   { code: 'SA', apiId: 135, name: 'Serie A' },
+  { code: 'SB', apiId: 136, name: 'Serie B' },
   { code: 'CIT', apiId: 137, name: 'Coppa Italia' },
-  // 프랑스
+  
+  // ===== 🇫🇷 프랑스 (3개) =====
   { code: 'FL1', apiId: 61, name: 'Ligue 1' },
+  { code: 'FL2', apiId: 62, name: 'Ligue 2' },
   { code: 'CDF', apiId: 66, name: 'Coupe de France' },
-  // 포르투갈
+  
+  // ===== 🇵🇹 포르투갈 (2개) =====
   { code: 'PPL', apiId: 94, name: 'Primeira Liga' },
   { code: 'TDP', apiId: 96, name: 'Taca de Portugal' },
-  // 네덜란드
+  
+  // ===== 🇳🇱 네덜란드 (2개) =====
   { code: 'DED', apiId: 88, name: 'Eredivisie' },
   { code: 'KNV', apiId: 90, name: 'KNVB Beker' },
-  // 아프리카
-  { code: 'AFCON', apiId: 6, name: 'Africa Cup of Nations' },
+  
+  // ===== 🇰🇷 한국 (2개) =====
+  { code: 'KL1', apiId: 292, name: 'K League 1' },
+  { code: 'KL2', apiId: 293, name: 'K League 2' },
+  
+  // ===== 🇯🇵 일본 (2개) =====
+  { code: 'J1', apiId: 98, name: 'J1 League' },
+  { code: 'J2', apiId: 99, name: 'J2 League' },
+  
+  // ===== 🇸🇦 사우디아라비아 (1개) =====
+  { code: 'SAL', apiId: 307, name: 'Saudi Pro League' },
+  
+  // ===== 🇦🇺 호주 (1개) =====
+  { code: 'ALG', apiId: 188, name: 'A-League' },
+  
+  // ===== 🇨🇳 중국 (1개) =====
+  { code: 'CSL', apiId: 169, name: 'Chinese Super League' },
+  
+  // ===== 🇹🇷 터키 (1개) =====
+  { code: 'TSL', apiId: 203, name: 'Süper Lig' },
+  
+  // ===== 🇧🇪 벨기에 (1개) =====
+  { code: 'JPL', apiId: 144, name: 'Jupiler Pro League' },
+  
+  // ===== 🏴󠁧󠁢󠁳󠁣󠁴󠁿 스코틀랜드 (1개) =====
+  { code: 'SPL', apiId: 179, name: 'Scottish Premiership' },
+  
+  // ===== 🇨🇭 스위스 (1개) =====
+  { code: 'SSL', apiId: 207, name: 'Swiss Super League' },
+  
+  // ===== 🇦🇹 오스트리아 (1개) =====
+  { code: 'ABL', apiId: 218, name: 'Austrian Bundesliga' },
+  
+  // ===== 🇬🇷 그리스 (1개) =====
+  { code: 'GSL', apiId: 197, name: 'Super League Greece' },
+  
+  // ===== 🇩🇰 덴마크 (1개) =====
+  { code: 'DSL', apiId: 119, name: 'Danish Superliga' },
+  
+  // ===== 🇧🇷 브라질 (1개) =====
+  { code: 'BSA', apiId: 71, name: 'Brasileirão Série A' },
+  
+  // ===== 🇦🇷 아르헨티나 (1개) =====
+  { code: 'ARG', apiId: 128, name: 'Liga Profesional Argentina' },
+  
+  // ===== 🌎 남미 국제대회 (2개) =====
+  { code: 'COP', apiId: 13, name: 'Copa Libertadores' },
+  { code: 'COS', apiId: 11, name: 'Copa Sudamericana' },
+  
+  // ===== 🇺🇸 미국/멕시코 (2개) =====
+  { code: 'MLS', apiId: 253, name: 'MLS' },
+  { code: 'LMX', apiId: 262, name: 'Liga MX' },
 ]
 
-// 🌍 팀명 한글 매핑
+// ============================================================
+// 🌍 팀명 한글 매핑 (대폭 확장!)
+// ============================================================
 const TEAM_KR_MAP: { [key: string]: string } = {
-  // 프리미어리그
+  // ===== 프리미어리그 =====
   'Manchester City': '맨체스터 시티',
   'Liverpool': '리버풀',
   'Arsenal': '아스널',
   'Chelsea': '첼시',
   'Manchester United': '맨체스터 유나이티드',
   'Tottenham': '토트넘',
+  'Tottenham Hotspur': '토트넘',
   'Newcastle': '뉴캐슬',
+  'Newcastle United': '뉴캐슬',
   'Brighton': '브라이튼',
+  'Brighton & Hove Albion': '브라이튼',
   'Aston Villa': '애스턴 빌라',
   'West Ham': '웨스트햄',
+  'West Ham United': '웨스트햄',
   'Bournemouth': '본머스',
+  'AFC Bournemouth': '본머스',
   'Fulham': '풀럼',
   'Wolves': '울버햄튼',
+  'Wolverhampton Wanderers': '울버햄튼',
   'Crystal Palace': '크리스탈 팰리스',
   'Everton': '에버턴',
   'Brentford': '브렌트퍼드',
   'Nottingham Forest': '노팅엄 포레스트',
   'Burnley': '번리',
   'Sheffield Utd': '셰필드 유나이티드',
+  'Sheffield United': '셰필드 유나이티드',
   'Luton': '루턴',
+  'Luton Town': '루턴',
+  'Ipswich': '입스위치',
+  'Ipswich Town': '입스위치',
+  'Leicester': '레스터',
+  'Leicester City': '레스터',
+  'Southampton': '사우샘프턴',
   
-  // 라리가
+  // ===== 라리가 =====
   'Barcelona': '바르셀로나',
   'Real Madrid': '레알 마드리드',
   'Atletico Madrid': '아틀레티코 마드리드',
   'Real Sociedad': '레알 소시에다드',
   'Athletic Club': '아틀레틱 빌바오',
+  'Athletic Bilbao': '아틀레틱 빌바오',
   'Real Betis': '레알 베티스',
   'Valencia': '발렌시아',
   'Villarreal': '비야레알',
   'Sevilla': '세비야',
+  'Getafe': '헤타페',
+  'Osasuna': '오사수나',
+  'Celta Vigo': '셀타 비고',
+  'Mallorca': '마요르카',
+  'Las Palmas': '라스 팔마스',
+  'Rayo Vallecano': '라요 바예카노',
+  'Alaves': '알라베스',
+  'Girona': '지로나',
+  'Espanyol': '에스파뇰',
+  'Leganes': '레가네스',
+  'Valladolid': '바야돌리드',
   
-  // 분데스리가
+  // ===== 분데스리가 =====
   'Bayern Munich': '바이에른 뮌헨',
+  'Bayern München': '바이에른 뮌헨',
   'Borussia Dortmund': '도르트문트',
   'RB Leipzig': 'RB 라이프치히',
   'Bayer Leverkusen': '바이어 레버쿠젠',
   'Union Berlin': '우니온 베를린',
   'Freiburg': '프라이부르크',
+  'SC Freiburg': '프라이부르크',
   'Eintracht Frankfurt': '프랑크푸르트',
   'VfL Wolfsburg': '볼프스부르크',
+  'Wolfsburg': '볼프스부르크',
   'Borussia Monchengladbach': '묀헨글라트바흐',
+  "Borussia M'gladbach": '묀헨글라트바흐',
   'FSV Mainz 05': '마인츠',
+  'Mainz 05': '마인츠',
   '1899 Hoffenheim': '호펜하임',
+  'Hoffenheim': '호펜하임',
+  'Werder Bremen': '베르더 브레멘',
+  'VfB Stuttgart': '슈투트가르트',
+  'Stuttgart': '슈투트가르트',
+  'FC Augsburg': '아우크스부르크',
+  'Augsburg': '아우크스부르크',
+  'FC Köln': '쾰른',
+  'Köln': '쾰른',
+  'Heidenheim': '하이덴하임',
+  'Holstein Kiel': '홀슈타인 킬',
+  'St. Pauli': '장크트 파울리',
   
-  // 세리에A
+  // ===== 세리에A =====
   'Inter': '인테르',
+  'Inter Milan': '인테르',
   'AC Milan': 'AC 밀란',
+  'Milan': 'AC 밀란',
   'Juventus': '유벤투스',
   'Napoli': '나폴리',
   'Lazio': '라치오',
   'Roma': '로마',
+  'AS Roma': '로마',
   'Atalanta': '아탈란타',
   'Fiorentina': '피오렌티나',
+  'Bologna': '볼로냐',
+  'Torino': '토리노',
+  'Monza': '몬차',
+  'Udinese': '우디네세',
+  'Sassuolo': '사수올로',
+  'Empoli': '엠폴리',
+  'Cagliari': '칼리아리',
+  'Lecce': '레체',
+  'Verona': '베로나',
+  'Hellas Verona': '베로나',
+  'Genoa': '제노아',
+  'Frosinone': '프로시노네',
+  'Salernitana': '살레르니타나',
+  'Como': '코모',
+  'Parma': '파르마',
+  'Venezia': '베네치아',
   
-  // 리그1
+  // ===== 리그1 =====
   'Paris Saint Germain': '파리 생제르맹',
+  'Paris Saint-Germain': '파리 생제르맹',
+  'PSG': '파리 생제르맹',
   'Marseille': '마르세유',
+  'Olympique Marseille': '마르세유',
   'Monaco': '모나코',
+  'AS Monaco': '모나코',
   'Lens': '랑스',
+  'RC Lens': '랑스',
   'Lille': '릴',
+  'LOSC Lille': '릴',
   'Nice': '니스',
+  'OGC Nice': '니스',
   'Lyon': '리옹',
+  'Olympique Lyon': '리옹',
   'Rennes': '렌',
+  'Stade Rennais': '렌',
+  'Strasbourg': '스트라스부르',
+  'Nantes': '낭트',
+  'Toulouse': '툴루즈',
+  'Montpellier': '몽펠리에',
+  'Brest': '브레스트',
+  'Reims': '랭스',
+  'Le Havre': '르아브르',
+  'Metz': '메스',
+  'Lorient': '로리앙',
+  'Clermont': '클레르몽',
+  
+  // ===== 포르투갈 =====
+  'Benfica': '벤피카',
+  'Porto': '포르투',
+  'FC Porto': '포르투',
+  'Sporting CP': '스포르팅',
+  'Sporting Lisbon': '스포르팅',
+  'Braga': '브라가',
+  'SC Braga': '브라가',
+  
+  // ===== 네덜란드 =====
+  'Ajax': '아약스',
+  'PSV Eindhoven': 'PSV',
+  'PSV': 'PSV 에인트호번',
+  'Feyenoord': '페예노르트',
+  'AZ Alkmaar': 'AZ',
+  'Twente': '트벤테',
+  'FC Twente': '트벤테',
+  
+  // ===== 🇰🇷 K리그 =====
+  'Ulsan Hyundai': '울산 HD',
+  'Ulsan HD': '울산 HD',
+  'Jeonbuk Motors': '전북 현대',
+  'Jeonbuk Hyundai Motors': '전북 현대',
+  'Pohang Steelers': '포항 스틸러스',
+  'FC Seoul': 'FC 서울',
+  'Suwon Bluewings': '수원 삼성',
+  'Suwon Samsung Bluewings': '수원 삼성',
+  'Daegu FC': '대구 FC',
+  'Incheon United': '인천 유나이티드',
+  'Gangwon FC': '강원 FC',
+  'Jeju United': '제주 유나이티드',
+  'Gwangju FC': '광주 FC',
+  'Suwon FC': '수원 FC',
+  'Daejeon Citizen': '대전 시티즌',
+  'Daejeon Hana Citizen': '대전 하나 시티즌',
+  'Gimcheon Sangmu': '김천 상무',
+  'Seoul E-Land': '서울 이랜드',
+  'Busan IPark': '부산 아이파크',
+  'Anyang FC': '안양 FC',
+  'Chungnam Asan': '충남 아산',
+  'Ansan Greeners': '안산 그리너스',
+  'Jeonnam Dragons': '전남 드래곤즈',
+  'Gyeongnam FC': '경남 FC',
+  'Bucheon FC 1995': '부천 FC',
+  'Cheongju FC': '청주 FC',
+  'Cheonan City FC': '천안 시티',
+  
+  // ===== 🇯🇵 J리그 =====
+  'Vissel Kobe': '비셀 고베',
+  'Yokohama F. Marinos': '요코하마 F 마리노스',
+  'Yokohama F Marinos': '요코하마 F 마리노스',
+  'Kawasaki Frontale': '가와사키 프론탈레',
+  'Urawa Reds': '우라와 레즈',
+  'Urawa Red Diamonds': '우라와 레즈',
+  'Kashima Antlers': '가시마 앤틀러스',
+  'Gamba Osaka': '감바 오사카',
+  'Cerezo Osaka': '세레소 오사카',
+  'FC Tokyo': 'FC 도쿄',
+  'Nagoya Grampus': '나고야 그램퍼스',
+  'Sanfrecce Hiroshima': '산프레체 히로시마',
+  'Kashiwa Reysol': '가시와 레이솔',
+  'Consadole Sapporo': '콘사돌레 삿포로',
+  'Jubilo Iwata': '주빌로 이와타',
+  'Sagan Tosu': '사간 도스',
+  'Shonan Bellmare': '쇼난 벨마레',
+  'Avispa Fukuoka': '아비스파 후쿠오카',
+  'Albirex Niigata': '알비렉스 니가타',
+  'Kyoto Sanga': '교토 상가',
+  'Tokyo Verdy': '도쿄 베르디',
+  
+  // ===== 🇸🇦 사우디 =====
+  'Al Hilal': '알 힐랄',
+  'Al-Hilal': '알 힐랄',
+  'Al Nassr': '알 나스르',
+  'Al-Nassr': '알 나스르',
+  'Al Ittihad': '알 이티하드',
+  'Al-Ittihad': '알 이티하드',
+  'Al Ahli': '알 아흘리',
+  'Al-Ahli': '알 아흘리',
+  'Al Shabab': '알 샤밥',
+  'Al-Shabab': '알 샤밥',
+  'Al Fateh': '알 파테',
+  'Al-Fateh': '알 파테',
+  'Al Taawoun': '알 타아운',
+  'Al-Taawoun': '알 타아운',
+  'Al Ettifaq': '알 에티파크',
+  'Al-Ettifaq': '알 에티파크',
+  
+  // ===== 🇹🇷 터키 =====
+  'Galatasaray': '갈라타사라이',
+  'Fenerbahce': '페네르바체',
+  'Fenerbahçe': '페네르바체',
+  'Besiktas': '베식타스',
+  'Beşiktaş': '베식타스',
+  'Trabzonspor': '트라브존스포르',
+  
+  // ===== 🇧🇪 벨기에 =====
+  'Club Brugge': '클럽 브뤼헤',
+  'Anderlecht': '안데를레흐트',
+  'Racing Genk': '겐크',
+  'KRC Genk': '겐크',
+  'Union St. Gilloise': '유니온 생질루아즈',
+  'Standard Liege': '스탕다르 리에주',
+  
+  // ===== 🏴󠁧󠁢󠁳󠁣󠁴󠁿 스코틀랜드 =====
+  'Celtic': '셀틱',
+  'Rangers': '레인저스',
+  'Hearts': '하츠',
+  'Aberdeen': '애버딘',
+  'Hibernian': '히버니안',
+  
+  // ===== 🇧🇷 브라질 =====
+  'Flamengo': '플라멩구',
+  'Palmeiras': '팔메이라스',
+  'Sao Paulo': '상파울루',
+  'São Paulo': '상파울루',
+  'Santos': '산토스',
+  'Corinthians': '코린치안스',
+  'Fluminense': '플루미넨세',
+  'Atletico Mineiro': '아틀레치쿠 미네이루',
+  'Atlético Mineiro': '아틀레치쿠 미네이루',
+  'Internacional': '인테르나시오날',
+  'Gremio': '그레미우',
+  'Grêmio': '그레미우',
+  'Botafogo': '보타포구',
+  'Cruzeiro': '크루제이루',
+  
+  // ===== 🇦🇷 아르헨티나 =====
+  'Boca Juniors': '보카 주니어스',
+  'River Plate': '리버 플레이트',
+  'Racing Club': '라싱 클루브',
+  'Independiente': '인데펜디엔테',
+  'San Lorenzo': '산 로렌소',
+  'Estudiantes': '에스투디안테스',
+  
+  // ===== 🇺🇸 MLS =====
+  'Inter Miami': '인터 마이애미',
+  'LA Galaxy': 'LA 갤럭시',
+  'LAFC': 'LAFC',
+  'Los Angeles FC': 'LAFC',
+  'Seattle Sounders': '시애틀 사운더스',
+  'Atlanta United': '애틀랜타 유나이티드',
+  'New York Red Bulls': '뉴욕 레드불스',
+  'New York City FC': '뉴욕 시티 FC',
+  'FC Cincinnati': 'FC 신시내티',
+  'Columbus Crew': '콜럼버스 크루',
+  
+  // ===== 🇲🇽 멕시코 =====
+  'Club America': '클럽 아메리카',
+  'Club América': '클럽 아메리카',
+  'Guadalajara': '과달라하라',
+  'Monterrey': '몬테레이',
+  'Tigres UANL': '티그레스',
+  'Cruz Azul': '크루스 아술',
+  'Pumas UNAM': '푸마스',
 }
 
-// ✅ 시즌 계산 함수 (2026년 새해 버그 수정!)
-function getCurrentSeason(): number {
+// ============================================================
+// 시즌 계산 함수 (리그별로 다르게)
+// ============================================================
+function getCurrentSeason(leagueCode: string): number {
   const now = new Date()
   const year = now.getFullYear()
-  const month = now.getMonth() + 1  // 0-indexed → 1-indexed
-  
+  const month = now.getMonth() + 1
+
+  // 아시아/남미/북미 리그는 단일 연도 시즌
+  const singleYearLeagues = ['KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL', 'LMX']
+  if (singleYearLeagues.includes(leagueCode)) {
+    return year
+  }
+
   // 유럽 축구 시즌: 8월 ~ 이듬해 5월
   // 1월~6월: 전년도 시즌 (예: 2026년 1월 → 2025 시즌)
   // 7월~12월: 당해년도 시즌 (예: 2025년 9월 → 2025 시즌)
@@ -130,6 +439,7 @@ function getCurrentSeason(): number {
 export async function GET(request: NextRequest) {
   try {
     console.log('🔄 경기 결과 수집 시작...')
+    console.log(`📊 총 ${LEAGUES.length}개 리그 처리`)
 
     // 지난 3일 범위
     const today = new Date()
@@ -139,16 +449,14 @@ export async function GET(request: NextRequest) {
     const fromDate = threeDaysAgo.toISOString().split('T')[0]
     const toDate = today.toISOString().split('T')[0]
 
-    // ✅ 수정된 시즌 계산
-    const season = getCurrentSeason()
     console.log(`📅 수집 기간: ${fromDate} ~ ${toDate}`)
-    console.log(`🏆 시즌: ${season} (${season}-${season + 1} 시즌)`)
 
     let allFinishedMatches: any[] = []
 
     // 각 리그별 종료된 경기 가져오기
     for (const league of LEAGUES) {
-      console.log(`\n🏆 ${league.name} 처리 중...`)
+      const season = getCurrentSeason(league.code)
+      console.log(`\n🏆 ${league.name} (${league.code}) 처리 중... (시즌: ${season})`)
       
       try {
         const matches = await fetchFinishedMatches(league.apiId, fromDate, toDate, season)
@@ -159,8 +467,8 @@ export async function GET(request: NextRequest) {
           ...matches.map((m: any) => ({ ...m, league: league.code }))
         ]
         
-        // API Rate Limit 방지
-        await sleep(1000)
+        // API Rate Limit 방지 (0.5초로 단축)
+        await sleep(500)
       } catch (leagueError) {
         console.error(`  ❌ ${league.name} 처리 실패:`, leagueError)
       }
@@ -198,7 +506,6 @@ export async function GET(request: NextRequest) {
 
         // 예측 데이터 없으면 스킵
         if (!prediction) {
-          console.log(`⭕ ${match.teams.home.name} vs ${match.teams.away.name} - 예측 없음`)
           skippedCount++
           continue
         }
@@ -270,7 +577,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      season: season,
+      leaguesProcessed: LEAGUES.length,
       dateRange: `${fromDate} ~ ${toDate}`,
       finishedMatches: allFinishedMatches.length,
       uniqueMatches: uniqueMatches.length,
@@ -297,11 +604,9 @@ export async function POST(request: NextRequest) {
   return GET(request)
 }
 
-// 🔍 종료된 경기 가져오기 (시즌 파라미터 추가!)
+// 🔍 종료된 경기 가져오기
 async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: string, season: number) {
   const url = `https://${API_FOOTBALL_HOST}/fixtures?league=${leagueId}&season=${season}&from=${fromDate}&to=${toDate}`
-  
-  console.log(`  📡 API 호출: league=${leagueId}, season=${season}`)
   
   const response = await fetch(url, {
     headers: {
@@ -318,13 +623,6 @@ async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: 
   const data = await response.json()
   const allMatches = data.response || []
   
-  console.log(`  📊 전체 경기: ${allMatches.length}개`)
-  
-  if (allMatches.length > 0) {
-    const statuses = [...new Set(allMatches.map((m: any) => m.fixture.status.short))]
-    console.log(`  ℹ️ 상태:`, statuses.join(', '))
-  }
-  
   // 종료된 경기만 필터링
   const now = new Date()
   const finishedMatches = allMatches.filter((m: any) => {
@@ -340,14 +638,11 @@ async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: 
     const hoursElapsed = (now.getTime() - kickoff.getTime()) / (1000 * 60 * 60)
     
     if (hoursElapsed > 3 && m.goals.home !== null && m.goals.away !== null) {
-      console.log(`  🕐 ${m.teams.home.name} vs ${m.teams.away.name}: ${hoursElapsed.toFixed(1)}h 경과, FT로 처리`)
       return true
     }
     
     return false
   })
-  
-  console.log(`  ✅ 종료 경기: ${finishedMatches.length}개`)
   
   return finishedMatches
 }
