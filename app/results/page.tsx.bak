@@ -318,9 +318,10 @@ export default function MatchResultsPage() {
     }
   }, [expandedMatch, highlights, loadHighlight])
 
-  // 데이터 로드 - 기존 API 구조 유지
-  const loadMatchesByDate = async (dateKey: string) => {
-    if (dataCache.current[dateKey]) {
+  // 데이터 로드 - ✅ 자동 최신 날짜 폴백 기능 추가 (v2)
+  const loadMatchesByDate = async (dateKey: string, isRetry: boolean = false) => {
+    // 캐시 체크 (리트라이가 아닐 때만)
+    if (!isRetry && dataCache.current[dateKey]) {
       setMatches(dataCache.current[dateKey])
       setLoading(false)
       return
@@ -329,7 +330,8 @@ export default function MatchResultsPage() {
     try {
       setLoading(true)
       
-      const apiUrl = `/api/match-results?league=ALL&date=${dateKey}&stats=true`
+      // ✅ autoLatest=true 파라미터 추가 - 데이터 없으면 최신 날짜로 자동 폴백
+      const apiUrl = `/api/match-results?league=ALL&date=${dateKey}&stats=true&autoLatest=true`
       const response = await fetch(apiUrl)
       
       if (!response.ok) throw new Error('Failed to fetch match results')
@@ -337,6 +339,17 @@ export default function MatchResultsPage() {
       const data = await response.json()
 
       if (data.success) {
+        // ✅ 폴백 처리: API가 다른 날짜 데이터를 반환한 경우
+        if (data.usedFallback && data.actualDate && data.actualDate !== dateKey) {
+          console.log(`📅 자동 폴백: ${dateKey} → ${data.actualDate}`)
+          // 날짜를 실제 데이터가 있는 날짜로 변경
+          const [year, month, day] = data.actualDate.split('-').map(Number)
+          const newDate = new Date(year, month - 1, day)
+          setSelectedDate(newDate)
+          // 새 날짜의 캐시에 저장
+          dataCache.current[data.actualDate] = data.matches || []
+        }
+        
         const matchesArray: Match[] = data.matches || []
         
         let winnerCorrectCount = 0
@@ -398,7 +411,9 @@ export default function MatchResultsPage() {
             : 0
         })
         
-        dataCache.current[dateKey] = matchesArray
+        // 원래 요청한 날짜 또는 실제 날짜로 캐시 저장
+        const cacheKey = data.usedFallback ? data.actualDate : dateKey
+        dataCache.current[cacheKey] = matchesArray
         setMatches(matchesArray)
       } else {
         setMatches([])

@@ -6,39 +6,194 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { TEAM_NAME_KR } from '../teamLogos'
 import AdSenseAd from '../components/AdSenseAd'
 
-// 🏆 리그 정보
+// 🏆 리그 정보 (45개 - 확장!)
 const LEAGUES = [
-  { code: 'ALL', nameKo: '전체', nameEn: 'All Leagues', logo: '🌍', isEmoji: true },
-  // 유럽 대항전
-  { code: 'CL', nameKo: '챔스', nameEn: 'Champions League', logo: 'https://media.api-sports.io/football/leagues/2.png', isEmoji: false },
-  { code: 'EL', nameKo: '유로파', nameEn: 'Europa League', logo: 'https://media.api-sports.io/football/leagues/3.png', isEmoji: false },
-  { code: 'UECL', nameKo: '컨퍼런스', nameEn: 'UEFA Conference League', logo: 'https://media.api-sports.io/football/leagues/848.png', isEmoji: false },
-  { code: 'UNL', nameKo: '네이션스', nameEn: 'UEFA Nations League', logo: 'https://media.api-sports.io/football/leagues/5.png', isEmoji: false },
-  // 잉글랜드
-  { code: 'PL', nameKo: 'EPL', nameEn: 'Premier League', logo: 'https://media.api-sports.io/football/leagues/39.png', isEmoji: false },
-  { code: 'ELC', nameKo: '챔피언십', nameEn: 'Championship', logo: 'https://media.api-sports.io/football/leagues/40.png', isEmoji: false },
+  { code: 'ALL', nameKo: '전체', nameEn: 'All', logo: '🌍', isEmoji: true },
+  
+  // ===== 🏆 국제대회 (7개) =====
+  { code: 'CL', nameKo: '챔스', nameEn: 'UCL', logo: 'https://media.api-sports.io/football/leagues/2.png', isEmoji: false },
+  { code: 'EL', nameKo: '유로파', nameEn: 'UEL', logo: 'https://media.api-sports.io/football/leagues/3.png', isEmoji: false },
+  { code: 'UECL', nameKo: '컨퍼런스', nameEn: 'UECL', logo: 'https://media.api-sports.io/football/leagues/848.png', isEmoji: false },
+  { code: 'UNL', nameKo: '네이션스', nameEn: 'UNL', logo: 'https://media.api-sports.io/football/leagues/5.png', isEmoji: false },
+  { code: 'COP', nameKo: '리베르타', nameEn: 'Libertadores', logo: 'https://media.api-sports.io/football/leagues/13.png', isEmoji: false },
+  { code: 'COS', nameKo: '수다메리카나', nameEn: 'Sudamericana', logo: 'https://media.api-sports.io/football/leagues/11.png', isEmoji: false },
+  { code: 'AFCON', nameKo: '아프리카컵', nameEn: 'AFCON', logo: 'https://media.api-sports.io/football/leagues/6.png', isEmoji: false },
+  
+  // ===== 🇰🇷 아시아 (7개) =====
+  { code: 'KL1', nameKo: 'K리그1', nameEn: 'K League 1', logo: 'https://media.api-sports.io/football/leagues/292.png', isEmoji: false },
+  { code: 'KL2', nameKo: 'K리그2', nameEn: 'K League 2', logo: 'https://media.api-sports.io/football/leagues/293.png', isEmoji: false },
+  { code: 'J1', nameKo: 'J1리그', nameEn: 'J1 League', logo: 'https://media.api-sports.io/football/leagues/98.png', isEmoji: false },
+  { code: 'J2', nameKo: 'J2리그', nameEn: 'J2 League', logo: 'https://media.api-sports.io/football/leagues/99.png', isEmoji: false },
+  { code: 'SAL', nameKo: '사우디', nameEn: 'Saudi Pro', logo: 'https://media.api-sports.io/football/leagues/307.png', isEmoji: false },
+  { code: 'CSL', nameKo: '중국', nameEn: 'CSL', logo: 'https://media.api-sports.io/football/leagues/169.png', isEmoji: false },
+  { code: 'ALG', nameKo: 'A리그', nameEn: 'A-League', logo: 'https://media.api-sports.io/football/leagues/188.png', isEmoji: false },
+  
+  // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
+  { code: 'PL', nameKo: 'EPL', nameEn: 'EPL', logo: 'https://media.api-sports.io/football/leagues/39.png', isEmoji: false },
+  { code: 'ELC', nameKo: '챔피언십', nameEn: 'EFL Champ', logo: 'https://media.api-sports.io/football/leagues/40.png', isEmoji: false },
   { code: 'FAC', nameKo: 'FA컵', nameEn: 'FA Cup', logo: 'https://media.api-sports.io/football/leagues/45.png', isEmoji: false },
-  { code: 'EFL', nameKo: 'EFL컵', nameEn: 'EFL Cup', logo: 'https://media.api-sports.io/football/leagues/46.png', isEmoji: false },
-  // 스페인
+  { code: 'EFL', nameKo: 'EFL컵', nameEn: 'EFL Cup', logo: 'https://media.api-sports.io/football/leagues/48.png', isEmoji: false },
+  
+  // ===== 🇪🇸 스페인 (3개) =====
   { code: 'PD', nameKo: '라리가', nameEn: 'La Liga', logo: 'https://media.api-sports.io/football/leagues/140.png', isEmoji: false },
+  { code: 'SD', nameKo: '라리가2', nameEn: 'La Liga 2', logo: 'https://media.api-sports.io/football/leagues/141.png', isEmoji: false },
   { code: 'CDR', nameKo: '코파델레이', nameEn: 'Copa del Rey', logo: 'https://media.api-sports.io/football/leagues/143.png', isEmoji: false },
-  // 독일
+  
+  // ===== 🇩🇪 독일 (3개) =====
   { code: 'BL1', nameKo: '분데스', nameEn: 'Bundesliga', logo: 'https://media.api-sports.io/football/leagues/78.png', isEmoji: false },
+  { code: 'BL2', nameKo: '분데스2', nameEn: 'Bundesliga 2', logo: 'https://media.api-sports.io/football/leagues/79.png', isEmoji: false },
   { code: 'DFB', nameKo: 'DFB포칼', nameEn: 'DFB Pokal', logo: 'https://media.api-sports.io/football/leagues/81.png', isEmoji: false },
-  // 이탈리아
-  { code: 'SA', nameKo: '세리에', nameEn: 'Serie A', logo: 'https://media.api-sports.io/football/leagues/135.png', isEmoji: false },
+  
+  // ===== 🇮🇹 이탈리아 (3개) =====
+  { code: 'SA', nameKo: '세리에A', nameEn: 'Serie A', logo: 'https://media.api-sports.io/football/leagues/135.png', isEmoji: false },
+  { code: 'SB', nameKo: '세리에B', nameEn: 'Serie B', logo: 'https://media.api-sports.io/football/leagues/136.png', isEmoji: false },
   { code: 'CIT', nameKo: '코파이탈리아', nameEn: 'Coppa Italia', logo: 'https://media.api-sports.io/football/leagues/137.png', isEmoji: false },
-  // 프랑스
+  
+  // ===== 🇫🇷 프랑스 (3개) =====
   { code: 'FL1', nameKo: '리그1', nameEn: 'Ligue 1', logo: 'https://media.api-sports.io/football/leagues/61.png', isEmoji: false },
+  { code: 'FL2', nameKo: '리그2', nameEn: 'Ligue 2', logo: 'https://media.api-sports.io/football/leagues/62.png', isEmoji: false },
   { code: 'CDF', nameKo: '쿠프드프랑스', nameEn: 'Coupe de France', logo: 'https://media.api-sports.io/football/leagues/66.png', isEmoji: false },
-  // 포르투갈
-  { code: 'PPL', nameKo: '포르투갈', nameEn: 'Primeira Liga', logo: 'https://media.api-sports.io/football/leagues/94.png', isEmoji: false },
-  { code: 'TDP', nameKo: '타사드포르투갈', nameEn: 'Taça de Portugal', logo: 'https://media.api-sports.io/football/leagues/96.png', isEmoji: false },
-  // 네덜란드
-  { code: 'DED', nameKo: '네덜란드', nameEn: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png', isEmoji: false },
+  
+  // ===== 🇵🇹 포르투갈 (2개) =====
+  { code: 'PPL', nameKo: '포르투갈', nameEn: 'Primeira', logo: 'https://media.api-sports.io/football/leagues/94.png', isEmoji: false },
+  { code: 'TDP', nameKo: '타사드포르투갈', nameEn: 'Taca', logo: 'https://media.api-sports.io/football/leagues/96.png', isEmoji: false },
+  
+  // ===== 🇳🇱 네덜란드 (2개) =====
+  { code: 'DED', nameKo: '에레디비시', nameEn: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png', isEmoji: false },
   { code: 'KNV', nameKo: 'KNVB컵', nameEn: 'KNVB Cup', logo: 'https://media.api-sports.io/football/leagues/90.png', isEmoji: false },
-  // 🆕 아프리카
-  { code: 'AFCON', nameKo: '아프리카컵', nameEn: 'Africa Cup of Nations', logo: 'https://media.api-sports.io/football/leagues/6.png', isEmoji: false },
+  
+  // ===== 🇪🇺 기타 유럽 (9개) =====
+  { code: 'TSL', nameKo: '터키', nameEn: 'Super Lig', logo: 'https://media.api-sports.io/football/leagues/203.png', isEmoji: false },
+  { code: 'JPL', nameKo: '벨기에', nameEn: 'Jupiler', logo: 'https://media.api-sports.io/football/leagues/144.png', isEmoji: false },
+  { code: 'SPL', nameKo: '스코틀랜드', nameEn: 'Scottish', logo: 'https://media.api-sports.io/football/leagues/179.png', isEmoji: false },
+  { code: 'SSL', nameKo: '스위스', nameEn: 'Swiss', logo: 'https://media.api-sports.io/football/leagues/207.png', isEmoji: false },
+  { code: 'ABL', nameKo: '오스트리아', nameEn: 'Austrian', logo: 'https://media.api-sports.io/football/leagues/218.png', isEmoji: false },
+  { code: 'GSL', nameKo: '그리스', nameEn: 'Greece', logo: 'https://media.api-sports.io/football/leagues/197.png', isEmoji: false },
+  { code: 'DSL', nameKo: '덴마크', nameEn: 'Denmark', logo: 'https://media.api-sports.io/football/leagues/119.png', isEmoji: false },
+  
+  // ===== 🌎 아메리카 (4개) =====
+  { code: 'BSA', nameKo: '브라질', nameEn: 'Brasileirao', logo: 'https://media.api-sports.io/football/leagues/71.png', isEmoji: false },
+  { code: 'ARG', nameKo: '아르헨티나', nameEn: 'Argentina', logo: 'https://media.api-sports.io/football/leagues/128.png', isEmoji: false },
+  { code: 'MLS', nameKo: 'MLS', nameEn: 'MLS', logo: 'https://media.api-sports.io/football/leagues/253.png', isEmoji: false },
+  { code: 'LMX', nameKo: '멕시코', nameEn: 'Liga MX', logo: 'https://media.api-sports.io/football/leagues/262.png', isEmoji: false },
+]
+
+// 🔥 대륙별 리그 그룹 (PC 사이드바용)
+const LEAGUE_GROUPS = [
+  {
+    id: 'all',
+    region: '전체',
+    regionEn: 'All',
+    leagues: [
+      { code: 'ALL', nameKo: '전체', nameEn: 'All', logo: '🌍', isEmoji: true }
+    ]
+  },
+  {
+    id: 'international',
+    region: '국제대회',
+    regionEn: 'International',
+    leagues: [
+      { code: 'CL', nameKo: '챔스', nameEn: 'UCL', logo: 'https://media.api-sports.io/football/leagues/2.png' },
+      { code: 'EL', nameKo: '유로파', nameEn: 'UEL', logo: 'https://media.api-sports.io/football/leagues/3.png' },
+      { code: 'UECL', nameKo: '컨퍼런스', nameEn: 'UECL', logo: 'https://media.api-sports.io/football/leagues/848.png' },
+      { code: 'UNL', nameKo: '네이션스', nameEn: 'UNL', logo: 'https://media.api-sports.io/football/leagues/5.png' },
+      { code: 'COP', nameKo: '리베르타', nameEn: 'Libertadores', logo: 'https://media.api-sports.io/football/leagues/13.png' },
+      { code: 'COS', nameKo: '수다메리카나', nameEn: 'Sudamericana', logo: 'https://media.api-sports.io/football/leagues/11.png' },
+      { code: 'AFCON', nameKo: '아프리카컵', nameEn: 'AFCON', logo: 'https://media.api-sports.io/football/leagues/6.png' },
+    ]
+  },
+  {
+    id: 'asia',
+    region: '아시아',
+    regionEn: 'Asia',
+    leagues: [
+      { code: 'KL1', nameKo: 'K리그1', nameEn: 'K League 1', logo: 'https://media.api-sports.io/football/leagues/292.png' },
+      { code: 'KL2', nameKo: 'K리그2', nameEn: 'K League 2', logo: 'https://media.api-sports.io/football/leagues/293.png' },
+      { code: 'J1', nameKo: 'J1리그', nameEn: 'J1 League', logo: 'https://media.api-sports.io/football/leagues/98.png' },
+      { code: 'J2', nameKo: 'J2리그', nameEn: 'J2 League', logo: 'https://media.api-sports.io/football/leagues/99.png' },
+      { code: 'SAL', nameKo: '사우디', nameEn: 'Saudi Pro', logo: 'https://media.api-sports.io/football/leagues/307.png' },
+      { code: 'CSL', nameKo: '중국', nameEn: 'CSL', logo: 'https://media.api-sports.io/football/leagues/169.png' },
+      { code: 'ALG', nameKo: 'A리그', nameEn: 'A-League', logo: 'https://media.api-sports.io/football/leagues/188.png' },
+    ]
+  },
+  {
+    id: 'england',
+    region: '잉글랜드',
+    regionEn: 'England',
+    leagues: [
+      { code: 'PL', nameKo: 'EPL', nameEn: 'EPL', logo: 'https://media.api-sports.io/football/leagues/39.png' },
+      { code: 'ELC', nameKo: '챔피언십', nameEn: 'EFL Champ', logo: 'https://media.api-sports.io/football/leagues/40.png' },
+      { code: 'FAC', nameKo: 'FA컵', nameEn: 'FA Cup', logo: 'https://media.api-sports.io/football/leagues/45.png' },
+      { code: 'EFL', nameKo: 'EFL컵', nameEn: 'EFL Cup', logo: 'https://media.api-sports.io/football/leagues/48.png' },
+    ]
+  },
+  {
+    id: 'spain',
+    region: '스페인',
+    regionEn: 'Spain',
+    leagues: [
+      { code: 'PD', nameKo: '라리가', nameEn: 'La Liga', logo: 'https://media.api-sports.io/football/leagues/140.png' },
+      { code: 'SD', nameKo: '라리가2', nameEn: 'La Liga 2', logo: 'https://media.api-sports.io/football/leagues/141.png' },
+      { code: 'CDR', nameKo: '코파델레이', nameEn: 'Copa del Rey', logo: 'https://media.api-sports.io/football/leagues/143.png' },
+    ]
+  },
+  {
+    id: 'germany',
+    region: '독일',
+    regionEn: 'Germany',
+    leagues: [
+      { code: 'BL1', nameKo: '분데스', nameEn: 'Bundesliga', logo: 'https://media.api-sports.io/football/leagues/78.png' },
+      { code: 'BL2', nameKo: '분데스2', nameEn: 'Bundesliga 2', logo: 'https://media.api-sports.io/football/leagues/79.png' },
+      { code: 'DFB', nameKo: 'DFB포칼', nameEn: 'DFB Pokal', logo: 'https://media.api-sports.io/football/leagues/81.png' },
+    ]
+  },
+  {
+    id: 'italy',
+    region: '이탈리아',
+    regionEn: 'Italy',
+    leagues: [
+      { code: 'SA', nameKo: '세리에A', nameEn: 'Serie A', logo: 'https://media.api-sports.io/football/leagues/135.png' },
+      { code: 'SB', nameKo: '세리에B', nameEn: 'Serie B', logo: 'https://media.api-sports.io/football/leagues/136.png' },
+      { code: 'CIT', nameKo: '코파이탈리아', nameEn: 'Coppa Italia', logo: 'https://media.api-sports.io/football/leagues/137.png' },
+    ]
+  },
+  {
+    id: 'france',
+    region: '프랑스',
+    regionEn: 'France',
+    leagues: [
+      { code: 'FL1', nameKo: '리그1', nameEn: 'Ligue 1', logo: 'https://media.api-sports.io/football/leagues/61.png' },
+      { code: 'FL2', nameKo: '리그2', nameEn: 'Ligue 2', logo: 'https://media.api-sports.io/football/leagues/62.png' },
+      { code: 'CDF', nameKo: '쿠프드프랑스', nameEn: 'Coupe de France', logo: 'https://media.api-sports.io/football/leagues/66.png' },
+    ]
+  },
+  {
+    id: 'europe_other',
+    region: '기타 유럽',
+    regionEn: 'Other Europe',
+    leagues: [
+      { code: 'PPL', nameKo: '포르투갈', nameEn: 'Primeira', logo: 'https://media.api-sports.io/football/leagues/94.png' },
+      { code: 'DED', nameKo: '에레디비시', nameEn: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png' },
+      { code: 'TSL', nameKo: '터키', nameEn: 'Super Lig', logo: 'https://media.api-sports.io/football/leagues/203.png' },
+      { code: 'JPL', nameKo: '벨기에', nameEn: 'Jupiler', logo: 'https://media.api-sports.io/football/leagues/144.png' },
+      { code: 'SPL', nameKo: '스코틀랜드', nameEn: 'Scottish', logo: 'https://media.api-sports.io/football/leagues/179.png' },
+      { code: 'SSL', nameKo: '스위스', nameEn: 'Swiss', logo: 'https://media.api-sports.io/football/leagues/207.png' },
+      { code: 'ABL', nameKo: '오스트리아', nameEn: 'Austrian', logo: 'https://media.api-sports.io/football/leagues/218.png' },
+      { code: 'GSL', nameKo: '그리스', nameEn: 'Greece', logo: 'https://media.api-sports.io/football/leagues/197.png' },
+      { code: 'DSL', nameKo: '덴마크', nameEn: 'Denmark', logo: 'https://media.api-sports.io/football/leagues/119.png' },
+    ]
+  },
+  {
+    id: 'americas',
+    region: '아메리카',
+    regionEn: 'Americas',
+    leagues: [
+      { code: 'BSA', nameKo: '브라질', nameEn: 'Brasileirao', logo: 'https://media.api-sports.io/football/leagues/71.png' },
+      { code: 'ARG', nameKo: '아르헨티나', nameEn: 'Argentina', logo: 'https://media.api-sports.io/football/leagues/128.png' },
+      { code: 'MLS', nameKo: 'MLS', nameEn: 'MLS', logo: 'https://media.api-sports.io/football/leagues/253.png' },
+      { code: 'LMX', nameKo: '멕시코', nameEn: 'Liga MX', logo: 'https://media.api-sports.io/football/leagues/262.png' },
+    ]
+  },
 ]
 
 // 예측 정보 인터페이스
@@ -557,31 +712,61 @@ export default function MatchResultsPage() {
               </div>
             )}
 
+            {/* 🔥 대륙별 리그 그룹 */}
             <div>
               <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">
                 {currentLanguage === 'ko' ? '리그' : 'Leagues'}
               </h3>
               <div className="space-y-1">
-                {LEAGUES.map(league => (
-                  <button
-                    key={league.code}
-                    onClick={() => setSelectedLeague(league.code)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
-                      selectedLeague === league.code
-                        ? 'bg-[#A3FF4C] text-gray-900 font-medium'
-                        : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
-                    }`}
-                  >
-                    {league.isEmoji ? (
-                      <span className="text-base">{league.logo}</span>
-                    ) : (
-                      <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center flex-shrink-0">
-                        <Image src={league.logo} alt={league.nameEn} width={18} height={18} className="w-[18px] h-[18px] object-contain" />
-                      </div>
-                    )}
-                    <span>{currentLanguage === 'ko' ? league.nameKo : league.nameEn}</span>
-                  </button>
-                ))}
+                {LEAGUE_GROUPS.map((group) => {
+                  const isAllGroup = group.id === 'all'
+                  
+                  return (
+                    <div key={group.id}>
+                      {isAllGroup ? (
+                        // 전체 버튼
+                        group.leagues.map((league) => (
+                          <button
+                            key={league.code}
+                            onClick={() => setSelectedLeague(league.code)}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+                              selectedLeague === league.code
+                                ? 'bg-[#A3FF4C] text-gray-900 font-medium'
+                                : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
+                            }`}
+                          >
+                            <span className="text-base">{league.logo}</span>
+                            <span>{currentLanguage === 'ko' ? league.nameKo : league.nameEn}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <>
+                          {/* 대륙 헤더 */}
+                          <div className="text-[10px] font-bold text-gray-600 uppercase mt-3 mb-1 px-3">
+                            {currentLanguage === 'ko' ? group.region : group.regionEn}
+                          </div>
+                          {/* 리그 목록 */}
+                          {group.leagues.map((league) => (
+                            <button
+                              key={league.code}
+                              onClick={() => setSelectedLeague(league.code)}
+                              className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-all ${
+                                selectedLeague === league.code
+                                  ? 'bg-[#A3FF4C] text-gray-900 font-medium'
+                                  : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
+                              }`}
+                            >
+                              <div className="w-5 h-5 bg-white rounded flex items-center justify-center flex-shrink-0">
+                                <Image src={league.logo} alt={league.nameEn} width={14} height={14} className="w-3.5 h-3.5 object-contain" />
+                              </div>
+                              <span>{currentLanguage === 'ko' ? league.nameKo : league.nameEn}</span>
+                            </button>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
