@@ -2402,8 +2402,10 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                 </nav>
               </div>
 
-              {/* 블로그 미리보기 */}
-              <BlogPreviewSidebar darkMode={darkMode} />
+              {/* 블로그 미리보기 - ✨ 반짝이는 효과 */}
+              <div className="shimmer-card glow-effect corner-sparkle overflow-hidden">
+                <BlogPreviewSidebar darkMode={darkMode} />
+              </div>
             </div>
           </aside>
 

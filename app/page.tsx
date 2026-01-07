@@ -489,6 +489,58 @@ interface Match {
   lineupAvailable?: boolean
   homeFormation?: string
   awayFormation?: string
+  // 🆕 FotMob 스타일: 예측 결과 관련 필드
+  predictedWinner?: 'home' | 'draw' | 'away'
+  actualWinner?: 'home' | 'draw' | 'away'
+  isWinnerCorrect?: boolean
+  minutesPlayed?: number  // 진행 중 경기의 경과 시간
+}
+
+// 🆕 경기 상태 타입
+type MatchStatus = 'SCHEDULED' | 'LIVE' | 'HALFTIME' | 'FINISHED'
+
+// 🆕 경기 상태 판별 함수
+function getMatchStatus(match: Match): MatchStatus {
+  const status = match.status?.toUpperCase() || ''
+  
+  // API에서 직접 제공하는 상태 확인
+  if (['FINISHED', 'FT', 'AET', 'PEN'].includes(status)) {
+    return 'FINISHED'
+  }
+  if (['IN_PLAY', 'LIVE', '1H', '2H', 'ET'].includes(status)) {
+    return 'LIVE'
+  }
+  if (['HT', 'HALFTIME', 'BREAK'].includes(status)) {
+    return 'HALFTIME'
+  }
+  if (['SCHEDULED', 'TIMED', 'NS', 'TBD'].includes(status)) {
+    return 'SCHEDULED'
+  }
+  
+  // 시간 기반 판별 (fallback)
+  const matchTime = new Date(match.utcDate || match.date).getTime()
+  const now = Date.now()
+  const hoursSinceStart = (now - matchTime) / (1000 * 60 * 60)
+  
+  if (hoursSinceStart > 2) return 'FINISHED'
+  if (hoursSinceStart > 0) return 'LIVE'
+  return 'SCHEDULED'
+}
+
+// 🆕 예측 승자 계산
+function getPredictedWinner(match: Match): 'home' | 'draw' | 'away' {
+  const { homeWinRate, drawRate, awayWinRate } = match
+  if (homeWinRate >= drawRate && homeWinRate >= awayWinRate) return 'home'
+  if (awayWinRate >= homeWinRate && awayWinRate >= drawRate) return 'away'
+  return 'draw'
+}
+
+// 🆕 실제 승자 계산
+function getActualWinner(match: Match): 'home' | 'draw' | 'away' | null {
+  if (match.homeScore === null || match.awayScore === null) return null
+  if (match.homeScore > match.awayScore) return 'home'
+  if (match.awayScore > match.homeScore) return 'away'
+  return 'draw'
 }
 
 // 트렌드 데이터 인터페이스
@@ -801,8 +853,6 @@ export default function Home() {
   const [selectedMatchForLineup, setSelectedMatchForLineup] = useState<Match | null>(null)
   // 🆕 날짜 필터 - Date 기반으로 변경
   const [selectedDate, setSelectedDate] = useState<Date>(getKSTToday())
-  const [currentPage, setCurrentPage] = useState(1)
-  const MATCHES_PER_PAGE = 15
   const [showFallbackBanner, setShowFallbackBanner] = useState(false)
   const [standings, setStandings] = useState<any[]>([])
   const [standingsLoading, setStandingsLoading] = useState(false)
@@ -821,6 +871,11 @@ export default function Home() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   // 🆕 평균 적중률 (동적으로 가져옴)
   const [avgAccuracy, setAvgAccuracy] = useState(67)
+  
+  // 🆕 종료 경기 하이라이트 관련
+  const [highlights, setHighlights] = useState<{ [key: number]: any }>({})
+  const [loadingHighlight, setLoadingHighlight] = useState<number | null>(null)
+  const highlightCache = useRef<{ [key: string]: any }>({})
 
   // 전체 리그 목록 (전체 제외)
   const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
@@ -898,19 +953,16 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
     const newDate = new Date(selectedDate)
     newDate.setDate(newDate.getDate() - 1)
     setSelectedDate(newDate)
-    setCurrentPage(1)
   }
 
   const goToNextDay = () => {
     const newDate = new Date(selectedDate)
     newDate.setDate(newDate.getDate() + 1)
     setSelectedDate(newDate)
-    setCurrentPage(1)
   }
 
   const goToToday = () => {
     setSelectedDate(getKSTToday())
-    setCurrentPage(1)
   }
 
   // 🆕 리그 그룹 펼침/접힘 토글
@@ -945,15 +997,71 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
     })
   }
 
-  // 가장 빠른 경기 날짜 찾기
+  // 가장 빠른 미래 경기 날짜 찾기 (FotMob 스타일)
   const findEarliestMatchDate = (): Date | null => {
     if (matches.length === 0) return null
     
-    const sortedMatches = [...matches].sort((a, b) => 
+    const now = new Date()
+    
+    // 🆕 현재 시간 이후의 경기만 (시간 기준으로 정확히)
+    const futureMatches = matches.filter(match => {
+      const matchDate = new Date(match.utcDate)
+      return matchDate > now
+    })
+    
+    console.log(`📅 미래 경기 수: ${futureMatches.length}개 / 전체: ${matches.length}개`)
+    
+    if (futureMatches.length === 0) {
+      // 미래 경기 없으면 가장 최근 완료 경기
+      console.log('📅 미래 경기 없음 → 가장 최근 경기로 이동')
+      const sortedMatches = [...matches].sort((a, b) => 
+        new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime()
+      )
+      return getMatchKSTDate(sortedMatches[0].utcDate)
+    }
+    
+    // 미래 경기 중 가장 빠른 날짜
+    const sortedFuture = futureMatches.sort((a, b) => 
       new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
     )
     
-    return getMatchKSTDate(sortedMatches[0].utcDate)
+    console.log(`📅 가장 빠른 미래 경기: ${sortedFuture[0].homeTeam} vs ${sortedFuture[0].awayTeam}`)
+    
+    return getMatchKSTDate(sortedFuture[0].utcDate)
+  }
+  
+  // 🆕 종료 경기 하이라이트 로드
+  const loadHighlight = async (match: Match) => {
+    const cacheKey = `${match.homeTeam}-${match.awayTeam}-${match.utcDate?.split('T')[0]}`
+    
+    if (highlightCache.current[cacheKey] !== undefined) {
+      setHighlights(prev => ({ ...prev, [match.id]: highlightCache.current[cacheKey] }))
+      return
+    }
+
+    setLoadingHighlight(match.id)
+
+    try {
+      const matchDate = match.utcDate?.split('T')[0] || new Date().toISOString().split('T')[0]
+      const leagueCode = match.leagueCode || 'PL'
+      const response = await fetch(
+        `/api/match-highlights?date=${matchDate}&homeTeam=${encodeURIComponent(match.homeTeam)}&awayTeam=${encodeURIComponent(match.awayTeam)}&league=${leagueCode}`
+      )
+      
+      if (!response.ok) throw new Error('Failed to fetch highlight')
+      
+      const data = await response.json()
+      const highlight = data.highlights?.[0] || null
+      
+      highlightCache.current[cacheKey] = highlight
+      setHighlights(prev => ({ ...prev, [match.id]: highlight }))
+    } catch (error) {
+      console.error('Failed to load highlight:', error)
+      highlightCache.current[cacheKey] = null
+      setHighlights(prev => ({ ...prev, [match.id]: null }))
+    } finally {
+      setLoadingHighlight(null)
+    }
   }
 
   // 🆕 오늘 경기 없으면 가장 빠른 경기 날짜로 자동 이동
@@ -1320,8 +1428,9 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               league: match.league || getLeagueName(match.league_code) || result.league,
               leagueCode: match.league_code || match.leagueCode || result.league,
               utcDate: match.commence_time || match.utcDate,
-              homeCrest: match.home_team_logo || getTeamLogo(match.home_team || match.homeTeam),  // 🆕 DB 로고 우선
-              awayCrest: match.away_team_logo || getTeamLogo(match.away_team || match.awayTeam),  // 🆕 DB 로고 우선
+              // 🆕 엠블럼: 여러 필드 체크 후 fallback
+              homeCrest: match.home_team_logo || match.home_crest || match.homeCrest || getTeamLogo(match.home_team || match.homeTeam),
+              awayCrest: match.away_team_logo || match.away_crest || match.awayCrest || getTeamLogo(match.away_team || match.awayTeam),
               // 확률 필드 변환
               homeWinRate: match.home_probability || match.homeWinRate || 33,
               drawRate: match.draw_probability || match.drawRate || 34,
@@ -1331,7 +1440,14 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               drawOdds: match.draw_odds || match.drawOdds,
               awayWinOdds: match.away_odds || match.awayWinOdds,
               // 기타
-              oddsSource: match.odds_source || match.oddsSource || 'db'
+              oddsSource: match.odds_source || match.oddsSource || 'db',
+              // 🆕 FotMob 스타일: 경기 상태 및 결과 필드
+              status: match.matchStatus || match.status || 'SCHEDULED',
+              homeScore: match.finalScoreHome ?? match.homeScore ?? null,
+              awayScore: match.finalScoreAway ?? match.awayScore ?? null,
+              isCorrect: match.isCorrect ?? null,
+              predictionType: match.predictionType || null,
+              predictedWinner: match.predictedWinner || null
             }))
           )
         } else {
@@ -1366,8 +1482,9 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             league: match.league || getLeagueName(match.league_code) || selectedLeague,
             leagueCode: match.league_code || match.leagueCode,
             utcDate: match.commence_time || match.utcDate,
-            homeCrest: match.home_team_logo || getTeamLogo(match.home_team || match.homeTeam),  // 🆕 DB 로고 우선
-            awayCrest: match.away_team_logo || getTeamLogo(match.away_team || match.awayTeam),  // 🆕 DB 로고 우선
+            // 🆕 엠블럼: 여러 필드 체크 후 fallback
+            homeCrest: match.home_team_logo || match.home_crest || match.homeCrest || getTeamLogo(match.home_team || match.homeTeam),
+            awayCrest: match.away_team_logo || match.away_crest || match.awayCrest || getTeamLogo(match.away_team || match.awayTeam),
             // 확률 필드 변환 (probability → rate)
             homeWinRate: match.home_probability || match.homeWinRate || 33,
             drawRate: match.draw_probability || match.drawRate || 34,
@@ -1377,7 +1494,14 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             drawOdds: match.draw_odds || match.drawOdds,
             awayWinOdds: match.away_odds || match.awayWinOdds,
             // 기타 필드
-            oddsSource: match.odds_source || match.oddsSource || 'db'
+            oddsSource: match.odds_source || match.oddsSource || 'db',
+            // 🆕 FotMob 스타일: 경기 상태 및 결과 필드
+            status: match.matchStatus || match.status || 'SCHEDULED',
+            homeScore: match.finalScoreHome ?? match.homeScore ?? null,
+            awayScore: match.finalScoreAway ?? match.awayScore ?? null,
+            isCorrect: match.isCorrect ?? null,
+            predictionType: match.predictionType || null,
+            predictedWinner: match.predictedWinner || null
           }))
         }
         
@@ -1426,35 +1550,52 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         // DB API는 이미 Match 형식으로 반환되며 실제 오즈 포함
         const convertedMatches = uniqueMatches
         
-        // 현재 시간 기준으로 미래 경기만 필터링
+        // 🆕 FotMob 스타일: 예정 + 완료 경기 모두 포함 (최근 7일 ~ 미래 14일)
         const now = new Date()
-        const futureMatches = convertedMatches.filter((match: any) => {
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        const fourteenDaysLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+        
+        const filteredMatches = convertedMatches.filter((match: any) => {
           const matchDate = new Date(match.utcDate)
-          return matchDate > now  // 현재 시간보다 이후 경기만
+          // 최근 7일 ~ 미래 14일 범위 내 경기
+          return matchDate >= sevenDaysAgo && matchDate <= fourteenDaysLater
         })
         
         // 날짜순 정렬 (가까운 경기부터)
-        futureMatches.sort((a, b) => {
+        filteredMatches.sort((a, b) => {
           return new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
         })
         
+        // 통계 로그
+        const scheduledCount = filteredMatches.filter((m: any) => 
+          !m.status || m.status === 'SCHEDULED' || m.status === 'TIMED' || m.status === 'NS'
+        ).length
+        const finishedCount = filteredMatches.filter((m: any) => 
+          m.status === 'FINISHED' || m.status === 'FT' || m.status === 'AET' || m.status === 'PEN'
+        ).length
+        const liveCount = filteredMatches.filter((m: any) => 
+          m.status === 'IN_PLAY' || m.status === 'LIVE' || m.status === '1H' || m.status === '2H' || m.status === 'HT'
+        ).length
+        
         console.log('✅ 전체 경기:', convertedMatches.length)
-        console.log('📅 예정된 경기:', futureMatches.length)
-        console.log('🗑️ 제외된 과거 경기:', convertedMatches.length - futureMatches.length)
+        console.log('📅 필터링된 경기:', filteredMatches.length)
+        console.log('   - 예정:', scheduledCount)
+        console.log('   - 진행중:', liveCount)  
+        console.log('   - 완료:', finishedCount)
         
         // 리그 정보 확인
-        if (futureMatches.length > 0) {
+        if (filteredMatches.length > 0) {
           console.log('🏆 첫 번째 경기 리그 정보:', {
-            leagueCode: futureMatches[0].leagueCode,
-            league: futureMatches[0].league
+            leagueCode: filteredMatches[0].leagueCode,
+            league: filteredMatches[0].league
           })
         }
         
         // 💾 캐시에 저장
-        setCachedData(cacheKey, futureMatches)
+        setCachedData(cacheKey, filteredMatches)
         
         // 🌐 팀명 한글 번역
-        const translatedMatches = await translateMatches(futureMatches)
+        const translatedMatches = await translateMatches(filteredMatches)
         
         setMatches(translatedMatches)
         
@@ -1463,14 +1604,17 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
           setAllMatchesForBanner(translatedMatches)
         }
         
-        // 🆕 라인업 상태 체크
-        if (translatedMatches.length > 0) {
-          checkLineupStatus(translatedMatches)
+        // 🆕 라인업 상태 체크 (예정 경기만)
+        const scheduledMatches = translatedMatches.filter((m: any) => 
+          !m.status || m.status === 'SCHEDULED' || m.status === 'TIMED' || m.status === 'NS'
+        )
+        if (scheduledMatches.length > 0) {
+          checkLineupStatus(scheduledMatches)
         }
         
-        // 🆕 트렌드 데이터 자동 로드 (모든 경기)
+        // 🆕 트렌드 데이터 자동 로드 (예정 경기만)
         console.log('📊 트렌드 데이터 자동 로드 시작...')
-        for (const match of translatedMatches.slice(0, 10)) { // 처음 10경기만
+        for (const match of scheduledMatches.slice(0, 10)) { // 처음 10경기만
           fetchTrendData(match.id.toString(), match)
         }
         
@@ -1771,29 +1915,38 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
     } else {
       setExpandedMatchId(match.id)
       
-      // 실제 뉴스 API 호출 (영문 팀명 사용)
-      fetchNewsKeywords(match.homeTeam, match.awayTeam)
-      
-      // 🔥 카드 클릭 시 항상 트렌드 데이터 새로고침
-      console.log('📊 트렌드 데이터 강제 새로고침:', match.id)
-      const freshTrend = await fetchTrendData(match.id.toString(), match)
-                  
-      setTimeout(() => {
-        const chartContainer = document.getElementById(`trend-chart-${match.id}`)
-        const currentTrend = freshTrend || trendData[match.id]
-        
-        // 트렌드 데이터가 있을 때만 차트 렌더링
-        if (chartContainer) {
-          if (currentTrend && currentTrend.length > 0) {
-            console.log('📈 차트 렌더링 시작:', currentTrend.length, 'points')
-            renderChart(chartContainer, currentTrend)
-          } else {
-            console.log('⚠️ 차트 렌더링 실패 - 데이터 없음')
-            // renderChart가 알아서 "데이터 수집 중" 메시지 표시
-            renderChart(chartContainer, [])
-          }
+      // 🆕 종료된 경기면 하이라이트 로드
+      const matchStatus = getMatchStatus(match)
+      if (matchStatus === 'FINISHED') {
+        if (highlights[match.id] === undefined) {
+          loadHighlight(match)
         }
-      }, 100)
+      } else {
+        // 예정된 경기: 기존 로직
+        // 실제 뉴스 API 호출 (영문 팀명 사용)
+        fetchNewsKeywords(match.homeTeam, match.awayTeam)
+        
+        // 🔥 카드 클릭 시 항상 트렌드 데이터 새로고침
+        console.log('📊 트렌드 데이터 강제 새로고침:', match.id)
+        const freshTrend = await fetchTrendData(match.id.toString(), match)
+                    
+        setTimeout(() => {
+          const chartContainer = document.getElementById(`trend-chart-${match.id}`)
+          const currentTrend = freshTrend || trendData[match.id]
+          
+          // 트렌드 데이터가 있을 때만 차트 렌더링
+          if (chartContainer) {
+            if (currentTrend && currentTrend.length > 0) {
+              console.log('📈 차트 렌더링 시작:', currentTrend.length, 'points')
+              renderChart(chartContainer, currentTrend)
+            } else {
+              console.log('⚠️ 차트 렌더링 실패 - 데이터 없음')
+              // renderChart가 알아서 "데이터 수집 중" 메시지 표시
+              renderChart(chartContainer, [])
+            }
+          }
+        }, 100)
+      }
     }
   }
 
@@ -2583,13 +2736,6 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                 return matchKey === selectedDateKey
               })
               
-              // 페이지네이션
-              const totalMatches = filteredMatches.length
-              const totalPages = Math.ceil(totalMatches / MATCHES_PER_PAGE)
-              const startIndex = (currentPage - 1) * MATCHES_PER_PAGE
-              const endIndex = startIndex + MATCHES_PER_PAGE
-              const paginatedMatches = filteredMatches.slice(startIndex, endIndex)
-              
               return (
                 <>
                   {/* 경기 없음 안내 */}
@@ -2616,15 +2762,15 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                     </div>
                   )}
 
-                  {paginatedMatches.length === 0 ? (
+                  {filteredMatches.length === 0 ? (
                     null  // 이미 위에서 경기 없음 UI 표시
                   ) : (
                     <>
                       {/* ━━━━━━ FotMob 스타일: 리그별 그룹화 ━━━━━━ */}
                       {(() => {
                         // 리그별로 경기 그룹화
-                        const matchesByLeague: { [key: string]: typeof paginatedMatches } = {}
-                        paginatedMatches.forEach(match => {
+                        const matchesByLeague: { [key: string]: typeof filteredMatches } = {}
+                        filteredMatches.forEach(match => {
                           const code = match.leagueCode || 'OTHER'
                           if (!matchesByLeague[code]) matchesByLeague[code] = []
                           matchesByLeague[code].push(match)
@@ -2772,16 +2918,65 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                           />
                                         </div>
 
-                                        {/* VS */}
-                                        <div className="w-20 md:w-24 flex-shrink-0 flex justify-center">
-                                          <div className={`text-xs font-bold px-3 py-1 rounded ${
-                                            isExpanded 
-                                              ? 'bg-[#A3FF4C]/20 text-[#A3FF4C] border border-[#A3FF4C]/30' 
-                                              : darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-500'
-                                          }`}>
-                                            VS
-                                          </div>
-                                        </div>
+                                        {/* 🆕 FotMob 스타일: 상태별 중앙 영역 */}
+                                        {(() => {
+                                          const matchStatus = getMatchStatus(match)
+                                          const predicted = getPredictedWinner(match)
+                                          const actual = getActualWinner(match)
+                                          const isCorrect = predicted === actual
+
+                                          // 종료된 경기
+                                          if (matchStatus === 'FINISHED' && match.homeScore !== null && match.awayScore !== null) {
+                                            return (
+                                              <div className="w-24 md:w-28 flex-shrink-0 flex flex-col items-center justify-center">
+                                                <span className="text-[10px] text-gray-500 mb-0.5">FT</span>
+                                                <div className="flex items-center gap-2">
+                                                  <span className={`text-lg font-bold ${match.homeScore > match.awayScore ? 'text-white' : 'text-gray-500'}`}>
+                                                    {match.homeScore}
+                                                  </span>
+                                                  <span className="text-gray-600">-</span>
+                                                  <span className={`text-lg font-bold ${match.awayScore > match.homeScore ? 'text-white' : 'text-gray-500'}`}>
+                                                    {match.awayScore}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            )
+                                          }
+
+                                          // 진행 중 경기
+                                          if (matchStatus === 'LIVE' || matchStatus === 'HALFTIME') {
+                                            return (
+                                              <div className="w-24 md:w-28 flex-shrink-0 flex flex-col items-center justify-center">
+                                                <span className="text-[10px] text-red-500 font-bold flex items-center gap-1 mb-0.5">
+                                                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                                                  {matchStatus === 'HALFTIME' ? 'HT' : 'LIVE'}
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-lg font-bold text-white">
+                                                    {match.homeScore ?? 0}
+                                                  </span>
+                                                  <span className="text-gray-600">-</span>
+                                                  <span className="text-lg font-bold text-white">
+                                                    {match.awayScore ?? 0}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            )
+                                          }
+
+                                          // 예정된 경기 (기본)
+                                          return (
+                                            <div className="w-20 md:w-24 flex-shrink-0 flex justify-center">
+                                              <div className={`text-xs font-bold px-3 py-1 rounded ${
+                                                isExpanded 
+                                                  ? 'bg-[#A3FF4C]/20 text-[#A3FF4C] border border-[#A3FF4C]/30' 
+                                                  : darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-500'
+                                              }`}>
+                                                VS
+                                              </div>
+                                            </div>
+                                          )
+                                        })()}
 
                                         {/* 원정팀 */}
                                         <div className="flex-1 flex items-center justify-start gap-2 min-w-0 pl-2">
@@ -2801,7 +2996,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                         </div>
 
                                         {/* 확장 화살표 */}
-                                        <div className="w-6 flex-shrink-0 flex justify-end">
+                                        <div className="w-8 flex-shrink-0 flex items-center justify-end gap-1">
                                           <svg 
                                             className={`w-4 h-4 transition-transform duration-300 ${
                                               isExpanded ? 'rotate-180 text-[#A3FF4C]' : darkMode ? 'text-gray-600' : 'text-gray-400'
@@ -2816,6 +3011,111 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                       {/* ━━━ 확장된 상세 정보 ━━━ */}
                                       {isExpanded && (
                                         <div className="border-t border-[#A3FF4C]/20 animate-fadeIn">
+                                          {/* 🆕 종료된 경기: 스코어 + 승리팀만 깔끔하게 */}
+                                          {(() => {
+                                            const matchStatus = getMatchStatus(match)
+                                            if (matchStatus === 'FINISHED' && match.homeScore !== null && match.awayScore !== null) {
+                                              const actual = getActualWinner(match)
+                                              const homeWin = match.homeScore > match.awayScore
+                                              const awayWin = match.awayScore > match.homeScore
+                                              const isDraw = match.homeScore === match.awayScore
+
+                                              return (
+                                                <div className="px-4 py-4">
+                                                  {/* 최종 스코어 - 크게 표시 */}
+                                                  <div className="flex items-center justify-center gap-6 mb-3">
+                                                    {/* 홈팀 */}
+                                                    <div className={`flex items-center gap-3 ${homeWin ? 'opacity-100' : 'opacity-50'}`}>
+                                                      <span className={`text-sm font-medium ${homeWin ? 'text-white' : 'text-gray-500'}`}>
+                                                        {homeTeamName}
+                                                      </span>
+                                                      {homeWin && <span className="text-[#A3FF4C] text-xs">승</span>}
+                                                    </div>
+                                                    
+                                                    {/* 스코어 */}
+                                                    <div className="flex items-center gap-3 px-4 py-2 bg-gray-800 rounded-lg">
+                                                      <span className={`text-2xl font-bold ${homeWin ? 'text-white' : 'text-gray-400'}`}>
+                                                        {match.homeScore}
+                                                      </span>
+                                                      <span className="text-gray-600 text-lg">-</span>
+                                                      <span className={`text-2xl font-bold ${awayWin ? 'text-white' : 'text-gray-400'}`}>
+                                                        {match.awayScore}
+                                                      </span>
+                                                    </div>
+                                                    
+                                                    {/* 원정팀 */}
+                                                    <div className={`flex items-center gap-3 ${awayWin ? 'opacity-100' : 'opacity-50'}`}>
+                                                      {awayWin && <span className="text-[#A3FF4C] text-xs">승</span>}
+                                                      <span className={`text-sm font-medium ${awayWin ? 'text-white' : 'text-gray-500'}`}>
+                                                        {awayTeamName}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  
+                                                  {/* 결과 텍스트 */}
+                                                  <div className="text-center">
+                                                    <span className={`text-xs px-3 py-1 rounded-full ${
+                                                      isDraw 
+                                                        ? 'bg-gray-700 text-gray-300' 
+                                                        : 'bg-[#A3FF4C]/20 text-[#A3FF4C]'
+                                                    }`}>
+                                                      {isDraw 
+                                                        ? (currentLanguage === 'ko' ? '무승부' : 'Draw')
+                                                        : (currentLanguage === 'ko' 
+                                                            ? `${homeWin ? homeTeamName : awayTeamName} 승리`
+                                                            : `${homeWin ? homeTeamName : awayTeamName} Win`)
+                                                      }
+                                                    </span>
+                                                  </div>
+                                                  
+                                                  {/* 🆕 하이라이트 영역 */}
+                                                  <div className="mt-4 border-t border-gray-800 pt-4">
+                                                    {loadingHighlight === match.id ? (
+                                                      <div className="flex items-center justify-center py-12">
+                                                        <div className="w-8 h-8 border-2 border-gray-600 border-t-[#A3FF4C] rounded-full animate-spin"></div>
+                                                      </div>
+                                                    ) : highlights[match.id] && highlights[match.id].matchviewUrl ? (
+                                                      <div className="relative">
+                                                        <iframe
+                                                          src={highlights[match.id].matchviewUrl}
+                                                          className="w-full border-0 rounded-lg"
+                                                          style={{ height: '600px', minHeight: '500px' }}
+                                                          allow="autoplay; fullscreen"
+                                                          allowFullScreen
+                                                          loading="lazy"
+                                                        />
+                                                        <div className="absolute top-2 right-2">
+                                                          <a
+                                                            href={highlights[match.id].matchviewUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-1 px-3 py-1.5 bg-black/70 hover:bg-black/90 rounded-lg text-xs text-white transition-colors"
+                                                          >
+                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                            </svg>
+                                                            {currentLanguage === 'ko' ? '새 탭' : 'New tab'}
+                                                          </a>
+                                                        </div>
+                                                      </div>
+                                                    ) : (
+                                                      <div className="py-8 text-center">
+                                                        <div className="text-3xl mb-2">📺</div>
+                                                        <p className="text-gray-500 text-sm">
+                                                          {currentLanguage === 'ko' ? '하이라이트 준비 중' : 'Highlights coming soon'}
+                                                        </p>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )
+                                            }
+                                            return null
+                                          })()}
+
+                                          {/* 예정된 경기: 기존 승률 바 + 트렌드 */}
+                                          {getMatchStatus(match) === 'SCHEDULED' && (
+                                            <>
                                           {/* 승률 바 */}
                                           <div className="px-4 py-4">
                                             <div className="flex h-2 rounded-full overflow-hidden bg-gray-900 mb-3">
@@ -2879,6 +3179,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                               darkMode={darkMode}
                                             />
                                           </div>
+                                            </>
+                                          )}
                                         </div>
                                       )}
                                     </div>
@@ -2904,103 +3206,6 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                           )
                         })
                       })()}
-            
-            {/* 페이지네이션 - 모던 스타일 */}
-            {totalPages > 1 && (
-              <div className="flex flex-col items-center gap-4 mt-10 mb-6">
-                {/* 페이지 정보 - 상단 */}
-                <div className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                  <span className="text-[#A3FF4C] font-bold">{totalMatches}</span>
-                  {currentLanguage === 'ko' ? ' 경기 중 ' : ' matches • '}
-                  <span className="font-medium">{currentPage}</span>
-                  <span className="mx-1">/</span>
-                  <span>{totalPages}</span>
-                  {currentLanguage === 'ko' ? ' 페이지' : ''}
-                </div>
-
-                {/* 페이지 버튼들 */}
-                <div className="flex items-center gap-1">
-                  {/* 이전 버튼 */}
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className={`
-                      w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200
-                      ${currentPage === 1
-                        ? 'text-gray-600 cursor-not-allowed'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                      }
-                    `}
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  
-                  {/* 페이지 번호들 */}
-                  <div className="flex items-center">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
-                      const isActive = currentPage === page
-                      const isNear = page >= currentPage - 1 && page <= currentPage + 1
-                      const isEdge = page === 1 || page === totalPages
-                      const showDots = page === currentPage - 2 || page === currentPage + 2
-
-                      if (isEdge || isNear) {
-                        return (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            className={`
-                              w-10 h-10 rounded-full font-medium text-sm transition-all duration-200
-                              ${isActive
-                                ? 'bg-[#A3FF4C] text-gray-900 scale-110'
-                                : darkMode
-                                  ? 'text-gray-400 hover:text-white hover:bg-gray-800'
-                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                              }
-                            `}
-                          >
-                            {page}
-                          </button>
-                        )
-                      } else if (showDots) {
-                        return (
-                          <span key={page} className="w-8 text-center text-gray-600 text-sm">
-                            •••
-                          </span>
-                        )
-                      }
-                      return null
-                    })}
-                  </div>
-
-                  {/* 다음 버튼 */}
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className={`
-                      w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200
-                      ${currentPage === totalPages
-                        ? 'text-gray-600 cursor-not-allowed'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                      }
-                    `}
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* 프로그레스 바 */}
-                <div className="w-48 h-1 bg-gray-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#A3FF4C] to-[#62F4FF] rounded-full transition-all duration-300"
-                    style={{ width: `${(currentPage / totalPages) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
             </>
           )}
         </>
