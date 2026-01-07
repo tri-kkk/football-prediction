@@ -315,6 +315,9 @@ export default function MatchResultsPage() {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
   const [collapsedLeagues, setCollapsedLeagues] = useState<Set<string>>(new Set())
   
+  // 🔥 접이식 그룹 상태 (기본: 주요 리그만 펼침)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['international', 'england', 'spain', 'germany', 'italy']))
+  
   const [highlights, setHighlights] = useState<Record<string, Highlight | null>>({})
   const [loadingHighlight, setLoadingHighlight] = useState<string | null>(null)
 
@@ -684,54 +687,7 @@ export default function MatchResultsPage() {
         {/* 좌측 사이드바 */}
         <aside className="hidden md:block w-64 min-h-screen bg-[#1a1a1a] border-r border-gray-800 sticky top-0 overflow-y-auto flex-shrink-0">
           <div className="p-4">
-            {/* ✅ PICK 적중률 통계 (NEW!) */}
-            {pickStats.total > 0 && (
-              <div className="mb-4 p-3 bg-gradient-to-br from-yellow-900/30 to-orange-900/30 rounded-lg border border-yellow-600/30">
-                <h4 className="text-xs font-bold text-yellow-400 uppercase mb-2 flex items-center gap-1">
-                  ⭐ {currentLanguage === 'ko' ? 'PICK 적중률' : 'PICK Accuracy'}
-                </h4>
-                <div className="text-center">
-                  <div className={`text-3xl font-bold ${
-                    pickStats.accuracy >= 70 ? 'text-green-400' :
-                    pickStats.accuracy >= 50 ? 'text-yellow-400' : 'text-red-400'
-                  }`}>
-                    {pickStats.total - pickStats.pending > 0 ? `${pickStats.accuracy}%` : '-'}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {pickStats.correct} / {pickStats.total - pickStats.pending}
-                    {currentLanguage === 'ko' ? ' 적중' : ' correct'}
-                  </div>
-                  {pickStats.pending > 0 && (
-                    <div className="text-xs text-yellow-500/70 mt-1">
-                      {pickStats.pending}{currentLanguage === 'ko' ? '개 진행중' : ' pending'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 예측 적중률 통계 */}
-            {predictionStats.withPredictions > 0 && (
-              <div className="mb-6 p-3 bg-[#252525] rounded-lg">
-                <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">
-                  {currentLanguage === 'ko' ? '오늘의 적중률' : "Today's Accuracy"}
-                </h4>
-                <div className="text-center">
-                  <div className={`text-3xl font-bold ${
-                    predictionStats.accuracy >= 60 ? 'text-green-400' :
-                    predictionStats.accuracy >= 40 ? 'text-yellow-400' : 'text-red-400'
-                  }`}>
-                    {predictionStats.accuracy}%
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {predictionStats.winnerCorrect} / {predictionStats.withPredictions}
-                    {currentLanguage === 'ko' ? ' 적중' : ' correct'}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 🔥 대륙별 리그 그룹 */}
+            {/* 🔥 대륙별 리그 그룹 (접이식) */}
             <div>
               <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">
                 {currentLanguage === 'ko' ? '리그' : 'Leagues'}
@@ -739,6 +695,11 @@ export default function MatchResultsPage() {
               <div className="space-y-1">
                 {LEAGUE_GROUPS.map((group) => {
                   const isAllGroup = group.id === 'all'
+                  const isExpanded = expandedGroups.has(group.id)
+                  const hasSelectedLeague = group.leagues.some(l => l.code === selectedLeague)
+                  
+                  // 선택된 리그가 있는 그룹은 자동으로 펼침
+                  const shouldShow = isExpanded || hasSelectedLeague
                   
                   return (
                     <div key={group.id}>
@@ -760,12 +721,33 @@ export default function MatchResultsPage() {
                         ))
                       ) : (
                         <>
-                          {/* 대륙 헤더 */}
-                          <div className="text-[10px] font-bold text-gray-600 uppercase mt-3 mb-1 px-3">
-                            {currentLanguage === 'ko' ? group.region : group.regionEn}
-                          </div>
-                          {/* 리그 목록 */}
-                          {group.leagues.map((league) => (
+                          {/* 🔥 대륙 헤더 (클릭 가능) */}
+                          <button
+                            onClick={() => {
+                              setExpandedGroups(prev => {
+                                const newSet = new Set(prev)
+                                if (newSet.has(group.id)) {
+                                  newSet.delete(group.id)
+                                } else {
+                                  newSet.add(group.id)
+                                }
+                                return newSet
+                              })
+                            }}
+                            className="w-full flex items-center justify-between text-[10px] font-bold text-gray-500 uppercase mt-3 mb-1 px-3 py-1 hover:text-gray-300 hover:bg-gray-800/30 rounded transition-all"
+                          >
+                            <span>{currentLanguage === 'ko' ? group.region : group.regionEn}</span>
+                            <svg 
+                              className={`w-3 h-3 transition-transform ${shouldShow ? 'rotate-180' : ''}`} 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          {/* 리그 목록 (펼쳐진 경우만) */}
+                          {shouldShow && group.leagues.map((league) => (
                             <button
                               key={league.code}
                               onClick={() => setSelectedLeague(league.code)}
