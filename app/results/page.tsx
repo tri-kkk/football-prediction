@@ -6,7 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { TEAM_NAME_KR } from '../teamLogos'
 import AdSenseAd from '../components/AdSenseAd'
 
-// 🏆 리그 정보 (45개 - 확장!)
+// 🏆 리그 정보 (50개 - 아프리카 추가!)
 const LEAGUES = [
   { code: 'ALL', nameKo: '전체', nameEn: 'All', logo: '🌍', isEmoji: true },
   
@@ -18,6 +18,13 @@ const LEAGUES = [
   { code: 'COP', nameKo: '리베르타', nameEn: 'Libertadores', logo: 'https://media.api-sports.io/football/leagues/13.png', isEmoji: false },
   { code: 'COS', nameKo: '수다메리카나', nameEn: 'Sudamericana', logo: 'https://media.api-sports.io/football/leagues/11.png', isEmoji: false },
   { code: 'AFCON', nameKo: '아프리카컵', nameEn: 'AFCON', logo: 'https://media.api-sports.io/football/leagues/6.png', isEmoji: false },
+  
+  // ===== 🌍 아프리카 리그 (5개) - NEW! =====
+  { code: 'EGY', nameKo: '이집트', nameEn: 'Egypt', logo: 'https://media.api-sports.io/football/leagues/233.png', isEmoji: false },
+  { code: 'RSA', nameKo: '남아공', nameEn: 'South Africa', logo: 'https://media.api-sports.io/football/leagues/288.png', isEmoji: false },
+  { code: 'MAR', nameKo: '모로코', nameEn: 'Morocco', logo: 'https://media.api-sports.io/football/leagues/200.png', isEmoji: false },
+  { code: 'DZA', nameKo: '알제리', nameEn: 'Algeria', logo: 'https://media.api-sports.io/football/leagues/187.png', isEmoji: false },
+  { code: 'TUN', nameKo: '튀니지', nameEn: 'Tunisia', logo: 'https://media.api-sports.io/football/leagues/202.png', isEmoji: false },
   
   // ===== 🇰🇷 아시아 (7개) =====
   { code: 'KL1', nameKo: 'K리그1', nameEn: 'K League 1', logo: 'https://media.api-sports.io/football/leagues/292.png', isEmoji: false },
@@ -114,6 +121,18 @@ const LEAGUE_GROUPS = [
       { code: 'SAL', nameKo: '사우디', nameEn: 'Saudi Pro', logo: 'https://media.api-sports.io/football/leagues/307.png' },
       { code: 'CSL', nameKo: '중국', nameEn: 'CSL', logo: 'https://media.api-sports.io/football/leagues/169.png' },
       { code: 'ALG', nameKo: 'A리그', nameEn: 'A-League', logo: 'https://media.api-sports.io/football/leagues/188.png' },
+    ]
+  },
+  {
+    id: 'africa',
+    region: '아프리카',
+    regionEn: 'Africa',
+    leagues: [
+      { code: 'EGY', nameKo: '이집트', nameEn: 'Egypt', logo: 'https://media.api-sports.io/football/leagues/233.png' },
+      { code: 'RSA', nameKo: '남아공', nameEn: 'South Africa', logo: 'https://media.api-sports.io/football/leagues/288.png' },
+      { code: 'MAR', nameKo: '모로코', nameEn: 'Morocco', logo: 'https://media.api-sports.io/football/leagues/200.png' },
+      { code: 'DZA', nameKo: '알제리', nameEn: 'Algeria', logo: 'https://media.api-sports.io/football/leagues/187.png' },
+      { code: 'TUN', nameKo: '튀니지', nameEn: 'Tunisia', logo: 'https://media.api-sports.io/football/leagues/202.png' },
     ]
   },
   {

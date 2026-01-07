@@ -10,7 +10,7 @@ const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY!
 const API_FOOTBALL_HOST = 'v3.football.api-sports.io'
 
 // ============================================================
-// 🔥 리그 설정 (45개 - 대폭 확장!)
+// 🔥 리그 설정 (50개 - 아프리카 추가!)
 // ============================================================
 const LEAGUES = [
   // ===== 🏆 국제 대회 (5개) =====
@@ -19,6 +19,13 @@ const LEAGUES = [
   { code: 'UECL', apiId: 848, name: 'Conference League' },
   { code: 'UNL', apiId: 5, name: 'Nations League' },
   { code: 'AFCON', apiId: 6, name: 'Africa Cup of Nations' },
+  
+  // ===== 🌍 아프리카 리그 (5개) - NEW! =====
+  { code: 'EGY', apiId: 233, name: 'Egyptian Premier League' },
+  { code: 'RSA', apiId: 288, name: 'South African Premier League' },
+  { code: 'MAR', apiId: 200, name: 'Botola Pro' },
+  { code: 'DZA', apiId: 187, name: 'Ligue 1 Algeria' },
+  { code: 'TUN', apiId: 202, name: 'Ligue 1 Tunisia' },
   
   // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
   { code: 'PL', apiId: 39, name: 'Premier League' },
@@ -411,6 +418,68 @@ const TEAM_KR_MAP: { [key: string]: string } = {
   'Tigres UANL': '티그레스',
   'Cruz Azul': '크루스 아술',
   'Pumas UNAM': '푸마스',
+  
+  // ===== 🇪🇬 이집트 =====
+  'Al Ahly': '알 아흘리',
+  'Al Ahly SC': '알 아흘리',
+  'Zamalek': '자말렉',
+  'Zamalek SC': '자말렉',
+  'Pyramids FC': '피라미드 FC',
+  'Pyramids': '피라미드 FC',
+  'Al Masry': '알 마스리',
+  'Future FC': '퓨처 FC',
+  'Ceramica Cleopatra': '세라미카 클레오파트라',
+  'Ismaily SC': '이스마일리',
+  'Ismaily': '이스마일리',
+  'ENPPI': 'ENPPI',
+  'Pharco FC': '파르코 FC',
+  'El Gouna': '엘 고우나',
+  
+  // ===== 🇿🇦 남아공 =====
+  'Mamelodi Sundowns': '마멜로디 선다운스',
+  'Sundowns': '마멜로디 선다운스',
+  'Orlando Pirates': '올란도 파이레이츠',
+  'Kaizer Chiefs': '카이저 치프스',
+  'Cape Town City': '케이프타운 시티',
+  'SuperSport United': '슈퍼스포트 유나이티드',
+  'Stellenbosch FC': '스텔렌보쉬',
+  'AmaZulu FC': '아마줄루',
+  'AmaZulu': '아마줄루',
+  'Sekhukhune United': '세쿠쿠네 유나이티드',
+  'Golden Arrows': '골든 애로우스',
+  'Richards Bay': '리차드스 베이',
+  
+  // ===== 🇲🇦 모로코 =====
+  'Wydad Casablanca': '위다드 카사블랑카',
+  'Wydad AC': '위다드 카사블랑카',
+  'Raja Casablanca': '라자 카사블랑카',
+  'Raja CA': '라자 카사블랑카',
+  'AS FAR': 'AS FAR',
+  'FAR Rabat': 'AS FAR',
+  'RS Berkane': 'RS 베르칸',
+  'FUS Rabat': 'FUS 라바트',
+  'Maghreb Fes': '마그레브 페스',
+  'Hassania Agadir': '하사니아 아가디르',
+  
+  // ===== 🇩🇿 알제리 =====
+  'MC Alger': 'MC 알제',
+  'CR Belouizdad': 'CR 벨루이즈다드',
+  'USM Alger': 'USM 알제',
+  'JS Kabylie': 'JS 카빌리',
+  'ES Setif': 'ES 세티프',
+  'CS Constantine': 'CS 콩스탄틴',
+  'MC Oran': 'MC 오랑',
+  'ASO Chlef': 'ASO 셸레프',
+  
+  // ===== 🇹🇳 튀니지 =====
+  'Esperance Tunis': '에스페랑스 튀니스',
+  'Esperance de Tunis': '에스페랑스 튀니스',
+  'CA Bizertin': 'CA 비제르탱',
+  'Club Africain': '클럽 아프리캥',
+  'CS Sfaxien': 'CS 스팍시앙',
+  'Etoile Sahel': '에투알 사헬',
+  'US Monastir': 'US 모나스티르',
+  'Stade Tunisien': '스타드 튀니지앵',
 }
 
 // ============================================================

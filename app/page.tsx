@@ -14,7 +14,7 @@ import MobileMatchReports from './components/MobileMatchReports'
 
 import TopHighlights from './components/TopHighlights'
 
-// 🔥 리그 정보 (45개 - 대폭 확장!)
+// 🔥 리그 정보 (50개 - 아프리카 추가!)
 const LEAGUES = [
   // 전체
   { 
@@ -34,6 +34,13 @@ const LEAGUES = [
   { code: 'COP', name: '코파 리베르타도레스', nameEn: 'Copa Libertadores', flag: 'https://flagcdn.com/w40/br.png', logo: 'https://media.api-sports.io/football/leagues/13.png', isEmoji: false },
   { code: 'COS', name: '코파 수다메리카나', nameEn: 'Copa Sudamericana', flag: 'https://flagcdn.com/w40/ar.png', logo: 'https://media.api-sports.io/football/leagues/11.png', isEmoji: false },
   { code: 'AFCON', name: '아프리카 네이션스컵', nameEn: 'Africa Cup of Nations', flag: 'https://img.icons8.com/color/48/africa.png', logo: 'https://media.api-sports.io/football/leagues/6.png', isEmoji: false },
+  
+  // ===== 🌍 아프리카 리그 (5개) - NEW! =====
+  { code: 'EGY', name: '이집트 프리미어리그', nameEn: 'Egyptian Premier League', flag: 'https://flagcdn.com/w40/eg.png', logo: 'https://media.api-sports.io/football/leagues/233.png', isEmoji: false },
+  { code: 'RSA', name: '남아공 프리미어리그', nameEn: 'South African Premier League', flag: 'https://flagcdn.com/w40/za.png', logo: 'https://media.api-sports.io/football/leagues/288.png', isEmoji: false },
+  { code: 'MAR', name: '모로코 보톨라', nameEn: 'Botola Pro', flag: 'https://flagcdn.com/w40/ma.png', logo: 'https://media.api-sports.io/football/leagues/200.png', isEmoji: false },
+  { code: 'DZA', name: '알제리 리그1', nameEn: 'Ligue 1 Algeria', flag: 'https://flagcdn.com/w40/dz.png', logo: 'https://media.api-sports.io/football/leagues/187.png', isEmoji: false },
+  { code: 'TUN', name: '튀니지 리그1', nameEn: 'Ligue 1 Tunisia', flag: 'https://flagcdn.com/w40/tn.png', logo: 'https://media.api-sports.io/football/leagues/202.png', isEmoji: false },
   
   // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
   { code: 'PL', name: '프리미어리그', nameEn: 'Premier League', flag: 'https://flagcdn.com/w40/gb-eng.png', logo: 'https://media.api-sports.io/football/leagues/39.png', isEmoji: false },
@@ -167,6 +174,21 @@ const LEAGUE_GROUPS = [
     ]
   },
   
+  // 아프리카
+  {
+    id: 'africa',
+    region: '아프리카',
+    regionEn: 'Africa',
+    flag: '',
+    leagues: [
+      { code: 'EGY', name: '이집트', nameEn: 'Egypt', logo: 'https://media.api-sports.io/football/leagues/233.png' },
+      { code: 'RSA', name: '남아공', nameEn: 'South Africa', logo: 'https://media.api-sports.io/football/leagues/288.png' },
+      { code: 'MAR', name: '모로코', nameEn: 'Morocco', logo: 'https://media.api-sports.io/football/leagues/200.png' },
+      { code: 'DZA', name: '알제리', nameEn: 'Algeria', logo: 'https://media.api-sports.io/football/leagues/187.png' },
+      { code: 'TUN', name: '튀니지', nameEn: 'Tunisia', logo: 'https://media.api-sports.io/football/leagues/202.png' },
+    ]
+  },
+  
   // 잉글랜드
   {
     id: 'england',
@@ -267,11 +289,13 @@ const LEAGUE_GROUPS = [
   },
 ]
 
-// 🔥 오즈 데이터가 있는 리그 (45개 전체)
+// 🔥 오즈 데이터가 있는 리그 (50개 전체)
 const LEAGUES_WITH_ODDS = [
   'ALL',
   // 국제대회
   'CL', 'EL', 'UECL', 'UNL', 'COP', 'COS', 'AFCON',
+  // 아프리카
+  'EGY', 'RSA', 'MAR', 'DZA', 'TUN',
   // 잉글랜드
   'PL', 'ELC', 'FAC', 'EFL',
   // 스페인
@@ -303,6 +327,12 @@ function getLeagueLogo(league: string): string {
     'COP': 'https://media.api-sports.io/football/leagues/13.png',
     'COS': 'https://media.api-sports.io/football/leagues/11.png',
     'AFCON': 'https://media.api-sports.io/football/leagues/6.png',
+    // 아프리카
+    'EGY': 'https://media.api-sports.io/football/leagues/233.png',
+    'RSA': 'https://media.api-sports.io/football/leagues/288.png',
+    'MAR': 'https://media.api-sports.io/football/leagues/200.png',
+    'DZA': 'https://media.api-sports.io/football/leagues/187.png',
+    'TUN': 'https://media.api-sports.io/football/leagues/202.png',
     // 잉글랜드
     'PL': 'https://media.api-sports.io/football/leagues/39.png',
     'ELC': 'https://media.api-sports.io/football/leagues/40.png',
@@ -365,6 +395,12 @@ function getLeagueFlag(leagueCode: string): { url: string; isEmoji: boolean } {
     'COP': { url: 'https://flagcdn.com/w40/br.png', isEmoji: false },
     'COS': { url: 'https://flagcdn.com/w40/ar.png', isEmoji: false },
     'AFCON': { url: 'https://img.icons8.com/color/48/africa.png', isEmoji: false },
+    // 아프리카
+    'EGY': { url: 'https://flagcdn.com/w40/eg.png', isEmoji: false },
+    'RSA': { url: 'https://flagcdn.com/w40/za.png', isEmoji: false },
+    'MAR': { url: 'https://flagcdn.com/w40/ma.png', isEmoji: false },
+    'DZA': { url: 'https://flagcdn.com/w40/dz.png', isEmoji: false },
+    'TUN': { url: 'https://flagcdn.com/w40/tn.png', isEmoji: false },
     // 잉글랜드
     'PL': { url: 'https://flagcdn.com/w40/gb-eng.png', isEmoji: false },
     'ELC': { url: 'https://flagcdn.com/w40/gb-eng.png', isEmoji: false },

@@ -5,7 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 
 // ============================================================
-// 🔥 리그 코드 매핑 (45개 - 대폭 확장!)
+// 🔥 리그 코드 매핑 (50개 - 아프리카 추가!)
 // ============================================================
 const LEAGUE_IDS: { [key: string]: number } = {
   // ===== 🏆 국제 대회 (5개) =====
@@ -14,6 +14,13 @@ const LEAGUE_IDS: { [key: string]: number } = {
   'UECL': 848,  // Conference League
   'UNL': 5,     // Nations League
   'AFCON': 6,   // Africa Cup of Nations
+  
+  // ===== 🌍 아프리카 리그 (5개) - NEW! =====
+  'EGY': 233,   // Egyptian Premier League
+  'RSA': 288,   // South African Premier League
+  'MAR': 200,   // Botola Pro (Morocco)
+  'DZA': 187,   // Ligue 1 Algeria
+  'TUN': 202,   // Ligue 1 Tunisia
   
   // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
   'PL': 39,     // Premier League

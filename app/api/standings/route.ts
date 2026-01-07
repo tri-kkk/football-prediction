@@ -4,7 +4,7 @@ const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY || ''
 const BASE_URL = 'https://v3.football.api-sports.io'
 
 // ============================================================
-// 🔥 API-Football 리그 ID 매핑 (45개 리그!)
+// 🔥 API-Football 리그 ID 매핑 (50개 리그 - 아프리카 추가!)
 // ============================================================
 const LEAGUES: { [key: string]: number } = {
   // ===== 🏆 국제대회 (7개) =====
@@ -15,6 +15,13 @@ const LEAGUES: { [key: string]: number } = {
   'COP': 13,     // Copa Libertadores
   'COS': 11,     // Copa Sudamericana
   'AFCON': 6,    // Africa Cup of Nations
+  
+  // ===== 🌍 아프리카 리그 (5개) - NEW! =====
+  'EGY': 233,    // Egyptian Premier League
+  'RSA': 288,    // South African Premier League
+  'MAR': 200,    // Botola Pro (Morocco)
+  'DZA': 187,    // Ligue 1 Algeria
+  'TUN': 202,    // Ligue 1 Tunisia
   
   // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
   'PL': 39,      // Premier League
@@ -111,6 +118,12 @@ const LEAGUE_NAMES: { [key: string]: string } = {
   'COP': 'Copa Libertadores',
   'COS': 'Copa Sudamericana',
   'AFCON': 'Africa Cup of Nations',
+  // 아프리카
+  'EGY': 'Egyptian Premier League',
+  'RSA': 'South African Premier League',
+  'MAR': 'Botola Pro',
+  'DZA': 'Ligue 1 Algeria',
+  'TUN': 'Ligue 1 Tunisia',
   // 잉글랜드
   'PL': 'Premier League',
   'ELC': 'Championship',
@@ -170,6 +183,12 @@ const LEAGUE_LOGOS: { [key: string]: string } = {
   'COP': 'https://media.api-sports.io/football/leagues/13.png',
   'COS': 'https://media.api-sports.io/football/leagues/11.png',
   'AFCON': 'https://media.api-sports.io/football/leagues/6.png',
+  // 아프리카
+  'EGY': 'https://media.api-sports.io/football/leagues/233.png',
+  'RSA': 'https://media.api-sports.io/football/leagues/288.png',
+  'MAR': 'https://media.api-sports.io/football/leagues/200.png',
+  'DZA': 'https://media.api-sports.io/football/leagues/187.png',
+  'TUN': 'https://media.api-sports.io/football/leagues/202.png',
   // 잉글랜드
   'PL': 'https://media.api-sports.io/football/leagues/39.png',
   'ELC': 'https://media.api-sports.io/football/leagues/40.png',
