@@ -2895,15 +2895,12 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                           darkMode ? 'hover:bg-[#1a1a1a]' : 'hover:bg-gray-50'
                                         } ${isExpanded ? '!bg-[#0d1f0d]' : ''}`}
                                       >
-                                        {/* 시간 + 날짜 */}
+                                        {/* 시간 */}
                                         <div className="w-16 md:w-20 flex-shrink-0">
                                           <div className={`text-sm md:text-base font-bold tabular-nums ${
                                             isExpanded ? 'text-[#A3FF4C]' : darkMode ? 'text-gray-400' : 'text-gray-600'
                                           }`}>
                                             {formatTime(match.utcDate)}
-                                          </div>
-                                          <div className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
-                                            {formatDate(match.utcDate, currentLanguage)}
                                           </div>
                                         </div>
 
