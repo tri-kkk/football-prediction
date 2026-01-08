@@ -610,7 +610,13 @@ async function translateMatches(matches: any[]): Promise<any[]> {
 
 // 시간 포맷 함수 (한국 시간 KST 고정)
 function formatTime(utcDateString: string): string {
-  const date = new Date(utcDateString)
+  // UTC 문자열 정규화 (Z가 없으면 추가)
+  let normalizedDate = utcDateString
+  if (!utcDateString.endsWith('Z') && !utcDateString.includes('+')) {
+    normalizedDate = utcDateString.replace(' ', 'T') + 'Z'
+  }
+  
+  const date = new Date(normalizedDate)
   // 한국 시간대로 변환 (UTC+9)
   const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000))
   const hours = String(kstDate.getUTCHours()).padStart(2, '0')
@@ -620,7 +626,13 @@ function formatTime(utcDateString: string): string {
 
 // 날짜 포맷 (한국 시간 KST 고정)
 function formatDate(utcDateString: string, language: string = 'ko'): string {
-  const date = new Date(utcDateString)
+  // UTC 문자열 정규화 (Z가 없으면 추가)
+  let normalizedDate = utcDateString
+  if (!utcDateString.endsWith('Z') && !utcDateString.includes('+')) {
+    normalizedDate = utcDateString.replace(' ', 'T') + 'Z'
+  }
+  
+  const date = new Date(normalizedDate)
   // 한국 시간대로 변환 (UTC+9)
   const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000))
   const kstNow = new Date(Date.now() + (9 * 60 * 60 * 1000))
@@ -678,7 +690,13 @@ function getKSTWeekEnd(): Date {
 
 // 경기 날짜를 KST 기준으로 변환
 function getMatchKSTDate(utcDateString: string): Date {
-  const utcDate = new Date(utcDateString)
+  // UTC 문자열 정규화 (Z가 없으면 추가)
+  let normalizedDate = utcDateString
+  if (!utcDateString.endsWith('Z') && !utcDateString.includes('+')) {
+    normalizedDate = utcDateString.replace(' ', 'T') + 'Z'
+  }
+  
+  const utcDate = new Date(normalizedDate)
   const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000))
   return new Date(Date.UTC(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate()))
 }
