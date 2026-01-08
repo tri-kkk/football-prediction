@@ -608,33 +608,37 @@ async function translateMatches(matches: any[]): Promise<any[]> {
   }))
 }
 
-// 시간 포맷 함수 (브라우저 로컬 시간대 자동 적용)
+// 시간 포맷 함수 (한국 시간 KST 고정)
 function formatTime(utcDateString: string): string {
   const date = new Date(utcDateString)
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
+  // 한국 시간대로 변환 (UTC+9)
+  const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000))
+  const hours = String(kstDate.getUTCHours()).padStart(2, '0')
+  const minutes = String(kstDate.getUTCMinutes()).padStart(2, '0')
   return `${hours}:${minutes}`
 }
 
-// 날짜 포맷 (브라우저 로컬 시간대 자동 적용)
+// 날짜 포맷 (한국 시간 KST 고정)
 function formatDate(utcDateString: string, language: string = 'ko'): string {
   const date = new Date(utcDateString)
-  const now = new Date()
+  // 한국 시간대로 변환 (UTC+9)
+  const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000))
+  const kstNow = new Date(Date.now() + (9 * 60 * 60 * 1000))
   
-  // 날짜만 비교 (시간 제거)
-  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  // KST 기준 날짜만 비교
+  const todayDate = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()))
   const tomorrowDate = new Date(todayDate)
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1)
-  const matchDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1)
+  const matchDate = new Date(Date.UTC(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate()))
   
   if (matchDate.getTime() === todayDate.getTime()) {
     return language === 'ko' ? '오늘' : 'Today'
   } else if (matchDate.getTime() === tomorrowDate.getTime()) {
     return language === 'ko' ? '내일' : 'Tomorrow'
   } else {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
+    const year = kstDate.getUTCFullYear()
+    const month = String(kstDate.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(kstDate.getUTCDate()).padStart(2, '0')
     return `${year}/${month}/${day}`
   }
 }
@@ -646,14 +650,16 @@ const MAX_CACHE_SIZE = 2 * 1024 * 1024 // 2MB 제한 (안전 마진)
 
 // 🕐 한국 시간(KST, UTC+9) 기준 날짜 계산 헬퍼
 function getKSTDate(date: Date = new Date()): Date {
-  // UTC 시간에 9시간 추가
-  const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
-  return new Date(utc + (9 * 60 * 60 * 1000))
+  // UTC 시간에 9시간 추가하여 KST로 변환
+  return new Date(date.getTime() + (9 * 60 * 60 * 1000))
 }
 
 function getKSTToday(): Date {
-  const kst = getKSTDate()
-  return new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()))
+  // 현재 UTC 시간 + 9시간 = KST
+  const now = new Date()
+  const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000))
+  // KST 기준 오늘 자정 (UTC로 저장)
+  return new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()))
 }
 
 function getKSTTomorrow(): Date {
