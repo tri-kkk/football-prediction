@@ -13,6 +13,7 @@ import AdSenseAd from './components/AdSenseAd'
 import MobileMatchReports from './components/MobileMatchReports'
 
 import TopHighlights from './components/TopHighlights'
+import MatchPoll from './components/MatchPoll'
 
 // 🔥 리그 정보 (50개 - 아프리카 추가!)
 const LEAGUES = [
@@ -3184,6 +3185,26 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                               <span>⚽</span>
                                               <span>{currentLanguage === 'ko' ? '라인업' : 'Lineup'}</span>
                                             </button>
+                                          </div>
+
+                                          {/* 🗳️ 경기 예측 Poll */}
+                                          <div className="px-4 pb-4">
+                                            <MatchPoll
+                                              matchId={match.id?.toString() || ''}
+                                              homeTeam={match.homeTeam}
+                                              awayTeam={match.awayTeam}
+                                              homeTeamKR={match.homeTeamKR}
+                                              awayTeamKR={match.awayTeamKR}
+                                              leagueCode={match.leagueCode}
+                                              matchDate={match.utcDate}
+                                              darkMode={darkMode}
+                                              language={currentLanguage}
+                                              aiPrediction={{
+                                                homeWin: Math.round(displayHomeProb),
+                                                draw: Math.round(displayDrawProb),
+                                                awayWin: Math.round(displayAwayProb)
+                                              }}
+                                            />
                                           </div>
 
                                           {/* AI 경기 예측 분석 */}
