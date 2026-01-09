@@ -139,19 +139,48 @@ export default function MatchPoll({
   }
   const baseVotes = getBaseVotes()
   
-  // 🎭 시딩 투표를 AI 예측 비율로 분배
+  // 🎲 경기별 고정 노이즈 생성 (일관성 유지)
+  const getNoiseValue = (seed: number) => {
+    const x = Math.sin(seed) * 10000
+    return (x - Math.floor(x)) * 2 - 1  // -1 ~ 1 범위
+  }
+  
+  // 🎭 시딩 투표를 AI 예측 기반 + 노이즈로 분배
   const getSeededVotes = () => {
     if (!aiPrediction) {
-      // AI 예측 없으면 균등 분배
       const third = Math.floor(baseVotes / 3)
       return { home: third, draw: third, away: third }
     }
-    // AI 예측 비율로 분배 (약간의 랜덤성 추가)
-    const total = aiPrediction.homeWin + aiPrediction.draw + aiPrediction.awayWin
-    const homeBase = Math.round((aiPrediction.homeWin / total) * baseVotes)
-    const drawBase = Math.round((aiPrediction.draw / total) * baseVotes)
-    const awayBase = baseVotes - homeBase - drawBase
-    return { home: homeBase, draw: drawBase, away: Math.max(0, awayBase) }
+    
+    const numericId = parseInt(matchId.replace(/\D/g, '').slice(-6) || '0', 10)
+    
+    // 노이즈: -12% ~ +12% 변동 (경기마다 다름)
+    const homeNoise = getNoiseValue(numericId * 3) * 12
+    const drawNoise = getNoiseValue(numericId * 7) * 8
+    const awayNoise = getNoiseValue(numericId * 11) * 12
+    
+    // AI 비율 + 노이즈 적용
+    let homePercent = aiPrediction.homeWin + homeNoise
+    let drawPercent = aiPrediction.draw + drawNoise
+    let awayPercent = aiPrediction.awayWin + awayNoise
+    
+    // 최소값 보장 (5% 이상)
+    homePercent = Math.max(5, homePercent)
+    drawPercent = Math.max(5, drawPercent)
+    awayPercent = Math.max(5, awayPercent)
+    
+    // 100%로 정규화
+    const total = homePercent + drawPercent + awayPercent
+    homePercent = (homePercent / total) * 100
+    drawPercent = (drawPercent / total) * 100
+    awayPercent = (awayPercent / total) * 100
+    
+    // 투표 수로 변환
+    const homeBase = Math.round((homePercent / 100) * baseVotes)
+    const drawBase = Math.round((drawPercent / 100) * baseVotes)
+    const awayBase = Math.max(0, baseVotes - homeBase - drawBase)
+    
+    return { home: homeBase, draw: drawBase, away: awayBase }
   }
   const seededVotes = getSeededVotes()
   
