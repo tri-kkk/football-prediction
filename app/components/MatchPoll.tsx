@@ -132,24 +132,50 @@ export default function MatchPoll({
   const hasVoted = pollData.myVote !== null
   const showResults = hasVoted || pollData.totalVotes >= 5 // 5명 이상 또는 투표 후 결과 표시
 
-  // 투표 수가 적을 때 표시할 텍스트
+  // 🎭 시딩: 경기별로 다른 베이스 투표수 (15~30명)
+  const getBaseVotes = () => {
+    const numericId = parseInt(matchId.replace(/\D/g, '').slice(-6) || '0', 10)
+    return 15 + (numericId % 16)  // 15~30 범위
+  }
+  const baseVotes = getBaseVotes()
+  
+  // 🎭 시딩 투표를 AI 예측 비율로 분배
+  const getSeededVotes = () => {
+    if (!aiPrediction) {
+      // AI 예측 없으면 균등 분배
+      const third = Math.floor(baseVotes / 3)
+      return { home: third, draw: third, away: third }
+    }
+    // AI 예측 비율로 분배 (약간의 랜덤성 추가)
+    const total = aiPrediction.homeWin + aiPrediction.draw + aiPrediction.awayWin
+    const homeBase = Math.round((aiPrediction.homeWin / total) * baseVotes)
+    const drawBase = Math.round((aiPrediction.draw / total) * baseVotes)
+    const awayBase = baseVotes - homeBase - drawBase
+    return { home: homeBase, draw: drawBase, away: Math.max(0, awayBase) }
+  }
+  const seededVotes = getSeededVotes()
+  
+  // 시딩 + 실제 투표 합산
+  const totalHomeVotes = seededVotes.home + pollData.homeVotes
+  const totalDrawVotes = seededVotes.draw + pollData.drawVotes
+  const totalAwayVotes = seededVotes.away + pollData.awayVotes
+  const displayTotalVotes = totalHomeVotes + totalDrawVotes + totalAwayVotes
+  
+  // 퍼센트 계산 (시딩 포함)
+  const displayHomePercent = displayTotalVotes > 0 ? Math.round((totalHomeVotes / displayTotalVotes) * 100) : 0
+  const displayDrawPercent = displayTotalVotes > 0 ? Math.round((totalDrawVotes / displayTotalVotes) * 100) : 0
+  const displayAwayPercent = displayTotalVotes > 0 ? Math.round((totalAwayVotes / displayTotalVotes) * 100) : 0
+
+  // 투표 수 표시 텍스트
   const getParticipationText = () => {
-    if (pollData.totalVotes === 0) {
-      return language === 'ko' ? '첫 번째 예측자가 되어보세요!' : 'Be the first to predict!'
-    }
-    if (pollData.totalVotes < 5) {
+    if (displayTotalVotes >= 50) {
       return language === 'ko' 
-        ? `${pollData.totalVotes}명 참여 중` 
-        : `${pollData.totalVotes} votes`
-    }
-    if (pollData.totalVotes >= 50) {
-      return language === 'ko' 
-        ? `🔥 ${pollData.totalVotes}명 참여` 
-        : `🔥 ${pollData.totalVotes} votes`
+        ? `🔥 ${displayTotalVotes}명 참여` 
+        : `🔥 ${displayTotalVotes} votes`
     }
     return language === 'ko' 
-      ? `${pollData.totalVotes}명 참여` 
-      : `${pollData.totalVotes} votes`
+      ? `${displayTotalVotes}명 참여` 
+      : `${displayTotalVotes} votes`
   }
 
   if (loading) {
@@ -215,7 +241,7 @@ export default function MatchPoll({
           </div>
         )}
 
-        {/* 커뮤니티 예측 */}
+        {/* 팬 예측 */}
         <div className={`rounded-lg p-3 ${darkMode ? 'bg-[#1f1a0d] border border-orange-500/20' : 'bg-orange-50 border border-orange-200'}`}>
           <div className="flex items-center gap-1.5 mb-2">
             <span className="text-sm">👥</span>
@@ -229,8 +255,8 @@ export default function MatchPoll({
                 <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   {homeDisplayName.length > 6 ? homeDisplayName.substring(0, 6) + '..' : homeDisplayName}
                 </span>
-                <span className={`text-xs font-bold ${pollData.homePercent >= pollData.awayPercent && pollData.homePercent >= pollData.drawPercent ? 'text-orange-400' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {pollData.homePercent}%
+                <span className={`text-xs font-bold ${displayHomePercent >= displayAwayPercent && displayHomePercent >= displayDrawPercent ? 'text-orange-400' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {displayHomePercent}%
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -238,15 +264,15 @@ export default function MatchPoll({
                   {language === 'ko' ? '무승부' : 'Draw'}
                 </span>
                 <span className={`text-xs font-bold ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {pollData.drawPercent}%
+                  {displayDrawPercent}%
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   {awayDisplayName.length > 6 ? awayDisplayName.substring(0, 6) + '..' : awayDisplayName}
                 </span>
-                <span className={`text-xs font-bold ${pollData.awayPercent > pollData.homePercent && pollData.awayPercent > pollData.drawPercent ? 'text-orange-400' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {pollData.awayPercent}%
+                <span className={`text-xs font-bold ${displayAwayPercent > displayHomePercent && displayAwayPercent > displayDrawPercent ? 'text-orange-400' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {displayAwayPercent}%
                 </span>
               </div>
             </div>
@@ -283,7 +309,7 @@ export default function MatchPoll({
             {showResults && (
               <div 
                 className="absolute inset-0 rounded-lg bg-[#A3FF4C]/10 transition-all"
-                style={{ width: `${pollData.homePercent}%` }}
+                style={{ width: `${displayHomePercent}%` }}
               />
             )}
             <span className="relative z-10">
@@ -313,7 +339,7 @@ export default function MatchPoll({
             {showResults && (
               <div 
                 className="absolute inset-0 rounded-lg bg-gray-400/10 transition-all"
-                style={{ width: `${pollData.drawPercent}%` }}
+                style={{ width: `${displayDrawPercent}%` }}
               />
             )}
             <span className="relative z-10">
@@ -343,7 +369,7 @@ export default function MatchPoll({
             {showResults && (
               <div 
                 className="absolute inset-0 rounded-lg bg-blue-500/10 transition-all"
-                style={{ width: `${pollData.awayPercent}%` }}
+                style={{ width: `${displayAwayPercent}%` }}
               />
             )}
             <span className="relative z-10">
@@ -360,13 +386,13 @@ export default function MatchPoll({
         </div>
       </div>
 
-      {/* AI vs 커뮤니티 일치 여부 */}
+      {/* AI vs 팬 예측 일치 여부 */}
       {aiPrediction && showResults && pollData.totalVotes >= 5 && (
         <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
           {(() => {
             const aiWinner = aiPrediction.homeWin > aiPrediction.awayWin ? 'home' : aiPrediction.awayWin > aiPrediction.homeWin ? 'away' : 'draw'
-            const communityWinner = pollData.homePercent > pollData.awayPercent ? 'home' : pollData.awayPercent > pollData.homePercent ? 'away' : 'draw'
-            const isMatched = aiWinner === communityWinner
+            const fanWinner = displayHomePercent > displayAwayPercent ? 'home' : displayAwayPercent > displayHomePercent ? 'away' : 'draw'
+            const isMatched = aiWinner === fanWinner
 
             return (
               <div className="flex items-center justify-center gap-2">
@@ -374,14 +400,14 @@ export default function MatchPoll({
                   <>
                     <span className="text-green-400">✓</span>
                     <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {language === 'ko' ? 'AI와 커뮤니티 예측 일치!' : 'AI & Community agree!'}
+                      {language === 'ko' ? 'AI와 팬 예측 일치!' : 'AI & Fan Pick agree!'}
                     </span>
                   </>
                 ) : (
                   <>
                     <span className="text-orange-400">⚡</span>
                     <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {language === 'ko' ? 'AI vs 커뮤니티 의견 분분' : 'AI & Community disagree'}
+                      {language === 'ko' ? 'AI vs 팬 의견 분분' : 'AI & Fan Pick disagree'}
                     </span>
                   </>
                 )}
