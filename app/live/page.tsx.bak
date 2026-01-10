@@ -84,6 +84,18 @@ export default function LivePage() {
     { code: 'CDF', nameKo: '쿠프', nameEn: 'CdF' },
   ]
 
+  // ✅ 통계 라벨 다국어 지원
+  const statsLabels = {
+    possession: { ko: '점유율', en: 'Possession' },
+    shotsOnGoal: { ko: '슈팅(유효)', en: 'Shots (on)' },
+    shotsOffGoal: { ko: '슈팅(무효)', en: 'Shots (off)' },
+    corners: { ko: '코너킥', en: 'Corners' },
+    offsides: { ko: '오프사이드', en: 'Offsides' },
+    fouls: { ko: '파울', en: 'Fouls' },
+    yellowCards: { ko: '경고', en: 'Yellow Cards' },
+    redCards: { ko: '퇴장', en: 'Red Cards' },
+  }
+
   const fetchLiveMatches = async () => {
     try {
       const response = await fetch('/api/live-matches')
@@ -91,10 +103,12 @@ export default function LivePage() {
 
       if (data.success) {
         setMatches(data.matches)
-        setLastUpdate(new Date().toLocaleTimeString('ko-KR'))
+        // ✅ 언어별 시간 형식
+        setLastUpdate(new Date().toLocaleTimeString(language === 'ko' ? 'ko-KR' : 'en-US'))
         setError(null)
       } else {
-        throw new Error(data.error || '데이터를 불러올 수 없습니다.')
+        // ✅ 에러 메시지 다국어
+        throw new Error(data.error || (language === 'ko' ? '데이터를 불러올 수 없습니다.' : 'Failed to load data.'))
       }
     } catch (err: any) {
       console.error('라이브 경기 조회 실패:', err)
@@ -135,7 +149,7 @@ export default function LivePage() {
   }
 
   const getStatusKR = (status: string) => {
-    const statusMap: Record<string, string> = {
+    const statusMapKo: Record<string, string> = {
       '1H': '전반전',
       '2H': '후반전',
       'HT': '하프타임',
@@ -144,7 +158,16 @@ export default function LivePage() {
       'FT': '종료',
       'LIVE': '진행중'
     }
-    return language === 'ko' ? statusMap[status] || status : status
+    const statusMapEn: Record<string, string> = {
+      '1H': '1st Half',
+      '2H': '2nd Half',
+      'HT': 'Half Time',
+      'ET': 'Extra Time',
+      'P': 'Penalties',
+      'FT': 'Full Time',
+      'LIVE': 'Live'
+    }
+    return language === 'ko' ? (statusMapKo[status] || status) : (statusMapEn[status] || status)
   }
 
   const getEventIcon = (type: string) => {
@@ -230,7 +253,8 @@ export default function LivePage() {
           <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
             <span className="flex items-center gap-1">
               <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-              15초 자동 업데이트
+              {/* ✅ 자동 업데이트 안내 다국어 */}
+              {language === 'ko' ? '15초 자동 업데이트' : 'Auto-refresh every 15s'}
             </span>
             <span className="ml-auto font-mono">{lastUpdate}</span>
           </div>
@@ -284,7 +308,10 @@ export default function LivePage() {
                       {match.elapsed && (
                         <div className="text-right">
                           <span className="text-2xl font-bold text-white tabular-nums">{match.elapsed}'</span>
-                          <div className="text-xs text-gray-500 mt-0.5">경과</div>
+                          {/* ✅ 경과 라벨 다국어 */}
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {language === 'ko' ? '경과' : 'Elapsed'}
+                          </div>
                         </div>
                       )}
                       <span className={`px-3 py-1.5 ${getStatusColor(match.status)} text-white text-xs font-bold rounded-lg shadow-lg`}>
@@ -358,12 +385,14 @@ export default function LivePage() {
                     </div>
                   )}
 
-                  {/* 상세 정보 토글 버튼 */}
+                  {/* ✅ 상세 정보 토글 버튼 다국어 */}
                   <button
                     onClick={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
                     className="w-full mt-4 py-2 bg-[#2a2a2a] hover:bg-[#333] rounded-lg text-sm text-gray-300 font-medium transition-colors flex items-center justify-center gap-2"
                   >
-                    {expandedMatch === match.id ? '접기' : '상세 정보'}
+                    {expandedMatch === match.id 
+                      ? (language === 'ko' ? '접기' : 'Collapse') 
+                      : (language === 'ko' ? '상세 정보' : 'Details')}
                     <span className="text-xs">{expandedMatch === match.id ? '▲' : '▼'}</span>
                   </button>
                 </div>
@@ -374,6 +403,7 @@ export default function LivePage() {
                     {/* 탭 네비게이션 */}
                     <div className="px-5 pt-5 pb-3 border-b border-gray-800">
                       <div className="flex gap-2">
+                        {/* ✅ 탭 버튼 다국어 */}
                         <button
                           onClick={() => setActiveTab('overview')}
                           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -382,7 +412,7 @@ export default function LivePage() {
                               : 'bg-[#2a2a2a] text-gray-400 hover:bg-[#333]'
                           }`}
                         >
-                          📋 개요
+                          📋 {language === 'ko' ? '개요' : 'Overview'}
                         </button>
                         <button
                           onClick={() => setActiveTab('stats')}
@@ -392,7 +422,7 @@ export default function LivePage() {
                               : 'bg-[#2a2a2a] text-gray-400 hover:bg-[#333]'
                           }`}
                         >
-                          📊 통계
+                          📊 {language === 'ko' ? '통계' : 'Stats'}
                         </button>
                         <button
                           onClick={() => setActiveTab('lineup')}
@@ -402,7 +432,7 @@ export default function LivePage() {
                               : 'bg-[#2a2a2a] text-gray-400 hover:bg-[#333]'
                           }`}
                         >
-                          👥 라인업
+                          👥 {language === 'ko' ? '라인업' : 'Lineup'}
                         </button>
                       </div>
                     </div>
@@ -449,7 +479,10 @@ export default function LivePage() {
                         ) : (
                           <div className="p-8 text-center">
                             <div className="text-4xl mb-3">📋</div>
-                            <p className="text-gray-400">아직 주요 이벤트가 없습니다</p>
+                            {/* ✅ 빈 이벤트 메시지 다국어 */}
+                            <p className="text-gray-400">
+                              {language === 'ko' ? '아직 주요 이벤트가 없습니다' : 'No major events yet'}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -465,11 +498,13 @@ export default function LivePage() {
                               {language === 'ko' ? '경기 통계' : 'Match Stats'}
                             </h3>
                             <div className="space-y-4">
-                              {/* 점유율 */}
+                              {/* ✅ 점유율 다국어 */}
                               <div>
                                 <div className="flex justify-between text-xs text-gray-400 mb-1">
                                   <span>{match.stats.possession.home}%</span>
-                                  <span className="font-medium text-white">점유율</span>
+                                  <span className="font-medium text-white">
+                                    {language === 'ko' ? statsLabels.possession.ko : statsLabels.possession.en}
+                                  </span>
                                   <span>{match.stats.possession.away}%</span>
                                 </div>
                                 <div className="h-2 bg-gray-800 rounded-full overflow-hidden flex">
@@ -484,21 +519,25 @@ export default function LivePage() {
                                 </div>
                               </div>
 
-                              {/* 기타 통계 */}
-                              {Object.entries({
-                                '슈팅(유효)': match.stats.shotsOnGoal,
-                                '슈팅(무효)': match.stats.shotsOffGoal,
-                                '코너킥': match.stats.corners,
-                                '오프사이드': match.stats.offsides,
-                                '파울': match.stats.fouls,
-                                '경고': match.stats.yellowCards,
-                                '퇴장': match.stats.redCards,
-                              }).map(([label, stat]) => (
-                                <div key={label} className="flex items-center justify-between text-sm">
+                              {/* ✅ 기타 통계 다국어 */}
+                              {[
+                                { key: 'shotsOnGoal', stat: match.stats.shotsOnGoal },
+                                { key: 'shotsOffGoal', stat: match.stats.shotsOffGoal },
+                                { key: 'corners', stat: match.stats.corners },
+                                { key: 'offsides', stat: match.stats.offsides },
+                                { key: 'fouls', stat: match.stats.fouls },
+                                { key: 'yellowCards', stat: match.stats.yellowCards },
+                                { key: 'redCards', stat: match.stats.redCards },
+                              ].map(({ key, stat }) => (
+                                <div key={key} className="flex items-center justify-between text-sm">
                                   <span className="text-blue-400 font-bold w-12 text-center">
                                     {stat.home}
                                   </span>
-                                  <span className="text-gray-400 font-medium">{label}</span>
+                                  <span className="text-gray-400 font-medium">
+                                    {language === 'ko' 
+                                      ? statsLabels[key as keyof typeof statsLabels].ko 
+                                      : statsLabels[key as keyof typeof statsLabels].en}
+                                  </span>
                                   <span className="text-red-400 font-bold w-12 text-center">
                                     {stat.away}
                                   </span>
@@ -509,7 +548,10 @@ export default function LivePage() {
                         ) : (
                           <div className="p-8 text-center">
                             <div className="text-4xl mb-3">📊</div>
-                            <p className="text-gray-400">통계 데이터가 아직 없습니다</p>
+                            {/* ✅ 빈 통계 메시지 다국어 */}
+                            <p className="text-gray-400">
+                              {language === 'ko' ? '통계 데이터가 아직 없습니다' : 'No stats available yet'}
+                            </p>
                           </div>
                         )}
                       </div>

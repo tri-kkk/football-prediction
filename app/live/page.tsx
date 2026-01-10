@@ -60,28 +60,111 @@ export default function LivePage() {
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'lineup'>('overview')
 
+  // ============================================================
+  // 🔥 리그 설정 (50개 - Cron과 동일!)
+  // ============================================================
   const leagues = [
     { code: 'ALL', nameKo: '전체', nameEn: 'All' },
-    // 유럽 대항전
+    
+    // ===== 🏆 국제 대회 (5개) =====
     { code: 'CL', nameKo: '챔스', nameEn: 'UCL' },
     { code: 'EL', nameKo: '유로파', nameEn: 'UEL' },
     { code: 'UECL', nameKo: '컨퍼', nameEn: 'UECL' },
-    // 잉글랜드
+    { code: 'UNL', nameKo: '네이션스', nameEn: 'UNL' },
+    { code: 'AFCON', nameKo: '아프콘', nameEn: 'AFCON' },
+    
+    // ===== 🌍 아프리카 리그 (5개) =====
+    { code: 'EGY', nameKo: '이집트', nameEn: 'Egypt' },
+    { code: 'RSA', nameKo: '남아공', nameEn: 'RSA' },
+    { code: 'MAR', nameKo: '모로코', nameEn: 'Morocco' },
+    { code: 'DZA', nameKo: '알제리', nameEn: 'Algeria' },
+    { code: 'TUN', nameKo: '튀니지', nameEn: 'Tunisia' },
+    
+    // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
     { code: 'PL', nameKo: 'EPL', nameEn: 'EPL' },
+    { code: 'ELC', nameKo: '챔십', nameEn: 'Champ' },
     { code: 'FAC', nameKo: 'FA컵', nameEn: 'FA' },
     { code: 'EFL', nameKo: 'EFL', nameEn: 'EFL' },
-    // 스페인
+    
+    // ===== 🇪🇸 스페인 (3개) =====
     { code: 'PD', nameKo: '라리가', nameEn: 'Liga' },
+    { code: 'SD', nameKo: '라리가2', nameEn: 'Liga2' },
     { code: 'CDR', nameKo: '코파', nameEn: 'Copa' },
-    // 독일
+    
+    // ===== 🇩🇪 독일 (3개) =====
     { code: 'BL1', nameKo: '분데스', nameEn: 'Bund' },
+    { code: 'BL2', nameKo: '분데스2', nameEn: 'Bund2' },
     { code: 'DFB', nameKo: 'DFB', nameEn: 'DFB' },
-    // 이탈리아
+    
+    // ===== 🇮🇹 이탈리아 (3개) =====
     { code: 'SA', nameKo: '세리에', nameEn: 'SerieA' },
+    { code: 'SB', nameKo: '세리에B', nameEn: 'SerieB' },
     { code: 'CIT', nameKo: '코파IT', nameEn: 'CopIt' },
-    // 프랑스
+    
+    // ===== 🇫🇷 프랑스 (3개) =====
     { code: 'FL1', nameKo: '리그1', nameEn: 'L1' },
+    { code: 'FL2', nameKo: '리그2', nameEn: 'L2' },
     { code: 'CDF', nameKo: '쿠프', nameEn: 'CdF' },
+    
+    // ===== 🇵🇹 포르투갈 (2개) =====
+    { code: 'PPL', nameKo: '프리메이라', nameEn: 'Liga PT' },
+    { code: 'TDP', nameKo: '타사PT', nameEn: 'Taca' },
+    
+    // ===== 🇳🇱 네덜란드 (2개) =====
+    { code: 'DED', nameKo: '에레디', nameEn: 'Erediv' },
+    { code: 'KNV', nameKo: 'KNVB', nameEn: 'KNVB' },
+    
+    // ===== 🇰🇷 한국 (2개) =====
+    { code: 'KL1', nameKo: 'K리그1', nameEn: 'KL1' },
+    { code: 'KL2', nameKo: 'K리그2', nameEn: 'KL2' },
+    
+    // ===== 🇯🇵 일본 (2개) =====
+    { code: 'J1', nameKo: 'J리그', nameEn: 'J1' },
+    { code: 'J2', nameKo: 'J2리그', nameEn: 'J2' },
+    
+    // ===== 🇸🇦 사우디 (1개) =====
+    { code: 'SAL', nameKo: '사우디', nameEn: 'Saudi' },
+    
+    // ===== 🇦🇺 호주 (1개) =====
+    { code: 'ALG', nameKo: 'A리그', nameEn: 'A-Lg' },
+    
+    // ===== 🇨🇳 중국 (1개) =====
+    { code: 'CSL', nameKo: '중국', nameEn: 'CSL' },
+    
+    // ===== 🇹🇷 터키 (1개) =====
+    { code: 'TSL', nameKo: '터키', nameEn: 'Turkey' },
+    
+    // ===== 🇧🇪 벨기에 (1개) =====
+    { code: 'JPL', nameKo: '벨기에', nameEn: 'Belgium' },
+    
+    // ===== 🏴󠁧󠁢󠁳󠁣󠁴󠁿 스코틀랜드 (1개) =====
+    { code: 'SPL', nameKo: '스코틀', nameEn: 'Scotland' },
+    
+    // ===== 🇨🇭 스위스 (1개) =====
+    { code: 'SSL', nameKo: '스위스', nameEn: 'Swiss' },
+    
+    // ===== 🇦🇹 오스트리아 (1개) =====
+    { code: 'ABL', nameKo: '오스트리아', nameEn: 'Austria' },
+    
+    // ===== 🇬🇷 그리스 (1개) =====
+    { code: 'GSL', nameKo: '그리스', nameEn: 'Greece' },
+    
+    // ===== 🇩🇰 덴마크 (1개) =====
+    { code: 'DSL', nameKo: '덴마크', nameEn: 'Denmark' },
+    
+    // ===== 🇧🇷 브라질 (1개) =====
+    { code: 'BSA', nameKo: '브라질', nameEn: 'Brazil' },
+    
+    // ===== 🇦🇷 아르헨티나 (1개) =====
+    { code: 'ARG', nameKo: '아르헨', nameEn: 'Argentina' },
+    
+    // ===== 🌎 남미 국제대회 (2개) =====
+    { code: 'COP', nameKo: '리베르', nameEn: 'Libert' },
+    { code: 'COS', nameKo: '수다메', nameEn: 'Sudam' },
+    
+    // ===== 🇺🇸 미국/멕시코 (2개) =====
+    { code: 'MLS', nameKo: 'MLS', nameEn: 'MLS' },
+    { code: 'LMX', nameKo: '멕시코', nameEn: 'LigaMX' },
   ]
 
   // ✅ 통계 라벨 다국어 지원
