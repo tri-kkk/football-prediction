@@ -1,109 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TEAM_NAME_KR } from '../../teamLogos'
 
-// ============================================================
-// 🔥 리그 ID 매핑 (50개 - Cron과 동일!)
-// ============================================================
+// 리그 ID 매핑
 const LEAGUE_IDS: Record<string, number> = {
-  // ===== 🏆 국제 대회 (5개) =====
-  'CL': 2,      // Champions League
-  'EL': 3,      // Europa League
-  'UECL': 848,  // UEFA Conference League
-  'UNL': 5,     // UEFA Nations League
-  'AFCON': 6,   // Africa Cup of Nations
-  
-  // ===== 🌍 아프리카 리그 (5개) =====
-  'EGY': 233,   // Egyptian Premier League
-  'RSA': 288,   // South African Premier League
-  'MAR': 200,   // Botola Pro
-  'DZA': 187,   // Ligue 1 Algeria
-  'TUN': 202,   // Ligue 1 Tunisia
-  
-  // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
-  'PL': 39,     // Premier League
-  'ELC': 40,    // Championship
-  'FAC': 45,    // FA Cup
-  'EFL': 48,    // EFL Cup
-  
-  // ===== 🇪🇸 스페인 (3개) =====
-  'PD': 140,    // La Liga
-  'SD': 141,    // La Liga 2
-  'CDR': 143,   // Copa del Rey
-  
-  // ===== 🇩🇪 독일 (3개) =====
-  'BL1': 78,    // Bundesliga
-  'BL2': 79,    // Bundesliga 2
-  'DFB': 81,    // DFB Pokal
-  
-  // ===== 🇮🇹 이탈리아 (3개) =====
-  'SA': 135,    // Serie A
-  'SB': 136,    // Serie B
-  'CIT': 137,   // Coppa Italia
-  
-  // ===== 🇫🇷 프랑스 (3개) =====
-  'FL1': 61,    // Ligue 1
-  'FL2': 62,    // Ligue 2
-  'CDF': 66,    // Coupe de France
-  
-  // ===== 🇵🇹 포르투갈 (2개) =====
-  'PPL': 94,    // Primeira Liga
-  'TDP': 96,    // Taca de Portugal
-  
-  // ===== 🇳🇱 네덜란드 (2개) =====
-  'DED': 88,    // Eredivisie
-  'KNV': 90,    // KNVB Beker
-  
-  // ===== 🇰🇷 한국 (2개) =====
-  'KL1': 292,   // K League 1
-  'KL2': 293,   // K League 2
-  
-  // ===== 🇯🇵 일본 (2개) =====
-  'J1': 98,     // J1 League
-  'J2': 99,     // J2 League
-  
-  // ===== 🇸🇦 사우디아라비아 (1개) =====
-  'SAL': 307,   // Saudi Pro League
-  
-  // ===== 🇦🇺 호주 (1개) =====
-  'ALG': 188,   // A-League
-  
-  // ===== 🇨🇳 중국 (1개) =====
-  'CSL': 169,   // Chinese Super League
-  
-  // ===== 🇹🇷 터키 (1개) =====
-  'TSL': 203,   // Süper Lig
-  
-  // ===== 🇧🇪 벨기에 (1개) =====
-  'JPL': 144,   // Jupiler Pro League
-  
-  // ===== 🏴󠁧󠁢󠁳󠁣󠁴󠁿 스코틀랜드 (1개) =====
-  'SPL': 179,   // Scottish Premiership
-  
-  // ===== 🇨🇭 스위스 (1개) =====
-  'SSL': 207,   // Swiss Super League
-  
-  // ===== 🇦🇹 오스트리아 (1개) =====
-  'ABL': 218,   // Austrian Bundesliga
-  
-  // ===== 🇬🇷 그리스 (1개) =====
-  'GSL': 197,   // Super League Greece
-  
-  // ===== 🇩🇰 덴마크 (1개) =====
-  'DSL': 119,   // Danish Superliga
-  
-  // ===== 🇧🇷 브라질 (1개) =====
-  'BSA': 71,    // Brasileirão Série A
-  
-  // ===== 🇦🇷 아르헨티나 (1개) =====
-  'ARG': 128,   // Liga Profesional Argentina
-  
-  // ===== 🌎 남미 국제대회 (2개) =====
-  'COP': 13,    // Copa Libertadores
-  'COS': 11,    // Copa Sudamericana
-  
-  // ===== 🇺🇸 미국/멕시코 (2개) =====
-  'MLS': 253,   // MLS
-  'LMX': 262,   // Liga MX
+  'PL': 39,    // Premier League
+  'PD': 140,   // La Liga
+  'BL1': 78,   // Bundesliga
+  'SA': 135,   // Serie A
+  'FL1': 61,   // Ligue 1
+  'CL': 2,     // Champions League
+  'PPL': 94,   // Primeira Liga
+  'DED': 88,   // Eredivisie
+  'EL': 3,     // Europa League
+  'ELC': 40    // Championship
 }
 
 export async function GET(request: NextRequest) {
@@ -127,7 +36,6 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('🔴 라이브 경기 조회 시작...')
-    console.log(`📊 지원 리그: ${Object.keys(LEAGUE_IDS).length}개`)
 
     // API-Football에서 현재 라이브 경기 조회
     const response = await fetch(
