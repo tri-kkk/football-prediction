@@ -414,10 +414,24 @@ const TEAM_KR_MAP: { [key: string]: string } = {
   'Club America': '클럽 아메리카',
   'Club América': '클럽 아메리카',
   'Guadalajara': '과달라하라',
+  'Guadalajara Chivas': '과달라하라 치바스',
   'Monterrey': '몬테레이',
   'Tigres UANL': '티그레스',
   'Cruz Azul': '크루스 아술',
   'Pumas UNAM': '푸마스',
+  'U.N.A.M. - Pumas': '푸마스',
+  'Atlas': '아틀라스',
+  'Mazatlán': '마사틀란',
+  'Mazatlan': '마사틀란',
+  'FC Juarez': 'FC 후아레스',
+  'Puebla': '푸에블라',
+  'Leon': '레온',
+  'Santos Laguna': '산토스 라구나',
+  'Necaxa': '네칵사',
+  'Pachuca': '파추카',
+  'Atletico San Luis': '아틀레티코 산루이스',
+  'Toluca': '톨루카',
+  'Club Queretaro': '케레타로',
   
   // ===== 🇪🇬 이집트 =====
   'Al Ahly': '알 아흘리',
@@ -483,7 +497,7 @@ const TEAM_KR_MAP: { [key: string]: string } = {
 }
 
 // ============================================================
-// 시즌 계산 함수 (리그별로 다르게)
+// 🔥 시즌 계산 함수 (리그별로 다르게) - LMX 수정!
 // ============================================================
 function getCurrentSeason(leagueCode: string): number {
   const now = new Date()
@@ -491,12 +505,13 @@ function getCurrentSeason(leagueCode: string): number {
   const month = now.getMonth() + 1
 
   // 아시아/남미/북미 리그는 단일 연도 시즌
-  const singleYearLeagues = ['KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL', 'LMX']
+  // 🔥 LMX 제거! - 멕시코는 Apertura/Clausura 시스템 (유럽식 시즌)
+  const singleYearLeagues = ['KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL']
   if (singleYearLeagues.includes(leagueCode)) {
     return year
   }
 
-  // 유럽 축구 시즌: 8월 ~ 이듬해 5월
+  // 유럽 축구 시즌 + 멕시코 (LMX): 8월 ~ 이듬해 5월
   // 1월~6월: 전년도 시즌 (예: 2026년 1월 → 2025 시즌)
   // 7월~12월: 당해년도 시즌 (예: 2025년 9월 → 2025 시즌)
   if (month <= 6) {
