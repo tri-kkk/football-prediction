@@ -305,8 +305,10 @@ export async function POST(request: Request) {
 
         for (const fixture of fixtures) {
           try {
+            // 🆕 경기 상태 추출
+            const matchStatus = fixture.fixture.status?.short || 'NS'
+            
             // 이미 종료된 경기는 건너뜀
-            const matchStatus = fixture.fixture.status.short
             if (['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'].includes(matchStatus)) {
               continue
             }
@@ -411,7 +413,7 @@ export async function POST(request: Request) {
             const homeTeamId = fixture.teams?.home?.id || null
             const awayTeamId = fixture.teams?.away?.id || null
 
-            // 3. DB 저장 (history)
+            // 3. DB 저장 (history) - 🆕 status 필드 추가!
             const historyData = {
               match_id: fixture.fixture.id.toString(),
               home_team: fixture.teams.home.name,
@@ -432,6 +434,7 @@ export async function POST(request: Request) {
               predicted_score_away: predictedScore.away,
               predicted_winner: predictedWinner,
               odds_source: `Averaged from ${validOddsCount} bookmakers`,
+              status: matchStatus,  // 🆕 경기 상태 추가!
             }
 
             const { error: historyError } = await supabase
@@ -444,7 +447,7 @@ export async function POST(request: Request) {
               continue
             }
 
-            // 4. DB 저장 (latest) - UPSERT
+            // 4. DB 저장 (latest) - UPSERT - 🆕 status 필드 추가!
             const { error: latestError } = await supabase
               .from('match_odds_latest')
               .upsert({
@@ -467,6 +470,7 @@ export async function POST(request: Request) {
                 predicted_score_away: predictedScore.away,
                 predicted_winner: predictedWinner,
                 odds_source: `Averaged from ${validOddsCount} bookmakers`,
+                status: matchStatus,  // 🆕 경기 상태 추가!
                 updated_at: new Date().toISOString(),
               }, {
                 onConflict: 'match_id'
@@ -476,7 +480,7 @@ export async function POST(request: Request) {
               console.error('❌ Latest save error:', latestError.message)
             } else {
               savedCount++
-              console.log(`✅ ${fixture.teams.home.name} vs ${fixture.teams.away.name}`)
+              console.log(`✅ ${fixture.teams.home.name} vs ${fixture.teams.away.name} (${matchStatus})`)
             }
 
             // API 제한 방지 (경기 간 0.3초 대기 - 더 빠르게)

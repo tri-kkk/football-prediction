@@ -11,7 +11,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // ============================================================
-// 🔥 리그 설정 (45개 - 대폭 확장!)
+// 🔥 리그 설정 (50개 - 아프리카 추가!)
 // ============================================================
 const LEAGUES = [
   // ===== 🏆 국제 대회 (5개) =====
@@ -20,6 +20,13 @@ const LEAGUES = [
   { code: 'UECL', id: 848, name: 'UEFA Conference League' },
   { code: 'UNL', id: 5, name: 'UEFA Nations League' },
   { code: 'AFCON', id: 6, name: 'Africa Cup of Nations', season: 2025 },
+  
+  // ===== 🌍 아프리카 리그 (5개) - NEW! =====
+  { code: 'EGY', id: 233, name: 'Egyptian Premier League' },
+  { code: 'RSA', id: 288, name: 'South African Premier League' },
+  { code: 'MAR', id: 200, name: 'Botola Pro' },
+  { code: 'DZA', id: 187, name: 'Ligue 1 Algeria' },
+  { code: 'TUN', id: 202, name: 'Ligue 1 Tunisia' },
   
   // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
   { code: 'PL', id: 39, name: 'Premier League' },
