@@ -26,6 +26,128 @@ interface BlogPost {
   author: string
 }
 
+// =============================================================================
+// 🆕 조회수 부스팅 설정 (메인 페이지와 동일하게 유지)
+// =============================================================================
+const VIEWS_BOOST_CONFIG = {
+  enabled: true,
+  
+  // 기본 부스트 (모든 포스트)
+  baseBoost: {
+    min: 50,      // 최소 추가 조회수
+    max: 150,     // 최대 추가 조회수
+  },
+  
+  // 시간 경과에 따른 추가 부스트
+  timeBoost: {
+    perDay: {
+      min: 15,    // 하루당 최소 추가
+      max: 40,    // 하루당 최대 추가
+    },
+    maxDays: 30,  // 최대 30일까지만 계산
+  },
+  
+  // 카테고리별 배수
+  categoryMultiplier: {
+    'preview': 1.5,   // 프리뷰는 1.5배
+    'analysis': 1.3,  // 분석은 1.3배
+    'weekly': 1.2,    // 주간은 1.2배
+    'default': 1.0,
+  },
+  
+  // 인기 태그 보너스
+  popularTags: ['프리미어리그', 'premier-league', '챔피언스리그', 'champions-league', '라리가', 'la-liga'],
+  tagBonus: 30,
+}
+
+/**
+ * 🆕 Seed 기반 의사 랜덤 (일관된 결과)
+ * 같은 seed면 항상 같은 값 반환
+ */
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9999) * 10000
+  return x - Math.floor(x)
+}
+
+/**
+ * 🆕 범위 내 seed 기반 랜덤 정수
+ */
+function seededRandomInt(seed: number, min: number, max: number): number {
+  return Math.floor(seededRandom(seed) * (max - min + 1)) + min
+}
+
+/**
+ * 🆕 부스트된 조회수 계산
+ */
+function getBoostedViews(post: BlogPost): number {
+  if (!VIEWS_BOOST_CONFIG.enabled) {
+    return post.views || 0
+  }
+  
+  const realViews = post.views || 0
+  const seed = post.id  // ID를 seed로 사용 → 항상 같은 결과
+  
+  // 1. 기본 부스트
+  const baseBoost = seededRandomInt(
+    seed,
+    VIEWS_BOOST_CONFIG.baseBoost.min,
+    VIEWS_BOOST_CONFIG.baseBoost.max
+  )
+  
+  // 2. 시간 경과 부스트
+  const publishedDate = new Date(post.published_at)
+  const now = new Date()
+  const daysPassed = Math.floor((now.getTime() - publishedDate.getTime()) / (1000 * 60 * 60 * 24))
+  const effectiveDays = Math.min(daysPassed, VIEWS_BOOST_CONFIG.timeBoost.maxDays)
+  
+  let timeBoost = 0
+  for (let i = 0; i < effectiveDays; i++) {
+    // 각 날짜마다 다른 seed 사용
+    timeBoost += seededRandomInt(
+      seed + i * 100,
+      VIEWS_BOOST_CONFIG.timeBoost.perDay.min,
+      VIEWS_BOOST_CONFIG.timeBoost.perDay.max
+    )
+  }
+  
+  // 3. 카테고리 배수
+  const categoryMultiplier = VIEWS_BOOST_CONFIG.categoryMultiplier[post.category as keyof typeof VIEWS_BOOST_CONFIG.categoryMultiplier] 
+    || VIEWS_BOOST_CONFIG.categoryMultiplier.default
+  
+  // 4. 인기 태그 보너스
+  let tagBonus = 0
+  if (post.tags?.length) {
+    const hasPopularTag = post.tags.some(tag => 
+      VIEWS_BOOST_CONFIG.popularTags.some(popular => 
+        tag.toLowerCase().includes(popular.toLowerCase())
+      )
+    )
+    if (hasPopularTag) {
+      tagBonus = VIEWS_BOOST_CONFIG.tagBonus
+    }
+  }
+  
+  // 최종 계산
+  const boostedViews = Math.floor(
+    (realViews + baseBoost + timeBoost + tagBonus) * categoryMultiplier
+  )
+  
+  return boostedViews
+}
+
+/**
+ * 🆕 조회수 포맷팅 (1.2K, 15K 등)
+ */
+function formatViews(views: number): string {
+  if (views >= 10000) {
+    return (views / 1000).toFixed(0) + 'K'
+  }
+  if (views >= 1000) {
+    return (views / 1000).toFixed(1) + 'K'
+  }
+  return views.toLocaleString()
+}
+
 export default function BlogPostPage() {
   const params = useParams()
   const slug = params?.slug as string
@@ -132,6 +254,9 @@ export default function BlogPostPage() {
     )
   }
 
+  // 🆕 부스트된 조회수 계산
+  const displayViews = getBoostedViews(post)
+
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white">
       {/* 커버 이미지 */}
@@ -156,8 +281,9 @@ export default function BlogPostPage() {
             </span>
             <span>{formatDate(post.published_at)}</span>
             <span>·</span>
+            {/* 🆕 부스트된 조회수 사용 */}
             <span className="flex items-center gap-1">
-              👁️ {post.views.toLocaleString()}
+              👁️ {formatViews(displayViews)}
             </span>
             {/* 언어 표시 */}
             {currentLanguage === 'en' && !post.content_en && (
