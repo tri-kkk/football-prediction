@@ -38,15 +38,27 @@ export async function GET(request: Request) {
     const upcomingData = await upcomingResponse.json()
     console.log(`📅 예정 경기: ${upcomingData.length}개`)
     
-    // 예정 경기 데이터 변환
-    const upcomingMatches = upcomingData.map((match: any) => ({
-      ...match,
-      matchStatus: 'SCHEDULED',
-      finalScoreHome: null,
-      finalScoreAway: null,
-      isCorrect: null,
-      predictionType: null
-    }))
+    // 🔥 예정 경기 데이터 변환 - status 필드 활용!
+    const upcomingMatches = upcomingData.map((match: any) => {
+      // ✅ DB의 status 필드 사용 (FT, NS, 1H, 2H, HT 등)
+      const dbStatus = match.status || 'NS'
+      
+      // 종료된 경기인지 확인
+      const isFinished = ['FT', 'AET', 'PEN'].includes(dbStatus)
+      
+      return {
+        ...match,
+        // ✅ DB status를 matchStatus로 변환
+        matchStatus: isFinished ? dbStatus : 'SCHEDULED',
+        // 종료된 경기면 null (match_results에서 가져올 예정)
+        finalScoreHome: null,
+        finalScoreAway: null,
+        isCorrect: null,
+        predictionType: null,
+        // 🆕 원본 status도 보존
+        status: dbStatus
+      }
+    })
     
     // 2️⃣ 완료된 경기 (match_results) - 최근 7일
     let finishedMatches: any[] = []
@@ -89,6 +101,7 @@ export async function GET(request: Request) {
           away_probability: match.predicted_away_probability,
           // 🆕 결과 데이터
           matchStatus: match.match_status || 'FT',
+          status: match.match_status || 'FT',
           finalScoreHome: match.final_score_home,
           finalScoreAway: match.final_score_away,
           predictedWinner: match.predicted_winner,
@@ -100,20 +113,42 @@ export async function GET(request: Request) {
       }
     }
     
-    // 3️⃣ 중복 제거 (match_id 기준)
-    const seenIds = new Set<number>()
-    const allMatches: any[] = []
-    
-    // 완료 경기 먼저 추가 (우선순위)
+    // 3️⃣ 🔥 match_results 데이터를 Map으로 변환 (빠른 조회용)
+    const resultsMap = new Map<number, any>()
     finishedMatches.forEach((match) => {
-      if (match.match_id && !seenIds.has(match.match_id)) {
-        seenIds.add(match.match_id)
-        allMatches.push(match)
+      if (match.match_id) {
+        resultsMap.set(match.match_id, match)
       }
     })
     
-    // 예정 경기 추가 (중복 제외)
-    upcomingMatches.forEach((match: any) => {
+    // 4️⃣ 🔥 예정 경기에 결과 데이터 병합
+    const mergedUpcoming = upcomingMatches.map((match: any) => {
+      const matchId = match.match_id || match.id
+      const result = resultsMap.get(matchId)
+      
+      if (result) {
+        // ✅ 결과가 있으면 병합 (결과 데이터 우선)
+        return {
+          ...match,
+          matchStatus: result.matchStatus || result.status || 'FT',
+          status: result.status || 'FT',
+          finalScoreHome: result.finalScoreHome,
+          finalScoreAway: result.finalScoreAway,
+          isCorrect: result.isCorrect,
+          predictionType: result.predictionType,
+          predictedWinner: result.predictedWinner
+        }
+      }
+      
+      return match
+    })
+    
+    // 5️⃣ 중복 제거 (match_id 기준) - 병합된 데이터 우선
+    const seenIds = new Set<number>()
+    const allMatches: any[] = []
+    
+    // 병합된 예정 경기 먼저 추가
+    mergedUpcoming.forEach((match: any) => {
       const matchId = match.match_id || match.id
       if (matchId && !seenIds.has(matchId)) {
         seenIds.add(matchId)
@@ -121,14 +156,22 @@ export async function GET(request: Request) {
       }
     })
     
-    // 4️⃣ 날짜순 정렬 (최신순)
+    // match_results에만 있는 경기 추가 (예정 경기에 없던 것)
+    finishedMatches.forEach((match) => {
+      if (match.match_id && !seenIds.has(match.match_id)) {
+        seenIds.add(match.match_id)
+        allMatches.push(match)
+      }
+    })
+    
+    // 6️⃣ 날짜순 정렬 (가까운 경기부터)
     allMatches.sort((a, b) => {
       const dateA = new Date(a.commence_time || a.match_date).getTime()
       const dateB = new Date(b.commence_time || b.match_date).getTime()
       return dateA - dateB // 오름차순 (가까운 경기부터)
     })
     
-    console.log(`📊 총 반환: ${allMatches.length}개 (예정: ${upcomingMatches.length}, 완료: ${finishedMatches.length})`)
+    console.log(`📊 총 반환: ${allMatches.length}개 (예정: ${upcomingMatches.length}, 완료: ${finishedMatches.length}, 병합됨: ${resultsMap.size})`)
     
     return Response.json({
       success: true,
@@ -137,7 +180,8 @@ export async function GET(request: Request) {
       count: allMatches.length,
       stats: {
         upcoming: upcomingMatches.length,
-        finished: finishedMatches.length
+        finished: finishedMatches.length,
+        merged: resultsMap.size
       }
     })
     
