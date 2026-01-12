@@ -50,6 +50,21 @@ interface LiveMatch {
   stats?: MatchStats
 }
 
+interface League {
+  code: string
+  nameKo: string
+  nameEn: string
+}
+
+interface LeagueCategory {
+  id: string
+  nameKo: string
+  nameEn: string
+  icon: string
+  flagCode?: string  // ISO 국가 코드 for flagcdn
+  leagues: League[]
+}
+
 export default function LivePage() {
   const { language } = useLanguage()
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL')
@@ -59,113 +74,191 @@ export default function LivePage() {
   const [lastUpdate, setLastUpdate] = useState<string>('')
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'lineup'>('overview')
+  
+  // 🆕 모달 상태
+  const [showLeagueModal, setShowLeagueModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // ============================================================
-  // 🔥 리그 설정 (50개 - Cron과 동일!)
+  // 🔥 인기 리그 (상단에 항상 표시)
   // ============================================================
-  const leagues = [
+  const popularLeagues: League[] = [
     { code: 'ALL', nameKo: '전체', nameEn: 'All' },
-    
-    // ===== 🏆 국제 대회 (5개) =====
-    { code: 'CL', nameKo: '챔스', nameEn: 'UCL' },
-    { code: 'EL', nameKo: '유로파', nameEn: 'UEL' },
-    { code: 'UECL', nameKo: '컨퍼', nameEn: 'UECL' },
-    { code: 'UNL', nameKo: '네이션스', nameEn: 'UNL' },
-    { code: 'AFCON', nameKo: '아프콘', nameEn: 'AFCON' },
-    
-    // ===== 🌍 아프리카 리그 (5개) =====
-    { code: 'EGY', nameKo: '이집트', nameEn: 'Egypt' },
-    { code: 'RSA', nameKo: '남아공', nameEn: 'RSA' },
-    { code: 'MAR', nameKo: '모로코', nameEn: 'Morocco' },
-    { code: 'DZA', nameKo: '알제리', nameEn: 'Algeria' },
-    { code: 'TUN', nameKo: '튀니지', nameEn: 'Tunisia' },
-    
-    // ===== 🏴󠁧󠁢󠁥󠁮󠁧󠁿 잉글랜드 (4개) =====
     { code: 'PL', nameKo: 'EPL', nameEn: 'EPL' },
-    { code: 'ELC', nameKo: '챔십', nameEn: 'Champ' },
-    { code: 'FAC', nameKo: 'FA컵', nameEn: 'FA' },
-    { code: 'EFL', nameKo: 'EFL', nameEn: 'EFL' },
-    
-    // ===== 🇪🇸 스페인 (3개) =====
     { code: 'PD', nameKo: '라리가', nameEn: 'Liga' },
-    { code: 'SD', nameKo: '라리가2', nameEn: 'Liga2' },
-    { code: 'CDR', nameKo: '코파', nameEn: 'Copa' },
-    
-    // ===== 🇩🇪 독일 (3개) =====
     { code: 'BL1', nameKo: '분데스', nameEn: 'Bund' },
-    { code: 'BL2', nameKo: '분데스2', nameEn: 'Bund2' },
-    { code: 'DFB', nameKo: 'DFB', nameEn: 'DFB' },
-    
-    // ===== 🇮🇹 이탈리아 (3개) =====
     { code: 'SA', nameKo: '세리에', nameEn: 'SerieA' },
-    { code: 'SB', nameKo: '세리에B', nameEn: 'SerieB' },
-    { code: 'CIT', nameKo: '코파IT', nameEn: 'CopIt' },
-    
-    // ===== 🇫🇷 프랑스 (3개) =====
     { code: 'FL1', nameKo: '리그1', nameEn: 'L1' },
-    { code: 'FL2', nameKo: '리그2', nameEn: 'L2' },
-    { code: 'CDF', nameKo: '쿠프', nameEn: 'CdF' },
-    
-    // ===== 🇵🇹 포르투갈 (2개) =====
-    { code: 'PPL', nameKo: '프리메이라', nameEn: 'Liga PT' },
-    { code: 'TDP', nameKo: '타사PT', nameEn: 'Taca' },
-    
-    // ===== 🇳🇱 네덜란드 (2개) =====
-    { code: 'DED', nameKo: '에레디', nameEn: 'Erediv' },
-    { code: 'KNV', nameKo: 'KNVB', nameEn: 'KNVB' },
-    
-    // ===== 🇰🇷 한국 (2개) =====
-    { code: 'KL1', nameKo: 'K리그1', nameEn: 'KL1' },
-    { code: 'KL2', nameKo: 'K리그2', nameEn: 'KL2' },
-    
-    // ===== 🇯🇵 일본 (2개) =====
-    { code: 'J1', nameKo: 'J리그', nameEn: 'J1' },
-    { code: 'J2', nameKo: 'J2리그', nameEn: 'J2' },
-    
-    // ===== 🇸🇦 사우디 (1개) =====
-    { code: 'SAL', nameKo: '사우디', nameEn: 'Saudi' },
-    
-    // ===== 🇦🇺 호주 (1개) =====
-    { code: 'ALG', nameKo: 'A리그', nameEn: 'A-Lg' },
-    
-    // ===== 🇨🇳 중국 (1개) =====
-    { code: 'CSL', nameKo: '중국', nameEn: 'CSL' },
-    
-    // ===== 🇹🇷 터키 (1개) =====
-    { code: 'TSL', nameKo: '터키', nameEn: 'Turkey' },
-    
-    // ===== 🇧🇪 벨기에 (1개) =====
-    { code: 'JPL', nameKo: '벨기에', nameEn: 'Belgium' },
-    
-    // ===== 🏴󠁧󠁢󠁳󠁣󠁴󠁿 스코틀랜드 (1개) =====
-    { code: 'SPL', nameKo: '스코틀', nameEn: 'Scotland' },
-    
-    // ===== 🇨🇭 스위스 (1개) =====
-    { code: 'SSL', nameKo: '스위스', nameEn: 'Swiss' },
-    
-    // ===== 🇦🇹 오스트리아 (1개) =====
-    { code: 'ABL', nameKo: '오스트리아', nameEn: 'Austria' },
-    
-    // ===== 🇬🇷 그리스 (1개) =====
-    { code: 'GSL', nameKo: '그리스', nameEn: 'Greece' },
-    
-    // ===== 🇩🇰 덴마크 (1개) =====
-    { code: 'DSL', nameKo: '덴마크', nameEn: 'Denmark' },
-    
-    // ===== 🇧🇷 브라질 (1개) =====
-    { code: 'BSA', nameKo: '브라질', nameEn: 'Brazil' },
-    
-    // ===== 🇦🇷 아르헨티나 (1개) =====
-    { code: 'ARG', nameKo: '아르헨', nameEn: 'Argentina' },
-    
-    // ===== 🌎 남미 국제대회 (2개) =====
-    { code: 'COP', nameKo: '리베르', nameEn: 'Libert' },
-    { code: 'COS', nameKo: '수다메', nameEn: 'Sudam' },
-    
-    // ===== 🇺🇸 미국/멕시코 (2개) =====
-    { code: 'MLS', nameKo: 'MLS', nameEn: 'MLS' },
-    { code: 'LMX', nameKo: '멕시코', nameEn: 'LigaMX' },
+    { code: 'CL', nameKo: '챔스', nameEn: 'UCL' },
   ]
+
+  // ============================================================
+  // 📂 카테고리별 리그 그룹화
+  // ============================================================
+  const leagueCategories: LeagueCategory[] = [
+    {
+      id: 'international',
+      nameKo: '국제 대회',
+      nameEn: 'International',
+      icon: '🏆',
+      leagues: [
+        { code: 'CL', nameKo: '챔피언스리그', nameEn: 'Champions League' },
+        { code: 'EL', nameKo: '유로파리그', nameEn: 'Europa League' },
+        { code: 'UECL', nameKo: '컨퍼런스리그', nameEn: 'Conference League' },
+        { code: 'UNL', nameKo: '네이션스리그', nameEn: 'Nations League' },
+        { code: 'AFCON', nameKo: '아프리카 네이션스컵', nameEn: 'AFCON' },
+      ]
+    },
+    {
+      id: 'europe-top',
+      nameKo: '유럽 주요 리그',
+      nameEn: 'Top European Leagues',
+      icon: '⚽',
+      leagues: [
+        { code: 'PL', nameKo: '프리미어리그', nameEn: 'Premier League' },
+        { code: 'PD', nameKo: '라리가', nameEn: 'La Liga' },
+        { code: 'BL1', nameKo: '분데스리가', nameEn: 'Bundesliga' },
+        { code: 'SA', nameKo: '세리에A', nameEn: 'Serie A' },
+        { code: 'FL1', nameKo: '리그1', nameEn: 'Ligue 1' },
+      ]
+    },
+    {
+      id: 'england',
+      nameKo: '잉글랜드',
+      nameEn: 'England',
+      icon: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+      flagCode: 'gb-eng',
+      leagues: [
+        { code: 'PL', nameKo: '프리미어리그', nameEn: 'Premier League' },
+        { code: 'ELC', nameKo: '챔피언십', nameEn: 'Championship' },
+        { code: 'FAC', nameKo: 'FA컵', nameEn: 'FA Cup' },
+        { code: 'EFL', nameKo: 'EFL컵', nameEn: 'EFL Cup' },
+      ]
+    },
+    {
+      id: 'spain',
+      nameKo: '스페인',
+      nameEn: 'Spain',
+      icon: '🇪🇸',
+      flagCode: 'es',
+      leagues: [
+        { code: 'PD', nameKo: '라리가', nameEn: 'La Liga' },
+        { code: 'SD', nameKo: '라리가2', nameEn: 'La Liga 2' },
+        { code: 'CDR', nameKo: '코파델레이', nameEn: 'Copa del Rey' },
+      ]
+    },
+    {
+      id: 'germany',
+      nameKo: '독일',
+      nameEn: 'Germany',
+      icon: '🇩🇪',
+      flagCode: 'de',
+      leagues: [
+        { code: 'BL1', nameKo: '분데스리가', nameEn: 'Bundesliga' },
+        { code: 'BL2', nameKo: '분데스리가2', nameEn: 'Bundesliga 2' },
+        { code: 'DFB', nameKo: 'DFB포칼', nameEn: 'DFB Pokal' },
+      ]
+    },
+    {
+      id: 'italy',
+      nameKo: '이탈리아',
+      nameEn: 'Italy',
+      icon: '🇮🇹',
+      flagCode: 'it',
+      leagues: [
+        { code: 'SA', nameKo: '세리에A', nameEn: 'Serie A' },
+        { code: 'SB', nameKo: '세리에B', nameEn: 'Serie B' },
+        { code: 'CIT', nameKo: '코파이탈리아', nameEn: 'Coppa Italia' },
+      ]
+    },
+    {
+      id: 'france',
+      nameKo: '프랑스',
+      nameEn: 'France',
+      icon: '🇫🇷',
+      flagCode: 'fr',
+      leagues: [
+        { code: 'FL1', nameKo: '리그1', nameEn: 'Ligue 1' },
+        { code: 'FL2', nameKo: '리그2', nameEn: 'Ligue 2' },
+        { code: 'CDF', nameKo: '쿠프드프랑스', nameEn: 'Coupe de France' },
+      ]
+    },
+    {
+      id: 'europe-other',
+      nameKo: '유럽 기타',
+      nameEn: 'Other European',
+      icon: '🇪🇺',
+      flagCode: 'eu',
+      leagues: [
+        { code: 'PPL', nameKo: '프리메이라리가', nameEn: 'Primeira Liga' },
+        { code: 'TDP', nameKo: '타사포르투갈', nameEn: 'Taça de Portugal' },
+        { code: 'DED', nameKo: '에레디비시', nameEn: 'Eredivisie' },
+        { code: 'KNV', nameKo: 'KNVB컵', nameEn: 'KNVB Cup' },
+        { code: 'JPL', nameKo: '벨기에리그', nameEn: 'Belgian Pro League' },
+        { code: 'SPL', nameKo: '스코틀랜드리그', nameEn: 'Scottish Premiership' },
+        { code: 'SSL', nameKo: '스위스리그', nameEn: 'Swiss Super League' },
+        { code: 'ABL', nameKo: '오스트리아리그', nameEn: 'Austrian Bundesliga' },
+        { code: 'GSL', nameKo: '그리스리그', nameEn: 'Greek Super League' },
+        { code: 'DSL', nameKo: '덴마크리그', nameEn: 'Danish Superliga' },
+        { code: 'TSL', nameKo: '터키리그', nameEn: 'Turkish Süper Lig' },
+      ]
+    },
+    {
+      id: 'africa',
+      nameKo: '아프리카',
+      nameEn: 'Africa',
+      icon: '🌍',
+      leagues: [
+        { code: 'EGY', nameKo: '이집트리그', nameEn: 'Egyptian League' },
+        { code: 'RSA', nameKo: '남아공리그', nameEn: 'South African League' },
+        { code: 'MAR', nameKo: '모로코리그', nameEn: 'Moroccan League' },
+        { code: 'DZA', nameKo: '알제리리그', nameEn: 'Algerian League' },
+        { code: 'TUN', nameKo: '튀니지리그', nameEn: 'Tunisian League' },
+      ]
+    },
+    {
+      id: 'asia',
+      nameKo: '아시아',
+      nameEn: 'Asia',
+      icon: '🌏',
+      leagues: [
+        { code: 'KL1', nameKo: 'K리그1', nameEn: 'K League 1' },
+        { code: 'KL2', nameKo: 'K리그2', nameEn: 'K League 2' },
+        { code: 'J1', nameKo: 'J리그', nameEn: 'J1 League' },
+        { code: 'J2', nameKo: 'J2리그', nameEn: 'J2 League' },
+        { code: 'SAL', nameKo: '사우디리그', nameEn: 'Saudi Pro League' },
+        { code: 'CSL', nameKo: '중국슈퍼리그', nameEn: 'Chinese Super League' },
+        { code: 'ALG', nameKo: 'A리그', nameEn: 'A-League' },
+      ]
+    },
+    {
+      id: 'americas',
+      nameKo: '아메리카',
+      nameEn: 'Americas',
+      icon: '🌎',
+      leagues: [
+        { code: 'MLS', nameKo: 'MLS', nameEn: 'MLS' },
+        { code: 'LMX', nameKo: '리가MX', nameEn: 'Liga MX' },
+        { code: 'BSA', nameKo: '브라질리그', nameEn: 'Brasileirão' },
+        { code: 'ARG', nameKo: '아르헨티나리그', nameEn: 'Liga Argentina' },
+        { code: 'COP', nameKo: '코파리베르타도레스', nameEn: 'Copa Libertadores' },
+        { code: 'COS', nameKo: '코파수다메리카나', nameEn: 'Copa Sudamericana' },
+      ]
+    },
+  ]
+
+  // 전체 리그 목록 (검색용)
+  const allLeagues = leagueCategories.flatMap(cat => cat.leagues)
+
+  // 검색 필터링
+  const filteredCategories = leagueCategories.map(category => ({
+    ...category,
+    leagues: category.leagues.filter(league => 
+      league.nameKo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      league.nameEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      league.code.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(category => category.leagues.length > 0)
 
   // ✅ 통계 라벨 다국어 지원
   const statsLabels = {
@@ -186,11 +279,9 @@ export default function LivePage() {
 
       if (data.success) {
         setMatches(data.matches)
-        // ✅ 언어별 시간 형식
         setLastUpdate(new Date().toLocaleTimeString(language === 'ko' ? 'ko-KR' : 'en-US'))
         setError(null)
       } else {
-        // ✅ 에러 메시지 다국어
         throw new Error(data.error || (language === 'ko' ? '데이터를 불러올 수 없습니다.' : 'Failed to load data.'))
       }
     } catch (err: any) {
@@ -210,9 +301,35 @@ export default function LivePage() {
     return () => clearInterval(interval)
   }, [])
 
+  // 모달 열릴 때 스크롤 방지
+  useEffect(() => {
+    if (showLeagueModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showLeagueModal])
+
   const filteredMatches = selectedLeague === 'ALL' 
     ? matches 
     : matches.filter(match => match.leagueCode === selectedLeague)
+
+  // 선택된 리그 이름 가져오기
+  const getSelectedLeagueName = () => {
+    if (selectedLeague === 'ALL') return language === 'ko' ? '전체' : 'All'
+    const league = allLeagues.find(l => l.code === selectedLeague)
+    return league ? (language === 'ko' ? league.nameKo : league.nameEn) : selectedLeague
+  }
+
+  // 리그 선택 핸들러
+  const handleLeagueSelect = (code: string) => {
+    setSelectedLeague(code)
+    setShowLeagueModal(false)
+    setSearchQuery('')
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -266,12 +383,8 @@ export default function LivePage() {
     }
   }
 
-  // ✅ 하프타임 스코어 표시 여부 결정 함수
   const shouldShowHalftimeScore = (match: LiveMatch) => {
-    // 하프타임 스코어가 없으면 표시 안 함
     if (match.halftimeHomeScore === null) return false
-    
-    // HT(하프타임), 2H(후반전), ET(연장전), P(승부차기), FT(종료)일 때만 표시
     return ['HT', '2H', 'ET', 'P', 'FT'].includes(match.status)
   }
 
@@ -316,9 +429,9 @@ export default function LivePage() {
             </div>
           </div>
 
-          {/* 리그 필터 - 모바일 스크롤 최적화 */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
-            {leagues.map(league => (
+          {/* 🆕 개선된 리그 필터 - 인기 리그 + 더보기 */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {popularLeagues.map(league => (
               <button
                 key={league.code}
                 onClick={() => setSelectedLeague(league.code)}
@@ -331,18 +444,161 @@ export default function LivePage() {
                 {language === 'ko' ? league.nameKo : league.nameEn}
               </button>
             ))}
+            
+            {/* 더보기 버튼 */}
+            <button
+              onClick={() => setShowLeagueModal(true)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                !popularLeagues.find(l => l.code === selectedLeague)
+                  ? 'bg-green-600 text-white shadow-lg'
+                  : 'bg-[#2a2a2a] text-gray-300 hover:bg-[#333] active:bg-[#444]'
+              }`}
+            >
+              {!popularLeagues.find(l => l.code === selectedLeague) && (
+                <span>{getSelectedLeagueName()}</span>
+              )}
+              <span>⋯</span>
+              <span className="text-xs opacity-70">
+                {language === 'ko' ? '더보기' : 'More'}
+              </span>
+            </button>
           </div>
 
           <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
             <span className="flex items-center gap-1">
               <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-              {/* ✅ 자동 업데이트 안내 다국어 */}
               {language === 'ko' ? '15초 자동 업데이트' : 'Auto-refresh every 15s'}
             </span>
             <span className="ml-auto font-mono">{lastUpdate}</span>
           </div>
         </div>
       </div>
+
+      {/* 🆕 리그 선택 모달 */}
+      {showLeagueModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center"
+          onClick={() => {
+            setShowLeagueModal(false)
+            setSearchQuery('')
+          }}
+        >
+          <div 
+            className="bg-[#1a1a1a] w-full sm:w-[480px] h-[95vh] sm:h-auto sm:max-h-[80vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* 드래그 핸들 (모바일) */}
+            <div className="sm:hidden flex justify-center pt-2 pb-1">
+              <div className="w-10 h-1 bg-gray-600 rounded-full"></div>
+            </div>
+            
+            {/* 모달 헤더 - 컴팩트 */}
+            <div className="sticky top-0 bg-[#1a1a1a] border-b border-gray-700 px-4 py-3 z-10">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-base font-bold text-white">
+                  {language === 'ko' ? '리그 선택' : 'Select League'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowLeagueModal(false)
+                    setSearchQuery('')
+                  }}
+                  className="w-7 h-7 rounded-full bg-[#2a2a2a] hover:bg-[#333] flex items-center justify-center text-gray-400 text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              {/* 검색 입력 - 컴팩트 */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={language === 'ko' ? '리그 검색...' : 'Search leagues...'}
+                  className="w-full px-3 py-2 pl-9 bg-[#2a2a2a] border border-gray-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                  🔍
+                </span>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-sm"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 모달 컨텐츠 - flex-1로 나머지 공간 모두 사용 */}
+            <div className="flex-1 overflow-y-auto p-3 pb-6">
+              {/* 전체 버튼 */}
+              {!searchQuery && (
+                <button
+                  onClick={() => handleLeagueSelect('ALL')}
+                  className={`w-full mb-3 px-3 py-2.5 rounded-lg text-left font-medium transition-all text-sm ${
+                    selectedLeague === 'ALL'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-[#2a2a2a] text-gray-300 hover:bg-[#333]'
+                  }`}
+                >
+                  🌐 {language === 'ko' ? '전체 리그' : 'All Leagues'}
+                </button>
+              )}
+
+              {/* 카테고리별 리그 */}
+              {filteredCategories.map(category => (
+                <div key={category.id} className="mb-3">
+                  <h3 className="text-xs font-semibold text-gray-400 mb-1.5 px-1 flex items-center gap-1.5">
+                    {category.flagCode ? (
+                      <img 
+                        src={`https://flagcdn.com/16x12/${category.flagCode}.png`}
+                        alt=""
+                        className="w-4 h-3 object-cover rounded-sm"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    ) : (
+                      <span className="text-sm">{category.icon}</span>
+                    )}
+                    <span>{language === 'ko' ? category.nameKo : category.nameEn}</span>
+                  </h3>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {category.leagues.map(league => (
+                      <button
+                        key={`${category.id}-${league.code}`}
+                        onClick={() => handleLeagueSelect(league.code)}
+                        className={`px-2.5 py-2 rounded-lg text-xs font-medium text-left transition-all ${
+                          selectedLeague === league.code
+                            ? 'bg-green-600 text-white'
+                            : 'bg-[#2a2a2a] text-gray-300 hover:bg-[#333] active:bg-[#444]'
+                        }`}
+                      >
+                        {language === 'ko' ? league.nameKo : league.nameEn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {/* 검색 결과 없음 */}
+              {searchQuery && filteredCategories.length === 0 && (
+                <div className="text-center py-6">
+                  <div className="text-3xl mb-2">🔍</div>
+                  <p className="text-gray-400 text-sm">
+                    {language === 'ko' 
+                      ? `"${searchQuery}" 검색 결과 없음`
+                      : `No results for "${searchQuery}"`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 경기 목록 */}
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -391,7 +647,6 @@ export default function LivePage() {
                       {match.elapsed && (
                         <div className="text-right">
                           <span className="text-2xl font-bold text-white tabular-nums">{match.elapsed}'</span>
-                          {/* ✅ 경과 라벨 다국어 */}
                           <div className="text-xs text-gray-500 mt-0.5">
                             {language === 'ko' ? '경과' : 'Elapsed'}
                           </div>
@@ -403,283 +658,161 @@ export default function LivePage() {
                     </div>
                   </div>
 
-                  {/* 경기 스코어 */}
-                  <div className="mb-5">
+                  {/* 팀 정보 */}
+                  <div className="space-y-4">
                     {/* 홈팀 */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
-                          <Image
-                            src={match.homeCrest}
-                            alt={match.homeTeam}
-                            width={32}
-                            height={32}
-                            className="object-contain"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-lg font-bold text-white">
-                            {language === 'ko' ? match.homeTeamKR : match.homeTeam}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">HOME</div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Image
+                          src={match.homeCrest}
+                          alt={match.homeTeam}
+                          width={40}
+                          height={40}
+                          className="object-contain"
+                        />
+                        <div>
+                          <div className="font-semibold text-white">{language === 'ko' ? match.homeTeamKR : match.homeTeam}</div>
+                          <div className="text-xs text-gray-500">HOME</div>
                         </div>
                       </div>
-                      <div className="text-4xl font-bold text-white tabular-nums ml-4">
-                        {match.homeScore}
-                      </div>
+                      <span className="text-3xl font-bold text-white tabular-nums">{match.homeScore}</span>
                     </div>
 
-                    {/* 원정팀 */}
+                    {/* 어웨이팀 */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#2a2a2a]">
-                          <Image
-                            src={match.awayCrest}
-                            alt={match.awayTeam}
-                            width={32}
-                            height={32}
-                            className="object-contain"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-lg font-bold text-white">
-                            {language === 'ko' ? match.awayTeamKR : match.awayTeam}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">AWAY</div>
+                      <div className="flex items-center gap-3">
+                        <Image
+                          src={match.awayCrest}
+                          alt={match.awayTeam}
+                          width={40}
+                          height={40}
+                          className="object-contain"
+                        />
+                        <div>
+                          <div className="font-semibold text-white">{language === 'ko' ? match.awayTeamKR : match.awayTeam}</div>
+                          <div className="text-xs text-gray-500">AWAY</div>
                         </div>
                       </div>
-                      <div className="text-4xl font-bold text-white tabular-nums ml-4">
-                        {match.awayScore}
-                      </div>
+                      <span className="text-3xl font-bold text-white tabular-nums">{match.awayScore}</span>
                     </div>
                   </div>
 
-                  {/* ✅ 하프타임 스코어 - 조건 개선 */}
+                  {/* 전반 종료 스코어 (해당되는 경우에만) */}
                   {shouldShowHalftimeScore(match) && (
-                    <div className="bg-[#0a0a0a] rounded-lg p-3 mb-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500 font-medium">
-                          {language === 'ko' ? '전반 종료' : 'Half Time'}
-                        </span>
-                        <span className="text-sm text-gray-300 font-bold tabular-nums">
-                          {match.halftimeHomeScore} - {match.halftimeAwayScore}
-                        </span>
-                      </div>
+                    <div className="mt-4 pt-3 border-t border-gray-800 flex justify-between items-center text-sm">
+                      <span className="text-gray-500">
+                        {language === 'ko' ? '전반 종료' : 'Half Time'}
+                      </span>
+                      <span className="text-gray-400 font-medium">
+                        {match.halftimeHomeScore} - {match.halftimeAwayScore}
+                      </span>
                     </div>
                   )}
-
-                  {/* ✅ 상세 정보 토글 버튼 다국어 */}
-                  <button
-                    onClick={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
-                    className="w-full mt-4 py-2 bg-[#2a2a2a] hover:bg-[#333] rounded-lg text-sm text-gray-300 font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    {expandedMatch === match.id 
-                      ? (language === 'ko' ? '접기' : 'Collapse') 
-                      : (language === 'ko' ? '상세 정보' : 'Details')}
-                    <span className="text-xs">{expandedMatch === match.id ? '▲' : '▼'}</span>
-                  </button>
                 </div>
+
+                {/* 상세 정보 토글 버튼 */}
+                <button
+                  onClick={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
+                  className="w-full py-3 bg-[#222] hover:bg-[#2a2a2a] text-gray-400 text-sm font-medium transition-colors border-t border-gray-800"
+                >
+                  {expandedMatch === match.id 
+                    ? (language === 'ko' ? '접기 ▲' : 'Collapse ▲')
+                    : (language === 'ko' ? '상세 정보 ▼' : 'Details ▼')}
+                </button>
 
                 {/* 확장된 상세 정보 */}
                 {expandedMatch === match.id && (
-                  <div className="border-t border-gray-800 bg-[#0f0f0f]">
-                    {/* 탭 네비게이션 */}
-                    <div className="px-5 pt-5 pb-3 border-b border-gray-800">
-                      <div className="flex gap-2">
-                        {/* ✅ 탭 버튼 다국어 */}
+                  <div className="bg-[#151515] border-t border-gray-800">
+                    {/* 탭 메뉴 */}
+                    <div className="flex border-b border-gray-800">
+                      {(['overview', 'stats', 'lineup'] as const).map(tab => (
                         <button
-                          onClick={() => setActiveTab('overview')}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            activeTab === 'overview'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-[#2a2a2a] text-gray-400 hover:bg-[#333]'
+                          key={tab}
+                          onClick={() => setActiveTab(tab)}
+                          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                            activeTab === tab
+                              ? 'text-green-500 border-b-2 border-green-500'
+                              : 'text-gray-500 hover:text-gray-300'
                           }`}
                         >
-                          📋 {language === 'ko' ? '개요' : 'Overview'}
+                          {tab === 'overview' && (language === 'ko' ? '이벤트' : 'Events')}
+                          {tab === 'stats' && (language === 'ko' ? '통계' : 'Stats')}
+                          {tab === 'lineup' && (language === 'ko' ? '라인업' : 'Lineup')}
                         </button>
-                        <button
-                          onClick={() => setActiveTab('stats')}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            activeTab === 'stats'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-[#2a2a2a] text-gray-400 hover:bg-[#333]'
-                          }`}
-                        >
-                          📊 {language === 'ko' ? '통계' : 'Stats'}
-                        </button>
-                        <button
-                          onClick={() => setActiveTab('lineup')}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            activeTab === 'lineup'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-[#2a2a2a] text-gray-400 hover:bg-[#333]'
-                          }`}
-                        >
-                          👥 {language === 'ko' ? '라인업' : 'Lineup'}
-                        </button>
-                      </div>
+                      ))}
                     </div>
 
                     {/* 탭 컨텐츠 */}
-                    {activeTab === 'overview' && (
-                      <div>
-                        {/* 경기 이벤트 타임라인 */}
-                        {match.events && match.events.length > 0 ? (
-                          <div className="p-5 border-b border-gray-800">
-                            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                              <span className="text-green-500">📋</span>
-                              {language === 'ko' ? '경기 이벤트' : 'Match Events'}
-                            </h3>
-                            <div className="space-y-2">
-                              {match.events.map((event, idx) => (
-                                <div
-                                  key={idx}
-                                  className={`flex items-center gap-3 p-2 rounded ${
-                                    event.team === 'home' ? 'bg-blue-500/10' : 'bg-red-500/10'
-                                  }`}
-                                >
-                                  <span className="text-xs font-bold text-gray-400 w-8 tabular-nums">
-                                    {event.time}'
-                                  </span>
-                                  <span className="text-lg">{getEventIcon(event.type)}</span>
-                                  <div className="flex-1">
-                                    <div className="text-sm text-white font-medium">{event.player}</div>
-                                    {event.detail && (
-                                      <div className="text-xs text-gray-500">{event.detail}</div>
-                                    )}
-                                  </div>
-                                  <span className={`text-xs px-2 py-1 rounded ${
-                                    event.team === 'home' 
-                                      ? 'bg-blue-500 text-white' 
-                                      : 'bg-red-500 text-white'
-                                  }`}>
-                                    {event.team === 'home' ? 'HOME' : 'AWAY'}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="p-8 text-center">
-                            <div className="text-4xl mb-3">📋</div>
-                            {/* ✅ 빈 이벤트 메시지 다국어 */}
-                            <p className="text-gray-400">
-                              {language === 'ko' ? '아직 주요 이벤트가 없습니다' : 'No major events yet'}
+                    <div className="p-4">
+                      {activeTab === 'overview' && match.events && (
+                        <div className="space-y-2">
+                          {match.events.length === 0 ? (
+                            <p className="text-gray-500 text-center py-4">
+                              {language === 'ko' ? '아직 이벤트가 없습니다' : 'No events yet'}
                             </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                          ) : (
+                            match.events.map((event, idx) => (
+                              <div
+                                key={idx}
+                                className={`flex items-center gap-3 p-2 rounded ${
+                                  event.team === 'home' ? 'bg-blue-500/10' : 'bg-red-500/10'
+                                }`}
+                              >
+                                <span className="text-xs text-gray-400 w-8">{event.time}'</span>
+                                <span>{getEventIcon(event.type)}</span>
+                                <span className="text-sm text-white">{event.player}</span>
+                                {event.detail && (
+                                  <span className="text-xs text-gray-500">({event.detail})</span>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
 
-                    {/* 통계 탭 */}
-                    {activeTab === 'stats' && (
-                      <div>
-                        {match.stats ? (
-                          <div className="p-5">
-                            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                              <span className="text-green-500">📊</span>
-                              {language === 'ko' ? '경기 통계' : 'Match Stats'}
-                            </h3>
-                            <div className="space-y-4">
-                              {/* ✅ 점유율 다국어 */}
-                              <div>
-                                <div className="flex justify-between text-xs text-gray-400 mb-1">
-                                  <span>{match.stats.possession.home}%</span>
-                                  <span className="font-medium text-white">
-                                    {language === 'ko' ? statsLabels.possession.ko : statsLabels.possession.en}
+                      {activeTab === 'stats' && match.stats && (
+                        <div className="space-y-3">
+                          {Object.entries(statsLabels).map(([key, label]) => {
+                            const stat = match.stats?.[key as keyof MatchStats]
+                            if (!stat) return null
+                            const total = stat.home + stat.away || 1
+                            const homePercent = (stat.home / total) * 100
+                            
+                            return (
+                              <div key={key} className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-white font-medium">{stat.home}</span>
+                                  <span className="text-gray-400">
+                                    {language === 'ko' ? label.ko : label.en}
                                   </span>
-                                  <span>{match.stats.possession.away}%</span>
+                                  <span className="text-white font-medium">{stat.away}</span>
                                 </div>
-                                <div className="h-2 bg-gray-800 rounded-full overflow-hidden flex">
+                                <div className="flex h-2 bg-gray-700 rounded overflow-hidden">
                                   <div 
-                                    className="bg-blue-500"
-                                    style={{ width: `${match.stats.possession.home}%` }}
-                                  ></div>
+                                    className="bg-blue-500 transition-all"
+                                    style={{ width: `${homePercent}%` }}
+                                  />
                                   <div 
-                                    className="bg-red-500"
-                                    style={{ width: `${match.stats.possession.away}%` }}
-                                  ></div>
+                                    className="bg-red-500 transition-all"
+                                    style={{ width: `${100 - homePercent}%` }}
+                                  />
                                 </div>
                               </div>
+                            )
+                          })}
+                        </div>
+                      )}
 
-                              {/* ✅ 기타 통계 다국어 */}
-                              {[
-                                { key: 'shotsOnGoal', stat: match.stats.shotsOnGoal },
-                                { key: 'shotsOffGoal', stat: match.stats.shotsOffGoal },
-                                { key: 'corners', stat: match.stats.corners },
-                                { key: 'offsides', stat: match.stats.offsides },
-                                { key: 'fouls', stat: match.stats.fouls },
-                                { key: 'yellowCards', stat: match.stats.yellowCards },
-                                { key: 'redCards', stat: match.stats.redCards },
-                              ].map(({ key, stat }) => (
-                                <div key={key} className="flex items-center justify-between text-sm">
-                                  <span className="text-blue-400 font-bold w-12 text-center">
-                                    {stat.home}
-                                  </span>
-                                  <span className="text-gray-400 font-medium">
-                                    {language === 'ko' 
-                                      ? statsLabels[key as keyof typeof statsLabels].ko 
-                                      : statsLabels[key as keyof typeof statsLabels].en}
-                                  </span>
-                                  <span className="text-red-400 font-bold w-12 text-center">
-                                    {stat.away}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="p-8 text-center">
-                            <div className="text-4xl mb-3">📊</div>
-                            {/* ✅ 빈 통계 메시지 다국어 */}
-                            <p className="text-gray-400">
-                              {language === 'ko' ? '통계 데이터가 아직 없습니다' : 'No stats available yet'}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* 라인업 탭 */}
-                    {activeTab === 'lineup' && (
-                      <div className="p-5">
-                        <LineupWidget
-                          fixtureId={match.fixtureId || match.id}
-                          homeTeam={match.homeTeam}
-                          awayTeam={match.awayTeam}
-                        />
-                      </div>
-                    )}
+                      {activeTab === 'lineup' && match.fixtureId && (
+                        <LineupWidget fixtureId={match.fixtureId} />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
             ))}
           </div>
         )}
-      </div>
-
-      {/* 하단 실시간 스코어 티커 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#1a1a1a] border-t border-gray-700 py-3 z-20">
-        <div className="overflow-hidden">
-          <div className="flex animate-scroll gap-8">
-            {[...filteredMatches, ...filteredMatches].map((match, idx) => (
-              <div key={`${match.id}-${idx}`} className="flex items-center gap-3 whitespace-nowrap">
-                <span className={`px-2 py-0.5 ${getStatusColor(match.status)} text-white text-xs font-bold rounded`}>
-                  {match.elapsed ? `${match.elapsed}'` : getStatusKR(match.status)}
-                </span>
-                <span className="text-sm text-gray-300">
-                  {language === 'ko' ? match.homeTeamKR : match.homeTeam}
-                </span>
-                <span className="text-sm font-bold text-white tabular-nums">
-                  {match.homeScore} - {match.awayScore}
-                </span>
-                <span className="text-sm text-gray-300">
-                  {language === 'ko' ? match.awayTeamKR : match.awayTeam}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       <style jsx>{`

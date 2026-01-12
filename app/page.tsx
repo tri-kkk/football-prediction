@@ -2975,123 +2975,210 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                       {/* ━━━ 경기 행 (클릭 가능) ━━━ */}
                                       <div 
                                         onClick={() => handleMatchClick(match)}
-                                        className={`flex items-center cursor-pointer px-3 py-3 md:px-4 ${
+                                        className={`cursor-pointer px-3 py-2.5 md:py-3 md:px-4 ${
                                           darkMode ? 'hover:bg-[#1a1a1a]' : 'hover:bg-gray-50'
                                         } ${isExpanded ? '!bg-[#0d1f0d]' : ''}`}
                                       >
-                                        {/* 시간 */}
-                                        <div className="w-16 md:w-20 flex-shrink-0">
-                                          <div className={`text-sm md:text-base font-bold tabular-nums ${
-                                            isExpanded ? 'text-[#A3FF4C]' : darkMode ? 'text-gray-400' : 'text-gray-600'
-                                          }`}>
-                                            {formatTime(match.utcDate)}
-                                          </div>
-                                        </div>
-
-                                        {/* 홈팀 */}
-                                        <div className="flex-1 flex items-center justify-end gap-2 min-w-0 pr-2">
-                                          <span className={`text-sm md:text-base font-medium truncate text-right ${
-                                            darkMode ? 'text-white' : 'text-gray-900'
-                                          }`}>
-                                            {truncate(homeTeamName, 12)}
-                                          </span>
-                                          <img 
-                                            src={match.homeCrest} 
-                                            alt={match.homeTeam}
-                                            className="w-7 h-7 md:w-8 md:h-8 object-contain flex-shrink-0"
-                                            onError={(e) => {
-                                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="%23333"/></svg>'
-                                            }}
-                                          />
-                                        </div>
-
-                                        {/* 🆕 FotMob 스타일: 상태별 중앙 영역 */}
-                                        {(() => {
-                                          const matchStatus = getMatchStatus(match)
-                                          const predicted = getPredictedWinner(match)
-                                          const actual = getActualWinner(match)
-                                          const isCorrect = predicted === actual
-
-                                          // 종료된 경기
-                                          if (matchStatus === 'FINISHED' && match.homeScore !== null && match.awayScore !== null) {
+                                        {/* 📱 모바일: 2줄 스택 레이아웃 */}
+                                        <div className="md:hidden">
+                                          {(() => {
+                                            const matchStatus = getMatchStatus(match)
+                                            const isFinished = matchStatus === 'FINISHED' && match.homeScore !== null
+                                            const isLive = matchStatus === 'LIVE' || matchStatus === 'HALFTIME'
+                                            
                                             return (
-                                              <div className="w-24 md:w-28 flex-shrink-0 flex flex-col items-center justify-center">
-                                                <span className="text-[10px] text-gray-500 mb-0.5">FT</span>
-                                                <div className="flex items-center gap-2">
-                                                  <span className={`text-lg font-bold ${match.homeScore > match.awayScore ? 'text-white' : 'text-gray-500'}`}>
-                                                    {match.homeScore}
+                                              <div className="flex flex-col gap-1.5">
+                                                {/* 홈팀 행 */}
+                                                <div className="flex items-center">
+                                                  <div className={`w-12 flex-shrink-0 text-xs font-bold tabular-nums ${
+                                                    isExpanded ? 'text-[#A3FF4C]' : 'text-gray-500'
+                                                  }`}>
+                                                    {isLive ? (
+                                                      <span className="text-red-500 flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                                                        {matchStatus === 'HALFTIME' ? 'HT' : 'LIVE'}
+                                                      </span>
+                                                    ) : isFinished ? (
+                                                      <span className="text-gray-500">FT</span>
+                                                    ) : (
+                                                      formatTime(match.utcDate)
+                                                    )}
+                                                  </div>
+                                                  <img 
+                                                    src={match.homeCrest} 
+                                                    alt={match.homeTeam}
+                                                    className="w-5 h-5 object-contain flex-shrink-0 mr-2"
+                                                    onError={(e) => {
+                                                      e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="%23333"/></svg>'
+                                                    }}
+                                                  />
+                                                  <span className={`flex-1 text-sm font-medium truncate ${
+                                                    darkMode ? 'text-white' : 'text-gray-900'
+                                                  }`}>
+                                                    {homeTeamName}
                                                   </span>
-                                                  <span className="text-gray-600">-</span>
-                                                  <span className={`text-lg font-bold ${match.awayScore > match.homeScore ? 'text-white' : 'text-gray-500'}`}>
-                                                    {match.awayScore}
+                                                  <span className={`w-8 text-right text-base font-bold tabular-nums ${
+                                                    isFinished || isLive
+                                                      ? (match.homeScore > match.awayScore ? 'text-white' : 'text-gray-500')
+                                                      : 'text-gray-600'
+                                                  }`}>
+                                                    {isFinished || isLive ? (match.homeScore ?? 0) : ''}
                                                   </span>
+                                                  {/* 확장 화살표 - 홈팀 행 우측 */}
+                                                  <div className="w-6 flex-shrink-0 flex justify-end">
+                                                    <svg 
+                                                      className={`w-4 h-4 transition-transform duration-300 ${
+                                                        isExpanded ? 'rotate-180 text-[#A3FF4C]' : 'text-gray-600'
+                                                      }`}
+                                                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                                    >
+                                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                  </div>
+                                                </div>
+                                                {/* 원정팀 행 */}
+                                                <div className="flex items-center">
+                                                  <div className="w-12 flex-shrink-0"></div>
+                                                  <img 
+                                                    src={match.awayCrest} 
+                                                    alt={match.awayTeam}
+                                                    className="w-5 h-5 object-contain flex-shrink-0 mr-2"
+                                                    onError={(e) => {
+                                                      e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="%23333"/></svg>'
+                                                    }}
+                                                  />
+                                                  <span className={`flex-1 text-sm font-medium truncate ${
+                                                    darkMode ? 'text-white' : 'text-gray-900'
+                                                  }`}>
+                                                    {awayTeamName}
+                                                  </span>
+                                                  <span className={`w-8 text-right text-base font-bold tabular-nums ${
+                                                    isFinished || isLive
+                                                      ? (match.awayScore > match.homeScore ? 'text-white' : 'text-gray-500')
+                                                      : 'text-gray-600'
+                                                  }`}>
+                                                    {isFinished || isLive ? (match.awayScore ?? 0) : ''}
+                                                  </span>
+                                                  <div className="w-6 flex-shrink-0"></div>
                                                 </div>
                                               </div>
                                             )
-                                          }
+                                          })()}
+                                        </div>
 
-                                          // 진행 중 경기
-                                          if (matchStatus === 'LIVE' || matchStatus === 'HALFTIME') {
-                                            return (
-                                              <div className="w-24 md:w-28 flex-shrink-0 flex flex-col items-center justify-center">
-                                                <span className="text-[10px] text-red-500 font-bold flex items-center gap-1 mb-0.5">
-                                                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                                                  {matchStatus === 'HALFTIME' ? 'HT' : 'LIVE'}
-                                                </span>
-                                                <div className="flex items-center gap-2">
-                                                  <span className="text-lg font-bold text-white">
-                                                    {match.homeScore ?? 0}
-                                                  </span>
-                                                  <span className="text-gray-600">-</span>
-                                                  <span className="text-lg font-bold text-white">
-                                                    {match.awayScore ?? 0}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                            )
-                                          }
-
-                                          // 예정된 경기 (기본)
-                                          return (
-                                            <div className="w-20 md:w-24 flex-shrink-0 flex justify-center">
-                                              <div className={`text-xs font-bold px-3 py-1 rounded ${
-                                                isExpanded 
-                                                  ? 'bg-[#A3FF4C]/20 text-[#A3FF4C] border border-[#A3FF4C]/30' 
-                                                  : darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-500'
-                                              }`}>
-                                                VS
-                                              </div>
+                                        {/* 💻 데스크톱: 기존 1줄 레이아웃 */}
+                                        <div className="hidden md:flex items-center">
+                                          {/* 시간 */}
+                                          <div className="w-20 flex-shrink-0">
+                                            <div className={`text-base font-bold tabular-nums ${
+                                              isExpanded ? 'text-[#A3FF4C]' : darkMode ? 'text-gray-400' : 'text-gray-600'
+                                            }`}>
+                                              {formatTime(match.utcDate)}
                                             </div>
-                                          )
-                                        })()}
+                                          </div>
 
-                                        {/* 원정팀 */}
-                                        <div className="flex-1 flex items-center justify-start gap-2 min-w-0 pl-2">
-                                          <img 
-                                            src={match.awayCrest} 
-                                            alt={match.awayTeam}
-                                            className="w-7 h-7 md:w-8 md:h-8 object-contain flex-shrink-0"
-                                            onError={(e) => {
-                                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="%23333"/></svg>'
-                                            }}
-                                          />
-                                          <span className={`text-sm md:text-base font-medium truncate ${
-                                            darkMode ? 'text-white' : 'text-gray-900'
-                                          }`}>
-                                            {truncate(awayTeamName, 12)}
-                                          </span>
-                                        </div>
+                                          {/* 홈팀 */}
+                                          <div className="flex-1 flex items-center justify-end gap-2 min-w-0 pr-2">
+                                            <span className={`text-base font-medium truncate text-right ${
+                                              darkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>
+                                              {truncate(homeTeamName, 16)}
+                                            </span>
+                                            <img 
+                                              src={match.homeCrest} 
+                                              alt={match.homeTeam}
+                                              className="w-8 h-8 object-contain flex-shrink-0"
+                                              onError={(e) => {
+                                                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="%23333"/></svg>'
+                                              }}
+                                            />
+                                          </div>
 
-                                        {/* 확장 화살표 */}
-                                        <div className="w-8 flex-shrink-0 flex items-center justify-end gap-1">
-                                          <svg 
-                                            className={`w-4 h-4 transition-transform duration-300 ${
-                                              isExpanded ? 'rotate-180 text-[#A3FF4C]' : darkMode ? 'text-gray-600' : 'text-gray-400'
-                                            }`}
-                                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                          >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                          </svg>
+                                          {/* 중앙 스코어/상태 영역 */}
+                                          {(() => {
+                                            const matchStatus = getMatchStatus(match)
+
+                                            // 종료된 경기
+                                            if (matchStatus === 'FINISHED' && match.homeScore !== null && match.awayScore !== null) {
+                                              return (
+                                                <div className="w-28 flex-shrink-0 flex flex-col items-center justify-center">
+                                                  <span className="text-[10px] text-gray-500 mb-0.5">FT</span>
+                                                  <div className="flex items-center gap-2">
+                                                    <span className={`text-lg font-bold ${match.homeScore > match.awayScore ? 'text-white' : 'text-gray-500'}`}>
+                                                      {match.homeScore}
+                                                    </span>
+                                                    <span className="text-gray-600">-</span>
+                                                    <span className={`text-lg font-bold ${match.awayScore > match.homeScore ? 'text-white' : 'text-gray-500'}`}>
+                                                      {match.awayScore}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              )
+                                            }
+
+                                            // 진행 중 경기
+                                            if (matchStatus === 'LIVE' || matchStatus === 'HALFTIME') {
+                                              return (
+                                                <div className="w-28 flex-shrink-0 flex flex-col items-center justify-center">
+                                                  <span className="text-[10px] text-red-500 font-bold flex items-center gap-1 mb-0.5">
+                                                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                                                    {matchStatus === 'HALFTIME' ? 'HT' : 'LIVE'}
+                                                  </span>
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-lg font-bold text-white">
+                                                      {match.homeScore ?? 0}
+                                                    </span>
+                                                    <span className="text-gray-600">-</span>
+                                                    <span className="text-lg font-bold text-white">
+                                                      {match.awayScore ?? 0}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              )
+                                            }
+
+                                            // 예정된 경기 (기본)
+                                            return (
+                                              <div className="w-24 flex-shrink-0 flex justify-center">
+                                                <div className={`text-xs font-bold px-3 py-1 rounded ${
+                                                  isExpanded 
+                                                    ? 'bg-[#A3FF4C]/20 text-[#A3FF4C] border border-[#A3FF4C]/30' 
+                                                    : darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-500'
+                                                }`}>
+                                                  VS
+                                                </div>
+                                              </div>
+                                            )
+                                          })()}
+
+                                          {/* 원정팀 */}
+                                          <div className="flex-1 flex items-center justify-start gap-2 min-w-0 pl-2">
+                                            <img 
+                                              src={match.awayCrest} 
+                                              alt={match.awayTeam}
+                                              className="w-8 h-8 object-contain flex-shrink-0"
+                                              onError={(e) => {
+                                                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="%23333"/></svg>'
+                                              }}
+                                            />
+                                            <span className={`text-base font-medium truncate ${
+                                              darkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>
+                                              {truncate(awayTeamName, 16)}
+                                            </span>
+                                          </div>
+
+                                          {/* 확장 화살표 */}
+                                          <div className="w-8 flex-shrink-0 flex items-center justify-end">
+                                            <svg 
+                                              className={`w-4 h-4 transition-transform duration-300 ${
+                                                isExpanded ? 'rotate-180 text-[#A3FF4C]' : darkMode ? 'text-gray-600' : 'text-gray-400'
+                                              }`}
+                                              fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                            >
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                          </div>
                                         </div>
                                       </div>
 
