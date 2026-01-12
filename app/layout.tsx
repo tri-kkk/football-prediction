@@ -227,6 +227,13 @@ export default function RootLayout({
               </Link>
               <span className="text-gray-600">•</span>
               <Link 
+                href="/advertise" 
+                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+              >
+                Advertise
+              </Link>
+              <span className="text-gray-600">•</span>
+              <Link 
                 href="/contact" 
                 className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
               >

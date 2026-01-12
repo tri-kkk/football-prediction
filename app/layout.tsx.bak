@@ -7,14 +7,16 @@ import Navigation from './components/Navigation'
 import BottomNavigation from './components/BottomNavigation'
 import { LanguageProvider } from './contexts/LanguageContext'
 import LanguageToggle from './components/LanguageToggle'
-import HtmlLangUpdater from './components/HtmlLangUpdater'  // ✅ 동적 언어 처리
+import HtmlLangUpdater from './components/HtmlLangUpdater'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
-  title: 'Trend Soccer - 실시간 해외축구 경기 예측 & 프리뷰 플랫폼',
-  description: '실시간 확률 기반 축구 경기 예측 분석. 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그 승률 및 트렌드 분석 제공',
-  keywords: '축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, Soccer Prediction, Football Analysis, EPL Predictions, Match Preview, Live Score',
-  authors: [{ name: 'Trend Soccer' }],
+  // ✅ SEO 수정: 한글 브랜드명 맨 앞 배치 + AI 키워드
+  title: '트랜드사커 - TrendSoccer 실시간 해외축구 경기 예측 & AI 분석',
+  // ✅ SEO 수정: 구체적 수치 + 핵심 키워드 포함
+  description: '트랜드사커(TrendSoccer)는 6대 리그 4,800경기 이상의 데이터를 AI로 분석하여 승률 예측을 제공합니다. 실시간 해외축구 배당 분석, 프리미엄 경기 픽, 승무패 예측 정보를 확인하세요.',
+  keywords: '트랜드사커, TrendSoccer, 축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, AI 축구 분석, 승무패 예측, Soccer Prediction, Football Analysis, EPL Predictions, Match Preview, Live Score',
+  authors: [{ name: '트랜드사커 (TrendSoccer)' }],
   robots: {
     index: true,
     follow: true,
@@ -22,28 +24,29 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://www.trendsoccer.com',
   },
+  // ✅ SEO 수정: OG Tags 최적화
   openGraph: {
-    title: 'Trend Soccer - 실시간 해외축구 경기 예측 & 프리뷰 플랫폼',
-    description: '실시간 확률 기반 축구 경기 예측 분석 플랫폼',
+    title: '트랜드사커 - 실시간 해외축구 AI 예측',
+    description: '데이터가 증명하는 승률. 6대 리그 전 경기 분석 리포트 확인하기.',
     type: 'website',
     locale: 'ko_KR',
     alternateLocale: ['en_US'],
     url: 'https://www.trendsoccer.com',
-    siteName: 'Trend Soccer',
+    siteName: '트랜드사커 (TrendSoccer)',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Trend Soccer - 축구 경기 예측 플랫폼',
+        alt: '트랜드사커 - AI 기반 축구 경기 예측 플랫폼',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Trend Soccer - 실시간 해외축구 경기 예측',
-    description: '실시간 확률 기반 축구 경기 예측 분석 플랫폼',
-    images: ['/og-image.jpg'],
+    title: '트랜드사커 - 실시간 해외축구 AI 예측',
+    description: '데이터가 증명하는 승률. 6대 리그 전 경기 분석 리포트 확인하기.',
+    images: ['/og-image.png'],
   },
   icons: {
     icon: [
@@ -55,7 +58,7 @@ export const metadata: Metadata = {
   },
 }
 
-// ✅ JSON-LD 구조화 데이터 - 사이트 네비게이션 (Google 사이트링크용) - 한/영 지원
+// ✅ JSON-LD 구조화 데이터 - 사이트 네비게이션 (Google 사이트링크용)
 const siteNavigationSchema = {
   "@context": "http://schema.org",
   "@type": "ItemList",
@@ -95,14 +98,14 @@ const siteNavigationSchema = {
   ]
 }
 
-// ✅ JSON-LD 구조화 데이터 - 웹사이트 (검색 기능 표시)
+// ✅ JSON-LD 구조화 데이터 - 웹사이트 (검색 기능 표시) - 브랜드명 업데이트
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": "Trend Soccer",
-  "alternateName": "트렌드사커",
+  "name": "트랜드사커",
+  "alternateName": ["TrendSoccer", "Trend Soccer"],
   "url": "https://www.trendsoccer.com",
-  "description": "실시간 확률 기반 축구 경기 예측 분석 플랫폼 | Real-time football match prediction platform",
+  "description": "AI 기반 실시간 축구 경기 예측 분석 플랫폼 | AI-powered real-time football match prediction platform",
   "inLanguage": ["ko-KR", "en-US"],
   "potentialAction": {
     "@type": "SearchAction",
@@ -111,12 +114,12 @@ const websiteSchema = {
   }
 }
 
-// ✅ JSON-LD 구조화 데이터 - 조직 (브랜드 인식)
+// ✅ JSON-LD 구조화 데이터 - 조직 (브랜드 인식) - 브랜드명 업데이트
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "Trend Soccer",
-  "alternateName": "트렌드사커",
+  "name": "트랜드사커",
+  "alternateName": ["TrendSoccer", "Trend Soccer"],
   "url": "https://www.trendsoccer.com",
   "logo": "https://www.trendsoccer.com/logo.svg",
   "sameAs": []
@@ -185,7 +188,7 @@ export default function RootLayout({
               <Link href="/" className="flex items-center gap-3 cursor-pointer">
                 <img 
                   src="/logo.svg" 
-                  alt="Trend Soccer" 
+                  alt="트랜드사커" 
                   className="h-12 w-auto"
                 />
               </Link>
@@ -247,9 +250,9 @@ export default function RootLayout({
             
             {/* Copyright */}
             <div className="text-center text-gray-500 text-sm">
-              <p>© 2025 Trend Soccer. All rights reserved.</p>
+              <p>© 2025 TrendSoccer (트랜드사커). All rights reserved.</p>
               <p className="mt-2 text-xs text-gray-600">
-                Real-time soccer match prediction and analysis platform
+                AI-powered soccer match prediction and analysis platform
               </p>
             </div>
           </div>
