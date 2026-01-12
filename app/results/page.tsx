@@ -1127,82 +1127,91 @@ export default function MatchResultsPage() {
                               <div key={match.match_id} className={`${match.isPick ? 'bg-gradient-to-r from-yellow-900/10 to-transparent' : 'bg-[#151515]'}`}>
                                 <button
                                   onClick={() => handleMatchExpand(match)}
-                                  className="w-full px-4 py-3 hover:bg-[#1a1a1a] transition-colors"
+                                  className="w-full px-3 py-2.5 hover:bg-[#1a1a1a] transition-colors"
                                 >
-                                  {/* 상단: 시간 + PICK 배지 */}
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs text-gray-500">{formatTime(match.match_date)}</span>
-                                    {match.isPick && (
-                                      <span className="text-[10px] bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold px-2 py-0.5 rounded-full">
-                                        ⭐ PICK {getPickResultText(match.pickInfo?.pick_result || '', currentLanguage)}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {/* 중앙: 팀 vs 팀 + 스코어 */}
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  {/* 📱 2줄 스택 레이아웃 */}
+                                  <div className="flex flex-col gap-1.5">
+                                    {/* 홈팀 행 */}
+                                    <div className="flex items-center">
+                                      {/* 시간/상태 */}
+                                      <div className="w-10 flex-shrink-0 text-xs font-bold text-gray-500">
+                                        FT
+                                      </div>
+                                      {/* 홈 로고 */}
                                       {match.home_crest ? (
-                                        <Image src={match.home_crest} alt={match.home_team} width={24} height={24} className="w-6 h-6 object-contain flex-shrink-0" />
+                                        <Image src={match.home_crest} alt={match.home_team} width={20} height={20} className="w-5 h-5 object-contain flex-shrink-0 mr-2" />
                                       ) : (
-                                        <div className="w-6 h-6 bg-gray-700 rounded-full flex-shrink-0" />
+                                        <div className="w-5 h-5 bg-gray-700 rounded-full flex-shrink-0 mr-2" />
                                       )}
-                                      <span className={`text-sm truncate ${match.isPick && match.pickInfo?.pick_result === 'HOME' ? 'text-yellow-400 font-medium' : ''}`}>
+                                      {/* 홈팀명 */}
+                                      <span className={`flex-1 text-sm font-medium truncate ${
+                                        match.isPick && match.pickInfo?.pick_result === 'HOME' 
+                                          ? 'text-yellow-400' 
+                                          : match.final_score_home > match.final_score_away 
+                                            ? 'text-white' 
+                                            : 'text-gray-300'
+                                      }`}>
                                         {translateTeamName(match.home_team, currentLanguage)}
                                       </span>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 px-3">
-                                      <span className={`text-lg font-bold ${match.final_score_home > match.final_score_away ? 'text-white' : 'text-gray-400'}`}>
+                                      {/* 홈 스코어 */}
+                                      <span className={`w-6 text-right text-base font-bold tabular-nums ${
+                                        match.final_score_home > match.final_score_away ? 'text-white' : 'text-gray-500'
+                                      }`}>
                                         {match.final_score_home}
                                       </span>
-                                      <span className="text-gray-600">-</span>
-                                      <span className={`text-lg font-bold ${match.final_score_away > match.final_score_home ? 'text-white' : 'text-gray-400'}`}>
-                                        {match.final_score_away}
-                                      </span>
+                                      {/* 적중/실패 배지 (홈팀 행 우측) */}
+                                      <div className="w-14 flex justify-end flex-shrink-0 ml-2">
+                                        {match.isPick && match.pickInfo ? (
+                                          match.pickInfo.is_correct === true ? (
+                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-yellow-500 to-orange-500 text-black rounded">⭐</span>
+                                          ) : match.pickInfo.is_correct === false ? (
+                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white rounded">✗</span>
+                                          ) : (
+                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gray-600 text-white rounded">-</span>
+                                          )
+                                        ) : pred ? (
+                                          match.isWinnerCorrect ? (
+                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#A3FF4C] text-black rounded">✓</span>
+                                          ) : (
+                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white rounded">✗</span>
+                                          )
+                                        ) : null}
+                                      </div>
                                     </div>
-
-                                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                                      <span className={`text-sm truncate text-right ${match.isPick && match.pickInfo?.pick_result === 'AWAY' ? 'text-yellow-400 font-medium' : ''}`}>
+                                    
+                                    {/* 원정팀 행 */}
+                                    <div className="flex items-center">
+                                      {/* 시간 영역 (PICK 배지) */}
+                                      <div className="w-10 flex-shrink-0">
+                                        {match.isPick && (
+                                          <span className="text-[9px] text-yellow-400 font-bold">PICK</span>
+                                        )}
+                                      </div>
+                                      {/* 원정 로고 */}
+                                      {match.away_crest ? (
+                                        <Image src={match.away_crest} alt={match.away_team} width={20} height={20} className="w-5 h-5 object-contain flex-shrink-0 mr-2" />
+                                      ) : (
+                                        <div className="w-5 h-5 bg-gray-700 rounded-full flex-shrink-0 mr-2" />
+                                      )}
+                                      {/* 원정팀명 */}
+                                      <span className={`flex-1 text-sm font-medium truncate ${
+                                        match.isPick && match.pickInfo?.pick_result === 'AWAY' 
+                                          ? 'text-yellow-400' 
+                                          : match.final_score_away > match.final_score_home 
+                                            ? 'text-white' 
+                                            : 'text-gray-300'
+                                      }`}>
                                         {translateTeamName(match.away_team, currentLanguage)}
                                       </span>
-                                      {match.away_crest ? (
-                                        <Image src={match.away_crest} alt={match.away_team} width={24} height={24} className="w-6 h-6 object-contain flex-shrink-0" />
-                                      ) : (
-                                        <div className="w-6 h-6 bg-gray-700 rounded-full flex-shrink-0" />
-                                      )}
+                                      {/* 원정 스코어 */}
+                                      <span className={`w-6 text-right text-base font-bold tabular-nums ${
+                                        match.final_score_away > match.final_score_home ? 'text-white' : 'text-gray-500'
+                                      }`}>
+                                        {match.final_score_away}
+                                      </span>
+                                      {/* 빈 공간 (홈팀 행과 정렬 맞추기) */}
+                                      <div className="w-14 flex-shrink-0 ml-2"></div>
                                     </div>
-                                  </div>
-
-                                  {/* 하단: 확률 + 적중 */}
-                                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-800/50">
-                                    {match.isPick && match.pickInfo ? (
-                                      <span className="text-xs text-gray-500">
-                                        PICK <span className="text-yellow-400">{match.pickInfo.home_probability}-{match.pickInfo.draw_probability}-{match.pickInfo.away_probability}</span>
-                                      </span>
-                                    ) : pred ? (
-                                      <span className="text-xs text-gray-500">
-                                        {currentLanguage === 'ko' ? '확률' : 'Prob'} <span className="text-gray-400">{pred.homeWinProbability}-{pred.drawProbability}-{pred.awayWinProbability}</span>
-                                      </span>
-                                    ) : (
-                                      <span className="text-xs text-gray-600">-</span>
-                                    )}
-                                    
-                                    {match.isPick && match.pickInfo ? (
-                                      match.pickInfo.is_correct === true ? (
-                                        <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-yellow-500 to-orange-500 text-black rounded">⭐ {currentLanguage === 'ko' ? '적중' : 'Hit'}</span>
-                                      ) : match.pickInfo.is_correct === false ? (
-                                        <span className="px-2 py-0.5 text-xs font-bold bg-red-600 text-white rounded">{currentLanguage === 'ko' ? '실패' : 'Miss'}</span>
-                                      ) : (
-                                        <span className="px-2 py-0.5 text-xs font-bold bg-gray-600 text-white rounded">{currentLanguage === 'ko' ? '진행중' : 'Pending'}</span>
-                                      )
-                                    ) : pred ? (
-                                      match.isWinnerCorrect ? (
-                                        <span className="px-2 py-0.5 text-xs font-bold bg-[#A3FF4C] text-black rounded">{currentLanguage === 'ko' ? '적중' : 'Hit'}</span>
-                                      ) : (
-                                        <span className="px-2 py-0.5 text-xs font-bold bg-red-600 text-white rounded">{currentLanguage === 'ko' ? '실패' : 'Miss'}</span>
-                                      )
-                                    ) : null}
                                   </div>
                                 </button>
 

@@ -11,9 +11,7 @@ import HtmlLangUpdater from './components/HtmlLangUpdater'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
-  // ✅ SEO 수정: 한글 브랜드명 맨 앞 배치 + AI 키워드
   title: '트랜드사커 - TrendSoccer 실시간 해외축구 경기 예측 & AI 분석',
-  // ✅ SEO 수정: 구체적 수치 + 핵심 키워드 포함
   description: '트랜드사커(TrendSoccer)는 6대 리그 4,800경기 이상의 데이터를 AI로 분석하여 승률 예측을 제공합니다. 실시간 해외축구 배당 분석, 프리미엄 경기 픽, 승무패 예측 정보를 확인하세요.',
   keywords: '트랜드사커, TrendSoccer, 축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, AI 축구 분석, 승무패 예측, Soccer Prediction, Football Analysis, EPL Predictions, Match Preview, Live Score',
   authors: [{ name: '트랜드사커 (TrendSoccer)' }],
@@ -24,7 +22,6 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://www.trendsoccer.com',
   },
-  // ✅ SEO 수정: OG Tags 최적화
   openGraph: {
     title: '트랜드사커 - 실시간 해외축구 AI 예측',
     description: '데이터가 증명하는 승률. 6대 리그 전 경기 분석 리포트 확인하기.',
@@ -58,7 +55,6 @@ export const metadata: Metadata = {
   },
 }
 
-// ✅ JSON-LD 구조화 데이터 - 사이트 네비게이션 (Google 사이트링크용)
 const siteNavigationSchema = {
   "@context": "http://schema.org",
   "@type": "ItemList",
@@ -98,7 +94,6 @@ const siteNavigationSchema = {
   ]
 }
 
-// ✅ JSON-LD 구조화 데이터 - 웹사이트 (검색 기능 표시) - 브랜드명 업데이트
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
@@ -114,7 +109,6 @@ const websiteSchema = {
   }
 }
 
-// ✅ JSON-LD 구조화 데이터 - 조직 (브랜드 인식) - 브랜드명 업데이트
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -133,7 +127,6 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* ✅ JSON-LD 구조화 데이터 - 사이트 네비게이션 */}
         <Script
           id="site-navigation-schema"
           type="application/ld+json"
@@ -143,7 +136,6 @@ export default function RootLayout({
           }}
         />
         
-        {/* ✅ JSON-LD 구조화 데이터 - 웹사이트 */}
         <Script
           id="website-schema"
           type="application/ld+json"
@@ -153,7 +145,6 @@ export default function RootLayout({
           }}
         />
         
-        {/* ✅ JSON-LD 구조화 데이터 - 조직 */}
         <Script
           id="organization-schema"
           type="application/ld+json"
@@ -165,13 +156,10 @@ export default function RootLayout({
       </head>
       <body className="bg-[#0f0f0f] text-white">
         <LanguageProvider>
-        {/* ✅ 동적 html lang 속성 변경 */}
         <HtmlLangUpdater />
         
-        {/* Google Tag Manager */}
         <GoogleTagManager />
 
-        {/* Google AdSense */}
         <Script
           id="google-adsense"
           async
@@ -184,7 +172,6 @@ export default function RootLayout({
         <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between">
-              {/* 좌측: Logo */}
               <Link href="/" className="flex items-center gap-3 cursor-pointer">
                 <img 
                   src="/logo.svg" 
@@ -193,12 +180,10 @@ export default function RootLayout({
                 />
               </Link>
               
-              {/* 중앙: Desktop Navigation (PC만) */}
               <div className="hidden md:block">
                 <Navigation />
               </div>
               
-              {/* 우측: Language Toggle */}
               <div className="flex-shrink-0">
                 <LanguageToggle />
               </div>
@@ -207,15 +192,12 @@ export default function RootLayout({
         </header>
 
         {/* Main Content */}
-        <main className="pb-20 md:pb-0">
+        <main>
           {children}
         </main>
 
-        {/* 모바일 하단 네비게이션 */}
-        <BottomNavigation />
-
-        {/* Footer */}
-        <footer className="mt-20 py-12 border-t border-gray-800 bg-[#1a1a1a]">
+        {/* Footer - 모바일에서 하단 네비 공간 확보 */}
+        <footer className="py-12 border-t border-gray-800 bg-[#1a1a1a] mb-16 md:mb-0">
           <div className="container mx-auto px-4">
             {/* Footer Links */}
             <div className="flex flex-wrap justify-center items-center gap-6 mb-6">
@@ -264,6 +246,10 @@ export default function RootLayout({
             </div>
           </div>
         </footer>
+
+        {/* 모바일 하단 네비게이션 */}
+        <BottomNavigation />
+        
         </LanguageProvider>
       </body>
     </html>
