@@ -1,6 +1,7 @@
 // app/api/cron/calculate-patterns-v3/route.ts
 // 패턴 계산 API v3 - 누적 방식 (리그별 실행해도 전체 통합에 누적)
 // 타임아웃 방지를 위한 배치 처리 지원
+// K리그/J리그 지원 추가
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -9,6 +10,30 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+// ============================================
+// 리그 설정
+// ============================================
+const LEAGUES = {
+  europe: [
+    { id: 39, code: 'PL', name: 'Premier League' },
+    { id: 140, code: 'PD', name: 'La Liga' },
+    { id: 78, code: 'BL1', name: 'Bundesliga' },
+    { id: 135, code: 'SA', name: 'Serie A' },
+    { id: 61, code: 'FL1', name: 'Ligue 1' },
+    { id: 88, code: 'DED', name: 'Eredivisie' },
+  ],
+  asia: [
+    { id: 292, code: 'K1', name: 'K League 1' },
+    { id: 98, code: 'J1', name: 'J1 League' },
+  ]
+}
+
+// 전체 리그 ID 배열
+const ALL_LEAGUE_IDS = [
+  ...LEAGUES.europe.map(l => l.id),
+  ...LEAGUES.asia.map(l => l.id)
+]
 
 // ============================================
 // 유틸 함수
@@ -272,23 +297,26 @@ async function upsertPatternAccumulate(patternData: {
     finalDraws = existing.draws + draws
     finalAwayWins = existing.away_wins + away_wins
   } else {
-    // 리그별 패턴 또는 신규: 새 값으로 설정
+    // 리그별 또는 신규: 새로운 값 사용
     finalTotal = total_matches
     finalHomeWins = home_wins
     finalDraws = draws
     finalAwayWins = away_wins
   }
   
+  // 비율 계산
   const homeWinRate = finalTotal > 0 ? finalHomeWins / finalTotal : 0
   const drawRate = finalTotal > 0 ? finalDraws / finalTotal : 0
   const awayWinRate = finalTotal > 0 ? finalAwayWins / finalTotal : 0
+  
   const confidence = evaluateConfidence(finalTotal)
+  const description = generateDescription(pattern, homeWinRate, drawRate, awayWinRate)
+  const recommendation = generateRecommendation(homeWinRate, drawRate, awayWinRate, confidence)
   
   const record = {
     pattern,
-    league_id: patternData.league_id,
+    league_id: league_id,
     league_code: patternData.league_code,
-    season: null,
     total_matches: finalTotal,
     home_wins: finalHomeWins,
     draws: finalDraws,
@@ -297,8 +325,8 @@ async function upsertPatternAccumulate(patternData: {
     draw_rate: drawRate,
     away_win_rate: awayWinRate,
     confidence,
-    description: generateDescription(pattern, homeWinRate, drawRate, awayWinRate),
-    recommendation: generateRecommendation(homeWinRate, drawRate, awayWinRate, confidence),
+    description,
+    recommendation,
     updated_at: new Date().toISOString(),
   }
   
@@ -511,9 +539,12 @@ export async function GET(request: NextRequest) {
       awayWin: `${(p.away_win_rate * 100).toFixed(1)}%`,
       confidence: p.confidence,
     })),
+    leagues: LEAGUES,
     usage: {
       reset_and_all: 'POST { "mode": "reset" } - 전체 리셋 후 전체 계산',
       league: 'POST { "mode": "league", "leagueId": 39 } - 리그별 누적',
+      kleague: 'POST { "mode": "league", "leagueId": 292 } - K리그',
+      jleague: 'POST { "mode": "league", "leagueId": 98 } - J리그',
     }
   })
 }
@@ -526,14 +557,12 @@ export async function POST(request: NextRequest) {
     const startTime = Date.now()
     
     if (mode === 'reset') {
-      // 전체 리셋 후 모든 리그 계산
-      // 글로벌 패턴만 삭제하고 하나씩 누적
+      // 전체 리셋 후 모든 리그 계산 (유럽 + 아시아)
       await supabase.from('fg_patterns').delete().is('league_id', null)
       
-      const leagues = [39, 140, 78, 135, 61, 88]  // PL, PD, BL1, SA, FL1, DED
       let totalResult = { patterns: 0, updated: 0, errors: 0, skipped: 0, processed: 0 }
       
-      for (const lid of leagues) {
+      for (const lid of ALL_LEAGUE_IDS) {
         console.log(`📊 Processing league ${lid}...`)
         const result = await calculatePatterns(lid, false)
         totalResult.patterns = Math.max(totalResult.patterns, result.patterns)
@@ -548,6 +577,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         mode: 'reset',
+        leagues: ALL_LEAGUE_IDS.length,
         ...totalResult,
         duration: `${duration}s`,
       })
@@ -571,6 +601,8 @@ export async function POST(request: NextRequest) {
         examples: {
           reset: { mode: 'reset' },
           league: { mode: 'league', leagueId: 39 },
+          kleague: { mode: 'league', leagueId: 292 },
+          jleague: { mode: 'league', leagueId: 98 },
         }
       }, { status: 400 })
     }

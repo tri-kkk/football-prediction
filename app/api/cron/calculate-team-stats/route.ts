@@ -1,6 +1,7 @@
 // app/api/cron/calculate-team-stats/route.ts
 // fg_match_history → fg_team_stats 집계 API
 // 팀별 선제골 승률, 폼 지수 등 계산
+// K리그/J리그 한글 팀명 지원
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -10,6 +11,119 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// ============================================
+// 팀명 한글 매핑
+// ============================================
+const TEAM_NAME_KO: Record<string, string> = {
+  // K리그1 팀
+  'Ulsan Hyundai': '울산 HD',
+  'Ulsan HD': '울산 HD',
+  'Ulsan Hyundai FC': '울산 HD',
+  'Jeonbuk Hyundai Motors': '전북 현대',
+  'Jeonbuk Motors': '전북 현대',
+  'Jeonbuk FC': '전북 현대',
+  'Pohang Steelers': '포항 스틸러스',
+  'Incheon United': '인천 유나이티드',
+  'Daegu FC': '대구 FC',
+  'Gangwon FC': '강원 FC',
+  'Suwon FC': '수원 FC',
+  'Suwon Samsung Bluewings': '수원 삼성',
+  'Suwon Bluewings': '수원 삼성',
+  'Gimcheon Sangmu': '김천 상무',
+  'Gimcheon Sangmu FC': '김천 상무',
+  'Daejeon Citizen': '대전 시티즌',
+  'Daejeon Hana Citizen': '대전 하나 시티즌',
+  'FC Seoul': 'FC 서울',
+  'Seoul': 'FC 서울',
+  'Jeju United': '제주 유나이티드',
+  'Jeju United FC': '제주 유나이티드',
+  'Gwangju FC': '광주 FC',
+  'Suwon City': '수원 FC',
+  'Suwon City FC': '수원 FC',
+  'Seongnam FC': '성남 FC',
+  'Seongnam': '성남 FC',
+  'Sangju Sangmu': '상주 상무',
+  'Sangju Sangmu FC': '상주 상무',
+  'Busan IPark': '부산 아이파크',
+  'Busan I\'Park': '부산 아이파크',
+  'Busan I Park': '부산 아이파크',
+  'Jeonnam Dragons': '전남 드래곤즈',
+  'Gyeongnam FC': '경남 FC',
+  'Cheongju FC': '청주 FC',
+  'Ansan Greeners': '안산 그리너스',
+  'Seoul E-Land': '서울 이랜드',
+  'Seoul E-Land FC': '서울 이랜드',
+  'Bucheon FC 1995': '부천 FC',
+  'Bucheon FC': '부천 FC',
+  'Chungnam Asan': '충남 아산',
+  'Asan Mugunghwa': '아산 무궁화',
+  'Anyang FC': '안양 FC',
+  'FC Anyang': '안양 FC',
+  'Jeonbuk Hyundai Motors FC': '전북 현대',
+  'Suwon Samsung': '수원 삼성',
+  'Gimpo Citizen': '김포 시티즌',
+  'Gimpo FC': '김포 시티즌',
+  
+  // J1리그 팀
+  'Vissel Kobe': '비셀 고베',
+  'Yokohama F. Marinos': '요코하마 F 마리노스',
+  'Yokohama F.Marinos': '요코하마 F 마리노스',
+  'Yokohama Marinos': '요코하마 F 마리노스',
+  'Kashima Antlers': '가시마 앤틀러스',
+  'Sanfrecce Hiroshima': '산프레체 히로시마',
+  'Kawasaki Frontale': '가와사키 프론탈레',
+  'Urawa Red Diamonds': '우라와 레즈',
+  'Urawa Reds': '우라와 레즈',
+  'Urawa': '우라와 레즈',
+  'Kashima': '가시마 앤틀러스',
+  'Cerezo Osaka': '세레소 오사카',
+  'Gamba Osaka': '감바 오사카',
+  'FC Tokyo': 'FC 도쿄',
+  'Tokyo': 'FC 도쿄',
+  'Nagoya Grampus': '나고야 그램퍼스',
+  'Consadole Sapporo': '콘사돌레 삿포로',
+  'Hokkaido Consadole Sapporo': '콘사돌레 삿포로',
+  'Sagan Tosu': '사간 도스',
+  'Avispa Fukuoka': '아비스파 후쿠오카',
+  'Albirex Niigata': '알비렉스 니가타',
+  'Shonan Bellmare': '쇼난 벨마레',
+  'Kashiwa Reysol': '가시와 레이솔',
+  'Jubilo Iwata': '주빌로 이와타',
+  'Shimizu S-Pulse': '시미즈 에스펄스',
+  'Shimizu S Pulse': '시미즈 에스펄스',
+  'Kyoto Sanga': '교토 상가',
+  'Kyoto Sanga FC': '교토 상가',
+  'Tokushima Vortis': '도쿠시마 보르티스',
+  'Ventforet Kofu': '벤트포레 고후',
+  'Vegalta Sendai': '베갈타 센다이',
+  'Montedio Yamagata': '몬테디오 야마가타',
+  'Omiya Ardija': '오미야 아르디자',
+  'Machida Zelvia': '마치다 젤비아',
+  'FC Machida Zelvia': '마치다 젤비아',
+  'Tokyo Verdy': '도쿄 베르디',
+  'Tokyo Verdy 1969': '도쿄 베르디',
+  'V-Varen Nagasaki': 'V-파렌 나가사키',
+  'Oita Trinita': '오이타 트리니타',
+  'Roasso Kumamoto': '로아소 구마모토',
+  'Fagiano Okayama': '파지아노 오카야마',
+  'Ehime FC': '에히메 FC',
+  'Matsumoto Yamaga': '마츠모토 야마가',
+  'Tochigi SC': '도치기 SC',
+  'Zweigen Kanazawa': '츠에겐 가나자와',
+  'Renofa Yamaguchi': '레노파 야마구치',
+  'Blaublitz Akita': '블라우블리츠 아키타',
+  'Mito Hollyhock': '미토 홀리혹',
+  'JEF United': 'JEF 유나이티드',
+  'JEF United Chiba': 'JEF 유나이티드',
+  'Thespa Kusatsu': '테스파 구사츠',
+  'Yokohama FC': '요코하마 FC',
+}
+
+// 팀명 한글 변환 함수
+function getTeamNameKo(englishName: string): string {
+  return TEAM_NAME_KO[englishName] || englishName
+}
+
 interface MatchData {
   fixture_id: number
   league_id: number
@@ -18,8 +132,10 @@ interface MatchData {
   match_date: string
   home_team_id: number
   home_team: string
+  home_team_ko?: string
   away_team_id: number
   away_team: string
+  away_team_ko?: string
   home_score: number
   away_score: number
   first_goal_team: string // 'home', 'away', 'none'
@@ -29,6 +145,7 @@ interface MatchData {
 interface TeamStats {
   team_id: number
   team_name: string
+  team_name_ko: string
   league_id: number
   league_code: string
   season: string
@@ -115,6 +232,7 @@ function createEmptyStats(
   return {
     team_id: teamId,
     team_name: teamName,
+    team_name_ko: getTeamNameKo(teamName),
     league_id: leagueId,
     league_code: leagueCode,
     season: season,
@@ -460,18 +578,45 @@ export async function GET(request: NextRequest) {
   
   const { data: sample } = await supabase
     .from('fg_team_stats')
-    .select('team_name, league_code, season, total_played, home_first_goal_games, home_first_goal_wins')
+    .select('team_name, team_name_ko, league_code, season, total_played, home_first_goal_games, home_first_goal_wins')
     .order('total_played', { ascending: false })
-    .limit(5)
+    .limit(10)
+  
+  // 리그별 팀 수
+  const { data: byLeague } = await supabase
+    .from('fg_team_stats')
+    .select('league_code')
+  
+  const leagueCounts: Record<string, number> = {}
+  byLeague?.forEach((row: any) => {
+    leagueCounts[row.league_code] = (leagueCounts[row.league_code] || 0) + 1
+  })
   
   return NextResponse.json({
     status: 'ready',
     totalTeams: count || 0,
+    byLeague: leagueCounts,
     sample,
     usage: {
       calculateAll: 'POST { "mode": "all" }',
       calculateLeague: 'POST { "mode": "league", "leagueId": 39 }',
+      calculateKLeague: 'POST { "mode": "league", "leagueId": 292 }',
+      calculateJLeague: 'POST { "mode": "league", "leagueId": 98 }',
       calculateSeason: 'POST { "mode": "season", "season": "2025" }',
+    },
+    leagues: {
+      europe: [
+        { id: 39, code: 'PL', name: 'Premier League' },
+        { id: 140, code: 'PD', name: 'La Liga' },
+        { id: 78, code: 'BL1', name: 'Bundesliga' },
+        { id: 135, code: 'SA', name: 'Serie A' },
+        { id: 61, code: 'FL1', name: 'Ligue 1' },
+        { id: 88, code: 'DED', name: 'Eredivisie' },
+      ],
+      asia: [
+        { id: 292, code: 'K1', name: 'K League 1' },
+        { id: 98, code: 'J1', name: 'J1 League' },
+      ]
     }
   })
 }
@@ -497,6 +642,8 @@ export async function POST(request: NextRequest) {
         examples: {
           all: { mode: 'all' },
           league: { mode: 'league', leagueId: 39 },
+          kleague: { mode: 'league', leagueId: 292 },
+          jleague: { mode: 'league', leagueId: 98 },
           season: { mode: 'season', season: '2025' },
         }
       }, { status: 400 })
