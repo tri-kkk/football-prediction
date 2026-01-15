@@ -13,6 +13,16 @@ interface User {
   created_at: string
   updated_at: string
   last_login_at: string | null
+  // 🌍 국가 정보 추가
+  signup_ip: string | null
+  signup_country: string | null
+  signup_country_code: string | null
+}
+
+interface CountryStat {
+  country: string
+  code: string
+  count: number
 }
 
 interface Subscription {
@@ -114,6 +124,35 @@ const TABS = [
   { id: 'report', label: '광고 리포트', icon: '📈' },
   { id: 'blog', label: '블로그 관리', icon: '📝' },
 ]
+
+// 🌍 국가별 이모지 매핑
+const COUNTRY_FLAGS: Record<string, string> = {
+  KR: '🇰🇷',
+  US: '🇺🇸',
+  JP: '🇯🇵',
+  CN: '🇨🇳',
+  GB: '🇬🇧',
+  DE: '🇩🇪',
+  FR: '🇫🇷',
+  NG: '🇳🇬',
+  GH: '🇬🇭',
+  BR: '🇧🇷',
+  IN: '🇮🇳',
+  VN: '🇻🇳',
+  TH: '🇹🇭',
+  PH: '🇵🇭',
+  ID: '🇮🇩',
+  MY: '🇲🇾',
+  SG: '🇸🇬',
+  AU: '🇦🇺',
+  CA: '🇨🇦',
+  MX: '🇲🇽',
+}
+
+const getCountryFlag = (code: string | null) => {
+  if (!code) return '🌐'
+  return COUNTRY_FLAGS[code] || '🌐'
+}
 
 // ==================== 유틸리티 함수 ====================
 
@@ -236,7 +275,7 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
-  const [authLoading, setAuthLoading] = useState(true) // 초기 세션 확인 중
+  const [authLoading, setAuthLoading] = useState(true)
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null)
   const [lockoutCountdown, setLockoutCountdown] = useState<number | null>(null)
   
@@ -245,6 +284,7 @@ export default function AdminDashboard() {
   
   // ===== 데이터 상태 =====
   const [users, setUsers] = useState<User[]>([])
+  const [countryStats, setCountryStats] = useState<CountryStat[]>([])  // 🌍 국가 통계
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [ads, setAds] = useState<Advertisement[]>([])
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([])
@@ -256,6 +296,7 @@ export default function AdminDashboard() {
   
   // ===== 필터 상태 =====
   const [userFilter, setUserFilter] = useState<'all' | 'free' | 'premium'>('all')
+  const [countryFilter, setCountryFilter] = useState<string>('all')  // 🌍 국가 필터
   const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'active' | 'cancelled' | 'expired'>('all')
   const [adFilter, setAdFilter] = useState<string>('all')
   const [dateRange, setDateRange] = useState<'7' | '14' | '30'>('7')
@@ -295,9 +336,8 @@ export default function AdminDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
-  // ==================== 인증 (보안 강화) ====================
+  // ==================== 인증 ====================
 
-  // 잠금 카운트다운
   useEffect(() => {
     if (lockoutCountdown && lockoutCountdown > 0) {
       const timer = setTimeout(() => setLockoutCountdown(lockoutCountdown - 1), 1000)
@@ -309,7 +349,6 @@ export default function AdminDashboard() {
     }
   }, [lockoutCountdown])
 
-  // 초기 세션 확인
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -325,7 +364,6 @@ export default function AdminDashboard() {
     checkSession()
   }, [])
 
-  // 로그인 처리 (서버 API 호출)
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -355,7 +393,6 @@ export default function AdminDashboard() {
         setAuthError(data.message || data.error)
         setRemainingAttempts(data.remainingAttempts ?? null)
         
-        // 잠금된 경우 카운트다운 시작
         if (data.locked && data.remainingSeconds) {
           setLockoutCountdown(data.remainingSeconds)
         }
@@ -367,7 +404,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // 로그아웃 처리 (서버 API 호출)
   const handleLogout = async () => {
     try {
       await fetch('/api/admin/login', { method: 'DELETE' })
@@ -387,6 +423,18 @@ export default function AdminDashboard() {
       setUsers(data.users || [])
     } catch (err: any) {
       console.error('Users fetch error:', err)
+    }
+  }
+
+  // 🌍 국가 통계 조회
+  const fetchCountryStats = async () => {
+    try {
+      const response = await fetch('/api/admin/users?stats=country')
+      if (!response.ok) return
+      const data = await response.json()
+      setCountryStats(data.stats || [])
+    } catch (err) {
+      console.error('Country stats fetch error:', err)
     }
   }
 
@@ -448,43 +496,48 @@ export default function AdminDashboard() {
       if (reportSlotFilter !== 'all') {
         url += `&slot=${reportSlotFilter}`
       }
-      
       const response = await fetch(url)
       if (!response.ok) return
-      
       const data = await response.json()
       setReportStats(data.stats || [])
-      setReportSummary(data.summary || [])
       
-      // 광고별 성과 계산
-      const adMap: Record<string, AdPerformance> = {}
+      // 일별 요약
+      const summaryMap: Record<string, { impressions: number; clicks: number }> = {}
+      for (const stat of data.stats || []) {
+        if (!summaryMap[stat.date]) {
+          summaryMap[stat.date] = { impressions: 0, clicks: 0 }
+        }
+        summaryMap[stat.date].impressions += stat.impressions || 0
+        summaryMap[stat.date].clicks += stat.clicks || 0
+      }
+      const summary = Object.entries(summaryMap)
+        .map(([date, vals]) => ({ date, ...vals }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+      setReportSummary(summary)
+      
+      // 광고별 성과
+      const perfMap: Record<string, AdPerformance> = {}
       for (const stat of data.stats || []) {
         const ad = stat.advertisements
         if (!ad) continue
-        
-        if (!adMap[ad.id]) {
-          adMap[ad.id] = {
+        if (!perfMap[ad.id]) {
+          perfMap[ad.id] = {
             id: ad.id,
             name: ad.name,
             slot_type: ad.slot_type,
             totalImpressions: 0,
             totalClicks: 0,
-            ctr: 0
+            ctr: 0,
           }
         }
-        adMap[ad.id].totalImpressions += stat.impressions || 0
-        adMap[ad.id].totalClicks += stat.clicks || 0
+        perfMap[ad.id].totalImpressions += stat.impressions || 0
+        perfMap[ad.id].totalClicks += stat.clicks || 0
       }
-      
-      // CTR 계산
-      const adList = Object.values(adMap).map(ad => ({
-        ...ad,
-        ctr: ad.totalImpressions > 0 
-          ? (ad.totalClicks / ad.totalImpressions) * 100 
-          : 0
+      const perf = Object.values(perfMap).map(p => ({
+        ...p,
+        ctr: p.totalImpressions > 0 ? (p.totalClicks / p.totalImpressions) * 100 : 0,
       }))
-      
-      setAdPerformance(adList.sort((a, b) => b.totalImpressions - a.totalImpressions))
+      setAdPerformance(perf.sort((a, b) => b.totalImpressions - a.totalImpressions))
     } catch (err) {
       console.error('Report stats fetch error:', err)
     }
@@ -496,6 +549,7 @@ export default function AdminDashboard() {
     try {
       await Promise.all([
         fetchUsers(),
+        fetchCountryStats(),  // 🌍 국가 통계
         fetchSubscriptions(),
         fetchAds(),
         fetchDailyStats(),
@@ -514,14 +568,12 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated, dateRange])
 
-  // 리포트 탭 활성화 시 데이터 로드
   useEffect(() => {
     if (isAuthenticated && activeTab === 'report') {
       fetchReportStats()
     }
   }, [isAuthenticated, activeTab, reportDateRange, reportSlotFilter])
 
-  // 블로그 탭 활성화 시 데이터 로드
   useEffect(() => {
     if (isAuthenticated && activeTab === 'blog') {
       fetchBlogPosts()
@@ -573,19 +625,16 @@ export default function AdminDashboard() {
     }
   }
 
-  // 블로그 필터링
   const filteredBlogPosts = useMemo(() => {
     if (blogCategoryFilter === 'all') return blogPosts
     return blogPosts.filter(post => post.category === blogCategoryFilter)
   }, [blogPosts, blogCategoryFilter])
 
-  // 블로그 카테고리 목록
   const blogCategories = useMemo(() => {
     const cats = new Set(blogPosts.map(p => p.category))
     return Array.from(cats)
   }, [blogPosts])
 
-  // 블로그 통계
   const blogStats = useMemo(() => {
     const totalPosts = blogPosts.length
     const publishedPosts = blogPosts.filter(p => p.published).length
@@ -627,13 +676,21 @@ export default function AdminDashboard() {
 
   // ==================== 필터된 데이터 ====================
 
+  // 🌍 국가 필터 추가된 회원 필터링
   const filteredUsers = useMemo(() => {
     let result = users
     
+    // 티어 필터
     if (userFilter !== 'all') {
       result = result.filter(u => u.tier === userFilter)
     }
     
+    // 🌍 국가 필터
+    if (countryFilter !== 'all') {
+      result = result.filter(u => u.signup_country_code === countryFilter)
+    }
+    
+    // 검색
     if (userSearch) {
       const search = userSearch.toLowerCase()
       result = result.filter(u => 
@@ -645,7 +702,7 @@ export default function AdminDashboard() {
     return result.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
-  }, [users, userFilter, userSearch])
+  }, [users, userFilter, countryFilter, userSearch])
 
   const filteredSubscriptions = useMemo(() => {
     let result = subscriptions
@@ -830,7 +887,6 @@ export default function AdminDashboard() {
 
   // ==================== 렌더링 ====================
 
-  // 초기 로딩 중
   if (authLoading && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
@@ -845,7 +901,6 @@ export default function AdminDashboard() {
     )
   }
 
-  // 로그인 화면
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
@@ -861,7 +916,6 @@ export default function AdminDashboard() {
               <p className="text-gray-400 text-sm">관리자 페이지에 로그인하세요</p>
             </div>
             
-            {/* 에러 메시지 */}
             {authError && (
               <div className={`mb-6 p-4 rounded-lg ${lockoutCountdown ? 'bg-red-900/50 border border-red-500' : 'bg-red-900/30'}`}>
                 <p className="text-red-400 text-sm text-center">{authError}</p>
@@ -900,59 +954,38 @@ export default function AdminDashboard() {
                 className="w-full py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center"
               >
                 {authLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    확인 중...
-                  </>
-                ) : lockoutCountdown !== null ? (
-                  `잠김 (${Math.floor(lockoutCountdown / 60)}:${String(lockoutCountdown % 60).padStart(2, '0')})`
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
                 ) : (
                   '로그인'
                 )}
               </button>
             </form>
-            
-            {/* 보안 안내 */}
-            <div className="mt-6 pt-6 border-t border-gray-700">
-              <p className="text-gray-500 text-xs text-center">
-                🔒 5회 실패 시 5분간 잠금됩니다
-              </p>
-            </div>
-          </div>
-          
-          {/* 돌아가기 링크 */}
-          <div className="text-center mt-4">
-            <a href="/" className="text-gray-400 hover:text-white text-sm transition-colors">
-              ← 메인 페이지로 돌아가기
-            </a>
           </div>
         </div>
       </div>
     )
   }
 
+  // 메인 대시보드
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* 헤더 */}
-      <header className="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      <nav className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
               <span className="text-2xl">⚽</span>
-              <div>
-                <h1 className="text-xl font-bold text-white">TrendSoccer Admin</h1>
-                <p className="text-xs text-gray-500">관리자 대시보드</p>
-              </div>
+              <span className="text-xl font-bold text-white">TrendSoccer Admin</span>
             </div>
             
             <div className="flex items-center gap-4">
               <select
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value as '7' | '14' | '30')}
-                className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-emerald-500"
+                className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
               >
                 <option value="7">최근 7일</option>
                 <option value="14">최근 14일</option>
@@ -961,39 +994,33 @@ export default function AdminDashboard() {
               
               <button
                 onClick={loadAllData}
-                disabled={loading}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors"
               >
-                {loading ? '⏳' : '🔄'} 새로고침
+                🔄 새로고침
               </button>
               
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm transition-colors"
+                className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm transition-colors"
               >
                 로그아웃
               </button>
             </div>
           </div>
-        </div>
-      </header>
-
-      {/* 탭 네비게이션 */}
-      <nav className="bg-gray-800/50 border-b border-gray-700/50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-1 overflow-x-auto">
+          
+          {/* 탭 네비게이션 */}
+          <div className="flex items-center gap-1 -mb-px overflow-x-auto">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 text-sm font-medium whitespace-nowrap transition-all border-b-2 ${
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'text-emerald-400 border-emerald-400 bg-emerald-500/5'
-                    : 'text-gray-400 border-transparent hover:text-gray-300 hover:bg-gray-700/30'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-300'
                 }`}
               >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
+                {tab.icon} {tab.label}
               </button>
             ))}
           </div>
@@ -1073,6 +1100,22 @@ export default function AdminDashboard() {
                     <div className="text-sm text-gray-400">예상 수익</div>
                   </div>
                 </div>
+
+                {/* 🌍 국가별 회원 분포 */}
+                {countryStats.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                    <h3 className="text-lg font-semibold text-white mb-4">🌍 국가별 회원 분포</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                      {countryStats.slice(0, 12).map((c) => (
+                        <div key={c.code} className="bg-gray-900/50 rounded-lg p-3 text-center">
+                          <div className="text-2xl mb-1">{getCountryFlag(c.code)}</div>
+                          <div className="text-sm text-white font-medium">{c.count}명</div>
+                          <div className="text-xs text-gray-500">{c.country}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* 광고 통계 카드 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1171,7 +1214,10 @@ export default function AdminDashboard() {
                             {user.provider === 'google' ? '🔵' : '🟢'}
                           </div>
                           <div>
-                            <div className="text-white font-medium">{user.name || '이름 없음'}</div>
+                            <div className="text-white font-medium flex items-center gap-2">
+                              {user.name || '이름 없음'}
+                              <span className="text-sm">{getCountryFlag(user.signup_country_code)}</span>
+                            </div>
                             <div className="text-sm text-gray-500">{user.email}</div>
                           </div>
                         </div>
@@ -1197,7 +1243,8 @@ export default function AdminDashboard() {
               <div className="space-y-6">
                 {/* 필터 & 검색 */}
                 <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* 티어 필터 */}
                     {(['all', 'free', 'premium'] as const).map((filter) => (
                       <button
                         key={filter}
@@ -1216,6 +1263,20 @@ export default function AdminDashboard() {
                         </span>
                       </button>
                     ))}
+                    
+                    {/* 🌍 국가 필터 */}
+                    <select
+                      value={countryFilter}
+                      onChange={(e) => setCountryFilter(e.target.value)}
+                      className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="all">🌍 전체 국가</option>
+                      {countryStats.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {getCountryFlag(c.code)} {c.country} ({c.count})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   
                   <div className="relative">
@@ -1232,80 +1293,92 @@ export default function AdminDashboard() {
 
                 {/* 회원 목록 */}
                 <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-900/50">
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">회원</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">가입일</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">가입 방식</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">등급</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">마지막 접속</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">액션</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-700/50">
-                      {filteredUsers.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
-                            회원이 없습니다
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-900/50">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">회원</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">국가</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">가입일</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">가입 방식</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">등급</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">마지막 접속</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">액션</th>
                         </tr>
-                      ) : (
-                        filteredUsers.map((user) => (
-                          <tr key={user.id} className="hover:bg-gray-700/20 transition-colors">
-                            <td className="px-4 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
-                                  {user.name ? user.name.charAt(0).toUpperCase() : '?'}
-                                </div>
-                                <div>
-                                  <div className="text-white font-medium">{user.name || '이름 없음'}</div>
-                                  <div className="text-sm text-gray-500">{user.email}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-400">
-                              {formatDate(user.created_at)}
-                            </td>
-                            <td className="px-4 py-4">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                user.provider === 'google' 
-                                  ? 'bg-blue-500/20 text-blue-400'
-                                  : 'bg-green-500/20 text-green-400'
-                              }`}>
-                                {user.provider === 'google' ? '🔵 Google' : '🟢 Naver'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                user.tier === 'premium' 
-                                  ? 'bg-emerald-500/20 text-emerald-400'
-                                  : 'bg-gray-500/20 text-gray-400'
-                              }`}>
-                                {user.tier === 'premium' ? '💎 프리미엄' : '무료'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-400">
-                              {user.last_login_at ? formatDateTime(user.last_login_at) : '-'}
-                            </td>
-                            <td className="px-4 py-4 text-right">
-                              <select
-                                value={user.tier}
-                                onChange={(e) => handleUpdateUserTier(user.id, e.target.value as 'free' | 'premium')}
-                                className="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:border-emerald-500"
-                              >
-                                <option value="free">무료</option>
-                                <option value="premium">프리미엄</option>
-                              </select>
+                      </thead>
+                      <tbody className="divide-y divide-gray-700/50">
+                        {filteredUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
+                              회원이 없습니다
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          filteredUsers.map((user) => (
+                            <tr key={user.id} className="hover:bg-gray-700/20 transition-colors">
+                              <td className="px-4 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
+                                    {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                                  </div>
+                                  <div>
+                                    <div className="text-white font-medium">{user.name || '이름 없음'}</div>
+                                    <div className="text-sm text-gray-500">{user.email}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              {/* 🌍 국가 컬럼 */}
+                              <td className="px-4 py-4">
+                                <span 
+                                  className="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-300"
+                                  title={user.signup_ip || ''}
+                                >
+                                  {getCountryFlag(user.signup_country_code)} {user.signup_country_code || '-'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-400">
+                                {formatDate(user.created_at)}
+                              </td>
+                              <td className="px-4 py-4">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  user.provider === 'google' 
+                                    ? 'bg-blue-500/20 text-blue-400'
+                                    : 'bg-green-500/20 text-green-400'
+                                }`}>
+                                  {user.provider === 'google' ? '🔵 Google' : '🟢 Naver'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  user.tier === 'premium' 
+                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}>
+                                  {user.tier === 'premium' ? '💎 프리미엄' : '무료'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-400">
+                                {user.last_login_at ? formatDateTime(user.last_login_at) : '-'}
+                              </td>
+                              <td className="px-4 py-4 text-right">
+                                <select
+                                  value={user.tier}
+                                  onChange={(e) => handleUpdateUserTier(user.id, e.target.value as 'free' | 'premium')}
+                                  className="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:border-emerald-500"
+                                >
+                                  <option value="free">무료</option>
+                                  <option value="premium">프리미엄</option>
+                                </select>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                {/* 페이지네이션 (간단 버전) */}
+                {/* 페이지네이션 */}
                 <div className="flex items-center justify-between text-sm text-gray-500">
                   <span>총 {filteredUsers.length}명</span>
                 </div>
@@ -1360,79 +1433,81 @@ export default function AdminDashboard() {
 
                 {/* 구독 목록 */}
                 <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-900/50">
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">회원</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">플랜</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">상태</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">시작일</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">만료일</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">금액</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">액션</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-700/50">
-                      {filteredSubscriptions.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                            구독이 없습니다
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-900/50">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">회원</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">플랜</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">상태</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">시작일</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">만료일</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">금액</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">액션</th>
                         </tr>
-                      ) : (
-                        filteredSubscriptions.map((sub) => (
-                          <tr key={sub.id} className="hover:bg-gray-700/20 transition-colors">
-                            <td className="px-4 py-4">
-                              <div>
-                                <div className="text-white font-medium">{sub.user_name || '이름 없음'}</div>
-                                <div className="text-sm text-gray-500">{sub.user_email}</div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                sub.plan === 'yearly' 
-                                  ? 'bg-purple-500/20 text-purple-400'
-                                  : 'bg-blue-500/20 text-blue-400'
-                              }`}>
-                                {sub.plan === 'yearly' ? '🗓️ 연간' : '📅 월간'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                sub.status === 'active' 
-                                  ? 'bg-emerald-500/20 text-emerald-400'
-                                  : sub.status === 'cancelled'
-                                  ? 'bg-red-500/20 text-red-400'
-                                  : 'bg-gray-500/20 text-gray-400'
-                              }`}>
-                                {sub.status === 'active' ? '✅ 활성' : 
-                                 sub.status === 'cancelled' ? '❌ 취소' : '⏰ 만료'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-400">
-                              {formatDate(sub.started_at)}
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-400">
-                              {formatDate(sub.expires_at)}
-                            </td>
-                            <td className="px-4 py-4 text-sm text-white">
-                              {formatCurrency(sub.price || (sub.plan === 'yearly' ? 79000 : 9900))}
-                            </td>
-                            <td className="px-4 py-4 text-right">
-                              {sub.status === 'active' && (
-                                <button
-                                  onClick={() => handleCancelSubscription(sub.id)}
-                                  className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded text-sm transition-colors"
-                                >
-                                  취소
-                                </button>
-                              )}
+                      </thead>
+                      <tbody className="divide-y divide-gray-700/50">
+                        {filteredSubscriptions.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
+                              구독이 없습니다
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          filteredSubscriptions.map((sub) => (
+                            <tr key={sub.id} className="hover:bg-gray-700/20 transition-colors">
+                              <td className="px-4 py-4">
+                                <div>
+                                  <div className="text-white font-medium">{sub.user_name || '이름 없음'}</div>
+                                  <div className="text-sm text-gray-500">{sub.user_email}</div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  sub.plan === 'yearly' 
+                                    ? 'bg-purple-500/20 text-purple-400'
+                                    : 'bg-blue-500/20 text-blue-400'
+                                }`}>
+                                  {sub.plan === 'yearly' ? '🗓️ 연간' : '📅 월간'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  sub.status === 'active' 
+                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                    : sub.status === 'cancelled'
+                                    ? 'bg-red-500/20 text-red-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}>
+                                  {sub.status === 'active' ? '✅ 활성' : 
+                                   sub.status === 'cancelled' ? '❌ 취소' : '⏰ 만료'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-400">
+                                {formatDate(sub.started_at)}
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-400">
+                                {formatDate(sub.expires_at)}
+                              </td>
+                              <td className="px-4 py-4 text-sm text-white font-medium">
+                                {formatCurrency(sub.price || (sub.plan === 'monthly' ? 9900 : 79000))}
+                              </td>
+                              <td className="px-4 py-4 text-right">
+                                {sub.status === 'active' && (
+                                  <button
+                                    onClick={() => handleCancelSubscription(sub.id)}
+                                    className="px-3 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs transition-colors"
+                                  >
+                                    취소
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -1440,173 +1515,112 @@ export default function AdminDashboard() {
             {/* 광고 관리 탭 */}
             {activeTab === 'ads' && (
               <div className="space-y-6">
-                {/* 광고 추가 버튼 & 필터 */}
-                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                  <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-                    <button
-                      onClick={() => setAdFilter('all')}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                        adFilter === 'all'
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                      }`}
-                    >
-                      전체 ({ads.length})
-                    </button>
-                    {SLOT_TYPES.map((slot) => (
+                {/* 헤더 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {[{ value: 'all', label: '전체' }, ...SLOT_TYPES.map(s => ({ value: s.value, label: s.label }))].map((filter) => (
                       <button
-                        key={slot.value}
-                        onClick={() => setAdFilter(slot.value)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                          adFilter === slot.value
+                        key={filter.value}
+                        onClick={() => setAdFilter(filter.value)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          adFilter === filter.value
                             ? 'bg-emerald-600 text-white'
                             : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                         }`}
                       >
-                        {slot.label} ({ads.filter(a => a.slot_type === slot.value).length})
+                        {filter.label}
                       </button>
                     ))}
                   </div>
                   
                   <button
                     onClick={() => {
-                      resetAdForm()
                       setEditingAd(null)
+                      resetAdForm()
                       setIsAdModalOpen(true)
                     }}
-                    className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
                   >
-                    <span>➕</span> 광고 추가
+                    + 새 광고
                   </button>
                 </div>
 
                 {/* 광고 목록 */}
-                <div className="grid gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredAds.length === 0 ? (
-                    <div className="text-center py-20 bg-gray-800/50 rounded-xl border border-gray-700/50">
-                      <div className="text-4xl mb-4">📭</div>
-                      <p className="text-gray-400">등록된 광고가 없습니다</p>
+                    <div className="col-span-full text-center py-12 text-gray-500">
+                      등록된 광고가 없습니다
                     </div>
                   ) : (
                     filteredAds.map((ad) => (
-                      <div
+                      <div 
                         key={ad.id}
-                        className={`bg-gray-800/50 rounded-xl overflow-hidden border ${
+                        className={`bg-gray-800/50 rounded-xl border overflow-hidden ${
                           ad.is_active ? 'border-emerald-500/30' : 'border-gray-700/50'
                         }`}
                       >
-                        <div className="flex flex-col lg:flex-row">
-                          {/* 이미지 미리보기 */}
-                          <div className="lg:w-80 p-4 bg-gray-900/50 flex items-center justify-center">
-                            <div 
-                              className="relative bg-gray-700 rounded-lg overflow-hidden"
-                              style={{ 
-                                maxWidth: ad.slot_type === 'sidebar' ? '150px' : '100%',
-                                maxHeight: ad.slot_type === 'sidebar' ? '300px' : '90px'
-                              }}
-                            >
-                              <img
-                                src={ad.image_url}
-                                alt={ad.alt_text || ad.name}
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.src = 'https://via.placeholder.com/300x100?text=Image+Not+Found'
-                                }}
-                              />
-                              {!ad.is_active && (
-                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                  <span className="text-gray-300 font-bold">비활성</span>
-                                </div>
-                              )}
-                            </div>
+                        {/* 이미지 */}
+                        <div className="aspect-video bg-gray-900 flex items-center justify-center overflow-hidden">
+                          <img 
+                            src={ad.image_url} 
+                            alt={ad.alt_text || ad.name}
+                            className="max-w-full max-h-full object-contain"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/300x100?text=Image+Error'
+                            }}
+                          />
+                        </div>
+                        
+                        {/* 정보 */}
+                        <div className="p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="text-white font-medium">{ad.name}</h3>
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              ad.is_active 
+                                ? 'bg-emerald-500/20 text-emerald-400' 
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {ad.is_active ? '활성' : '비활성'}
+                            </span>
                           </div>
-
-                          {/* 정보 */}
-                          <div className="flex-1 p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h3 className="text-lg font-bold text-white mb-1">{ad.name}</h3>
-                                <div className="flex items-center gap-2">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                    ad.slot_type === 'desktop_banner' ? 'bg-blue-500/20 text-blue-400' :
-                                    ad.slot_type === 'sidebar' ? 'bg-purple-500/20 text-purple-400' :
-                                    'bg-orange-500/20 text-orange-400'
-                                  }`}>
-                                    {SLOT_TYPES.find(s => s.value === ad.slot_type)?.label}
-                                  </span>
-                                  <span className="text-gray-500 text-xs">{ad.width}×{ad.height}</span>
-                                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                    ad.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'
-                                  }`}>
-                                    {ad.is_active ? '활성' : '비활성'}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <span className="text-gray-500 text-xs">우선순위</span>
-                                <div className="text-lg font-bold text-white">{ad.priority}</div>
-                              </div>
-                            </div>
-
-                            {/* URL */}
-                            <div className="mb-3 text-sm">
-                              <div className="flex items-center gap-2 text-gray-400">
-                                <span>🔗</span>
-                                <a 
-                                  href={ad.link_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="hover:text-emerald-400 truncate"
-                                >
-                                  {ad.link_url}
-                                </a>
-                              </div>
-                            </div>
-
-                            {/* 통계 */}
-                            <div className="flex items-center gap-6 mb-4">
-                              <div className="text-xs text-gray-500 mr-2">오늘</div>
-                              <div>
-                                <span className="text-gray-500 text-xs">노출</span>
-                                <div className="text-white font-bold">{(todayAdStats[ad.id]?.impressions || 0).toLocaleString()}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-500 text-xs">클릭</span>
-                                <div className="text-white font-bold">{(todayAdStats[ad.id]?.clicks || 0).toLocaleString()}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-500 text-xs">CTR</span>
-                                <div className="text-emerald-400 font-bold">
-                                  {calculateCTR(todayAdStats[ad.id]?.clicks || 0, todayAdStats[ad.id]?.impressions || 0)}%
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* 액션 버튼 */}
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleToggleAdActive(ad)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                  ad.is_active 
-                                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                }`}
-                              >
-                                {ad.is_active ? '비활성화' : '활성화'}
-                              </button>
-                              <button
-                                onClick={() => handleEditAd(ad)}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                              >
-                                수정
-                              </button>
-                              <button
-                                onClick={() => handleAdDelete(ad.id)}
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-                              >
-                                삭제
-                              </button>
-                            </div>
+                          
+                          <div className="text-xs text-gray-500 mb-3">
+                            {SLOT_TYPES.find(s => s.value === ad.slot_type)?.label || ad.slot_type}
+                            <span className="mx-1">•</span>
+                            {ad.width}×{ad.height}
+                          </div>
+                          
+                          {/* 통계 */}
+                          <div className="flex items-center gap-4 text-xs text-gray-400 mb-4">
+                            <span>👁️ {(todayAdStats[ad.id]?.impressions || 0).toLocaleString()}</span>
+                            <span>👆 {(todayAdStats[ad.id]?.clicks || 0).toLocaleString()}</span>
+                            <span>CTR {calculateCTR(todayAdStats[ad.id]?.clicks || 0, todayAdStats[ad.id]?.impressions || 0)}%</span>
+                          </div>
+                          
+                          {/* 액션 */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleToggleAdActive(ad)}
+                              className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                ad.is_active 
+                                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                                  : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30'
+                              }`}
+                            >
+                              {ad.is_active ? '비활성화' : '활성화'}
+                            </button>
+                            <button
+                              onClick={() => handleEditAd(ad)}
+                              className="px-3 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg text-xs transition-colors"
+                            >
+                              수정
+                            </button>
+                            <button
+                              onClick={() => handleAdDelete(ad.id)}
+                              className="px-3 py-2 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-lg text-xs transition-colors"
+                            >
+                              삭제
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1619,313 +1633,158 @@ export default function AdminDashboard() {
             {/* 광고 리포트 탭 */}
             {activeTab === 'report' && (
               <div className="space-y-6">
-                {/* 필터 바 */}
+                {/* 필터 */}
                 <div className="flex flex-wrap items-center gap-4">
-                  {/* 슬롯 필터 */}
                   <select
-                    value={reportSlotFilter}
-                    onChange={(e) => {
-                      setReportSlotFilter(e.target.value)
-                      setTimeout(fetchReportStats, 100)
-                    }}
-                    className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                    value={reportDateRange}
+                    onChange={(e) => setReportDateRange(e.target.value)}
+                    className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="all">전체</option>
-                    {SLOT_TYPES.map(slot => (
-                      <option key={slot.value} value={slot.value}>
-                        {slot.label} ({slot.size})
-                      </option>
-                    ))}
+                    <option value="7">최근 7일</option>
+                    <option value="14">최근 14일</option>
+                    <option value="30">최근 30일</option>
                   </select>
                   
-                  {/* 기간 필터 */}
-                  <div className="flex gap-2">
-                    {['7', '14', '30'].map(days => (
-                      <button
-                        key={days}
-                        onClick={() => {
-                          setReportDateRange(days)
-                          setTimeout(fetchReportStats, 100)
-                        }}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          reportDateRange === days
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-gray-800 text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        {days}일
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={fetchReportStats}
-                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  <select
+                    value={reportSlotFilter}
+                    onChange={(e) => setReportSlotFilter(e.target.value)}
+                    className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
                   >
-                    🔄 새로고침
-                  </button>
+                    <option value="all">전체 슬롯</option>
+                    {SLOT_TYPES.map((slot) => (
+                      <option key={slot.value} value={slot.value}>{slot.label}</option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* 총계 카드 */}
-                {(() => {
-                  const totalImpressions = reportSummary.reduce((acc, s) => acc + s.impressions, 0)
-                  const totalClicks = reportSummary.reduce((acc, s) => acc + s.clicks, 0)
-                  const totalCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
-                  
-                  return (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
-                        <div className="text-gray-400 text-sm mb-1">총 노출</div>
-                        <div className="text-3xl font-bold text-white">
-                          {totalImpressions.toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
-                        <div className="text-gray-400 text-sm mb-1">총 클릭</div>
-                        <div className="text-3xl font-bold text-emerald-400">
-                          {totalClicks.toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
-                        <div className="text-gray-400 text-sm mb-1">평균 CTR</div>
-                        <div className="text-3xl font-bold text-blue-400">
-                          {totalCTR.toFixed(2)}%
-                        </div>
-                      </div>
+                {/* 요약 카드 */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                    <div className="text-2xl mb-2">👁️</div>
+                    <div className="text-2xl font-bold text-white">
+                      {reportSummary.reduce((sum, d) => sum + d.impressions, 0).toLocaleString()}
                     </div>
-                  )
-                })()}
+                    <div className="text-sm text-gray-400">총 노출</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                    <div className="text-2xl mb-2">👆</div>
+                    <div className="text-2xl font-bold text-white">
+                      {reportSummary.reduce((sum, d) => sum + d.clicks, 0).toLocaleString()}
+                    </div>
+                    <div className="text-sm text-gray-400">총 클릭</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                    <div className="text-2xl mb-2">📊</div>
+                    <div className="text-2xl font-bold text-white">
+                      {calculateCTR(
+                        reportSummary.reduce((sum, d) => sum + d.clicks, 0),
+                        reportSummary.reduce((sum, d) => sum + d.impressions, 0)
+                      )}%
+                    </div>
+                    <div className="text-sm text-gray-400">평균 CTR</div>
+                  </div>
+                </div>
 
-                {/* 일별 추이 차트 */}
-                <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
-                  <h2 className="text-lg font-bold text-white mb-6">일별 추이</h2>
-                  
-                  {reportSummary.length === 0 ? (
-                    <div className="text-center py-10 text-gray-400">
-                      데이터가 없습니다
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {(() => {
+                {/* 일별 차트 */}
+                {reportSummary.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                    <h3 className="text-lg font-semibold text-white mb-4">일별 추이</h3>
+                    <div className="flex items-end gap-1 h-32">
+                      {reportSummary.map((d, i) => {
                         const maxImpressions = Math.max(...reportSummary.map(s => s.impressions), 1)
-                        const maxClicks = Math.max(...reportSummary.map(s => s.clicks), 1)
-                        
-                        return reportSummary.slice(0, 14).reverse().map((day) => (
-                          <div key={day.date} className="flex items-center gap-4">
-                            <div className="w-24 text-sm text-gray-400">
-                              {new Date(day.date).toLocaleDateString('ko-KR', { 
-                                month: 'short', 
-                                day: 'numeric' 
-                              })}
-                            </div>
-                            
-                            <div className="flex-1 flex gap-2">
-                              <div className="flex-1 h-6 bg-gray-700 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                                  style={{ width: `${(day.impressions / maxImpressions) * 100}%` }}
-                                />
-                              </div>
-                              <div className="flex-1 h-6 bg-gray-700 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                                  style={{ width: `${(day.clicks / maxClicks) * 100}%` }}
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="w-36 flex gap-4 text-sm">
-                              <span className="text-blue-400 w-12 text-right">{day.impressions}</span>
-                              <span className="text-emerald-400 w-8 text-right">{day.clicks}</span>
-                              <span className="text-gray-500 w-12 text-right">
-                                {day.impressions > 0 
-                                  ? ((day.clicks / day.impressions) * 100).toFixed(1) 
-                                  : 0}%
-                              </span>
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center group relative">
+                            <div
+                              className="w-full bg-blue-500 rounded-t transition-all duration-300 cursor-pointer hover:opacity-80"
+                              style={{
+                                height: `${(d.impressions / maxImpressions) * 100}%`,
+                                minHeight: d.impressions > 0 ? '4px' : '0',
+                              }}
+                            />
+                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                              {formatDate(d.date)}<br />
+                              노출: {d.impressions.toLocaleString()}<br />
+                              클릭: {d.clicks.toLocaleString()}
                             </div>
                           </div>
-                        ))
-                      })()}
+                        )
+                      })}
                     </div>
-                  )}
-                  
-                  <div className="flex items-center gap-6 mt-6 pt-4 border-t border-gray-700">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full" />
-                      <span className="text-sm text-gray-400">노출</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-emerald-500 rounded-full" />
-                      <span className="text-sm text-gray-400">클릭</span>
+                    <div className="flex justify-between mt-2 text-[10px] text-gray-500">
+                      <span>{reportSummary.length > 0 ? formatDate(reportSummary[0].date) : ''}</span>
+                      <span>{reportSummary.length > 0 ? formatDate(reportSummary[reportSummary.length - 1].date) : ''}</span>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* 광고별 성과 테이블 */}
-                <div className="bg-gray-800/50 rounded-xl overflow-hidden border border-gray-700/50">
-                  <div className="p-6 border-b border-gray-700">
-                    <h2 className="text-lg font-bold text-white">광고별 성과</h2>
-                  </div>
-                  
-                  {adPerformance.length === 0 ? (
-                    <div className="text-center py-10 text-gray-400">
-                      데이터가 없습니다
+                {/* 광고별 성과 */}
+                {adPerformance.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
+                    <div className="px-4 py-3 bg-gray-900/50 border-b border-gray-700/50">
+                      <h3 className="font-semibold text-white">광고별 성과</h3>
                     </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="text-left text-gray-400 text-sm border-b border-gray-700">
-                            <th className="px-6 py-4">광고명</th>
-                            <th className="px-6 py-4">슬롯</th>
-                            <th className="px-6 py-4 text-right">노출</th>
-                            <th className="px-6 py-4 text-right">클릭</th>
-                            <th className="px-6 py-4 text-right">CTR</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {adPerformance.map((ad) => (
-                            <tr 
-                              key={ad.id}
-                              className="border-b border-gray-700/50 hover:bg-gray-700/30"
-                            >
-                              <td className="px-6 py-4 font-medium text-white">{ad.name}</td>
-                              <td className="px-6 py-4">
-                                <span className={`px-2 py-1 rounded text-xs ${
-                                  ad.slot_type === 'desktop_banner' ? 'bg-blue-500/20 text-blue-400' :
-                                  ad.slot_type === 'sidebar' ? 'bg-purple-500/20 text-purple-400' :
-                                  'bg-orange-500/20 text-orange-400'
-                                }`}>
-                                  {SLOT_TYPES.find(s => s.value === ad.slot_type)?.label || ad.slot_type}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-right text-blue-400">
-                                {ad.totalImpressions.toLocaleString()}
-                              </td>
-                              <td className="px-6 py-4 text-right text-emerald-400">
-                                {ad.totalClicks.toLocaleString()}
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <span className={`font-bold ${
-                                  ad.ctr >= 1 ? 'text-emerald-400' : 
-                                  ad.ctr >= 0.5 ? 'text-yellow-400' : 
-                                  'text-gray-400'
-                                }`}>
-                                  {ad.ctr.toFixed(2)}%
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-
-                {/* 일별 상세 테이블 */}
-                <div className="bg-gray-800/50 rounded-xl overflow-hidden border border-gray-700/50">
-                  <div className="p-6 border-b border-gray-700">
-                    <h2 className="text-lg font-bold text-white">일별 상세</h2>
-                  </div>
-                  
-                  <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="text-left text-gray-400 text-sm border-b border-gray-700">
-                          <th className="px-6 py-4">날짜</th>
-                          <th className="px-6 py-4 text-right">노출</th>
-                          <th className="px-6 py-4 text-right">클릭</th>
-                          <th className="px-6 py-4 text-right">CTR</th>
+                        <tr className="bg-gray-900/30">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">광고명</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">슬롯</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">노출</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">클릭</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">CTR</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {reportSummary.map((day) => {
-                          const ctr = day.impressions > 0 
-                            ? (day.clicks / day.impressions) * 100 
-                            : 0
-                          return (
-                            <tr 
-                              key={day.date}
-                              className="border-b border-gray-700/50 hover:bg-gray-700/30"
-                            >
-                              <td className="px-6 py-4 text-white">
-                                {new Date(day.date).toLocaleDateString('ko-KR', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                })}
-                              </td>
-                              <td className="px-6 py-4 text-right text-blue-400">
-                                {day.impressions.toLocaleString()}
-                              </td>
-                              <td className="px-6 py-4 text-right text-emerald-400">
-                                {day.clicks.toLocaleString()}
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <span className={`font-bold ${
-                                  ctr >= 1 ? 'text-emerald-400' : 
-                                  ctr >= 0.5 ? 'text-yellow-400' : 
-                                  'text-gray-400'
-                                }`}>
-                                  {ctr.toFixed(2)}%
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        })}
+                      <tbody className="divide-y divide-gray-700/50">
+                        {adPerformance.map((ad) => (
+                          <tr key={ad.id} className="hover:bg-gray-700/20">
+                            <td className="px-4 py-3 text-white">{ad.name}</td>
+                            <td className="px-4 py-3 text-gray-400 text-sm">
+                              {SLOT_TYPES.find(s => s.value === ad.slot_type)?.label || ad.slot_type}
+                            </td>
+                            <td className="px-4 py-3 text-right text-white">{ad.totalImpressions.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right text-white">{ad.totalClicks.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right">
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                ad.ctr >= 1 ? 'bg-emerald-500/20 text-emerald-400' :
+                                ad.ctr >= 0.5 ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-gray-500/20 text-gray-400'
+                              }`}>
+                                {ad.ctr.toFixed(2)}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
             {/* 블로그 관리 탭 */}
             {activeTab === 'blog' && (
               <div className="space-y-6">
-                {/* 블로그 통계 카드 */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">📝</span>
-                      <div>
-                        <div className="text-xl font-bold text-white">{blogStats.totalPosts}</div>
-                        <div className="text-xs text-gray-400">전체 글</div>
-                      </div>
-                    </div>
+                {/* 블로그 통계 */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                    <div className="text-2xl mb-2">📝</div>
+                    <div className="text-2xl font-bold text-white">{blogStats.totalPosts}</div>
+                    <div className="text-sm text-gray-400">총 게시물</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">✅</span>
-                      <div>
-                        <div className="text-xl font-bold text-emerald-400">{blogStats.publishedPosts}</div>
-                        <div className="text-xs text-gray-400">공개 글</div>
-                      </div>
-                    </div>
+                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                    <div className="text-2xl mb-2">✅</div>
+                    <div className="text-2xl font-bold text-white">{blogStats.publishedPosts}</div>
+                    <div className="text-sm text-gray-400">발행됨</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">📋</span>
-                      <div>
-                        <div className="text-xl font-bold text-gray-400">{blogStats.totalPosts - blogStats.publishedPosts}</div>
-                        <div className="text-xs text-gray-400">비공개 글</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">👁️</span>
-                      <div>
-                        <div className="text-xl font-bold text-blue-400">{blogStats.totalViews.toLocaleString()}</div>
-                        <div className="text-xs text-gray-400">총 조회수</div>
-                      </div>
-                    </div>
+                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                    <div className="text-2xl mb-2">👁️</div>
+                    <div className="text-2xl font-bold text-white">{blogStats.totalViews.toLocaleString()}</div>
+                    <div className="text-sm text-gray-400">총 조회수</div>
                   </div>
                 </div>
 
-                {/* 필터 & 버튼 */}
-                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                  <div className="flex items-center gap-2 flex-wrap">
+                {/* 필터 & 액션 */}
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => setBlogCategoryFilter('all')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -1934,7 +1793,7 @@ export default function AdminDashboard() {
                           : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                       }`}
                     >
-                      전체 ({blogPosts.length})
+                      전체
                     </button>
                     {blogCategories.map((cat) => (
                       <button
@@ -1946,101 +1805,85 @@ export default function AdminDashboard() {
                             : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                         }`}
                       >
-                        {cat} ({blogPosts.filter(p => p.category === cat).length})
+                        {cat}
                       </button>
                     ))}
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={fetchBlogPosts}
-                      className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm transition-colors"
-                    >
-                      🔄 새로고침
-                    </button>
-                    <a
-                      href="/admin/blog/new"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                      ✏️ 새 글 작성
-                    </a>
-                  </div>
+                  <a
+                    href="/admin/blog/new"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    + 새 글 작성
+                  </a>
                 </div>
 
                 {/* 블로그 목록 */}
                 {blogLoading ? (
-                  <div className="text-center py-20">
-                    <div className="text-4xl mb-4 animate-bounce">📝</div>
-                    <p className="text-gray-400">블로그 목록 불러오는 중...</p>
-                  </div>
+                  <div className="text-center py-12 text-gray-500">로딩 중...</div>
                 ) : (
-                  <div className="bg-gray-800/50 rounded-xl overflow-hidden border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
                     <table className="w-full">
                       <thead>
                         <tr className="bg-gray-900/50">
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">제목</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">카테고리</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">상태</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">조회수</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">작성일</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">관리</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">상태</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">조회수</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">작성일</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">액션</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-700/50">
                         {filteredBlogPosts.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
-                              <div className="text-4xl mb-2">📄</div>
-                              아직 작성된 글이 없습니다
+                              게시물이 없습니다
                             </td>
                           </tr>
                         ) : (
                           filteredBlogPosts.map((post) => (
                             <tr key={post.id} className="hover:bg-gray-700/20 transition-colors">
                               <td className="px-4 py-4">
-                                <div className="font-medium text-white">{post.title_kr}</div>
-                                <div className="text-xs text-gray-500 mt-1">/{post.slug}</div>
+                                <div className="text-white font-medium line-clamp-1">{post.title_kr}</div>
+                                <div className="text-xs text-gray-500">{post.slug}</div>
                               </td>
                               <td className="px-4 py-4">
-                                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">
+                                <span className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">
                                   {post.category}
                                 </span>
                               </td>
-                              <td className="px-4 py-4 text-center">
+                              <td className="px-4 py-4">
                                 <button
                                   onClick={() => handleTogglePublish(post.id, post.published)}
-                                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                                  className={`px-2 py-1 rounded text-xs font-medium ${
                                     post.published
-                                      ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
-                                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                                      ? 'bg-emerald-500/20 text-emerald-400'
+                                      : 'bg-gray-500/20 text-gray-400'
                                   }`}
                                 >
-                                  {post.published ? '✓ 공개' : '비공개'}
+                                  {post.published ? '✅ 발행됨' : '📝 초안'}
                                 </button>
                               </td>
-                              <td className="px-4 py-4 text-center text-sm text-white">
-                                {(post.views || 0).toLocaleString()}
+                              <td className="px-4 py-4 text-sm text-gray-400">
+                                {post.views?.toLocaleString() || 0}
                               </td>
-                              <td className="px-4 py-4 text-center text-sm text-gray-400">
+                              <td className="px-4 py-4 text-sm text-gray-400">
                                 {formatDate(post.created_at)}
                               </td>
-                              <td className="px-4 py-4">
-                                <div className="flex items-center justify-center gap-2">
+                              <td className="px-4 py-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
                                   <a
                                     href={`/blog/${post.slug}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs transition-colors"
+                                    className="px-3 py-1 bg-gray-700 text-gray-300 hover:bg-gray-600 rounded text-xs transition-colors"
                                   >
                                     보기
                                   </a>
                                   <a
                                     href={`/admin/blog/edit/${post.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors"
+                                    className="px-3 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded text-xs transition-colors"
                                   >
                                     수정
                                   </a>
