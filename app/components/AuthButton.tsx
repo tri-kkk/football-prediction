@@ -157,10 +157,10 @@ export default function AuthButton() {
 
   // 비로그인 상태 - 모바일 최적화
   return (
-    <Link
-      href="/login"
-      className="px-2.5 md:px-4 py-1 md:py-1.5 text-xs md:text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium whitespace-nowrap"
-    >
+ <Link
+    href="/login"
+    className="flex items-center justify-center px-2.5 md:px-4 py-1 md:py-1.5 text-xs md:text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium whitespace-nowrap"
+  >
       {language === 'ko' ? '로그인' : 'Login'}
     </Link>
   )
