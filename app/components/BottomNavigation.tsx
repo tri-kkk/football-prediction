@@ -2,11 +2,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useLanguage } from '../contexts/LanguageContext'
+import { usePWAInstall } from './pwa/PWAInstallContext'
 import Image from 'next/image'
 
 export default function MobileBottomNav() {
   const pathname = usePathname()
   const { language } = useLanguage()
+  const { canInstall, isInstalled, triggerInstall } = usePWAInstall()
 
   const navItems = [
     {
@@ -55,10 +57,17 @@ export default function MobileBottomNav() {
   ]
 
   const visibleNavItems = navItems.filter(item => !item.hidden)
+  
+  // 설치 가능하고 아직 설치 안 했으면 설치 버튼 추가
+  const showInstallButton = canInstall && !isInstalled
+  const totalColumns = visibleNavItems.length + (showInstallButton ? 1 : 0)
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0f0f0f] border-t border-gray-800 z-50 safe-area-bottom">
-      <div className={`grid gap-1 px-2 py-3`} style={{ gridTemplateColumns: `repeat(${visibleNavItems.length}, 1fr)` }}>
+      <div 
+        className="grid gap-1 px-2 py-3" 
+        style={{ gridTemplateColumns: `repeat(${totalColumns}, 1fr)` }}
+      >
         {visibleNavItems.map((item) => {
           const isActive = pathname === item.href
           
@@ -119,6 +128,35 @@ export default function MobileBottomNav() {
             </Link>
           )
         })}
+        
+        {/* 앱 설치 버튼 */}
+        {showInstallButton && (
+          <button
+            onClick={() => triggerInstall()}
+            className="relative flex flex-col items-center gap-2 py-2 rounded-lg transition-all text-emerald-400 active:bg-emerald-500/10"
+          >
+            <div className="relative opacity-100">
+              <svg 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect x="5" y="2" width="14" height="20" rx="2" stroke="#34d399" strokeWidth="2"/>
+                <path d="M12 7v6m0 0l-2.5-2.5M12 13l2.5-2.5" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="9" y1="18" x2="15" y2="18" stroke="#34d399" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <span className="text-[11px] font-medium">
+              {language === 'ko' ? '앱설치' : 'Install'}
+            </span>
+            {/* NEW 뱃지 */}
+            <span className="absolute -top-0.5 -right-0.5 px-1 py-0.5 text-[8px] font-bold rounded bg-red-500 text-white">
+              NEW
+            </span>
+          </button>
+        )}
       </div>
     </div>
   )

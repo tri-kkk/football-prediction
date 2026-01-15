@@ -1,5 +1,5 @@
 import './globals.css'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import Link from 'next/link'
 import GoogleTagManager from './GoogleTagManager'
@@ -10,6 +10,10 @@ import LanguageToggle from './components/LanguageToggle'
 import HtmlLangUpdater from './components/HtmlLangUpdater'
 import { Providers } from './providers'
 import AuthButton from './components/AuthButton'
+import { PWAInstallProvider } from './components/pwa/PWAInstallContext'
+import { IOSInstallGuide } from './components/pwa/IOSInstallGuide'
+import InstallBanner from './components/InstallBanner'
+import FooterBusinessInfo from './components/FooterBusinessInfo'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
@@ -23,6 +27,12 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: 'https://www.trendsoccer.com',
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'TrendSoccer',
   },
   openGraph: {
     title: '트랜드사커 - 실시간 해외축구 AI 예측',
@@ -53,8 +63,16 @@ export const metadata: Metadata = {
       { url: '/favicon.svg', type: 'image/svg+xml' },
     ],
     shortcut: '/favicon.ico',
-    apple: '/logo.svg',
+    apple: '/icons/icon-192x192.png',
   },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#0f0f0f',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 const siteNavigationSchema = {
@@ -129,6 +147,13 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* PWA 메타 태그 */}
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="TrendSoccer" />
+        
         <Script
           id="site-navigation-schema"
           type="application/ld+json"
@@ -158,6 +183,7 @@ export default function RootLayout({
       </head>
       <body className="bg-[#0f0f0f] text-white">
         <Providers>
+        <PWAInstallProvider>
         <LanguageProvider>
         <HtmlLangUpdater />
         
@@ -200,61 +226,122 @@ export default function RootLayout({
           {children}
         </main>
 
-        {/* Footer - 모바일에서 하단 네비 공간 확보 */}
-        <footer className="py-12 border-t border-gray-800 bg-[#1a1a1a] mb-16 md:mb-0">
+        {/* Footer - 개선된 디자인 */}
+        <footer className="border-t border-gray-800 bg-[#111111] mb-16 md:mb-0">
           <div className="container mx-auto px-4">
-            {/* Footer Links */}
-            <div className="flex flex-wrap justify-center items-center gap-6 mb-6">
-              <Link 
-                href="/about" 
-                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
-              >
-                About
-              </Link>
-              <span className="text-gray-600">•</span>
-              <Link 
-                href="/advertise" 
-                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
-              >
-                Advertise
-              </Link>
-              <span className="text-gray-600">•</span>
-              <Link 
-                href="/contact" 
-                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
-              >
-                Contact
-              </Link>
-              <span className="text-gray-600">•</span>
-              <Link 
-                href="/privacy" 
-                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
-              >
-                Privacy Policy
-              </Link>
-              <span className="text-gray-600">•</span>
-              <Link 
-                href="/terms" 
-                className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
-              >
-                Terms of Service
-              </Link>
+            
+            {/* 상단: 로고 + 네비게이션 링크 */}
+            <div className="py-8 border-b border-gray-800">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                {/* 로고 */}
+                <Link href="/" className="flex items-center gap-2">
+                  <img 
+                    src="/logo.svg" 
+                    alt="트랜드사커" 
+                    className="h-8 w-auto opacity-80"
+                  />
+                </Link>
+                
+                {/* 네비게이션 링크 */}
+                <div className="flex flex-wrap items-center gap-4 md:gap-6">
+                  <Link 
+                    href="/about" 
+                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                  >
+                    About
+                  </Link>
+                  <Link 
+                    href="/advertise" 
+                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                  >
+                    Advertise
+                  </Link>
+                  <Link 
+                    href="/contact" 
+                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                  >
+                    Contact
+                  </Link>
+                  <Link 
+                    href="/privacy" 
+                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                  >
+                    Privacy Policy
+                  </Link>
+                  <Link 
+                    href="/terms" 
+                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                  >
+                    Terms of Service
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* 중단: 고객센터 + 사업자 정보 */}
+            <div className="py-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+              
+              {/* 고객센터 */}
+              <div>
+                <h3 className="text-white font-semibold text-sm mb-4 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  고객센터
+                </h3>
+                <div className="space-y-2">
+                  <p className="text-gray-400 text-sm">
+                    이메일: <a href="mailto:trikilab2025@gmail.com" className="text-emerald-400 hover:text-emerald-300 transition-colors">trikilab2025@gmail.com</a>
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    운영시간: 평일 10:00 - 17:00 (주말/공휴일 휴무)
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    문의 접수 후 영업일 기준 1-2일 내 답변드립니다.
+                  </p>
+                </div>
+              </div>
+
+              {/* 사업자 정보 - 토글 컴포넌트 */}
+              <FooterBusinessInfo />
+            </div>
+
+            {/* 하단: 저작권 + 면책조항 */}
+            <div className="py-6 border-t border-gray-800">
+              <div className="space-y-3">
+                {/* 면책조항 */}
+                <p className="text-gray-600 text-[11px] leading-relaxed">
+                  트랜드사커는 스포츠 경기 결과에 대한 통계 분석 및 예측 정보를 제공하는 서비스입니다. 
+                  본 사이트에서 제공하는 정보는 참고용이며, 이를 기반으로 한 의사결정에 대한 책임은 전적으로 이용자에게 있습니다. 
+                  불법 도박은 법적 처벌의 대상이 됩니다.
+                </p>
+                
+                {/* 저작권 */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 pt-2">
+                  <p className="text-gray-500 text-xs">
+                    © 2025 TrendSoccer (트랜드사커). All rights reserved.
+                  </p>
+                  <p className="text-gray-600 text-[11px]">
+                    AI-powered soccer match prediction and analysis platform
+                  </p>
+                </div>
+              </div>
             </div>
             
-            {/* Copyright */}
-            <div className="text-center text-gray-500 text-sm">
-              <p>© 2025 TrendSoccer (트랜드사커). All rights reserved.</p>
-              <p className="mt-2 text-xs text-gray-600">
-                AI-powered soccer match prediction and analysis platform
-              </p>
-            </div>
           </div>
         </footer>
 
         {/* 모바일 하단 네비게이션 */}
         <BottomNavigation />
         
+        {/* 첫 방문 앱 설치 배너 */}
+        <InstallBanner />
+        
+        {/* iOS PWA 설치 안내 모달 */}
+        <IOSInstallGuide />
+        
         </LanguageProvider>
+        </PWAInstallProvider>
         </Providers>
       </body>
     </html>
