@@ -29,22 +29,25 @@ export async function GET() {
       )
     }
     
-    // 🆕 오늘 분석된 경기 수 조회
-    const todayStart = today + 'T00:00:00Z'
-    const tomorrowStart = new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00Z'
+    // 🔧 현재 시점 ~ 24시간 이내 경기만 카운트
+    const nowUTC = new Date().toISOString()
+    const next24hUTC = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     
+    console.log(`📅 Premium picks analysis range: ${nowUTC} ~ ${next24hUTC}`)
+    
+    // 24시간 이내 경기 수 조회
     const { count: analyzedCount } = await supabase
       .from('match_odds_latest')
       .select('*', { count: 'exact', head: true })
-      .gte('commence_time', todayStart)
-      .lt('commence_time', tomorrowStart)
+      .gte('commence_time', nowUTC)
+      .lt('commence_time', next24hUTC)
     
     return NextResponse.json({
       success: true,
       validDate: today,
       picks: picks || [],
       count: picks?.length || 0,
-      analyzed: analyzedCount || 0,  // 🆕 분석된 경기 수 추가
+      analyzed: analyzedCount || 0,
     })
     
   } catch (error) {
