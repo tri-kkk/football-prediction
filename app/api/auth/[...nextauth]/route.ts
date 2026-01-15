@@ -64,6 +64,9 @@ const handler = NextAuth({
           || headersList.get('x-real-ip') 
           || 'unknown'
         
+        // 현재 시간 (한 번만 생성)
+        const now = new Date().toISOString()
+        
         // 기존 사용자 확인
         const { data: existingUser } = await supabase
           .from('users')
@@ -76,8 +79,7 @@ const handler = NextAuth({
           const { country, countryCode } = await getCountryFromIP(ip)
           
           // 🎉 프로모션 기간 체크
-          const now = new Date()
-          const isPromoPeriod = now < PROMO_END_DATE
+          const isPromoPeriod = new Date() < PROMO_END_DATE
           
           // 🔴 재가입 체크 (프로모션 악용 방지)
           const emailHash = hashEmail(user.email)
@@ -91,7 +93,7 @@ const handler = NextAuth({
           const hadPromo = deletedUser?.promo_code ? true : false
           const canGetPromo = isPromoPeriod && !hadPromo
           
-          // 신규 사용자 생성 (IP, 국가 정보 포함)
+          // ✅ 신규 사용자 생성 (last_login_at 포함!)
           await supabase.from('users').insert({
             email: user.email,
             name: user.name,
@@ -106,21 +108,18 @@ const handler = NextAuth({
             tier: canGetPromo ? 'premium' : 'free',
             premium_expires_at: canGetPromo ? PROMO_END_DATE.toISOString() : null,
             promo_code: canGetPromo ? 'LAUNCH_2026' : null,
+            // ✅ 핵심 수정: 가입 시점 = 최초 로그인!
+            last_login_at: now,
           })
           
           console.log(`✅ New user: ${user.email} from ${country} (${countryCode}), IP: ${ip}`)
         } else {
-          // 로그인 시간 + 마지막 IP 업데이트
-          const headersList = await headers()
-          const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() 
-            || headersList.get('x-real-ip') 
-            || 'unknown'
-          
+          // ✅ 기존 사용자: 로그인 시간 + 마지막 IP 업데이트
           await supabase
             .from('users')
             .update({ 
-              last_login_at: new Date().toISOString(),
-              last_login_ip: ip  // 선택: 마지막 로그인 IP도 저장
+              last_login_at: now,
+              last_login_ip: ip
             })
             .eq('email', user.email)
         }
@@ -133,7 +132,6 @@ const handler = NextAuth({
     },
 
     async session({ session }) {
-      // ... 기존 코드 그대로 ...
       if (session.user?.email) {
         const { data: userData } = await supabase
           .from('users')
