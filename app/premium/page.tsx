@@ -1847,7 +1847,7 @@ export default function PremiumPredictPage() {
                               className="w-6 h-6 object-contain"
                               onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
                             />
-                            <span className="text-white font-medium text-sm">{pick.home_team}</span>
+                            <span className="text-white font-medium text-sm">{language === 'ko' ? (teamNameKo[pick.home_team] || pick.home_team) : pick.home_team}</span>
                           </div>
                           <span className="text-gray-500 text-xs">vs</span>
                           <div className="flex items-center gap-1">
@@ -1857,7 +1857,7 @@ export default function PremiumPredictPage() {
                               className="w-6 h-6 object-contain"
                               onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
                             />
-                            <span className="text-white font-medium text-sm">{pick.away_team}</span>
+                            <span className="text-white font-medium text-sm">{language === 'ko' ? (teamNameKo[pick.away_team] || pick.away_team) : pick.away_team}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
