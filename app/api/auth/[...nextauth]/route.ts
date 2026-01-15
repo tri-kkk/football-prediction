@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import NaverProvider from 'next-auth/providers/naver'
 import { createClient } from '@supabase/supabase-js'
+import { headers } from 'next/headers'
 import crypto from 'crypto'
 
 const supabase = createClient(
@@ -15,6 +16,30 @@ const PROMO_END_DATE = new Date('2026-02-01T00:00:00+09:00')
 // 이메일 해시 생성
 function hashEmail(email: string): string {
   return crypto.createHash('sha256').update(email.toLowerCase()).digest('hex')
+}
+
+// 🌍 IP로 국가 정보 가져오기
+async function getCountryFromIP(ip: string): Promise<{ country: string; countryCode: string }> {
+  // localhost나 내부 IP는 스킵
+  if (ip === 'unknown' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip === '::1') {
+    return { country: 'Local', countryCode: 'LO' }
+  }
+  
+  try {
+    // 무료 IP Geolocation API (상업용은 ip-api.com/pro 권장)
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=country,countryCode`, {
+      signal: AbortSignal.timeout(3000) // 3초 타임아웃
+    })
+    const data = await res.json()
+    
+    if (data.country) {
+      return { country: data.country, countryCode: data.countryCode }
+    }
+  } catch (error) {
+    console.error('IP Geolocation failed:', error)
+  }
+  
+  return { country: 'Unknown', countryCode: 'XX' }
 }
 
 const handler = NextAuth({
@@ -33,6 +58,12 @@ const handler = NextAuth({
       if (!user.email) return false
 
       try {
+        // 🌍 IP 주소 가져오기
+        const headersList = await headers()
+        const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() 
+          || headersList.get('x-real-ip') 
+          || 'unknown'
+        
         // 기존 사용자 확인
         const { data: existingUser } = await supabase
           .from('users')
@@ -41,6 +72,9 @@ const handler = NextAuth({
           .single()
 
         if (!existingUser) {
+          // 🌍 국가 정보 조회
+          const { country, countryCode } = await getCountryFromIP(ip)
+          
           // 🎉 프로모션 기간 체크
           const now = new Date()
           const isPromoPeriod = now < PROMO_END_DATE
@@ -57,42 +91,50 @@ const handler = NextAuth({
           const hadPromo = deletedUser?.promo_code ? true : false
           const canGetPromo = isPromoPeriod && !hadPromo
           
-          // 신규 사용자 생성
+          // 신규 사용자 생성 (IP, 국가 정보 포함)
           await supabase.from('users').insert({
             email: user.email,
             name: user.name,
             avatar_url: user.image,
             provider: account?.provider,
             provider_id: account?.providerAccountId,
+            // 🌍 IP 및 국가 정보
+            signup_ip: ip,
+            signup_country: country,
+            signup_country_code: countryCode,
             // 프로모션 적용 여부
             tier: canGetPromo ? 'premium' : 'free',
             premium_expires_at: canGetPromo ? PROMO_END_DATE.toISOString() : null,
             promo_code: canGetPromo ? 'LAUNCH_2026' : null,
           })
           
-          if (hadPromo) {
-            console.log(`⚠️ Returning user (promo already used): ${user.email}`)
-          } else {
-            console.log(`✅ New user: ${user.email}, tier: ${canGetPromo ? 'premium (promo)' : 'free'}`)
-          }
+          console.log(`✅ New user: ${user.email} from ${country} (${countryCode}), IP: ${ip}`)
         } else {
-          // 로그인 시간 업데이트
+          // 로그인 시간 + 마지막 IP 업데이트
+          const headersList = await headers()
+          const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() 
+            || headersList.get('x-real-ip') 
+            || 'unknown'
+          
           await supabase
             .from('users')
-            .update({ last_login_at: new Date().toISOString() })
+            .update({ 
+              last_login_at: new Date().toISOString(),
+              last_login_ip: ip  // 선택: 마지막 로그인 IP도 저장
+            })
             .eq('email', user.email)
         }
 
         return true
       } catch (error) {
         console.error('SignIn error:', error)
-        return true // 에러가 나도 일단 로그인 허용
+        return true
       }
     },
 
     async session({ session }) {
+      // ... 기존 코드 그대로 ...
       if (session.user?.email) {
-        // 사용자 티어 정보 추가
         const { data: userData } = await supabase
           .from('users')
           .select('id, tier, premium_expires_at, promo_code')
@@ -102,12 +144,10 @@ const handler = NextAuth({
         if (userData) {
           session.user.id = userData.id
           
-          // 🎉 프리미엄 만료 체크
           let currentTier = userData.tier
           if (userData.tier === 'premium' && userData.premium_expires_at) {
             const expiresAt = new Date(userData.premium_expires_at)
             if (new Date() > expiresAt) {
-              // 만료됨 - free로 전환
               currentTier = 'free'
               await supabase
                 .from('users')
