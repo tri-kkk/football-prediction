@@ -171,15 +171,15 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
 
-        {/* Global Navigation */}
+        {/* Global Navigation - 모바일 최적화 */}
         <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
-          <div className="container mx-auto px-4 py-3">
+          <div className="container mx-auto px-3 md:px-4 py-2 md:py-3">
             <div className="flex items-center justify-between">
-              <Link href="/" className="flex items-center gap-3 cursor-pointer">
+              <Link href="/" className="flex items-center gap-2 cursor-pointer">
                 <img 
                   src="/logo.svg" 
                   alt="트랜드사커" 
-                  className="h-12 w-auto"
+                  className="h-8 md:h-12 w-auto"
                 />
               </Link>
               
@@ -187,7 +187,7 @@ export default function RootLayout({
                 <Navigation />
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 md:gap-3">
                 <LanguageToggle />
                 <AuthButton />
               </div>

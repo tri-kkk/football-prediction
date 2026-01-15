@@ -33,7 +33,7 @@ export default function AuthButton() {
   // 로딩 중
   if (status === 'loading') {
     return (
-      <div className="w-20 h-8 bg-gray-700 rounded-lg animate-pulse" />
+      <div className="w-16 md:w-20 h-7 md:h-8 bg-gray-700 rounded-lg animate-pulse" />
     )
   }
 
@@ -48,13 +48,13 @@ export default function AuthButton() {
     return (
       <>
         <div className="relative" ref={dropdownRef}>
-          {/* 프로필 버튼 */}
+          {/* 프로필 버튼 - 모바일 최적화 */}
           <button
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+            className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
           >
             {/* 티어 배지 */}
-            <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+            <span className={`px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-bold rounded ${
               isPremium 
                 ? 'bg-yellow-500 text-black' 
                 : 'bg-gray-600 text-gray-200'
@@ -64,7 +64,7 @@ export default function AuthButton() {
             
             {/* 화살표 */}
             <svg 
-              className={`w-4 h-4 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+              className={`w-3 h-3 md:w-4 md:h-4 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -75,11 +75,11 @@ export default function AuthButton() {
 
           {/* 드롭다운 메뉴 */}
           {showDropdown && (
-            <div className="absolute right-0 mt-2 w-48 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+            <div className="absolute right-0 mt-2 w-44 md:w-48 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
               {/* 유저 정보 */}
-              <div className="px-4 py-3 border-b border-gray-700">
-                <div className="text-white text-sm font-medium truncate">{userName}</div>
-                <div className="text-gray-500 text-xs truncate">{userEmail}</div>
+              <div className="px-3 md:px-4 py-2.5 md:py-3 border-b border-gray-700">
+                <div className="text-white text-xs md:text-sm font-medium truncate">{userName}</div>
+                <div className="text-gray-500 text-[10px] md:text-xs truncate">{userEmail}</div>
               </div>
               
               {/* 메뉴 항목 */}
@@ -90,7 +90,7 @@ export default function AuthButton() {
                       setShowDropdown(false)
                       setShowModal(true)
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-800 flex items-center gap-2"
+                    className="w-full px-3 md:px-4 py-2 text-left text-xs md:text-sm text-gray-300 hover:bg-gray-800 flex items-center gap-2"
                   >
                     <span className="text-yellow-400">💎</span>
                     {language === 'ko' ? '구독 관리' : 'Manage Subscription'}
@@ -101,7 +101,7 @@ export default function AuthButton() {
                   <Link
                     href="/premium/pricing"
                     onClick={() => setShowDropdown(false)}
-                    className="block px-4 py-2 text-sm text-yellow-400 hover:bg-gray-800"
+                    className="block px-3 md:px-4 py-2 text-xs md:text-sm text-yellow-400 hover:bg-gray-800"
                   >
                     {language === 'ko' ? '프리미엄 구독하기' : 'Subscribe to Premium'}
                   </Link>
@@ -110,7 +110,7 @@ export default function AuthButton() {
                 <button
                   onClick={handleSignOut}
                   disabled={isLoading}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-400 hover:bg-gray-800 hover:text-red-400"
+                  className="w-full px-3 md:px-4 py-2 text-left text-xs md:text-sm text-gray-400 hover:bg-gray-800 hover:text-red-400"
                 >
                   {isLoading 
                     ? (language === 'ko' ? '로그아웃 중...' : 'Signing out...') 
@@ -124,7 +124,7 @@ export default function AuthButton() {
                     setShowDropdown(false)
                     setShowDeleteModal(true)
                   }}
-                  className="w-full px-4 py-2 text-left text-xs text-gray-500 hover:bg-gray-800 hover:text-red-400"
+                  className="w-full px-3 md:px-4 py-2 text-left text-[10px] md:text-xs text-gray-500 hover:bg-gray-800 hover:text-red-400"
                 >
                   {language === 'ko' ? '회원 탈퇴' : 'Delete Account'}
                 </button>
@@ -155,11 +155,11 @@ export default function AuthButton() {
     )
   }
 
-  // 비로그인 상태
+  // 비로그인 상태 - 모바일 최적화
   return (
     <Link
       href="/login"
-      className="px-4 py-1.5 text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium"
+      className="px-2.5 md:px-4 py-1 md:py-1.5 text-xs md:text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium whitespace-nowrap"
     >
       {language === 'ko' ? '로그인' : 'Login'}
     </Link>
@@ -226,15 +226,13 @@ function SubscriptionModal({
       if (language === 'ko') {
         switch (subscription.plan) {
           case 'monthly': return '1개월'
-          case 'quarterly': return '3개월'
-          case 'yearly': return '연간'
+          case 'yearly': return '1년'
           default: return subscription.plan
         }
       } else {
         switch (subscription.plan) {
-          case 'monthly': return '1 Month'
-          case 'quarterly': return '3 Months'
-          case 'yearly': return '1 Year'
+          case 'monthly': return 'Monthly'
+          case 'yearly': return 'Yearly'
           default: return subscription.plan
         }
       }
@@ -242,12 +240,12 @@ function SubscriptionModal({
     return '-'
   }
 
-  // 남은 일수 계산 - 세션 데이터 또는 subscription 데이터 사용
+  // D-Day 계산
   const getDaysRemaining = () => {
     const expiresAt = subscription?.expiresAt || premiumExpiresAt
     if (!expiresAt) return null
-    const now = new Date()
     const expires = new Date(expiresAt)
+    const now = new Date()
     const diff = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     return diff > 0 ? diff : 0
   }
