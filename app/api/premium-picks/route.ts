@@ -29,11 +29,22 @@ export async function GET() {
       )
     }
     
+    // 🆕 오늘 분석된 경기 수 조회
+    const todayStart = today + 'T00:00:00Z'
+    const tomorrowStart = new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00Z'
+    
+    const { count: analyzedCount } = await supabase
+      .from('match_odds_latest')
+      .select('*', { count: 'exact', head: true })
+      .gte('commence_time', todayStart)
+      .lt('commence_time', tomorrowStart)
+    
     return NextResponse.json({
       success: true,
       validDate: today,
       picks: picks || [],
       count: picks?.length || 0,
+      analyzed: analyzedCount || 0,  // 🆕 분석된 경기 수 추가
     })
     
   } catch (error) {

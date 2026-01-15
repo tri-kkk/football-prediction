@@ -1274,6 +1274,7 @@ export default function PremiumPredictPage() {
   const [premiumLoading, setPremiumLoading] = useState(false) // 프리미엄 픽 로딩
   const [premiumRequested, setPremiumRequested] = useState(false) // 버튼 클릭 여부
   const [noPremiumPicks, setNoPremiumPicks] = useState(false) // 확신 경기 없음
+  const [premiumAnalyzedCount, setPremiumAnalyzedCount] = useState(0) // 분석된 경기 수
   const [premiumStats, setPremiumStats] = useState<{
     wins: number
     losses: number
@@ -1334,6 +1335,7 @@ export default function PremiumPredictPage() {
     setPremiumLoading(true)
     setPremiumRequested(true)
     setNoPremiumPicks(false)
+    setPremiumAnalyzedCount(0) // 초기화
     
     try {
       // DB에서 오늘의 프리미엄 픽 조회
@@ -1341,6 +1343,9 @@ export default function PremiumPredictPage() {
       
       if (response.ok) {
         const data = await response.json()
+        
+        // 분석된 경기 수 저장
+        setPremiumAnalyzedCount(data.analyzed || 0)
         
         if (data.picks && data.picks.length > 0) {
           // DB 데이터를 MatchWithPrediction 형식으로 변환
@@ -1917,15 +1922,36 @@ export default function PremiumPredictPage() {
                   </div>
                 ) : noPremiumPicks ? (
                   <div className="p-6 text-center">
-                    <div className="text-3xl mb-2">⏰</div>
-                    <div className="text-white font-bold mb-1">
-                      {language === 'ko' ? '오늘의 PICK 준비 중' : 'Preparing Today\'s PICK'}
-                    </div>
-                    <p className="text-gray-500 text-sm">
-                      {language === 'ko' 
-                        ? '매일 18:00 (KST) 업데이트'
-                        : 'Updates daily at 6PM KST'}
-                    </p>
+                    {premiumAnalyzedCount > 0 ? (
+                      <>
+                        <div className="text-3xl mb-2">📊</div>
+                        <div className="text-white font-bold mb-1">
+                          {language === 'ko' ? '오늘은 확신 경기가 없습니다' : 'No High-Confidence Picks Today'}
+                        </div>
+                        <p className="text-gray-500 text-sm">
+                          {language === 'ko' 
+                            ? `${premiumAnalyzedCount}경기 분석 완료 · 조건 충족 경기 없음`
+                            : `${premiumAnalyzedCount} matches analyzed · No picks met criteria`}
+                        </p>
+                        <p className="text-gray-600 text-xs mt-2">
+                          {language === 'ko' 
+                            ? '내일 경기를 기대해주세요 🙏'
+                            : 'Check back tomorrow 🙏'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-3xl mb-2">⏰</div>
+                        <div className="text-white font-bold mb-1">
+                          {language === 'ko' ? '오늘의 PICK 준비 중' : 'Preparing Today\'s PICK'}
+                        </div>
+                        <p className="text-gray-500 text-sm">
+                          {language === 'ko' 
+                            ? '매일 18:00 (KST) 업데이트'
+                            : 'Updates daily at 6PM KST'}
+                        </p>
+                      </>
+                    )}
                   </div>
                 ) : premiumLoading ? (
                   <div className="p-4">
@@ -1940,15 +1966,36 @@ export default function PremiumPredictPage() {
                   </div>
                 ) : premiumPicks.length === 0 ? (
                   <div className="p-6 text-center">
-                    <div className="text-3xl mb-2">⏰</div>
-                    <div className="text-white font-bold mb-1">
-                      {language === 'ko' ? '오늘의 PICK 준비 중' : 'Preparing Today\'s PICK'}
-                    </div>
-                    <p className="text-gray-500 text-sm">
-                      {language === 'ko' 
-                        ? '매일 18:00 (KST) 업데이트'
-                        : 'Updates daily at 6PM KST'}
-                    </p>
+                    {premiumAnalyzedCount > 0 ? (
+                      <>
+                        <div className="text-3xl mb-2">📊</div>
+                        <div className="text-white font-bold mb-1">
+                          {language === 'ko' ? '오늘은 확신 경기가 없습니다' : 'No High-Confidence Picks Today'}
+                        </div>
+                        <p className="text-gray-500 text-sm">
+                          {language === 'ko' 
+                            ? `${premiumAnalyzedCount}경기 분석 완료 · 조건 충족 경기 없음`
+                            : `${premiumAnalyzedCount} matches analyzed · No picks met criteria`}
+                        </p>
+                        <p className="text-gray-600 text-xs mt-2">
+                          {language === 'ko' 
+                            ? '내일 경기를 기대해주세요 🙏'
+                            : 'Check back tomorrow 🙏'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-3xl mb-2">⏰</div>
+                        <div className="text-white font-bold mb-1">
+                          {language === 'ko' ? '오늘의 PICK 준비 중' : 'Preparing Today\'s PICK'}
+                        </div>
+                        <p className="text-gray-500 text-sm">
+                          {language === 'ko' 
+                            ? '매일 18:00 (KST) 업데이트'
+                            : 'Updates daily at 6PM KST'}
+                        </p>
+                      </>
+                    )}
                   </div>
                 ) : (
                 <div className="p-4 space-y-2">
