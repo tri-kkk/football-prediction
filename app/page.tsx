@@ -2687,24 +2687,24 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
           {/* 메인 콘텐츠 */}
           <main className="flex-1 min-w-0">
             
-            {/* 🔴 라이브 중계 배너 */}
+            {/* 🔴 라이브 중계 배너 - 모바일 최적화 */}
             {liveCount > 0 && (
               <a 
                 href="/live"
-                className={`block mb-6 rounded-2xl p-6 cursor-pointer transition-all hover:scale-[1.02] ${
+                className={`block mb-4 rounded-xl p-3 md:p-5 cursor-pointer transition-all hover:scale-[1.02] ${
                   darkMode 
                     ? 'bg-gradient-to-r from-red-600 via-pink-600 to-purple-600' 
                     : 'bg-gradient-to-r from-red-500 via-pink-500 to-purple-500'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-4 h-4 bg-white rounded-full animate-pulse" />
+                  <div className="flex items-center gap-2 md:gap-4">
+                    <div className="w-3 h-3 md:w-4 md:h-4 bg-white rounded-full animate-pulse" />
                     <div>
-                      <h2 className="text-2xl font-bold text-white mb-1">
+                      <h2 className="text-base md:text-xl font-bold text-white mb-0.5">
                         🔴 {currentLanguage === 'ko' ? `지금 ${liveCount}개 경기 진행 중!` : `${liveCount} Live Matches Now!`}
                       </h2>
-                      <p className="text-white/90 text-sm">
+                      <p className="text-white/90 text-xs md:text-sm">
                         {currentLanguage === 'ko' 
                           ? '실시간 점수와 배당 변화를 확인하세요 • 15초마다 자동 업데이트'
                           : 'Check live scores and odds • Auto-update every 15 seconds'
@@ -2712,7 +2712,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                       </p>
                     </div>
                   </div>
-                  <div className="text-white text-5xl font-bold hidden sm:block">
+                  <div className="text-white text-2xl md:text-4xl font-bold hidden sm:block">
                     →
                   </div>
                 </div>
@@ -2769,11 +2769,11 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
         {/* 💎 프리미엄 픽 미리보기 (비프리미엄용) */}
         {!isPremium && (
-          <div className="mb-4 relative">
-            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-3 md:p-4">
+          <div className="my-5 relative">
+            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4 md:p-5">
               {/* 블러 오버레이 */}
               <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
-                <div className="text-center p-4">
+                <div className="text-center py-8 px-4">
                   <div className="text-3xl mb-2">💎</div>
                   <div className="text-white font-bold text-lg mb-1">
                     {currentLanguage === 'ko' ? '트렌드사커 픽' : 'TrendSoccer Picks'}
