@@ -2,11 +2,36 @@
 
 import { useState, useEffect } from 'react'
 import { usePWAInstall } from './pwa/PWAInstallContext'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function InstallBanner() {
   const { canInstall, isInstalled, isIOS, triggerInstall } = usePWAInstall()
+  const { language } = useLanguage()
   const [showBanner, setShowBanner] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+
+  const texts = {
+    ko: {
+      title: '앱으로 더 빠르게! ⚡',
+      subtitle: '홈 화면에서 바로 경기 예측 확인',
+      tag1: '즉시 접속',
+      tag2: '앱 느낌',
+      tag3: '용량 0MB',
+      buttonIOS: '설치 방법 보기',
+      buttonAndroid: '홈 화면에 추가'
+    },
+    en: {
+      title: 'Faster with App! ⚡',
+      subtitle: 'Check match predictions from home screen',
+      tag1: 'Instant Access',
+      tag2: 'App-like',
+      tag3: '0MB Storage',
+      buttonIOS: 'See How to Install',
+      buttonAndroid: 'Add to Home Screen'
+    }
+  }
+
+  const t = texts[language] || texts.ko
 
   useEffect(() => {
     if (isInstalled || !canInstall) return
@@ -104,10 +129,10 @@ export default function InstallBanner() {
               {/* 텍스트 */}
               <div className="flex-1 pr-8">
                 <h3 className="font-bold text-white text-[17px] leading-tight mb-1">
-                  앱으로 더 빠르게! ⚡
+                  {t.title}
                 </h3>
                 <p className="text-slate-400 text-sm leading-snug">
-                  홈 화면에서 바로 경기 예측 확인
+                  {t.subtitle}
                 </p>
               </div>
             </div>
@@ -115,9 +140,9 @@ export default function InstallBanner() {
             {/* 혜택 태그 */}
             <div className="flex flex-wrap gap-2 mb-4">
               {[
-                { icon: '⚡', text: '즉시 접속' },
-                { icon: '📱', text: '앱 느낌' },
-                { icon: '💾', text: '용량 0MB' },
+                { icon: '⚡', text: t.tag1 },
+                { icon: '📱', text: t.tag2 },
+                { icon: '💾', text: t.tag3 },
               ].map((tag, i) => (
                 <span 
                   key={i}
@@ -139,7 +164,7 @@ export default function InstallBanner() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                {isIOS ? '설치 방법 보기' : '홈 화면에 추가'}
+                {isIOS ? t.buttonIOS : t.buttonAndroid}
               </span>
             </button>
           </div>

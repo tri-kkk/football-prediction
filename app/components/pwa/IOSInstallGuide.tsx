@@ -1,18 +1,49 @@
 'use client'
 
 import { usePWAInstall } from './PWAInstallContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 // iOS 사용자를 위한 설치 안내 모달
 export function IOSInstallGuide() {
   const { showIOSGuide, setShowIOSGuide, isIOS } = usePWAInstall()
+  const { language } = useLanguage()
 
   if (!showIOSGuide || !isIOS) return null
+
+  const texts = {
+    ko: {
+      title: 'TrendSoccer 설치하기',
+      subtitle: '홈 화면에 추가하면 앱처럼 사용할 수 있어요',
+      step1Title: '공유 버튼 탭하기',
+      step1Desc: 'Safari 하단 메뉴에서',
+      step2Title: '"홈 화면에 추가" 선택',
+      step2Desc: '아래로 스크롤해서 찾기',
+      step3Title: '"추가" 버튼 탭하기',
+      step3Desc: '우측 상단에서 완료',
+      confirmBtn: '확인했어요',
+      warning: 'Safari 브라우저에서만 가능해요'
+    },
+    en: {
+      title: 'Install TrendSoccer',
+      subtitle: 'Add to home screen for app-like experience',
+      step1Title: 'Tap the Share button',
+      step1Desc: 'At the bottom of Safari',
+      step2Title: 'Select "Add to Home Screen"',
+      step2Desc: 'Scroll down to find it',
+      step3Title: 'Tap "Add" button',
+      step3Desc: 'On the top right corner',
+      confirmBtn: 'Got it',
+      warning: 'Only available in Safari browser'
+    }
+  }
+
+  const t = texts[language] || texts.ko
 
   const steps = [
     {
       number: 1,
-      title: '공유 버튼 탭하기',
-      desc: 'Safari 하단 메뉴에서',
+      title: t.step1Title,
+      desc: t.step1Desc,
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -21,8 +52,8 @@ export function IOSInstallGuide() {
     },
     {
       number: 2,
-      title: '"홈 화면에 추가" 선택',
-      desc: '아래로 스크롤해서 찾기',
+      title: t.step2Title,
+      desc: t.step2Desc,
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
@@ -31,8 +62,8 @@ export function IOSInstallGuide() {
     },
     {
       number: 3,
-      title: '"추가" 버튼 탭하기',
-      desc: '우측 상단에서 완료',
+      title: t.step3Title,
+      desc: t.step3Desc,
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
@@ -73,10 +104,6 @@ export function IOSInstallGuide() {
             from { opacity: 0; }
             to { opacity: 1; }
           }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-          }
         `}</style>
 
         {/* 메인 카드 */}
@@ -103,10 +130,10 @@ export function IOSInstallGuide() {
             </div>
             
             <h2 className="text-xl font-bold text-white mb-2">
-              TrendSoccer 설치하기
+              {t.title}
             </h2>
             <p className="text-sm text-slate-400">
-              홈 화면에 추가하면 앱처럼 사용할 수 있어요
+              {t.subtitle}
             </p>
           </div>
 
@@ -161,7 +188,7 @@ export function IOSInstallGuide() {
             >
               {/* 버튼 글로우 효과 */}
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-              <span className="relative">확인했어요</span>
+              <span className="relative">{t.confirmBtn}</span>
             </button>
           </div>
 
@@ -171,7 +198,7 @@ export function IOSInstallGuide() {
               <svg className="w-4 h-4 text-amber-500/80" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
-              <span>Safari 브라우저에서만 가능해요</span>
+              <span>{t.warning}</span>
             </div>
           </div>
           

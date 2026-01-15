@@ -1,6 +1,7 @@
 'use client'
 
 import { usePWAInstall } from './PWAInstallContext'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface InstallButtonProps {
   className?: string
@@ -10,9 +11,25 @@ interface InstallButtonProps {
 // 메뉴나 헤더에 넣을 설치 버튼
 export function InstallButton({ className = '', variant = 'default' }: InstallButtonProps) {
   const { canInstall, isInstalled, triggerInstall } = usePWAInstall()
+  const { language } = useLanguage()
 
   // 이미 설치됨 또는 설치 불가능 → 버튼 숨김
   if (isInstalled || !canInstall) return null
+
+  const texts = {
+    ko: {
+      install: '앱 설치',
+      installFull: '앱으로 설치하기',
+      tooltip: '앱 설치하기'
+    },
+    en: {
+      install: 'Install',
+      installFull: 'Install as App',
+      tooltip: 'Install App'
+    }
+  }
+
+  const t = texts[language] || texts.ko
 
   const handleClick = async () => {
     await triggerInstall()
@@ -24,7 +41,7 @@ export function InstallButton({ className = '', variant = 'default' }: InstallBu
       <button
         onClick={handleClick}
         className={`p-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-all ${className}`}
-        title="앱 설치하기"
+        title={t.tooltip}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -43,7 +60,7 @@ export function InstallButton({ className = '', variant = 'default' }: InstallBu
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
-        앱으로 설치하기
+        {t.installFull}
       </button>
     )
   }
@@ -57,7 +74,7 @@ export function InstallButton({ className = '', variant = 'default' }: InstallBu
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
       </svg>
-      앱 설치
+      {t.install}
     </button>
   )
 }
@@ -65,8 +82,22 @@ export function InstallButton({ className = '', variant = 'default' }: InstallBu
 // 메뉴 아이템 형태 (드롭다운 메뉴 등에서 사용)
 export function InstallMenuItem({ className = '' }: { className?: string }) {
   const { canInstall, isInstalled, triggerInstall } = usePWAInstall()
+  const { language } = useLanguage()
 
   if (isInstalled || !canInstall) return null
+
+  const texts = {
+    ko: {
+      title: '앱으로 설치',
+      subtitle: '홈 화면에 추가'
+    },
+    en: {
+      title: 'Install App',
+      subtitle: 'Add to Home Screen'
+    }
+  }
+
+  const t = texts[language] || texts.ko
 
   return (
     <button
@@ -79,8 +110,8 @@ export function InstallMenuItem({ className = '' }: { className?: string }) {
         </svg>
       </div>
       <div>
-        <div className="font-medium">앱으로 설치</div>
-        <div className="text-xs text-gray-400">홈 화면에 추가</div>
+        <div className="font-medium">{t.title}</div>
+        <div className="text-xs text-gray-400">{t.subtitle}</div>
       </div>
       <div className="ml-auto">
         <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-full">
