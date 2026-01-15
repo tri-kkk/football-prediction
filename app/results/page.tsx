@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useSession } from 'next-auth/react'
 import { TEAM_NAME_KR } from '../teamLogos'
 import AdSenseAd from '../components/AdSenseAd'
 
@@ -308,6 +309,9 @@ export default function MatchResultsPage() {
   }
 
   const { language: currentLanguage } = useLanguage()
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
+  
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL')
@@ -863,8 +867,8 @@ export default function MatchResultsPage() {
 
                 return (
                   <React.Fragment key={leagueCode}>
-                    {/* 📢 모바일 인피드 광고 - 2번째, 4번째 리그 뒤 */}
-                    {(leagueIndex === 1 || leagueIndex === 3) && (
+                    {/* 📢 모바일 인피드 광고 - 2번째, 4번째 리그 뒤 (💎 프리미엄 제외) */}
+                    {!isPremium && (leagueIndex === 1 || leagueIndex === 3) && (
                       <div className="md:hidden py-2">
                         <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
                         <AdSenseAd slot="mobile_infeed" format="auto" responsive={true} darkMode={true} />
@@ -1278,26 +1282,28 @@ export default function MatchResultsPage() {
           </div>
         </main>
 
-        {/* 📢 우측 사이드바 - PC 전용 */}
-        <aside className="hidden lg:block w-[300px] flex-shrink-0 p-4">
-          <div className="sticky top-4 space-y-4">
-            {/* 상단 광고 */}
-            <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
-              <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
-              <div className="p-2">
-                <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={true} />
+        {/* 📢 우측 사이드바 - PC 전용 (💎 프리미엄 제외) */}
+        {!isPremium && (
+          <aside className="hidden lg:block w-[300px] flex-shrink-0 p-4">
+            <div className="sticky top-4 space-y-4">
+              {/* 상단 광고 */}
+              <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
+                <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
+                <div className="p-2">
+                  <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={true} />
+                </div>
               </div>
-            </div>
 
-            {/* 하단 광고 */}
-            <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
-              <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
-              <div className="p-2">
-                <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={true} />
+              {/* 하단 광고 */}
+              <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
+                <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
+                <div className="p-2">
+                  <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={true} />
+                </div>
               </div>
             </div>
-          </div>
-        </aside>
+          </aside>
+        )}
       </div>
     </div>
   )

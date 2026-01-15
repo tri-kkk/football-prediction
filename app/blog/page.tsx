@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useSession } from 'next-auth/react'
 import AdSenseAd from '../components/AdSenseAd'
 
 interface BlogPost {
@@ -142,6 +143,9 @@ function getBoostedViews(post: BlogPost): number {
 
 export default function BlogPage() {
   const { language: currentLanguage } = useLanguage()
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
+  
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -231,7 +235,7 @@ export default function BlogPage() {
       return (views / 1000).toFixed(0) + 'K'
     }
     if (views >= 1000) {
-      return (views / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+      return (views / 1000).toFixed(1) + 'K'
     }
     return views.toLocaleString()
   }
@@ -356,6 +360,11 @@ export default function BlogPage() {
                     {posts.flatMap((post, index) => {
                       const postCard = <PostCard key={post.id} post={post} />
 
+                      {/* 💎 프리미엄 유저는 광고 제거 */}
+                      if (isPremium) {
+                        return [postCard]
+                      }
+
                       // 📢 모바일: 3번째, 6번째, 9번째 포스트 뒤 인피드 광고
                       if ((index === 2 || index === 5 || index === 8)) {
                         return [
@@ -429,26 +438,28 @@ export default function BlogPage() {
               )}
             </main>
 
-            {/* 📢 우측 사이드바 - PC 전용 */}
-            <aside className="hidden lg:block w-[300px] flex-shrink-0">
-              <div className="sticky top-20 space-y-4">
-                {/* 상단 광고 */}
-                <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
-                  <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
-                  <div className="p-2">
-                    <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={true} />
+            {/* 📢 우측 사이드바 - PC 전용 (💎 프리미엄은 광고 없음) */}
+            {!isPremium && (
+              <aside className="hidden lg:block w-[300px] flex-shrink-0">
+                <div className="sticky top-20 space-y-4">
+                  {/* 상단 광고 */}
+                  <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
+                    <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
+                    <div className="p-2">
+                      <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={true} />
+                    </div>
                   </div>
-                </div>
 
-                {/* 하단 광고 */}
-                <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
-                  <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
-                  <div className="p-2">
-                    <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={true} />
+                  {/* 하단 광고 */}
+                  <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
+                    <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
+                    <div className="p-2">
+                      <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={true} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </aside>
+              </aside>
+            )}
           </div>
         </div>
       )}

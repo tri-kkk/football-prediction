@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useSession } from 'next-auth/react'
 import AdSenseAd from '../../components/AdSenseAd'
 
 interface BlogPost {
@@ -152,6 +153,9 @@ export default function BlogPostPage() {
   const params = useParams()
   const slug = params?.slug as string
   const { language: currentLanguage } = useLanguage()
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
+  
   const [post, setPost] = useState<BlogPost | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -426,10 +430,12 @@ export default function BlogPostPage() {
                     {firstHalf}
                   </ReactMarkdown>
                   
-                  {/* 📢 인아티클 광고 - 본문 중간 */}
-                  <div className="my-8">
-                    <AdSenseAd slot="in_article" darkMode={true} />
-                  </div>
+                  {/* 📢 인아티클 광고 - 본문 중간 (💎 프리미엄 제외) */}
+                  {!isPremium && (
+                    <div className="my-8">
+                      <AdSenseAd slot="in_article" darkMode={true} />
+                    </div>
+                  )}
                   
                   <ReactMarkdown
                     components={{
@@ -603,21 +609,23 @@ export default function BlogPostPage() {
           })()}
         </div>
 
-        {/* 📢 광고 - 본문 하단 */}
-        <div className="mt-10 mb-8">
-          {/* 모바일: 인피드 */}
-          <div className="lg:hidden">
-            <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
-            <AdSenseAd slot="mobile_infeed" format="auto" responsive={true} darkMode={true} />
-          </div>
-          {/* PC: 가로 배너 */}
-          <div className="hidden lg:flex justify-center">
-            <div className="w-full max-w-[728px]">
+        {/* 📢 광고 - 본문 하단 (💎 프리미엄 제외) */}
+        {!isPremium && (
+          <div className="mt-10 mb-8">
+            {/* 모바일: 인피드 */}
+            <div className="lg:hidden">
               <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
-              <AdSenseAd slot="horizontal" format="horizontal" responsive={false} darkMode={true} />
+              <AdSenseAd slot="mobile_infeed" format="auto" responsive={true} darkMode={true} />
+            </div>
+            {/* PC: 가로 배너 */}
+            <div className="hidden lg:flex justify-center">
+              <div className="w-full max-w-[728px]">
+                <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
+                <AdSenseAd slot="horizontal" format="horizontal" responsive={false} darkMode={true} />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* 태그 */}
         {post.tags && post.tags.length > 0 && (

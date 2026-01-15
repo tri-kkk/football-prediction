@@ -11,6 +11,8 @@ import BlogPreviewSidebar from './components/BlogPreviewSidebar'
 import AdBanner from './components/AdBanner'
 import AdSenseAd from './components/AdSenseAd'
 import MobileMatchReports from './components/MobileMatchReports'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 
 import TopHighlights from './components/TopHighlights'
 import MatchPoll from './components/MatchPoll'
@@ -852,6 +854,9 @@ function setCachedData(key: string, data: any) {
 
 export default function Home() {
   const { t, language: currentLanguage } = useLanguage()
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
+  
   const [selectedLeague, setSelectedLeague] = useState('ALL')
   const [matches, setMatches] = useState<Match[]>([])
   const [allMatchesForBanner, setAllMatchesForBanner] = useState<Match[]>([]) // 🆕 상단 롤링용 전체 경기
@@ -865,6 +870,11 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const desktopScrollRef = useRef<HTMLDivElement>(null) // 🆕 데스크톱 전용
+  
+  // 💎 프리미엄 픽 미리보기 상태
+  const [premiumPreview, setPremiumPreview] = useState<any[]>([])
+  const [premiumPreviewLoading, setPremiumPreviewLoading] = useState(false)
+  
   // AI 논평 상태
   const [aiCommentaries, setAiCommentaries] = useState<{ [key: number]: string }>({})
   const [commentaryLoading, setCommentaryLoading] = useState<{ [key: number]: boolean }>({})
@@ -1088,6 +1098,26 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
       setLoadingHighlight(null)
     }
   }
+
+  // 💎 프리미엄 픽 미리보기 로드
+  useEffect(() => {
+    const loadPremiumPreview = async () => {
+      setPremiumPreviewLoading(true)
+      try {
+        const response = await fetch('/api/premium-picks')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.picks && data.picks.length > 0) {
+            setPremiumPreview(data.picks.slice(0, 3))
+          }
+        }
+      } catch (e) {
+        console.error('Premium preview load error:', e)
+      }
+      setPremiumPreviewLoading(false)
+    }
+    loadPremiumPreview()
+  }, [])
 
   // 🆕 오늘 경기 없으면 가장 빠른 경기 날짜로 자동 이동
   useEffect(() => {
@@ -2520,12 +2550,14 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
         
         <div className="flex gap-8 relative">
-          {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) */}
-          <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
-            <div className="sticky top-20">
-              <AdBanner slot="sidebar" />
-            </div>
-          </aside>
+          {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) - 프리미엄 제외 */}
+          {!isPremium && (
+            <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
+              <div className="sticky top-20">
+                <AdBanner slot="sidebar" />
+              </div>
+            </aside>
+          )}
 
           {/* 왼쪽 사이드바: Popular Leagues (PC 전용) */}
           <aside className={`hidden lg:block w-64 flex-shrink-0`}>
@@ -2687,10 +2719,12 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               </a>
             )}
             
-            {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) */}
-            <div className="hidden lg:flex justify-center mb-6">
-              <AdBanner slot="desktop_banner" />
-            </div>
+            {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) - 프리미엄 제외 */}
+            {!isPremium && (
+              <div className="hidden lg:flex justify-center mb-6">
+                <AdBanner slot="desktop_banner" />
+              </div>
+            )}
 
         {/* 🔥 모바일 PICK 배너 - 컴팩트 버전 (최상단) */}
         <a 
@@ -2732,6 +2766,69 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             </div>
           </div>
         </a>
+
+        {/* 💎 프리미엄 픽 미리보기 (비프리미엄용) */}
+        {!isPremium && (
+          <div className="mb-4 relative">
+            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-3 md:p-4">
+              {/* 블러 오버레이 */}
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
+                <div className="text-center p-4">
+                  <div className="text-3xl mb-2">💎</div>
+                  <div className="text-white font-bold text-lg mb-1">
+                    {currentLanguage === 'ko' ? '트렌드사커 픽' : 'TrendSoccer Picks'}
+                  </div>
+                  <div className="text-gray-300 text-sm mb-3">
+                    {premiumPreview.length > 0 
+                      ? (currentLanguage === 'ko' 
+                          ? `오늘 ${premiumPreview.length}경기 프리미엄 매치` 
+                          : `${premiumPreview.length} Premium Matches today`)
+                      : (currentLanguage === 'ko'
+                          ? '빅데이터 기반 승률 높은 경기 추천'
+                          : 'Data-driven high win-rate picks')
+                    }
+                  </div>
+                  <Link 
+                    href="/premium"
+                    className="inline-block px-5 py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-lg font-bold text-sm transition-all"
+                  >
+                    {currentLanguage === 'ko' ? '지금 확인하기 →' : 'Check Now →'}
+                  </Link>
+                </div>
+              </div>
+              
+              {/* 블러된 미리보기 카드 */}
+              <div className="flex gap-2 overflow-hidden">
+                {premiumPreview.length > 0 ? (
+                  premiumPreview.map((pick, idx) => (
+                    <div key={idx} className="flex-1 min-w-0 bg-black/40 rounded-lg p-2 border border-yellow-500/20">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] text-gray-500">{pick.league_code}</span>
+                        <span className="text-[10px] text-yellow-400">💎</span>
+                      </div>
+                      <div className="text-white text-xs font-medium truncate">{pick.home_team}</div>
+                      <div className="text-gray-500 text-[10px] my-0.5">vs</div>
+                      <div className="text-white text-xs font-medium truncate">{pick.away_team}</div>
+                    </div>
+                  ))
+                ) : (
+                  // 픽이 없을 때 플레이스홀더
+                  [1, 2, 3].map((_, idx) => (
+                    <div key={idx} className="flex-1 min-w-0 bg-black/40 rounded-lg p-2 border border-yellow-500/20">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] text-gray-500">???</span>
+                        <span className="text-[10px] text-yellow-400">💎</span>
+                      </div>
+                      <div className="text-white text-xs font-medium truncate">Team A</div>
+                      <div className="text-gray-500 text-[10px] my-0.5">vs</div>
+                      <div className="text-white text-xs font-medium truncate">Team B</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
         <div className="mb-4 md:mb-8">
@@ -2880,8 +2977,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
                           return (
                             <React.Fragment key={leagueCode}>
-                              {/* 📢 모바일 인피드 광고 - 2번째, 4번째 리그 뒤 */}
-                              {(leagueIndex === 1 || leagueIndex === 3) && (
+                              {/* 📢 모바일 인피드 광고 - 2번째, 4번째 리그 뒤 (💎 프리미엄 제외) */}
+                              {!isPremium && (leagueIndex === 1 || leagueIndex === 3) && (
                                 <div className="md:hidden py-2 mb-4">
                                   <div className="text-[10px] text-center mb-1 text-gray-600">스폰서</div>
                                   <div className="px-2">
@@ -2890,8 +2987,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                 </div>
                               )}
 
-                              {/* 📢 PC 인피드 광고 - 3번째, 6번째 리그 뒤 */}
-                              {(leagueIndex === 2 || leagueIndex === 5) && (
+                              {/* 📢 PC 인피드 광고 - 3번째, 6번째 리그 뒤 (💎 프리미엄 제외) */}
+                              {!isPremium && (leagueIndex === 2 || leagueIndex === 5) && (
                                 <div className={`hidden md:block py-2 rounded-xl mb-4 ${
                                   darkMode ? 'bg-[#111]' : 'bg-gray-50'
                                 }`}>
@@ -3383,8 +3480,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                               </div>
                             </div>
                             
-                            {/* 📱 모바일 인피드 배너 - 첫 번째 리그 다음에 표시 */}
-                            {leagueIndex === 0 && (
+                            {/* 📱 모바일 인피드 배너 - 첫 번째 리그 다음에 표시 - 프리미엄 제외 */}
+                            {leagueIndex === 0 && !isPremium && (
                               <div className="block lg:hidden mb-4 flex justify-center">
                                 <AdBanner slot="mobile_bottom" />
                               </div>
@@ -3413,19 +3510,21 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
           {/* 우측 순위표 사이드바 */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
             <div className="sticky top-24 space-y-4">
-            {/* 📢 AdSense - 우측 사이드바 상단 */}
-            <div className={`rounded-xl overflow-hidden ${
-              darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
-            }`}>
-              <div className={`text-[10px] text-center py-1 ${
-                darkMode ? 'text-gray-600' : 'text-gray-400'
+            {/* 📢 AdSense - 우측 사이드바 상단 (💎 프리미엄 제외) */}
+            {!isPremium && (
+              <div className={`rounded-xl overflow-hidden ${
+                darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
               }`}>
-                AD
+                <div className={`text-[10px] text-center py-1 ${
+                  darkMode ? 'text-gray-600' : 'text-gray-400'
+                }`}>
+                  AD
+                </div>
+                <div className="flex justify-center p-2">
+                  <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={darkMode} />
+                </div>
               </div>
-              <div className="flex justify-center p-2">
-                <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={darkMode} />
-              </div>
-            </div>
+            )}
             
             {/* 전체 리그 선택 시 - 캐러셀 */}
             {selectedLeague === 'ALL' && (
@@ -3846,19 +3945,21 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               </div>
             )}
 
-            {/* 📢 AdSense - 우측 사이드바 하단 */}
-            <div className={`rounded-xl overflow-hidden ${
-              darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
-            }`}>
-              <div className={`text-[10px] text-center py-1 ${
-                darkMode ? 'text-gray-600' : 'text-gray-400'
+            {/* 📢 AdSense - 우측 사이드바 하단 (💎 프리미엄 제외) */}
+            {!isPremium && (
+              <div className={`rounded-xl overflow-hidden ${
+                darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
               }`}>
-                AD
+                <div className={`text-[10px] text-center py-1 ${
+                  darkMode ? 'text-gray-600' : 'text-gray-400'
+                }`}>
+                  AD
+                </div>
+                <div className="flex justify-center p-2">
+                  <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={darkMode} />
+                </div>
               </div>
-              <div className="flex justify-center p-2">
-                <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={darkMode} />
-              </div>
-            </div>
+            )}
             </div>
           </aside>
         </div>
@@ -4002,8 +4103,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         </div>
       </a>
 
-      {/* 📢 모바일 하단 고정 배너 (320x50) */}
-      {!isMobileAdClosed && (
+      {/* 📢 모바일 하단 고정 배너 (320x50) - 프리미엄 제외 */}
+      {!isMobileAdClosed && !isPremium && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 safe-area-bottom">
           <div className="relative flex justify-center py-2">
             <button

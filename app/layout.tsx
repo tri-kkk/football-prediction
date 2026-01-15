@@ -8,6 +8,8 @@ import BottomNavigation from './components/BottomNavigation'
 import { LanguageProvider } from './contexts/LanguageContext'
 import LanguageToggle from './components/LanguageToggle'
 import HtmlLangUpdater from './components/HtmlLangUpdater'
+import { Providers } from './providers'
+import AuthButton from './components/AuthButton'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
@@ -155,6 +157,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-[#0f0f0f] text-white">
+        <Providers>
         <LanguageProvider>
         <HtmlLangUpdater />
         
@@ -184,8 +187,9 @@ export default function RootLayout({
                 <Navigation />
               </div>
               
-              <div className="flex-shrink-0">
+              <div className="flex items-center gap-3">
                 <LanguageToggle />
+                <AuthButton />
               </div>
             </div>
           </div>
@@ -251,6 +255,7 @@ export default function RootLayout({
         <BottomNavigation />
         
         </LanguageProvider>
+        </Providers>
       </body>
     </html>
   )
