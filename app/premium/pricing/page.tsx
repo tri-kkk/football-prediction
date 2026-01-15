@@ -53,7 +53,7 @@ export default function PricingPage() {
                 {language === 'ko' ? '프리미엄 예측픽 무료' : 'FREE Premium Picks'}
               </p>
               <Link
-                href="/login"
+                href="/signup"
                 className="inline-block px-8 py-3 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-500 hover:to-cyan-500 text-white font-bold rounded-xl transition-all"
               >
                 {language === 'ko' ? '지금 무료로 가입하기 →' : 'Join Free Now →'}
@@ -116,7 +116,7 @@ export default function PricingPage() {
                       ? 'border-yellow-500 bg-yellow-500' 
                       : 'border-gray-600'
                   }`}>
-                    {selectedPlan === 'monthly' && <span className="text-black text-xs">✓</span>}
+                    {selectedPlan === 'monthly' && <span className="text-black text-xs">✔</span>}
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-white">
@@ -146,7 +146,7 @@ export default function PricingPage() {
                       ? 'border-yellow-500 bg-yellow-500' 
                       : 'border-gray-600'
                   }`}>
-                    {selectedPlan === 'quarterly' && <span className="text-black text-xs">✓</span>}
+                    {selectedPlan === 'quarterly' && <span className="text-black text-xs">✔</span>}
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-white">
@@ -161,25 +161,28 @@ export default function PricingPage() {
               </div>
             </div>
 
-            {/* CTA 버튼 - 비로그인이면 로그인으로, 로그인이면 alert 후 로그인으로 */}
+            {/* CTA 버튼 - 비로그인이면 alert 후 가입, 로그인이면 alert 후 메인 */}
             <div className="text-center mb-12">
               {!session ? (
-                // 비로그인: 로그인 페이지로
-                <Link
-                  href="/login"
-                  className="inline-block w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg transition-all text-center"
+                // 비로그인: alert 후 가입 페이지로
+                <button
+                  onClick={() => {
+                    alert(language === 'ko' ? '결제 시스템 준비중입니다.' : 'Payment system coming soon.')
+                    window.location.href = '/signup'
+                  }}
+                  className="w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg transition-all"
                 >
                   {language === 'ko' 
                     ? isPromoPeriod ? '무료로 시작하기' : '로그인하고 시작하기'
                     : isPromoPeriod ? 'Start Free' : 'Sign in to Start'}
-                </Link>
+                </button>
               ) : (
-                // 로그인 상태: alert 띄우고 로그인으로
+                // 로그인 상태: alert 도우고 메인으로
                 <button
                   className="w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg transition-all"
                   onClick={() => {
                     alert(language === 'ko' ? '결제 시스템 준비중입니다.' : 'Payment system coming soon.')
-                    window.location.href = '/login'
+                    window.location.href = '/'
                   }}
                 >
                   {language === 'ko' ? '프리미엄 시작하기' : 'Start Premium'}
@@ -221,7 +224,7 @@ export default function PricingPage() {
                       <div className="text-white font-medium">{item.title}</div>
                       <div className="text-gray-500 text-sm">{item.desc}</div>
                     </div>
-                    <span className="ml-auto text-green-400">✓</span>
+                    <span className="ml-auto text-green-400">✔</span>
                   </div>
                 ))}
               </div>
