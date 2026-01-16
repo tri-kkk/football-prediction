@@ -1,10 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 import Script from 'next/script'
 
 const ADSENSE_CLIENT_ID = 'ca-pub-7853814871438044'
+
+// Supabase 클라이언트 생성
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 /**
  * AdSense 스크립트 조건부 로더
@@ -12,14 +18,10 @@ const ADSENSE_CLIENT_ID = 'ca-pub-7853814871438044'
  * - 비로그인 사용자: 광고 스크립트 로드 ✅
  * - 무료 회원: 광고 스크립트 로드 ✅
  * - 프리미엄 회원: 광고 스크립트 로드 안 함 ❌
- * 
- * 이 컴포넌트를 layout.tsx에서 기존 AdSense Script 대신 사용하면,
- * 프리미엄 사용자에게는 자동 광고가 표시되지 않습니다.
  */
 export default function AdSenseLoader() {
   const [isPremium, setIsPremium] = useState<boolean | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
-  const supabase = createClientComponentClient()
 
   useEffect(() => {
     async function checkSubscription() {
@@ -34,8 +36,6 @@ export default function AdSenseLoader() {
         }
 
         // 사용자의 구독 상태 확인
-        // users 테이블에 tier 컬럼이 있다고 가정
-        // tier: 'free' | 'premium'
         const { data: profile } = await supabase
           .from('users')
           .select('tier')
@@ -68,7 +68,7 @@ export default function AdSenseLoader() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [])
 
   // 아직 확인 중이면 아무것도 렌더링 안 함
   if (isPremium === null) {

@@ -1,12 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 
 // ==========================================
 // 🎯 Google AdSense 설정
 // ==========================================
 const ADSENSE_CLIENT_ID = 'ca-pub-7853814871438044'
+
+// Supabase 클라이언트 생성
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 // AdSense 광고 슬롯
 const ADSENSE_SLOTS = {
@@ -65,8 +71,6 @@ export default function AdSenseAd({
   const [hasError, setHasError] = useState(false)
   const [isProduction, setIsProduction] = useState(false)
   const [isPremium, setIsPremium] = useState<boolean | null>(null)
-  
-  const supabase = createClientComponentClient()
 
   const adSlot = ADSENSE_SLOTS[slot]
   const slotSize = SLOT_SIZES[slot] || { width: '100%', minHeight: '90px', maxHeight: '90px' }
@@ -107,7 +111,7 @@ export default function AdSenseAd({
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     // 프리미엄 사용자는 광고 로드 스킵
