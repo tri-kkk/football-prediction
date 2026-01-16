@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '../../lib/supabase'  // ✅ 기존 클라이언트 사용
+import { useSession } from 'next-auth/react'  // ✅ NextAuth 사용
 
 // ==========================================
 // 🎯 Google AdSense 설정
@@ -64,57 +64,21 @@ export default function AdSenseAd({
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [isProduction, setIsProduction] = useState(false)
-  const [isPremium, setIsPremium] = useState<boolean | null>(null)
+  
+  const { data: session, status } = useSession()
 
   const adSlot = ADSENSE_SLOTS[slot]
   const slotSize = SLOT_SIZES[slot] || { width: '100%', minHeight: '90px', maxHeight: '90px' }
 
-  // ✅ 프리미엄 사용자 체크
-  useEffect(() => {
-    async function checkPremium() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          // 비로그인 사용자 = 광고 표시
-          setIsPremium(false)
-          return
-        }
-
-        // users 테이블에서 tier 확인
-        const { data: profile, error } = await supabase
-          .from('users')
-          .select('tier')
-          .eq('id', user.id)
-          .single()
-
-        if (error) {
-          setIsPremium(false)
-          return
-        }
-
-        setIsPremium(profile?.tier === 'premium')
-      } catch (error) {
-        // 에러 시 광고 표시 (안전한 기본값)
-        setIsPremium(false)
-      }
-    }
-
-    checkPremium()
-
-    // 인증 상태 변경 감지
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      checkPremium()
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
+  // ✅ NextAuth에서 프리미엄 체크
+  const isPremium = (session?.user as any)?.tier === 'premium'
 
   useEffect(() => {
+    // 세션 로딩 중이면 스킵
+    if (status === 'loading') return
+    
     // 프리미엄 사용자는 광고 로드 스킵
-    if (isPremium === null || isPremium === true) return
+    if (isPremium) return
 
     // 프로덕션 환경 체크
     const isProd = typeof window !== 'undefined' && 
@@ -151,7 +115,6 @@ export default function AdSenseAd({
         if (error?.message?.includes('already have ads')) {
           setIsLoaded(true)
         }
-        // 다른 에러는 무시 (로그도 안 남김)
       }
     }
 
@@ -163,15 +126,12 @@ export default function AdSenseAd({
       for (const entry of entries) {
         const { width, height } = entry.contentRect
         
-        // 너비와 높이가 둘 다 0보다 크면 로드 시도
         if (width > 50 && height > 50 && !isLoaded) {
-          // display: none 체크
           const computedStyle = window.getComputedStyle(container)
           if (computedStyle.display === 'none') {
             return
           }
           
-          // 약간의 딜레이 후 로드
           setTimeout(loadAd, 100)
           observer.disconnect()
         }
@@ -180,7 +140,6 @@ export default function AdSenseAd({
 
     observer.observe(container)
 
-    // 폴백: 2초 후에도 안 됐으면 한 번 시도
     const fallbackTimer = setTimeout(() => {
       if (!isLoaded && container.offsetWidth > 50) {
         loadAd()
@@ -191,16 +150,16 @@ export default function AdSenseAd({
       observer.disconnect()
       clearTimeout(fallbackTimer)
     }
-  }, [isLoaded, slot, isPremium])
+  }, [isLoaded, slot, isPremium, status])
 
-  // ✅ 프리미엄 사용자는 아무것도 렌더링 안 함
-  if (isPremium === true) {
-    return null
+  // 세션 로딩 중
+  if (status === 'loading') {
+    return <div style={{ minHeight: slotSize.minHeight }} />
   }
 
-  // 프리미엄 체크 중 (로딩 상태)
-  if (isPremium === null) {
-    return <div style={{ minHeight: slotSize.minHeight }} />
+  // ✅ 프리미엄 사용자는 아무것도 렌더링 안 함
+  if (isPremium) {
+    return null
   }
 
   // 로컬 환경 플레이스홀더
@@ -244,7 +203,6 @@ export default function AdSenseAd({
         ...style 
       }}
     >
-      {/* ✅ key로 중복 렌더링 방지 */}
       <ins
         key={`adsense-${slot}-${adSlot}`}
         className="adsbygoogle"

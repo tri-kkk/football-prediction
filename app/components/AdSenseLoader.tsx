@@ -1,89 +1,39 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'  // ✅ 기존 클라이언트 사용
+import { useSession } from 'next-auth/react'
 import Script from 'next/script'
 
 const ADSENSE_CLIENT_ID = 'ca-pub-7853814871438044'
 
-/**
- * AdSense 스크립트 조건부 로더
- * 
- * - 비로그인 사용자: 광고 스크립트 로드 ✅
- * - 무료 회원: 광고 스크립트 로드 ✅
- * - 프리미엄 회원: 광고 스크립트 로드 안 함 ❌
- */
 export default function AdSenseLoader() {
-  const [isPremium, setIsPremium] = useState<boolean | null>(null)
+  const { data: session, status } = useSession()
   const [isLoaded, setIsLoaded] = useState(false)
 
+  // ✅ 모든 Hooks는 최상단에! (early return 전에)
+  const isPremium = (session?.user as any)?.tier === 'premium'
+
+  // 디버그 로그
   useEffect(() => {
-    async function checkSubscription() {
-      try {
-        // 현재 로그인한 사용자 확인
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          // 비로그인 사용자 = 광고 표시
-          console.log('👤 비로그인 사용자 - 광고 표시')
-          setIsPremium(false)
-          return
-        }
-
-        console.log('👤 로그인 사용자:', user.email, 'ID:', user.id)
-
-        // 사용자의 구독 상태 확인
-        const { data: profile, error } = await supabase
-          .from('users')
-          .select('tier')
-          .eq('id', user.id)
-          .single()
-
-        if (error) {
-          console.error('❌ 프로필 조회 에러:', error)
-          setIsPremium(false)
-          return
-        }
-
-        console.log('📋 프로필:', profile)
-
-        const userIsPremium = profile?.tier === 'premium'
-        setIsPremium(userIsPremium)
-
-        if (userIsPremium) {
-          console.log('🎫 프리미엄 사용자 - 광고 스크립트 로드 건너뜀')
-        } else {
-          console.log('🆓 무료 사용자 - 광고 표시')
-        }
-      } catch (error) {
-        console.error('구독 상태 확인 실패:', error)
-        // 에러 시 광고 표시 (안전한 기본값)
-        setIsPremium(false)
-      }
+    if (status === 'loading') return
+    
+    if (!session) {
+      console.log('👤 비로그인 사용자 - 광고 표시')
+    } else if (isPremium) {
+      console.log('🎫 프리미엄 사용자 - 광고 스크립트 로드 건너뜀')
+    } else {
+      console.log('🆓 무료 사용자 - 광고 표시')
     }
+  }, [session, status, isPremium])
 
-    checkSubscription()
-
-    // 인증 상태 변경 감지 (로그인/로그아웃 시)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('🔄 인증 상태 변경:', event)
-        checkSubscription()
-      }
-    )
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
-
-  // 아직 확인 중이면 아무것도 렌더링 안 함
-  if (isPremium === null) {
+  // ✅ Hooks 이후에 조건부 렌더링
+  // 세션 로딩 중
+  if (status === 'loading') {
     return null
   }
 
   // 프리미엄 사용자면 스크립트 로드 안 함
-  if (isPremium === true) {
+  if (isPremium) {
     return null
   }
 
