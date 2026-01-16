@@ -1,0 +1,105 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import Script from 'next/script'
+
+const ADSENSE_CLIENT_ID = 'ca-pub-7853814871438044'
+
+/**
+ * AdSense 스크립트 조건부 로더
+ * 
+ * - 비로그인 사용자: 광고 스크립트 로드 ✅
+ * - 무료 회원: 광고 스크립트 로드 ✅
+ * - 프리미엄 회원: 광고 스크립트 로드 안 함 ❌
+ * 
+ * 이 컴포넌트를 layout.tsx에서 기존 AdSense Script 대신 사용하면,
+ * 프리미엄 사용자에게는 자동 광고가 표시되지 않습니다.
+ */
+export default function AdSenseLoader() {
+  const [isPremium, setIsPremium] = useState<boolean | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const supabase = createClientComponentClient()
+
+  useEffect(() => {
+    async function checkSubscription() {
+      try {
+        // 현재 로그인한 사용자 확인
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          // 비로그인 사용자 = 광고 표시
+          setIsPremium(false)
+          return
+        }
+
+        // 사용자의 구독 상태 확인
+        // users 테이블에 tier 컬럼이 있다고 가정
+        // tier: 'free' | 'premium'
+        const { data: profile } = await supabase
+          .from('users')
+          .select('tier')
+          .eq('id', user.id)
+          .single()
+
+        const userIsPremium = profile?.tier === 'premium'
+        setIsPremium(userIsPremium)
+
+        if (userIsPremium) {
+          console.log('🎫 프리미엄 사용자 - 광고 스크립트 로드 건너뜀')
+        }
+      } catch (error) {
+        console.error('구독 상태 확인 실패:', error)
+        // 에러 시 광고 표시 (안전한 기본값)
+        setIsPremium(false)
+      }
+    }
+
+    checkSubscription()
+
+    // 인증 상태 변경 감지 (로그인/로그아웃 시)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('🔄 인증 상태 변경:', event)
+        checkSubscription()
+      }
+    )
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase])
+
+  // 아직 확인 중이면 아무것도 렌더링 안 함
+  if (isPremium === null) {
+    return null
+  }
+
+  // 프리미엄 사용자면 스크립트 로드 안 함
+  if (isPremium === true) {
+    return null
+  }
+
+  // 이미 로드됐으면 스킵
+  if (isLoaded) {
+    return null
+  }
+
+  // 비프리미엄 사용자에게만 AdSense 스크립트 로드
+  return (
+    <Script
+      id="google-adsense"
+      async
+      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
+      crossOrigin="anonymous"
+      strategy="afterInteractive"
+      onLoad={() => {
+        console.log('📢 AdSense 스크립트 로드 완료')
+        setIsLoaded(true)
+      }}
+      onError={(e) => {
+        console.error('❌ AdSense 스크립트 로드 실패:', e)
+      }}
+    />
+  )
+}

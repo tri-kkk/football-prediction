@@ -14,6 +14,7 @@ import { PWAInstallProvider } from './components/pwa/PWAInstallContext'
 import { IOSInstallGuide } from './components/pwa/IOSInstallGuide'
 import InstallBanner from './components/InstallBanner'
 import FooterBusinessInfo from './components/FooterBusinessInfo'
+import AdSenseLoader from './components/AdSenseLoader' // ✅ 추가
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
@@ -189,13 +190,18 @@ export default function RootLayout({
         
         <GoogleTagManager />
 
-        <Script
-          id="google-adsense"
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7853814871438044"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        {/* ✅ 프리미엄 사용자 제외 - 조건부 AdSense 로더 */}
+        {/* 
+          기존 코드 (모든 사용자에게 로드):
+          <Script
+            id="google-adsense"
+            async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7853814871438044"
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        */}
+        <AdSenseLoader />
 
         {/* Global Navigation - 모바일 최적화 */}
         <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">

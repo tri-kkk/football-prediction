@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 // ==========================================
 // 🎯 Google AdSense 설정
@@ -63,11 +64,55 @@ export default function AdSenseAd({
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [isProduction, setIsProduction] = useState(false)
+  const [isPremium, setIsPremium] = useState<boolean | null>(null)
+  
+  const supabase = createClientComponentClient()
 
   const adSlot = ADSENSE_SLOTS[slot]
   const slotSize = SLOT_SIZES[slot] || { width: '100%', minHeight: '90px', maxHeight: '90px' }
 
+  // ✅ 프리미엄 사용자 체크
   useEffect(() => {
+    async function checkPremium() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          // 비로그인 사용자 = 광고 표시
+          setIsPremium(false)
+          return
+        }
+
+        // users 테이블에서 tier 확인
+        const { data: profile } = await supabase
+          .from('users')
+          .select('tier')
+          .eq('id', user.id)
+          .single()
+
+        setIsPremium(profile?.tier === 'premium')
+      } catch (error) {
+        // 에러 시 광고 표시 (안전한 기본값)
+        setIsPremium(false)
+      }
+    }
+
+    checkPremium()
+
+    // 인증 상태 변경 감지
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      checkPremium()
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase])
+
+  useEffect(() => {
+    // 프리미엄 사용자는 광고 로드 스킵
+    if (isPremium === null || isPremium === true) return
+
     // 프로덕션 환경 체크
     const isProd = typeof window !== 'undefined' && 
       !window.location.hostname.includes('localhost') &&
@@ -143,7 +188,17 @@ export default function AdSenseAd({
       observer.disconnect()
       clearTimeout(fallbackTimer)
     }
-  }, [isLoaded, slot])
+  }, [isLoaded, slot, isPremium])
+
+  // ✅ 프리미엄 사용자는 아무것도 렌더링 안 함
+  if (isPremium === true) {
+    return null
+  }
+
+  // 프리미엄 체크 중 (로딩 상태)
+  if (isPremium === null) {
+    return <div style={{ minHeight: slotSize.minHeight }} />
+  }
 
   // 로컬 환경 플레이스홀더
   if (!isProduction) {
