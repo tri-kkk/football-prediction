@@ -780,7 +780,7 @@ export default function MatchResultsPage() {
         {/* 메인 컨텐츠 */}
         <main className="flex-1 w-full md:min-h-screen">
           {/* 날짜 네비게이션 */}
-          <div className="sticky top-0 bg-[#0f0f0f] z-50 border-b border-gray-800">
+          <div className="sticky top-0 bg-[#0f0f0f] z-10 border-b border-gray-800">
             <div className="px-4 py-3">
               <div className="flex items-center justify-center gap-4 mb-3">
                 <button onClick={goToPreviousDay} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1a1a1a] hover:bg-[#252525] transition-colors">
