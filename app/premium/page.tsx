@@ -1928,8 +1928,8 @@ export default function PremiumPredictPage() {
                     </p>
                     <p className="text-gray-600 text-xs mt-2">
                       {language === 'ko' 
-                        ? '내일 경기를 기대해주세요 🙏'
-                        : 'Check back tomorrow 🙏'}
+                        ? '내일 경기를 기대해주세요(매일 오후6시) 🙏'
+                        : 'Check back tomorrow(KST 18:00) 🙏'}
                     </p>
                   </div>
                 ) : premiumLoading ? (
