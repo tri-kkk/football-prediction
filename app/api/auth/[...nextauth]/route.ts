@@ -20,15 +20,13 @@ function hashEmail(email: string): string {
 
 // 🌍 IP로 국가 정보 가져오기
 async function getCountryFromIP(ip: string): Promise<{ country: string; countryCode: string }> {
-  // localhost나 내부 IP는 스킵
   if (ip === 'unknown' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip === '::1') {
     return { country: 'Local', countryCode: 'LO' }
   }
   
   try {
-    // 무료 IP Geolocation API (상업용은 ip-api.com/pro 권장)
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=country,countryCode`, {
-      signal: AbortSignal.timeout(3000) // 3초 타임아웃
+      signal: AbortSignal.timeout(3000)
     })
     const data = await res.json()
     
@@ -58,13 +56,11 @@ const handler = NextAuth({
       if (!user.email) return false
 
       try {
-        // 🌍 IP 주소 가져오기
         const headersList = await headers()
         const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() 
           || headersList.get('x-real-ip') 
           || 'unknown'
         
-        // 현재 시간 (한 번만 생성)
         const now = new Date().toISOString()
         
         // 기존 사용자 확인
@@ -89,32 +85,31 @@ const handler = NextAuth({
             .eq('email_hash', emailHash)
             .single()
           
-          // 이전에 프로모션 받았으면 이번엔 무료로
           const hadPromo = deletedUser?.promo_code ? true : false
           const canGetPromo = isPromoPeriod && !hadPromo
           
-          // ✅ 신규 사용자 생성 (last_login_at 포함!)
+          // ✅ 신규 사용자 생성 (약관 미동의 상태!)
           await supabase.from('users').insert({
             email: user.email,
             name: user.name,
             avatar_url: user.image,
             provider: account?.provider,
             provider_id: account?.providerAccountId,
-            // 🌍 IP 및 국가 정보
             signup_ip: ip,
             signup_country: country,
             signup_country_code: countryCode,
-            // 프로모션 적용 여부
-            tier: canGetPromo ? 'premium' : 'free',
-            premium_expires_at: canGetPromo ? PROMO_END_DATE.toISOString() : null,
-            promo_code: canGetPromo ? 'LAUNCH_2026' : null,
-            // ✅ 핵심 수정: 가입 시점 = 최초 로그인!
+            // ⚠️ 약관 동의 전이라 프로모션 대기 상태로
+            tier: 'free',
+            pending_promo: canGetPromo ? 'LAUNCH_2026' : null,
             last_login_at: now,
+            // ✅ 핵심: 약관 미동의 상태로 생성 (NULL)
+            terms_agreed_at: null,
+            privacy_agreed_at: null,
           })
           
-          console.log(`✅ New user: ${user.email} from ${country} (${countryCode}), IP: ${ip}`)
+          console.log(`✅ New user (pending terms): ${user.email} from ${country} (${countryCode}), IP: ${ip}`)
         } else {
-          // ✅ 기존 사용자: 로그인 시간 + 마지막 IP 업데이트
+          // ✅ 기존 사용자: 로그인 시간 업데이트
           await supabase
             .from('users')
             .update({ 
@@ -131,17 +126,23 @@ const handler = NextAuth({
       }
     },
 
+    // ✅ session 콜백에서 termsAgreed 추가
     async session({ session }) {
       if (session.user?.email) {
         const { data: userData } = await supabase
           .from('users')
-          .select('id, tier, premium_expires_at, promo_code')
+          .select('id, tier, premium_expires_at, promo_code, terms_agreed_at, privacy_agreed_at, pending_promo')
           .eq('email', session.user.email)
           .single()
 
         if (userData) {
           session.user.id = userData.id
           
+          // ✅ 약관 동의 여부 체크
+          session.user.termsAgreed = !!(userData.terms_agreed_at && userData.privacy_agreed_at)
+          session.user.pendingPromo = userData.pending_promo
+          
+          // 프리미엄 만료 체크
           let currentTier = userData.tier
           if (userData.tier === 'premium' && userData.premium_expires_at) {
             const expiresAt = new Date(userData.premium_expires_at)

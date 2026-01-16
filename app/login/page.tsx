@@ -1,15 +1,18 @@
 'use client'
 
-import { signIn } from 'next-auth/react'
-import { useState } from 'react'
+import { signIn, useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useLanguage } from '../contexts/LanguageContext'
 import Link from 'next/link'
 
 export default function LoginPage() {
   const { language } = useLanguage()
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState<string | null>(null)
 
-  // 🔧 네이버 로그인 활성화 여부 (검수 통과 후 true로 변경)
+  // 네이버 로그인 활성화 여부 (검수 통과 후 true로 변경)
   const NAVER_ENABLED = false
 
   // 🎉 프로모션 기간 체크
@@ -18,18 +21,38 @@ export default function LoginPage() {
   const daysLeft = Math.ceil((PROMO_END.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   const isPromoPeriod = daysLeft > 0
 
+  // 이미 로그인된 경우 리다이렉트
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      if (!session.user.termsAgreed) {
+        router.push('/auth/terms')
+      } else {
+        router.push('/')
+      }
+    }
+  }, [session, status, router])
+
   const handleSignIn = async (provider: string) => {
     setIsLoading(provider)
     try {
-      await signIn(provider, { callbackUrl: '/' })
+      await signIn(provider, { callbackUrl: '/auth/terms' })
     } catch (error) {
       console.error('Login error:', error)
       setIsLoading(null)
     }
   }
 
+  // 로딩 중
+  if (status === 'loading') {
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4 py-10 relative overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-center justify-center px-4 py-10 overflow-auto">
       {/* 그라데이션 배경 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-green-500/10 rounded-full blur-3xl" />
@@ -61,24 +84,31 @@ export default function LoginPage() {
       `}</style>
 
       <div className="w-full relative z-10" style={{ maxWidth: '420px' }}>
+        {/* 로고 */}
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-block">
+            <img 
+              src="/logo.svg" 
+              alt="트랜드사커" 
+              className="h-10 w-auto mx-auto"
+            />
+          </Link>
+        </div>
+
         {/* 타이틀 + 기하학적 배경 */}
         <div className="text-center mb-8 relative">
           {/* 기하학적 도형들 */}
-          <div className="absolute -top-16 left-0 w-12 h-12 border border-green-500/30 rotate-45 animate-float-slow" />
-          <div className="absolute -top-12 right-4 w-10 h-10 border border-cyan-500/25 rotate-12 animate-float-medium" />
-          <div className="absolute -top-8 left-1/4 w-6 h-6 border border-emerald-500/20 -rotate-12 animate-float-fast" />
-          <div className="absolute -top-20 right-1/4 w-8 h-8 border border-teal-500/25 rotate-45 animate-float-slow" />
-          <div className="absolute top-0 -left-8 w-5 h-5 border border-green-400/20 rotate-0 animate-float-medium" />
-          <div className="absolute -top-4 -right-4 w-7 h-7 border border-cyan-400/20 rotate-45 animate-float-fast" />
+          <div className="absolute -top-12 left-0 w-10 h-10 border border-green-500/30 rotate-45 animate-float-slow" />
+          <div className="absolute -top-8 right-4 w-8 h-8 border border-cyan-500/25 rotate-12 animate-float-medium" />
+          <div className="absolute -top-4 left-1/4 w-5 h-5 border border-emerald-500/20 -rotate-12 animate-float-fast" />
+          <div className="absolute -top-14 right-1/4 w-6 h-6 border border-teal-500/25 rotate-45 animate-float-slow" />
           
           {/* 원형 점들 */}
-          <div className="absolute -top-10 left-8 w-2 h-2 bg-green-500/40 rounded-full animate-pulse-glow" />
-          <div className="absolute -top-6 right-12 w-3 h-3 bg-cyan-500/40 rounded-full animate-pulse-glow" style={{ animationDelay: '1s' }} />
-          <div className="absolute -top-14 left-1/2 w-2 h-2 bg-emerald-500/30 rounded-full animate-pulse-glow" style={{ animationDelay: '2s' }} />
-          <div className="absolute top-2 -right-2 w-2 h-2 bg-teal-500/40 rounded-full animate-pulse-glow" style={{ animationDelay: '0.5s' }} />
-          <div className="absolute -top-2 left-0 w-3 h-3 bg-green-400/30 rounded-full animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
+          <div className="absolute -top-6 left-8 w-2 h-2 bg-green-500/40 rounded-full animate-pulse-glow" />
+          <div className="absolute -top-2 right-12 w-2 h-2 bg-cyan-500/40 rounded-full animate-pulse-glow" style={{ animationDelay: '1s' }} />
+          <div className="absolute -top-10 left-1/2 w-2 h-2 bg-emerald-500/30 rounded-full animate-pulse-glow" style={{ animationDelay: '2s' }} />
           
-          <h1 className="text-3xl md:text-4xl font-bold leading-tight">
+          <h1 className="text-2xl md:text-3xl font-bold leading-tight">
             <span className="text-white">{language === 'ko' ? '데이터로 읽는' : 'Read with Data'}</span>
             <br />
             <span style={{ 
@@ -119,9 +149,12 @@ export default function LoginPage() {
 
         {/* 로그인 카드 */}
         <div className="bg-gradient-to-b from-[#1a1a1a] to-[#141414] rounded-3xl p-8 shadow-2xl border border-gray-800/50 backdrop-blur-sm">
-          <h2 className="text-xl font-bold text-white text-center mb-8">
-            {language === 'ko' ? '로그인' : 'Sign In'}
+          <h2 className="text-xl font-bold text-white text-center mb-2">
+            {language === 'ko' ? '로그인 / 회원가입' : 'Sign In / Sign Up'}
           </h2>
+          <p className="text-gray-500 text-sm text-center mb-8">
+            {language === 'ko' ? '소셜 계정으로 간편하게 시작하세요' : 'Get started with your social account'}
+          </p>
 
           <div className="space-y-3">
             {/* Google 로그인 */}
@@ -140,7 +173,7 @@ export default function LoginPage() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
               )}
-              Google
+              {language === 'ko' ? 'Google로 계속하기' : 'Continue with Google'}
             </button>
 
             {/* Naver 로그인 - 검수 통과 후 활성화 */}
@@ -157,7 +190,7 @@ export default function LoginPage() {
                     <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727v12.845z" />
                   </svg>
                 )}
-                Naver
+                {language === 'ko' ? 'Naver로 계속하기' : 'Continue with Naver'}
               </button>
             )}
           </div>
@@ -187,22 +220,14 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* 회원가입 링크 */}
-          <div className="mt-6 text-center">
-            <span className="text-gray-500 text-sm">
-              {language === 'ko' ? '회원이 아니신가요? ' : "Don't have an account? "}
-            </span>
-            <Link href="/signup" className="text-green-400 hover:text-green-300 text-sm font-medium">
-              {language === 'ko' ? '회원가입' : 'Sign Up'}
-            </Link>
-          </div>
+       
         </div>
 
         {/* 홈으로 */}
         <div className="text-center mt-6">
-          <a href="/" className="text-gray-600 hover:text-gray-400 text-sm transition-colors">
+          <Link href="/" className="text-gray-600 hover:text-gray-400 text-sm transition-colors">
             ← {language === 'ko' ? '홈으로' : 'Home'}
-          </a>
+          </Link>
         </div>
       </div>
     </div>

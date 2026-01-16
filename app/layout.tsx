@@ -14,7 +14,8 @@ import { PWAInstallProvider } from './components/pwa/PWAInstallContext'
 import { IOSInstallGuide } from './components/pwa/IOSInstallGuide'
 import InstallBanner from './components/InstallBanner'
 import FooterBusinessInfo from './components/FooterBusinessInfo'
-import AdSenseLoader from './components/AdSenseLoader' // ✅ 추가
+import AdSenseLoader from './components/AdSenseLoader'
+import TermsGuard from './components/TermsGuard'  // ✅ 추가
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
@@ -227,10 +228,13 @@ export default function RootLayout({
           </div>
         </header>
 
-        {/* Main Content */}
-        <main>
-          {children}
-        </main>
+        {/* ✅ TermsGuard로 감싸서 약관 미동의 시 리다이렉트 */}
+        <TermsGuard>
+          {/* Main Content */}
+          <main>
+            {children}
+          </main>
+        </TermsGuard>
 
         {/* Footer - 개선된 디자인 */}
         <footer className="border-t border-gray-800 bg-[#111111] mb-16 md:mb-0">
