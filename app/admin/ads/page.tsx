@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 
 // ==================== 타입 정의 ====================
 
+
 interface User {
   id: string
   email: string

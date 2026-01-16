@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
 
+
+
 // GA4 Property ID
 const PROPERTY_ID = process.env.GA_PROPERTY_ID || '511624468'
 
