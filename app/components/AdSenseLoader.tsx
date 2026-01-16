@@ -1,16 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../../lib/supabase'  // ✅ 기존 클라이언트 사용
 import Script from 'next/script'
 
 const ADSENSE_CLIENT_ID = 'ca-pub-7853814871438044'
-
-// Supabase 클라이언트 생성
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 /**
  * AdSense 스크립트 조건부 로더
@@ -31,22 +25,35 @@ export default function AdSenseLoader() {
         
         if (!user) {
           // 비로그인 사용자 = 광고 표시
+          console.log('👤 비로그인 사용자 - 광고 표시')
           setIsPremium(false)
           return
         }
 
+        console.log('👤 로그인 사용자:', user.email, 'ID:', user.id)
+
         // 사용자의 구독 상태 확인
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('users')
           .select('tier')
           .eq('id', user.id)
           .single()
+
+        if (error) {
+          console.error('❌ 프로필 조회 에러:', error)
+          setIsPremium(false)
+          return
+        }
+
+        console.log('📋 프로필:', profile)
 
         const userIsPremium = profile?.tier === 'premium'
         setIsPremium(userIsPremium)
 
         if (userIsPremium) {
           console.log('🎫 프리미엄 사용자 - 광고 스크립트 로드 건너뜀')
+        } else {
+          console.log('🆓 무료 사용자 - 광고 표시')
         }
       } catch (error) {
         console.error('구독 상태 확인 실패:', error)

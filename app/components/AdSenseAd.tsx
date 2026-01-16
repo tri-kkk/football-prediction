@@ -1,18 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../../lib/supabase'  // ✅ 기존 클라이언트 사용
 
 // ==========================================
 // 🎯 Google AdSense 설정
 // ==========================================
 const ADSENSE_CLIENT_ID = 'ca-pub-7853814871438044'
-
-// Supabase 클라이언트 생성
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 // AdSense 광고 슬롯
 const ADSENSE_SLOTS = {
@@ -88,11 +82,16 @@ export default function AdSenseAd({
         }
 
         // users 테이블에서 tier 확인
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('users')
           .select('tier')
           .eq('id', user.id)
           .single()
+
+        if (error) {
+          setIsPremium(false)
+          return
+        }
 
         setIsPremium(profile?.tier === 'premium')
       } catch (error) {
