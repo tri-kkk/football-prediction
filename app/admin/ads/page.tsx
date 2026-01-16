@@ -108,6 +108,83 @@ interface BlogPost {
   updated_at: string
 }
 
+// 📊 트래픽 분석 타입 추가
+interface TrafficOverview {
+  activeUsers: string
+  sessions: string
+  pageViews: string
+  avgSessionDuration: string
+  bounceRate: string
+  newUsers: string
+}
+
+interface DailyTraffic {
+  date: string
+  users: number
+  sessions: number
+  pageViews: number
+}
+
+interface PageStats {
+  path: string
+  views: number
+  avgDuration: string
+}
+
+interface SourceStats {
+  source: string
+  sessions: number
+  users: number
+}
+
+interface CountryTraffic {
+  country: string
+  users: number
+  sessions: number
+}
+
+interface DeviceStats {
+  device: string
+  users: number
+  sessions: number
+}
+
+// 🆕 시간대별 트래픽
+interface HourlyTraffic {
+  hour: number
+  users: number
+  sessions: number
+}
+
+// 🆕 신규 vs 재방문자
+interface UserTypeStats {
+  type: string
+  users: number
+  sessions: number
+}
+
+// 🆕 전주 대비 성장률
+interface ComparisonData {
+  current: {
+    users: number
+    sessions: number
+    pageViews: number
+    newUsers: number
+  }
+  previous: {
+    users: number
+    sessions: number
+    pageViews: number
+    newUsers: number
+  }
+  growth: {
+    users: string
+    sessions: string
+    pageViews: string
+    newUsers: string
+  }
+}
+
 // ==================== 상수 ====================
 
 const SLOT_TYPES = [
@@ -118,40 +195,119 @@ const SLOT_TYPES = [
 
 const TABS = [
   { id: 'dashboard', label: '대시보드', icon: '📊' },
+  { id: 'traffic', label: '트래픽 분석', icon: '📈' },  // 🆕 트래픽 탭 추가
   { id: 'users', label: '회원 관리', icon: '👥' },
   { id: 'subscriptions', label: '구독 관리', icon: '💳' },
   { id: 'ads', label: '광고 관리', icon: '📢' },
-  { id: 'report', label: '광고 리포트', icon: '📈' },
+  { id: 'report', label: '광고 리포트', icon: '📉' },
   { id: 'blog', label: '블로그 관리', icon: '📝' },
 ]
 
-// 🌍 국가별 이모지 매핑
+/// 국기 이모지 매핑 - 확장
 const COUNTRY_FLAGS: Record<string, string> = {
-  KR: '🇰🇷',
-  US: '🇺🇸',
-  JP: '🇯🇵',
-  CN: '🇨🇳',
-  GB: '🇬🇧',
-  DE: '🇩🇪',
-  FR: '🇫🇷',
-  NG: '🇳🇬',
-  GH: '🇬🇭',
-  BR: '🇧🇷',
-  IN: '🇮🇳',
-  VN: '🇻🇳',
-  TH: '🇹🇭',
-  PH: '🇵🇭',
-  ID: '🇮🇩',
-  MY: '🇲🇾',
-  SG: '🇸🇬',
-  AU: '🇦🇺',
-  CA: '🇨🇦',
-  MX: '🇲🇽',
+  KR: '🇰🇷', US: '🇺🇸', JP: '🇯🇵', CN: '🇨🇳', GB: '🇬🇧',
+  DE: '🇩🇪', FR: '🇫🇷', NG: '🇳🇬', GH: '🇬🇭', BR: '🇧🇷',
+  IN: '🇮🇳', VN: '🇻🇳', TH: '🇹🇭', PH: '🇵🇭', ID: '🇮🇩',
+  MY: '🇲🇾', SG: '🇸🇬', AU: '🇦🇺', CA: '🇨🇦', MX: '🇲🇽',
+  KE: '🇰🇪', TZ: '🇹🇿', UG: '🇺🇬', EG: '🇪🇬', ZA: '🇿🇦',
+  NL: '🇳🇱', CM: '🇨🇲', CI: '🇨🇮', LR: '🇱🇷', ZM: '🇿🇲',
+  BW: '🇧🇼', ES: '🇪🇸', IT: '🇮🇹', PT: '🇵🇹', RU: '🇷🇺',
+  TR: '🇹🇷', SA: '🇸🇦', AE: '🇦🇪', PK: '🇵🇰', BD: '🇧🇩',
+  AR: '🇦🇷', CO: '🇨🇴', PE: '🇵🇪', CL: '🇨🇱', PL: '🇵🇱',
+  BE: '🇧🇪', SE: '🇸🇪', NO: '🇳🇴', DK: '🇩🇰', FI: '🇫🇮',
+  IE: '🇮🇪', CH: '🇨🇭', AT: '🇦🇹', GR: '🇬🇷', CZ: '🇨🇿',
+  RO: '🇷🇴', HU: '🇭🇺', UA: '🇺🇦', MA: '🇲🇦', DZ: '🇩🇿',
+  TN: '🇹🇳', SN: '🇸🇳', ET: '🇪🇹', RW: '🇷🇼', ZW: '🇿🇼',
+  NZ: '🇳🇿', TW: '🇹🇼', HK: '🇭🇰',
+}
+
+// 국가명 → 코드 매핑 (GA4용) - 확장
+const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+  'South Korea': 'KR',
+  'Korea': 'KR',
+  'United States': 'US',
+  'Japan': 'JP',
+  'China': 'CN',
+  'United Kingdom': 'GB',
+  'Germany': 'DE',
+  'France': 'FR',
+  'Nigeria': 'NG',
+  'Ghana': 'GH',
+  'Brazil': 'BR',
+  'India': 'IN',
+  'Vietnam': 'VN',
+  'Thailand': 'TH',
+  'Philippines': 'PH',
+  'Indonesia': 'ID',
+  'Malaysia': 'MY',
+  'Singapore': 'SG',
+  'Australia': 'AU',
+  'Canada': 'CA',
+  'Mexico': 'MX',
+  'Kenya': 'KE',
+  'Tanzania': 'TZ',
+  'Uganda': 'UG',
+  'Egypt': 'EG',
+  'South Africa': 'ZA',
+  'Netherlands': 'NL',
+  'Cameroon': 'CM',
+  "Côte d'Ivoire": 'CI',
+  'Ivory Coast': 'CI',
+  'Liberia': 'LR',
+  'Zambia': 'ZM',
+  'Botswana': 'BW',
+  'Spain': 'ES',
+  'Italy': 'IT',
+  'Portugal': 'PT',
+  'Russia': 'RU',
+  'Turkey': 'TR',
+  'Saudi Arabia': 'SA',
+  'United Arab Emirates': 'AE',
+  'Pakistan': 'PK',
+  'Bangladesh': 'BD',
+  'Argentina': 'AR',
+  'Colombia': 'CO',
+  'Peru': 'PE',
+  'Chile': 'CL',
+  'Poland': 'PL',
+  'Belgium': 'BE',
+  'Sweden': 'SE',
+  'Norway': 'NO',
+  'Denmark': 'DK',
+  'Finland': 'FI',
+  'Ireland': 'IE',
+  'Switzerland': 'CH',
+  'Austria': 'AT',
+  'Greece': 'GR',
+  'Czech Republic': 'CZ',
+  'Czechia': 'CZ',
+  'Romania': 'RO',
+  'Hungary': 'HU',
+  'Ukraine': 'UA',
+  'Morocco': 'MA',
+  'Algeria': 'DZ',
+  'Tunisia': 'TN',
+  'Senegal': 'SN',
+  'Ethiopia': 'ET',
+  'Rwanda': 'RW',
+  'Zimbabwe': 'ZW',
+  'New Zealand': 'NZ',
+  'Taiwan': 'TW',
+  'Hong Kong': 'HK',
 }
 
 const getCountryFlag = (code: string | null) => {
   if (!code) return '🌐'
   return COUNTRY_FLAGS[code] || '🌐'
+}
+
+// GA4 국가명으로도 플래그 찾기
+const getCountryFlagByName = (countryName: string | null) => {
+  if (!countryName) return '🌐'
+  if (COUNTRY_FLAGS[countryName]) return COUNTRY_FLAGS[countryName]
+  const code = COUNTRY_NAME_TO_CODE[countryName]
+  if (code && COUNTRY_FLAGS[code]) return COUNTRY_FLAGS[code]
+  return '🌐'
 }
 
 // ==================== 유틸리티 함수 ====================
@@ -243,9 +399,9 @@ function TrendChart({
         <h4 className="text-sm font-medium text-gray-300">{title}</h4>
         <span className="text-lg font-bold text-white">{total.toLocaleString()}</span>
       </div>
-      <div className="flex items-end gap-1 h-20">
+       <div className="flex items-end gap-1 h-20">
         {data.map((d, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center group relative">
+          <div key={i} className="flex-1 h-full flex flex-col items-center justify-end group relative">
             <div
               className="w-full rounded-t transition-all duration-300 cursor-pointer hover:opacity-80"
               style={{
@@ -284,7 +440,7 @@ export default function AdminDashboard() {
   
   // ===== 데이터 상태 =====
   const [users, setUsers] = useState<User[]>([])
-  const [countryStats, setCountryStats] = useState<CountryStat[]>([])  // 🌍 국가 통계
+  const [countryStats, setCountryStats] = useState<CountryStat[]>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [ads, setAds] = useState<Advertisement[]>([])
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([])
@@ -296,7 +452,7 @@ export default function AdminDashboard() {
   
   // ===== 필터 상태 =====
   const [userFilter, setUserFilter] = useState<'all' | 'free' | 'premium'>('all')
-  const [countryFilter, setCountryFilter] = useState<string>('all')  // 🌍 국가 필터
+  const [countryFilter, setCountryFilter] = useState<string>('all')
   const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'active' | 'cancelled' | 'expired'>('all')
   const [adFilter, setAdFilter] = useState<string>('all')
   const [dateRange, setDateRange] = useState<'7' | '14' | '30'>('7')
@@ -331,6 +487,21 @@ export default function AdminDashboard() {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
   const [blogLoading, setBlogLoading] = useState(false)
   const [blogCategoryFilter, setBlogCategoryFilter] = useState('all')
+  
+  // ===== 📊 트래픽 분석 상태 (신규) =====
+  const [realtimeUsers, setRealtimeUsers] = useState<number>(0)
+  const [trafficOverview, setTrafficOverview] = useState<TrafficOverview | null>(null)
+  const [dailyTraffic, setDailyTraffic] = useState<DailyTraffic[]>([])
+  const [topPages, setTopPages] = useState<PageStats[]>([])
+  const [trafficSources, setTrafficSources] = useState<SourceStats[]>([])
+  const [countryTraffic, setCountryTraffic] = useState<CountryTraffic[]>([])
+  const [deviceStats, setDeviceStats] = useState<DeviceStats[]>([])
+  const [trafficLoading, setTrafficLoading] = useState(false)
+  const [trafficDateRange, setTrafficDateRange] = useState<'7' | '14' | '30'>('7')
+  // 🆕 새로운 트래픽 분석 state
+  const [hourlyTraffic, setHourlyTraffic] = useState<HourlyTraffic[]>([])
+  const [userTypeStats, setUserTypeStats] = useState<UserTypeStats[]>([])
+  const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null)
   
   // ===== Refs =====
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -426,7 +597,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // 🌍 국가 통계 조회
   const fetchCountryStats = async () => {
     try {
       const response = await fetch('/api/admin/users?stats=country')
@@ -501,7 +671,6 @@ export default function AdminDashboard() {
       const data = await response.json()
       setReportStats(data.stats || [])
       
-      // 일별 요약
       const summaryMap: Record<string, { impressions: number; clicks: number }> = {}
       for (const stat of data.stats || []) {
         if (!summaryMap[stat.date]) {
@@ -515,7 +684,6 @@ export default function AdminDashboard() {
         .sort((a, b) => a.date.localeCompare(b.date))
       setReportSummary(summary)
       
-      // 광고별 성과
       const perfMap: Record<string, AdPerformance> = {}
       for (const stat of data.stats || []) {
         const ad = stat.advertisements
@@ -543,13 +711,87 @@ export default function AdminDashboard() {
     }
   }
 
+  // ==================== 📊 트래픽 분석 함수 (신규) ====================
+
+  const fetchRealtimeUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/analytics?type=realtime')
+      if (!response.ok) return
+      const data = await response.json()
+      setRealtimeUsers(parseInt(data.activeUsers) || 0)
+    } catch (err) {
+      console.error('Realtime fetch error:', err)
+    }
+  }
+
+  const fetchTrafficData = async () => {
+    setTrafficLoading(true)
+    try {
+      const days = trafficDateRange
+
+      const [overviewRes, dailyRes, pagesRes, sourcesRes, countriesRes, devicesRes, hourlyRes, userTypeRes, comparisonRes] = await Promise.all([
+        fetch(`/api/admin/analytics?type=overview&days=${days}`),
+        fetch(`/api/admin/analytics?type=daily&days=${days}`),
+        fetch(`/api/admin/analytics?type=pages&days=${days}`),
+        fetch(`/api/admin/analytics?type=sources&days=${days}`),
+        fetch(`/api/admin/analytics?type=countries&days=${days}`),
+        fetch(`/api/admin/analytics?type=devices&days=${days}`),
+        fetch(`/api/admin/analytics?type=hourly&days=${days}`),
+        fetch(`/api/admin/analytics?type=usertype&days=${days}`),
+        fetch(`/api/admin/analytics?type=comparison&days=${days}`),
+      ])
+
+      if (overviewRes.ok) {
+        const data = await overviewRes.json()
+        setTrafficOverview(data)
+      }
+      if (dailyRes.ok) {
+        const data = await dailyRes.json()
+        setDailyTraffic(Array.isArray(data) ? data : [])
+      }
+      if (pagesRes.ok) {
+        const data = await pagesRes.json()
+        setTopPages(Array.isArray(data) ? data : [])
+      }
+      if (sourcesRes.ok) {
+        const data = await sourcesRes.json()
+        setTrafficSources(Array.isArray(data) ? data : [])
+      }
+      if (countriesRes.ok) {
+        const data = await countriesRes.json()
+        setCountryTraffic(Array.isArray(data) ? data : [])
+      }
+      if (devicesRes.ok) {
+        const data = await devicesRes.json()
+        setDeviceStats(Array.isArray(data) ? data : [])
+      }
+      // 🆕 새로운 데이터
+      if (hourlyRes.ok) {
+        const data = await hourlyRes.json()
+        setHourlyTraffic(Array.isArray(data) ? data : [])
+      }
+      if (userTypeRes.ok) {
+        const data = await userTypeRes.json()
+        setUserTypeStats(Array.isArray(data) ? data : [])
+      }
+      if (comparisonRes.ok) {
+        const data = await comparisonRes.json()
+        setComparisonData(data)
+      }
+    } catch (err) {
+      console.error('Traffic data fetch error:', err)
+    } finally {
+      setTrafficLoading(false)
+    }
+  }
+
   const loadAllData = async () => {
     setLoading(true)
     setError('')
     try {
       await Promise.all([
         fetchUsers(),
-        fetchCountryStats(),  // 🌍 국가 통계
+        fetchCountryStats(),
         fetchSubscriptions(),
         fetchAds(),
         fetchDailyStats(),
@@ -579,6 +821,18 @@ export default function AdminDashboard() {
       fetchBlogPosts()
     }
   }, [isAuthenticated, activeTab])
+
+  // 📊 트래픽 탭 useEffect (신규)
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'traffic') {
+      fetchRealtimeUsers()
+      fetchTrafficData()
+
+      // 실시간 사용자 30초마다 갱신
+      const interval = setInterval(fetchRealtimeUsers, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [isAuthenticated, activeTab, trafficDateRange])
 
   // ==================== 블로그 관리 함수 ====================
 
@@ -676,21 +930,17 @@ export default function AdminDashboard() {
 
   // ==================== 필터된 데이터 ====================
 
-  // 🌍 국가 필터 추가된 회원 필터링
   const filteredUsers = useMemo(() => {
     let result = users
     
-    // 티어 필터
     if (userFilter !== 'all') {
       result = result.filter(u => u.tier === userFilter)
     }
     
-    // 🌍 국가 필터
     if (countryFilter !== 'all') {
       result = result.filter(u => u.signup_country_code === countryFilter)
     }
     
-    // 검색
     if (userSearch) {
       const search = userSearch.toLowerCase()
       result = result.filter(u => 
@@ -1101,7 +1351,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* 🌍 국가별 회원 분포 */}
+                {/* 국가별 회원 분포 */}
                 {countryStats.length > 0 && (
                   <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
                     <h3 className="text-lg font-semibold text-white mb-4">🌍 국가별 회원 분포</h3>
@@ -1238,13 +1488,419 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* 📊 트래픽 분석 탭 (신규) */}
+            {activeTab === 'traffic' && (
+              <div className="space-y-6">
+                {/* 헤더 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-white">트래픽 분석</h2>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-full">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      <span className="text-green-400 text-sm font-medium">
+                        실시간 {realtimeUsers}명
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* 기간 선택 */}
+                  <div className="flex gap-2">
+                    {(['7', '14', '30'] as const).map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => setTrafficDateRange(d)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          trafficDateRange === d
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        }`}
+                      >
+                        {d}일
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {trafficLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+                  </div>
+                ) : (
+                  <>
+                    {/* 개요 카드 */}
+                    {trafficOverview && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
+                          <div className="text-gray-400 text-xs mb-1">활성 사용자</div>
+                          <div className="text-2xl font-bold text-white">
+                            {parseInt(trafficOverview.activeUsers).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
+                          <div className="text-gray-400 text-xs mb-1">세션</div>
+                          <div className="text-2xl font-bold text-white">
+                            {parseInt(trafficOverview.sessions).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
+                          <div className="text-gray-400 text-xs mb-1">페이지뷰</div>
+                          <div className="text-2xl font-bold text-white">
+                            {parseInt(trafficOverview.pageViews).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
+                          <div className="text-gray-400 text-xs mb-1">신규 사용자</div>
+                          <div className="text-2xl font-bold text-emerald-400">
+                            {parseInt(trafficOverview.newUsers).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
+                          <div className="text-gray-400 text-xs mb-1">평균 체류시간</div>
+                          <div className="text-2xl font-bold text-white">
+                            {Math.floor(parseInt(trafficOverview.avgSessionDuration) / 60)}분 {parseInt(trafficOverview.avgSessionDuration) % 60}초
+                          </div>
+                        </div>
+                        <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
+                          <div className="text-gray-400 text-xs mb-1">이탈률</div>
+                          <div className="text-2xl font-bold text-orange-400">
+                            {trafficOverview.bounceRate}%
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🆕 전주 대비 성장률 */}
+                    {comparisonData && (
+                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                        <h3 className="text-lg font-semibold text-white mb-4">📈 전주 대비 성장률</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {[
+                            { label: '사용자', current: comparisonData.current.users, growth: comparisonData.growth.users },
+                            { label: '세션', current: comparisonData.current.sessions, growth: comparisonData.growth.sessions },
+                            { label: '페이지뷰', current: comparisonData.current.pageViews, growth: comparisonData.growth.pageViews },
+                            { label: '신규 사용자', current: comparisonData.current.newUsers, growth: comparisonData.growth.newUsers },
+                          ].map((item, i) => {
+                            const growthNum = parseFloat(item.growth)
+                            const isPositive = growthNum > 0
+                            const isNegative = growthNum < 0
+                            return (
+                              <div key={i} className="bg-gray-900/50 rounded-lg p-4">
+                                <div className="text-gray-400 text-xs mb-1">{item.label}</div>
+                                <div className="text-xl font-bold text-white">{item.current.toLocaleString()}</div>
+                                <div className={`text-sm font-medium flex items-center gap-1 mt-1 ${
+                                  isPositive ? 'text-emerald-400' : isNegative ? 'text-red-400' : 'text-gray-400'
+                                }`}>
+                                  {isPositive ? '↑' : isNegative ? '↓' : '→'}
+                                  {Math.abs(growthNum)}%
+                                  <span className="text-gray-500 text-xs ml-1">vs 전주</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🆕 신규 vs 재방문 + 시간대별 트래픽 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 신규 vs 재방문 */}
+                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                        <h3 className="text-lg font-semibold text-white mb-4">👥 신규 vs 재방문</h3>
+                        {userTypeStats.length > 0 ? (
+                          <div className="space-y-4">
+                            {(() => {
+                              const total = userTypeStats.reduce((acc, u) => acc + u.users, 0)
+                              const newUser = userTypeStats.find(u => u.type === 'new')
+                              const returning = userTypeStats.find(u => u.type === 'returning')
+                              const newPercent = total > 0 ? ((newUser?.users || 0) / total * 100).toFixed(1) : '0'
+                              const returnPercent = total > 0 ? ((returning?.users || 0) / total * 100).toFixed(1) : '0'
+                              
+                              return (
+                                <>
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                      <div className="flex justify-between mb-2">
+                                        <span className="text-gray-300 text-sm">🆕 신규 방문자</span>
+                                        <span className="text-white font-medium">{newUser?.users.toLocaleString() || 0}명 ({newPercent}%)</span>
+                                      </div>
+                                      <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                                        <div 
+                                          className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
+                                          style={{ width: `${newPercent}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                      <div className="flex justify-between mb-2">
+                                        <span className="text-gray-300 text-sm">🔄 재방문자</span>
+                                        <span className="text-white font-medium">{returning?.users.toLocaleString() || 0}명 ({returnPercent}%)</span>
+                                      </div>
+                                      <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                                        <div 
+                                          className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-full transition-all duration-500"
+                                          style={{ width: `${returnPercent}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="mt-4 pt-4 border-t border-gray-700">
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-400">재방문율</span>
+                                      <span className="text-emerald-400 font-medium">{returnPercent}%</span>
+                                    </div>
+                                  </div>
+                                </>
+                              )
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm text-center py-4">데이터 없음</div>
+                        )}
+                      </div>
+
+                      {/* 시간대별 트래픽 */}
+                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                        <h3 className="text-lg font-semibold text-white mb-4">🕐 시간대별 트래픽</h3>
+                        {hourlyTraffic.length > 0 ? (
+                          <div>
+                            <div className="flex items-end gap-[2px] h-32">
+                              {Array.from({ length: 24 }, (_, hour) => {
+                                const data = hourlyTraffic.find(h => h.hour === hour)
+                                const users = data?.users || 0
+                                const maxUsers = Math.max(...hourlyTraffic.map(h => h.users), 1)
+                                const height = (users / maxUsers) * 100
+                                const isPeak = users === maxUsers && users > 0
+                                return (
+                                  <div 
+                                    key={hour} 
+                                    className="flex-1 h-full flex flex-col items-center justify-end group relative"
+                                  >
+                                    <div
+                                      className={`w-full rounded-t transition-all duration-300 ${
+                                        isPeak ? 'bg-amber-500' : 'bg-emerald-500 hover:bg-emerald-400'
+                                      }`}
+                                      style={{ height: `${height}%`, minHeight: users > 0 ? '2px' : '0' }}
+                                    />
+                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 border border-gray-700">
+                                      {hour}시: {users}명
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            <div className="flex justify-between mt-2 text-[10px] text-gray-500">
+                              <span>0시</span>
+                              <span>6시</span>
+                              <span>12시</span>
+                              <span>18시</span>
+                              <span>24시</span>
+                            </div>
+                            {/* 피크 시간 표시 */}
+                            {(() => {
+                              const peak = hourlyTraffic.reduce((max, h) => h.users > max.users ? h : max, hourlyTraffic[0])
+                              return peak && (
+                                <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between text-sm">
+                                  <span className="text-gray-400">피크 시간</span>
+                                  <span className="text-amber-400 font-medium">🔥 {peak.hour}시 ({peak.users}명)</span>
+                                </div>
+                              )
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm text-center py-4">데이터 없음</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 일별 트래픽 차트 */}
+                    {dailyTraffic.length > 0 && (
+                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                        <h3 className="text-lg font-semibold text-white mb-4">📈 일별 트래픽</h3>
+                        <div className="h-48">
+                          <div className="flex items-end justify-between h-40 gap-1">
+                            {dailyTraffic.map((day, i) => {
+                              const maxUsers = Math.max(...dailyTraffic.map(d => d.users), 1)
+                              const height = (day.users / maxUsers) * 100
+                              return (
+                              <div key={i} className="flex-1 h-full flex flex-col items-center justify-end group relative">
+                                  <div
+                                    className="w-full bg-emerald-500 rounded-t transition-all duration-300 hover:bg-emerald-400"
+                                    style={{ height: `${height}%`, minHeight: day.users > 0 ? '4px' : '0' }}
+                                  />
+                                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 border border-gray-700">
+                                    {day.date.slice(4, 6)}/{day.date.slice(6, 8)}: {day.users}명
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          <div className="flex justify-between mt-2 text-xs text-gray-500">
+                            <span>{dailyTraffic[0]?.date.slice(4, 6)}/{dailyTraffic[0]?.date.slice(6, 8)}</span>
+                            <span>{dailyTraffic[dailyTraffic.length - 1]?.date.slice(4, 6)}/{dailyTraffic[dailyTraffic.length - 1]?.date.slice(6, 8)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3열 그리드 */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* 인기 페이지 TOP 10 */}
+                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                        <h3 className="text-lg font-semibold text-white mb-4">🔥 인기 페이지 TOP 10</h3>
+                        <div className="space-y-3">
+                          {topPages.map((page, i) => (
+                            <div key={i} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span className="text-gray-500 text-sm w-5">{i + 1}</span>
+                                <span className="text-gray-300 text-sm truncate" title={page.path}>
+                                  {page.path === '/' ? '홈' : page.path}
+                                </span>
+                              </div>
+                              <span className="text-emerald-400 font-medium text-sm">
+                                {page.views.toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                          {topPages.length === 0 && (
+                            <div className="text-gray-500 text-sm text-center py-4">데이터 없음</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 유입 경로 */}
+                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                        <h3 className="text-lg font-semibold text-white mb-4">🔗 유입 경로</h3>
+                        <div className="space-y-3">
+                          {trafficSources.map((source, i) => {
+                            const maxSessions = Math.max(...trafficSources.map(s => s.sessions), 1)
+                            const percentage = (source.sessions / maxSessions) * 100
+                            return (
+                              <div key={i}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-gray-300 text-sm">{source.source}</span>
+                                  <span className="text-gray-400 text-sm">{source.sessions.toLocaleString()}</span>
+                                </div>
+                                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )
+                          })}
+                          {trafficSources.length === 0 && (
+                            <div className="text-gray-500 text-sm text-center py-4">데이터 없음</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 디바이스별 */}
+                      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                        <h3 className="text-lg font-semibold text-white mb-4">📱 디바이스</h3>
+                        <div className="space-y-4">
+                          {deviceStats.map((device, i) => {
+                            const totalUsers = deviceStats.reduce((acc, d) => acc + d.users, 0)
+                            const percentage = totalUsers > 0 ? ((device.users / totalUsers) * 100).toFixed(1) : '0'
+                            const icon = device.device === 'mobile' ? '📱' : device.device === 'desktop' ? '🖥️' : '📟'
+                            const color = device.device === 'mobile' ? 'bg-purple-500' : device.device === 'desktop' ? 'bg-cyan-500' : 'bg-orange-500'
+                            return (
+                              <div key={i} className="flex items-center gap-4">
+                                <span className="text-2xl">{icon}</span>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-gray-300 text-sm capitalize">{device.device}</span>
+                                    <span className="text-white font-medium">{percentage}%</span>
+                                  </div>
+                                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full ${color} rounded-full transition-all duration-500`}
+                                      style={{ width: `${percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                          {deviceStats.length === 0 && (
+                            <div className="text-gray-500 text-sm text-center py-4">데이터 없음</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+  {/* 국가별 트래픽 */}
+   <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                      <h3 className="text-lg font-semibold text-white mb-4">🌍 국가별 트래픽</h3>
+                      {countryTraffic.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* 상위 10개 국가 바 차트 */}
+                          <div className="space-y-3">
+                            {countryTraffic.slice(0, 10).map((country, i) => {
+                              const maxUsers = countryTraffic[0]?.users || 1
+                              const percentage = ((country.users / maxUsers) * 100).toFixed(0)
+                              const flag = getCountryFlagByName(country.country)
+                              return (
+                                <div key={i} className="flex items-center gap-3">
+                                  <span className="text-gray-500 text-sm w-5">{i + 1}</span>
+                                  <span className="text-xl w-8 text-center">{flag}</span>
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-gray-300 text-sm truncate max-w-[150px]">{country.country}</span>
+                                      <span className="text-white font-medium text-sm">{country.users.toLocaleString()}명</span>
+                                    </div>
+                                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full transition-all duration-500"
+                                        style={{ width: `${percentage}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          
+                          {/* 나머지 국가 목록 */}
+                          {countryTraffic.length > 10 && (
+                            <div className="bg-gray-900/30 rounded-lg p-4">
+                              <div className="text-gray-400 text-sm mb-3">기타 국가</div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {countryTraffic.slice(10, 20).map((country, i) => {
+                                  const flag = getCountryFlagByName(country.country)
+                                  return (
+                                    <div key={i} className="flex items-center gap-2 text-sm">
+                                      <span className="text-base">{flag}</span>
+                                      <span className="text-gray-400 truncate flex-1">{country.country}</span>
+                                      <span className="text-gray-500">{country.users}</span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                              {countryTraffic.length > 20 && (
+                                <div className="text-gray-500 text-xs mt-3 text-center">
+                                  +{countryTraffic.length - 20}개국 더
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-gray-500 text-sm text-center py-4">데이터 없음</div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* 회원 관리 탭 */}
             {activeTab === 'users' && (
               <div className="space-y-6">
                 {/* 필터 & 검색 */}
                 <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* 티어 필터 */}
                     {(['all', 'free', 'premium'] as const).map((filter) => (
                       <button
                         key={filter}
@@ -1264,7 +1920,6 @@ export default function AdminDashboard() {
                       </button>
                     ))}
                     
-                    {/* 🌍 국가 필터 */}
                     <select
                       value={countryFilter}
                       onChange={(e) => setCountryFilter(e.target.value)}
@@ -1327,7 +1982,6 @@ export default function AdminDashboard() {
                                   </div>
                                 </div>
                               </td>
-                              {/* 🌍 국가 컬럼 */}
                               <td className="px-4 py-4">
                                 <span 
                                   className="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-300"
@@ -1341,7 +1995,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-4">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  user.provider === 'google' 
+                                  user.provider === 'google'
                                     ? 'bg-blue-500/20 text-blue-400'
                                     : 'bg-green-500/20 text-green-400'
                                 }`}>
@@ -1350,7 +2004,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-4">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  user.tier === 'premium' 
+                                  user.tier === 'premium'
                                     ? 'bg-emerald-500/20 text-emerald-400'
                                     : 'bg-gray-500/20 text-gray-400'
                                 }`}>
@@ -1378,7 +2032,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* 페이지네이션 */}
                 <div className="flex items-center justify-between text-sm text-gray-500">
                   <span>총 {filteredUsers.length}명</span>
                 </div>
@@ -1388,7 +2041,6 @@ export default function AdminDashboard() {
             {/* 구독 관리 탭 */}
             {activeTab === 'subscriptions' && (
               <div className="space-y-6">
-                {/* 구독 요약 */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">💳</div>
@@ -1412,7 +2064,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* 필터 */}
                 <div className="flex items-center gap-2">
                   {(['all', 'active', 'cancelled', 'expired'] as const).map((filter) => (
                     <button
@@ -1431,7 +2082,6 @@ export default function AdminDashboard() {
                   ))}
                 </div>
 
-                {/* 구독 목록 */}
                 <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -1515,24 +2165,19 @@ export default function AdminDashboard() {
             {/* 광고 관리 탭 */}
             {activeTab === 'ads' && (
               <div className="space-y-6">
-                {/* 헤더 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {[{ value: 'all', label: '전체' }, ...SLOT_TYPES.map(s => ({ value: s.value, label: s.label }))].map((filter) => (
-                      <button
-                        key={filter.value}
-                        onClick={() => setAdFilter(filter.value)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          adFilter === filter.value
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                        }`}
-                      >
-                        {filter.label}
-                      </button>
-                    ))}
+                    <select
+                      value={adFilter}
+                      onChange={(e) => setAdFilter(e.target.value)}
+                      className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="all">전체 슬롯</option>
+                      {SLOT_TYPES.map((slot) => (
+                        <option key={slot.value} value={slot.value}>{slot.label}</option>
+                      ))}
+                    </select>
                   </div>
-                  
                   <button
                     onClick={() => {
                       setEditingAd(null)
@@ -1545,216 +2190,151 @@ export default function AdminDashboard() {
                   </button>
                 </div>
 
-                {/* 광고 목록 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredAds.length === 0 ? (
-                    <div className="col-span-full text-center py-12 text-gray-500">
-                      등록된 광고가 없습니다
-                    </div>
-                  ) : (
-                    filteredAds.map((ad) => (
-                      <div 
-                        key={ad.id}
-                        className={`bg-gray-800/50 rounded-xl border overflow-hidden ${
-                          ad.is_active ? 'border-emerald-500/30' : 'border-gray-700/50'
-                        }`}
-                      >
-                        {/* 이미지 */}
-                        <div className="aspect-video bg-gray-900 flex items-center justify-center overflow-hidden">
-                          <img 
-                            src={ad.image_url} 
-                            alt={ad.alt_text || ad.name}
-                            className="max-w-full max-h-full object-contain"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/300x100?text=Image+Error'
-                            }}
-                          />
+                  {filteredAds.map((ad) => (
+                    <div key={ad.id} className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
+                      <div className="relative">
+                        <img 
+                          src={ad.image_url} 
+                          alt={ad.alt_text || ad.name}
+                          className="w-full h-32 object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/300x100?text=No+Image'
+                          }}
+                        />
+                        <span className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium ${
+                          ad.is_active 
+                            ? 'bg-emerald-500/80 text-white'
+                            : 'bg-gray-500/80 text-white'
+                        }`}>
+                          {ad.is_active ? '활성' : '비활성'}
+                        </span>
+                      </div>
+                      <div className="p-4">
+                        <h4 className="text-white font-medium mb-1">{ad.name}</h4>
+                        <p className="text-gray-500 text-sm mb-3">
+                          {SLOT_TYPES.find(s => s.value === ad.slot_type)?.label} ({ad.width}×{ad.height})
+                        </p>
+                        <div className="flex items-center gap-4 text-sm mb-3">
+                          <span className="text-gray-400">👁️ {todayAdStats[ad.id]?.impressions || 0}</span>
+                          <span className="text-gray-400">👆 {todayAdStats[ad.id]?.clicks || 0}</span>
+                          <span className="text-emerald-400">
+                            {calculateCTR(todayAdStats[ad.id]?.clicks || 0, todayAdStats[ad.id]?.impressions || 0)}%
+                          </span>
                         </div>
-                        
-                        {/* 정보 */}
-                        <div className="p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <h3 className="text-white font-medium">{ad.name}</h3>
-                            <span className={`px-2 py-0.5 rounded text-xs ${
-                              ad.is_active 
-                                ? 'bg-emerald-500/20 text-emerald-400' 
-                                : 'bg-gray-500/20 text-gray-400'
-                            }`}>
-                              {ad.is_active ? '활성' : '비활성'}
-                            </span>
-                          </div>
-                          
-                          <div className="text-xs text-gray-500 mb-3">
-                            {SLOT_TYPES.find(s => s.value === ad.slot_type)?.label || ad.slot_type}
-                            <span className="mx-1">•</span>
-                            {ad.width}×{ad.height}
-                          </div>
-                          
-                          {/* 통계 */}
-                          <div className="flex items-center gap-4 text-xs text-gray-400 mb-4">
-                            <span>👁️ {(todayAdStats[ad.id]?.impressions || 0).toLocaleString()}</span>
-                            <span>👆 {(todayAdStats[ad.id]?.clicks || 0).toLocaleString()}</span>
-                            <span>CTR {calculateCTR(todayAdStats[ad.id]?.clicks || 0, todayAdStats[ad.id]?.impressions || 0)}%</span>
-                          </div>
-                          
-                          {/* 액션 */}
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleToggleAdActive(ad)}
-                              className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
-                                ad.is_active 
-                                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
-                                  : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30'
-                              }`}
-                            >
-                              {ad.is_active ? '비활성화' : '활성화'}
-                            </button>
-                            <button
-                              onClick={() => handleEditAd(ad)}
-                              className="px-3 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg text-xs transition-colors"
-                            >
-                              수정
-                            </button>
-                            <button
-                              onClick={() => handleAdDelete(ad.id)}
-                              className="px-3 py-2 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-lg text-xs transition-colors"
-                            >
-                              삭제
-                            </button>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleAdActive(ad)}
+                            className={`flex-1 py-2 rounded text-xs font-medium transition-colors ${
+                              ad.is_active
+                                ? 'bg-gray-600 hover:bg-gray-500 text-white'
+                                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                            }`}
+                          >
+                            {ad.is_active ? '비활성화' : '활성화'}
+                          </button>
+                          <button
+                            onClick={() => handleEditAd(ad)}
+                            className="px-3 py-2 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded text-xs transition-colors"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => handleAdDelete(ad.id)}
+                            className="px-3 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs transition-colors"
+                          >
+                            삭제
+                          </button>
                         </div>
                       </div>
-                    ))
-                  )}
+                    </div>
+                  ))}
                 </div>
+
+                {filteredAds.length === 0 && (
+                  <div className="text-center py-20 text-gray-500">
+                    등록된 광고가 없습니다
+                  </div>
+                )}
               </div>
             )}
 
             {/* 광고 리포트 탭 */}
             {activeTab === 'report' && (
               <div className="space-y-6">
-                {/* 필터 */}
-                <div className="flex flex-wrap items-center gap-4">
-                  <select
-                    value={reportDateRange}
-                    onChange={(e) => setReportDateRange(e.target.value)}
-                    className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="7">최근 7일</option>
-                    <option value="14">최근 14일</option>
-                    <option value="30">최근 30일</option>
-                  </select>
-                  
-                  <select
-                    value={reportSlotFilter}
-                    onChange={(e) => setReportSlotFilter(e.target.value)}
-                    className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="all">전체 슬롯</option>
-                    {SLOT_TYPES.map((slot) => (
-                      <option key={slot.value} value={slot.value}>{slot.label}</option>
-                    ))}
-                  </select>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <select
+                      value={reportSlotFilter}
+                      onChange={(e) => setReportSlotFilter(e.target.value)}
+                      className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="all">전체 슬롯</option>
+                      {SLOT_TYPES.map((slot) => (
+                        <option key={slot.value} value={slot.value}>{slot.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={reportDateRange}
+                      onChange={(e) => setReportDateRange(e.target.value)}
+                      className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="7">최근 7일</option>
+                      <option value="14">최근 14일</option>
+                      <option value="30">최근 30일</option>
+                    </select>
+                  </div>
                 </div>
 
-                {/* 요약 카드 */}
+                {/* 요약 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">👁️</div>
                     <div className="text-2xl font-bold text-white">
-                      {reportSummary.reduce((sum, d) => sum + d.impressions, 0).toLocaleString()}
+                      {reportSummary.reduce((sum, s) => sum + s.impressions, 0).toLocaleString()}
                     </div>
                     <div className="text-sm text-gray-400">총 노출</div>
                   </div>
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">👆</div>
                     <div className="text-2xl font-bold text-white">
-                      {reportSummary.reduce((sum, d) => sum + d.clicks, 0).toLocaleString()}
+                      {reportSummary.reduce((sum, s) => sum + s.clicks, 0).toLocaleString()}
                     </div>
                     <div className="text-sm text-gray-400">총 클릭</div>
                   </div>
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">📊</div>
-                    <div className="text-2xl font-bold text-white">
+                    <div className="text-2xl font-bold text-emerald-400">
                       {calculateCTR(
-                        reportSummary.reduce((sum, d) => sum + d.clicks, 0),
-                        reportSummary.reduce((sum, d) => sum + d.impressions, 0)
+                        reportSummary.reduce((sum, s) => sum + s.clicks, 0),
+                        reportSummary.reduce((sum, s) => sum + s.impressions, 0)
                       )}%
                     </div>
                     <div className="text-sm text-gray-400">평균 CTR</div>
                   </div>
                 </div>
 
-                {/* 일별 차트 */}
-                {reportSummary.length > 0 && (
-                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
-                    <h3 className="text-lg font-semibold text-white mb-4">일별 추이</h3>
-                    <div className="flex items-end gap-1 h-32">
-                      {reportSummary.map((d, i) => {
-                        const maxImpressions = Math.max(...reportSummary.map(s => s.impressions), 1)
-                        return (
-                          <div key={i} className="flex-1 flex flex-col items-center group relative">
-                            <div
-                              className="w-full bg-blue-500 rounded-t transition-all duration-300 cursor-pointer hover:opacity-80"
-                              style={{
-                                height: `${(d.impressions / maxImpressions) * 100}%`,
-                                minHeight: d.impressions > 0 ? '4px' : '0',
-                              }}
-                            />
-                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                              {formatDate(d.date)}<br />
-                              노출: {d.impressions.toLocaleString()}<br />
-                              클릭: {d.clicks.toLocaleString()}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <div className="flex justify-between mt-2 text-[10px] text-gray-500">
-                      <span>{reportSummary.length > 0 ? formatDate(reportSummary[0].date) : ''}</span>
-                      <span>{reportSummary.length > 0 ? formatDate(reportSummary[reportSummary.length - 1].date) : ''}</span>
-                    </div>
-                  </div>
-                )}
-
                 {/* 광고별 성과 */}
                 {adPerformance.length > 0 && (
-                  <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
-                    <div className="px-4 py-3 bg-gray-900/50 border-b border-gray-700/50">
-                      <h3 className="font-semibold text-white">광고별 성과</h3>
+                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                    <h3 className="text-lg font-semibold text-white mb-4">광고별 성과</h3>
+                    <div className="space-y-4">
+                      {adPerformance.map((perf) => (
+                        <div key={perf.id} className="flex items-center justify-between py-3 border-b border-gray-700/50 last:border-0">
+                          <div>
+                            <div className="text-white font-medium">{perf.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {SLOT_TYPES.find(s => s.value === perf.slot_type)?.label}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6 text-sm">
+                            <span className="text-gray-400">👁️ {perf.totalImpressions.toLocaleString()}</span>
+                            <span className="text-gray-400">👆 {perf.totalClicks.toLocaleString()}</span>
+                            <span className="text-emerald-400 font-medium">{perf.ctr.toFixed(2)}%</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-900/30">
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">광고명</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">슬롯</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">노출</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">클릭</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">CTR</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-700/50">
-                        {adPerformance.map((ad) => (
-                          <tr key={ad.id} className="hover:bg-gray-700/20">
-                            <td className="px-4 py-3 text-white">{ad.name}</td>
-                            <td className="px-4 py-3 text-gray-400 text-sm">
-                              {SLOT_TYPES.find(s => s.value === ad.slot_type)?.label || ad.slot_type}
-                            </td>
-                            <td className="px-4 py-3 text-right text-white">{ad.totalImpressions.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-right text-white">{ad.totalClicks.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-right">
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                ad.ctr >= 1 ? 'bg-emerald-500/20 text-emerald-400' :
-                                ad.ctr >= 0.5 ? 'bg-yellow-500/20 text-yellow-400' :
-                                'bg-gray-500/20 text-gray-400'
-                              }`}>
-                                {ad.ctr.toFixed(2)}%
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
                   </div>
                 )}
               </div>
@@ -1768,11 +2348,11 @@ export default function AdminDashboard() {
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">📝</div>
                     <div className="text-2xl font-bold text-white">{blogStats.totalPosts}</div>
-                    <div className="text-sm text-gray-400">총 게시물</div>
+                    <div className="text-sm text-gray-400">전체 포스트</div>
                   </div>
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">✅</div>
-                    <div className="text-2xl font-bold text-white">{blogStats.publishedPosts}</div>
+                    <div className="text-2xl font-bold text-emerald-400">{blogStats.publishedPosts}</div>
                     <div className="text-sm text-gray-400">발행됨</div>
                   </div>
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
@@ -1782,45 +2362,38 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* 필터 & 액션 */}
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
+                {/* 카테고리 필터 */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setBlogCategoryFilter('all')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      blogCategoryFilter === 'all'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    }`}
+                  >
+                    전체
+                  </button>
+                  {blogCategories.map((cat) => (
                     <button
-                      onClick={() => setBlogCategoryFilter('all')}
+                      key={cat}
+                      onClick={() => setBlogCategoryFilter(cat)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        blogCategoryFilter === 'all'
+                        blogCategoryFilter === cat
                           ? 'bg-emerald-600 text-white'
                           : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                       }`}
                     >
-                      전체
+                      {cat}
                     </button>
-                    {blogCategories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setBlogCategoryFilter(cat)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          blogCategoryFilter === cat
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  <a
-                    href="/admin/blog/new"
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    + 새 글 작성
-                  </a>
+                  ))}
                 </div>
 
                 {/* 블로그 목록 */}
                 {blogLoading ? (
-                  <div className="text-center py-12 text-gray-500">로딩 중...</div>
+                  <div className="text-center py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto" />
+                  </div>
                 ) : (
                   <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
                     <table className="w-full">
@@ -1838,15 +2411,16 @@ export default function AdminDashboard() {
                         {filteredBlogPosts.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
-                              게시물이 없습니다
+                              포스트가 없습니다
                             </td>
                           </tr>
                         ) : (
                           filteredBlogPosts.map((post) => (
                             <tr key={post.id} className="hover:bg-gray-700/20 transition-colors">
                               <td className="px-4 py-4">
-                                <div className="text-white font-medium line-clamp-1">{post.title_kr}</div>
-                                <div className="text-xs text-gray-500">{post.slug}</div>
+                                <div className="text-white font-medium truncate max-w-xs" title={post.title_kr}>
+                                  {post.title_kr}
+                                </div>
                               </td>
                               <td className="px-4 py-4">
                                 <span className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">
@@ -1859,19 +2433,19 @@ export default function AdminDashboard() {
                                   className={`px-2 py-1 rounded text-xs font-medium ${
                                     post.published
                                       ? 'bg-emerald-500/20 text-emerald-400'
-                                      : 'bg-gray-500/20 text-gray-400'
+                                      : 'bg-yellow-500/20 text-yellow-400'
                                   }`}
                                 >
-                                  {post.published ? '✅ 발행됨' : '📝 초안'}
+                                  {post.published ? '✅ 발행' : '📝 초안'}
                                 </button>
                               </td>
                               <td className="px-4 py-4 text-sm text-gray-400">
-                                {post.views?.toLocaleString() || 0}
+                                {(post.views || 0).toLocaleString()}
                               </td>
                               <td className="px-4 py-4 text-sm text-gray-400">
                                 {formatDate(post.created_at)}
                               </td>
-                              <td className="px-4 py-4 text-right">
+                              <td className="px-4 py-4">
                                 <div className="flex items-center justify-end gap-2">
                                   <a
                                     href={`/blog/${post.slug}`}
@@ -1903,7 +2477,6 @@ export default function AdminDashboard() {
                   </div>
                 )}
 
-                {/* 블로그 링크 */}
                 <div className="flex items-center justify-center gap-4 pt-4">
                   <a
                     href="/blog"
@@ -1942,7 +2515,6 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleAdSave} className="p-6 space-y-6">
-              {/* 광고명 */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   광고명 <span className="text-red-400">*</span>
@@ -1957,7 +2529,6 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* 슬롯 타입 */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   슬롯 타입 <span className="text-red-400">*</span>
@@ -1981,7 +2552,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* 이미지 URL */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   이미지 URL <span className="text-red-400">*</span>
@@ -2025,7 +2595,6 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* 링크 URL */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   링크 URL <span className="text-red-400">*</span>
@@ -2040,7 +2609,6 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* 대체 텍스트 */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   대체 텍스트 (Alt)
@@ -2054,7 +2622,6 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* 우선순위 */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   우선순위 (높을수록 먼저 노출)
@@ -2069,7 +2636,6 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* 기간 설정 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -2095,7 +2661,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* 버튼 */}
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
