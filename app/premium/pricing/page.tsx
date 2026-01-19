@@ -168,7 +168,7 @@ export default function PricingPage() {
                 <button
                   onClick={() => {
                     alert(language === 'ko' ? '결제 시스템 준비중입니다.' : 'Payment system coming soon.')
-                    window.location.href = '/signup'
+                    window.location.href = '/login'
                   }}
                   className="w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg transition-all"
                 >
