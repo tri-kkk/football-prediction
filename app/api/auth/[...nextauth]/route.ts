@@ -63,53 +63,15 @@ const handler = NextAuth({
         
         const now = new Date().toISOString()
         
-        // 기존 사용자 확인
+        // ✅ 1. 기존 users 테이블에서 확인 (이미 가입 완료된 회원)
         const { data: existingUser } = await supabase
           .from('users')
-          .select('id')
+          .select('id, terms_agreed_at')
           .eq('email', user.email)
           .single()
 
-        if (!existingUser) {
-          // 🌍 국가 정보 조회
-          const { country, countryCode } = await getCountryFromIP(ip)
-          
-          // 🎉 프로모션 기간 체크
-          const isPromoPeriod = new Date() < PROMO_END_DATE
-          
-          // 🔴 재가입 체크 (프로모션 악용 방지)
-          const emailHash = hashEmail(user.email)
-          const { data: deletedUser } = await supabase
-            .from('deleted_users')
-            .select('promo_code')
-            .eq('email_hash', emailHash)
-            .single()
-          
-          const hadPromo = deletedUser?.promo_code ? true : false
-          const canGetPromo = isPromoPeriod && !hadPromo
-          
-          // ✅ 신규 사용자 생성 (약관 미동의 상태!)
-          await supabase.from('users').insert({
-            email: user.email,
-            name: user.name,
-            avatar_url: user.image,
-            provider: account?.provider,
-            provider_id: account?.providerAccountId,
-            signup_ip: ip,
-            signup_country: country,
-            signup_country_code: countryCode,
-            // ⚠️ 약관 동의 전이라 프로모션 대기 상태로
-            tier: 'free',
-            pending_promo: canGetPromo ? 'LAUNCH_2026' : null,
-            last_login_at: now,
-            // ✅ 핵심: 약관 미동의 상태로 생성 (NULL)
-            terms_agreed_at: null,
-            privacy_agreed_at: null,
-          })
-          
-          console.log(`✅ New user (pending terms): ${user.email} from ${country} (${countryCode}), IP: ${ip}`)
-        } else {
-          // ✅ 기존 사용자: 로그인 시간 업데이트
+        if (existingUser) {
+          // ✅ 기존 회원: 로그인 시간만 업데이트
           await supabase
             .from('users')
             .update({ 
@@ -117,30 +79,87 @@ const handler = NextAuth({
               last_login_ip: ip
             })
             .eq('email', user.email)
+          
+          console.log(`✅ Existing user login: ${user.email}`)
+          return true
         }
 
+        // ✅ 2. pending_users에서 확인 (약관 동의 대기 중)
+        const { data: pendingUser } = await supabase
+          .from('pending_users')
+          .select('id')
+          .eq('email', user.email)
+          .single()
+
+        if (pendingUser) {
+          // 이미 pending 상태 → 업데이트만
+          await supabase
+            .from('pending_users')
+            .update({ 
+              updated_at: now,
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 연장
+            })
+            .eq('email', user.email)
+          
+          console.log(`🔄 Pending user re-login: ${user.email}`)
+          return true
+        }
+
+        // ✅ 3. 완전히 신규 사용자 → pending_users에 저장
+        const { country, countryCode } = await getCountryFromIP(ip)
+        
+        // 프로모션 기간 체크
+        const isPromoPeriod = new Date() < PROMO_END_DATE
+        
+        // 재가입 체크 (프로모션 악용 방지)
+        const emailHash = hashEmail(user.email)
+        const { data: deletedUser } = await supabase
+          .from('deleted_users')
+          .select('promo_code')
+          .eq('email_hash', emailHash)
+          .single()
+        
+        const hadPromo = deletedUser?.promo_code ? true : false
+        const canGetPromo = isPromoPeriod && !hadPromo
+        
+        // ⚠️ 핵심 변경: users가 아닌 pending_users에 저장!
+        await supabase.from('pending_users').insert({
+          email: user.email,
+          name: user.name,
+          avatar_url: user.image,
+          provider: account?.provider,
+          provider_id: account?.providerAccountId,
+          signup_ip: ip,
+          signup_country: country,
+          signup_country_code: countryCode,
+          pending_promo: canGetPromo ? 'LAUNCH_2026' : null,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후 만료
+        })
+        
+        console.log(`🆕 New pending user: ${user.email} from ${country} (${countryCode}), IP: ${ip}`)
         return true
+
       } catch (error) {
         console.error('SignIn error:', error)
+        // 에러가 나도 로그인은 허용 (약관 페이지에서 처리)
         return true
       }
     },
 
-    // ✅ session 콜백에서 termsAgreed 추가
     async session({ session }) {
       if (session.user?.email) {
+        // ✅ 1. 먼저 users 테이블에서 확인
         const { data: userData } = await supabase
           .from('users')
-          .select('id, tier, premium_expires_at, promo_code, terms_agreed_at, privacy_agreed_at, pending_promo')
+          .select('id, tier, premium_expires_at, promo_code, terms_agreed_at, privacy_agreed_at')
           .eq('email', session.user.email)
           .single()
 
         if (userData) {
+          // ✅ 정식 회원
           session.user.id = userData.id
-          
-          // ✅ 약관 동의 여부 체크
-          session.user.termsAgreed = !!(userData.terms_agreed_at && userData.privacy_agreed_at)
-          session.user.pendingPromo = userData.pending_promo
+          session.user.termsAgreed = true  // users에 있으면 무조건 동의 완료
+          session.user.pendingPromo = null
           
           // 프리미엄 만료 체크
           let currentTier = userData.tier
@@ -159,6 +178,26 @@ const handler = NextAuth({
           session.user.tier = currentTier
           session.user.premium_expires_at = userData.premium_expires_at
           session.user.promo_code = userData.promo_code
+          
+        } else {
+          // ✅ 2. pending_users에서 확인
+          const { data: pendingData } = await supabase
+            .from('pending_users')
+            .select('id, pending_promo')
+            .eq('email', session.user.email)
+            .single()
+
+          if (pendingData) {
+            // 약관 동의 대기 중
+            session.user.id = pendingData.id
+            session.user.termsAgreed = false  // 핵심: 아직 미동의
+            session.user.pendingPromo = pendingData.pending_promo
+            session.user.tier = 'guest'  // 아직 정식 회원 아님
+          } else {
+            // 어디에도 없음 (비정상 상태)
+            session.user.termsAgreed = false
+            session.user.tier = 'guest'
+          }
         }
       }
       return session
