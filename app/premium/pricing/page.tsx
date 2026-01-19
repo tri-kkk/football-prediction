@@ -53,7 +53,7 @@ export default function PricingPage() {
                 {language === 'ko' ? '프리미엄 예측픽 무료' : 'FREE Premium Picks'}
               </p>
               <Link
-                href="/signup"
+                href="/login"
                 className="inline-block px-8 py-3 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-500 hover:to-cyan-500 text-white font-bold rounded-xl transition-all"
               >
                 {language === 'ko' ? '지금 무료로 가입하기 →' : 'Join Free Now →'}
