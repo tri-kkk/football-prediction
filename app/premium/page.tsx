@@ -798,7 +798,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
         <div className="relative">
           {/* 🔒 맛보기 블러 오버레이 (비회원용 - 2번째부터) */}
           {isBlurred && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md rounded-lg">
+            <div className="absolute inset-0 z-[1] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md rounded-lg">
               <div className="text-center p-4">
                 <div className="text-3xl mb-2">🎁</div>
                 <div className="text-white font-bold mb-1 text-lg">
@@ -1584,6 +1584,8 @@ export default function PremiumPredictPage() {
               match_id: pick.match_id,
               home_team: pick.home_team,
               away_team: pick.away_team,
+              home_team_id: pick.home_team_id,  // 팀 ID 추가
+              away_team_id: pick.away_team_id,  // 팀 ID 추가
               pick_result: pick.prediction?.recommendation?.pick || 'HOME',
               league_code: pick.league_code,
               commence_time: pick.commence_time,
@@ -1737,7 +1739,7 @@ export default function PremiumPredictPage() {
       </div>
       
       {/* 리그 필터 - Sticky */}
-      <header className="bg-[#0d0d12]/95 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-10">
+      <header className="bg-[#0d0d12]/95 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-[5]">
         <div className="max-w-7xl mx-auto px-4 py-2">
           {/* 리그 필터 */}
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -1842,7 +1844,9 @@ export default function PremiumPredictPage() {
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-1">
                             <img 
-                              src={getTeamLogo(pick.home_team)} 
+                              src={pick.home_team_id 
+                                ? `https://media.api-sports.io/football/teams/${pick.home_team_id}.png`
+                                : getTeamLogo(pick.home_team)} 
                               alt="" 
                               className="w-6 h-6 object-contain"
                               onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
@@ -1852,7 +1856,9 @@ export default function PremiumPredictPage() {
                           <span className="text-gray-500 text-xs">vs</span>
                           <div className="flex items-center gap-1">
                             <img 
-                              src={getTeamLogo(pick.away_team)} 
+                              src={pick.away_team_id 
+                                ? `https://media.api-sports.io/football/teams/${pick.away_team_id}.png`
+                                : getTeamLogo(pick.away_team)} 
                               alt="" 
                               className="w-6 h-6 object-contain"
                               onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
@@ -1993,10 +1999,12 @@ export default function PremiumPredictPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-center flex-1">
                           <img 
-                            src={match.home_team_logo || getTeamLogo(match.home_team)} 
+                            src={match.home_team_id 
+                              ? `https://media.api-sports.io/football/teams/${match.home_team_id}.png`
+                              : getTeamLogo(match.home_team)} 
                             alt="" 
                             className="w-8 h-8 mx-auto mb-0.5 object-contain"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
                           />
                           <div className="text-white text-xs font-medium truncate">{language === 'ko' ? (teamNameKo[match.home_team] || match.home_team) : match.home_team}</div>
                           <div className="text-[10px] text-gray-500">{language === 'ko' ? '홈' : 'Home'}</div>
@@ -2004,10 +2012,12 @@ export default function PremiumPredictPage() {
                         <div className="px-2 text-gray-600 font-bold text-sm">VS</div>
                         <div className="text-center flex-1">
                           <img 
-                            src={match.away_team_logo || getTeamLogo(match.away_team)} 
+                            src={match.away_team_id 
+                              ? `https://media.api-sports.io/football/teams/${match.away_team_id}.png`
+                              : getTeamLogo(match.away_team)} 
                             alt="" 
                             className="w-8 h-8 mx-auto mb-0.5 object-contain"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
                           />
                           <div className="text-white text-xs font-medium truncate">{language === 'ko' ? (teamNameKo[match.away_team] || match.away_team) : match.away_team}</div>
                           <div className="text-[10px] text-gray-500">{language === 'ko' ? '원정' : 'Away'}</div>
