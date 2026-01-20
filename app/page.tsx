@@ -3782,6 +3782,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         </div>
       </a>
 
+
       {/* 📢 모바일 하단 고정 배너 (320x50) - 프리미엄 제외 */}
       {!isMobileAdClosed && !isPremium && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 safe-area-bottom">
