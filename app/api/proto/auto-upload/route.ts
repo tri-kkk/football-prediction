@@ -194,8 +194,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No matches found in text' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } })
     }
 
+    // 기존 결과 데이터 가져오기 (보존용)
+    const { data: existingMatches } = await supabase
+      .from('proto_matches')
+      .select('match_seq, result_code, home_score, away_score')
+      .eq('round', round)
+    
+    // 기존 결과 매핑
+    const existingResults = new Map()
+    if (existingMatches) {
+      existingMatches.forEach(m => {
+        if (m.result_code) {
+          existingResults.set(m.match_seq, {
+            result_code: m.result_code,
+            home_score: m.home_score,
+            away_score: m.away_score
+          })
+        }
+      })
+    }
+    
+    // 기존 결과 유지하면서 데이터 병합
+    const matchesWithResults = matches.map(m => {
+      const existing = existingResults.get(m.match_seq)
+      if (existing) {
+        return {
+          ...m,
+          result_code: existing.result_code,
+          home_score: existing.home_score,
+          away_score: existing.away_score
+        }
+      }
+      return m
+    })
+
+    // 기존 데이터 삭제 후 새로 입력
     await supabase.from('proto_matches').delete().eq('round', round)
-    const { error } = await supabase.from('proto_matches').insert(matches)
+    const { error } = await supabase.from('proto_matches').insert(matchesWithResults)
 
     if (error) {
       console.error('Insert error:', error)
