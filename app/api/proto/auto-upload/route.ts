@@ -26,8 +26,17 @@ function parseNewlineFormat(text: string, round: string) {
   const seenMatches = new Set<string>()
   const currentYear = new Date().getFullYear()
 
-  // 스킵할 베팅 타입
-  const skipBetTypes = ['승⑤패', '승③패', '승④패', 'H ', 'U ', 'SUM', 'hH', 'hU', 'h ']
+  // 베팅 타입 매핑
+  const betTypeMap: Record<string, string> = {
+    '승⑤패': '승5패',
+    '승③패': '승3패', 
+    '승④패': '승4패',
+    'H': '핸디캡',
+    'U': '언오버',
+    'SUM': '합계',
+    'hH': '전반핸디',
+    'hU': '전반언오버',
+  }
 
   let i = 0
   while (i < lines.length) {
@@ -71,12 +80,28 @@ function parseNewlineFormat(text: string, round: string) {
     // 베팅 타입 확인 (3번 인덱스가 베팅타입인지 홈팀인지)
     let betType = '승무패'
     let teamStartIdx = i + 3
+    let handicapValue: number | null = null
+    let totalValue: number | null = null
     
     const possibleBetType = lines[i + 3]
-    if (skipBetTypes.some(t => possibleBetType.startsWith(t) || possibleBetType === t.trim())) {
-      // 스킵할 베팅 타입이면 다음 경기로
-      i = i + 10
-      continue
+    
+    // 베팅 타입 감지
+    for (const [key, value] of Object.entries(betTypeMap)) {
+      if (possibleBetType.startsWith(key) || possibleBetType === key) {
+        betType = value
+        teamStartIdx = i + 4  // 베팅 타입이 있으면 팀 시작 인덱스 +1
+        
+        // 핸디캡/언오버 값 추출 (예: "H -3.5" → -3.5)
+        const valueMatch = possibleBetType.match(/[-+]?\d+\.?\d*/)
+        if (valueMatch) {
+          if (betType.includes('핸디')) {
+            handicapValue = parseFloat(valueMatch[0])
+          } else if (betType.includes('언오버') || betType === '합계') {
+            totalValue = parseFloat(valueMatch[0])
+          }
+        }
+        break
+      }
     }
     
     // 홈팀, 구분자, 원정팀
@@ -112,8 +137,8 @@ function parseNewlineFormat(text: string, round: string) {
     // 상태
     const status = lines[teamStartIdx + 6] || '경기전'
     
-    // 중복 체크
-    const matchKey = `${homeTeam}-${awayTeam}`
+    // 중복 체크 (팀 + 베팅타입 조합)
+    const matchKey = `${homeTeam}-${awayTeam}-${betType}`
     if (seenMatches.has(matchKey)) {
       i = i + 10
       continue
@@ -133,6 +158,8 @@ function parseNewlineFormat(text: string, round: string) {
       home_odds: homeOdds,
       draw_odds: drawOdds,
       away_odds: awayOdds,
+      handicap_value: handicapValue,
+      total_value: totalValue,
       status: status,
       result_code: null,
     })
