@@ -38,15 +38,30 @@ function parseNewlineFormat(text: string, round: string) {
     'hU': '전반언오버',
   }
 
+  // 결과 코드 매핑 (한글 → 영문)
+  const resultCodeMap: Record<string, string> = {
+    '홈승': 'home',
+    '홈패': 'away',
+    '무': 'draw',
+    '원정승': 'away',
+    '원정패': 'home',
+    '핸디승': 'home',
+    '핸디패': 'away',
+    '핸디무': 'draw',
+    '오버': 'over',
+    '언더': 'under',
+    '홀': 'odd',
+    '짝': 'even',
+    '3세트': '3set',
+    '4세트': '4set',
+    '5세트': '5set',
+    '적특': 'void',
+    '적중특례': 'void',
+    '발매취소': 'cancelled'
+  }
+
   // 결과 코드 목록
-  const resultCodes = [
-    '홈승', '홈패', '무', '원정승', '원정패',
-    '핸디승', '핸디패', '핸디무',
-    '오버', '언더',
-    '홀', '짝',
-    '3세트', '4세트', '5세트',
-    '적특', '적중특례', '발매취소'
-  ]
+  const resultCodes = Object.keys(resultCodeMap)
 
   let i = 0
   while (i < lines.length) {
@@ -166,8 +181,8 @@ function parseNewlineFormat(text: string, round: string) {
     let resultCode: string | null = null
     
     if (resultCodes.includes(statusOrResult)) {
-      // 결과 코드면
-      resultCode = statusOrResult
+      // 결과 코드면 → 영문으로 변환
+      resultCode = resultCodeMap[statusOrResult] || null
       status = '종료'
     } else {
       // 상태면 (경기전, 진행중, 하프타임 등)
