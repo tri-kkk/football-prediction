@@ -38,6 +38,16 @@ function parseNewlineFormat(text: string, round: string) {
     'hU': '전반언오버',
   }
 
+  // 결과 코드 목록
+  const resultCodes = [
+    '홈승', '홈패', '무', '원정승', '원정패',
+    '핸디승', '핸디패', '핸디무',
+    '오버', '언더',
+    '홀', '짝',
+    '3세트', '4세트', '5세트',
+    '적특', '적중특례', '발매취소'
+  ]
+
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
@@ -114,11 +124,25 @@ function parseNewlineFormat(text: string, round: string) {
       continue
     }
     
-    // 팀명 추출 (점수 제거)
-    // "KT소닉붐 51" → "KT소닉붐"
-    // "68 안양정관" → "안양정관"
+    // 팀명 및 스코어 추출
+    // "KT소닉붐 62" → 팀: "KT소닉붐", 스코어: 62
+    // "73 안양정관" → 스코어: 73, 팀: "안양정관"
+    const homeMatch = homeLine.match(/^(.+?)\s+(\d+)$/)
+    const awayMatch = awayLine.match(/^(\d+)\s+(.+)$/)
+    
     let homeTeam = homeLine.replace(/\s+\d+(\.\d+)?$/, '').trim()
     let awayTeam = awayLine.replace(/^\d+(\.\d+)?\s+/, '').trim()
+    let homeScore: number | null = null
+    let awayScore: number | null = null
+    
+    if (homeMatch) {
+      homeTeam = homeMatch[1].trim()
+      homeScore = parseInt(homeMatch[2])
+    }
+    if (awayMatch) {
+      awayScore = parseInt(awayMatch[1])
+      awayTeam = awayMatch[2].trim()
+    }
     
     if (!homeTeam || !awayTeam) {
       i++
@@ -134,8 +158,21 @@ function parseNewlineFormat(text: string, round: string) {
     const drawOdds = drawOddsStr !== '-' ? parseFloat(drawOddsStr) : null
     const awayOdds = awayOddsStr !== '-' ? parseFloat(awayOddsStr) : null
     
-    // 상태
-    const status = lines[teamStartIdx + 6] || '경기전'
+    // 상태/결과 파싱
+    const statusOrResult = lines[teamStartIdx + 6] || '경기전'
+    
+    // 결과인지 상태인지 판별
+    let status = '경기전'
+    let resultCode: string | null = null
+    
+    if (resultCodes.includes(statusOrResult)) {
+      // 결과 코드면
+      resultCode = statusOrResult
+      status = '종료'
+    } else {
+      // 상태면 (경기전, 진행중, 하프타임 등)
+      status = statusOrResult
+    }
     
     // 중복 체크 (팀 + 베팅타입 조합)
     const matchKey = `${homeTeam}-${awayTeam}-${betType}`
@@ -160,8 +197,10 @@ function parseNewlineFormat(text: string, round: string) {
       away_odds: awayOdds,
       handicap_value: handicapValue,
       total_value: totalValue,
+      home_score: homeScore,
+      away_score: awayScore,
       status: status,
-      result_code: null,
+      result_code: resultCode,
     })
     
     i = i + 10
@@ -194,7 +233,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No matches found in text' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } })
     }
 
-    // 기존 결과 데이터 가져오기 (보존용)
+    // 기존 결과 데이터 가져오기 (파싱 실패 시 보존용)
     const { data: existingMatches } = await supabase
       .from('proto_matches')
       .select('match_seq, result_code, home_score, away_score')
@@ -204,20 +243,19 @@ export async function POST(request: NextRequest) {
     const existingResults = new Map()
     if (existingMatches) {
       existingMatches.forEach(m => {
-        if (m.result_code) {
-          existingResults.set(m.match_seq, {
-            result_code: m.result_code,
-            home_score: m.home_score,
-            away_score: m.away_score
-          })
-        }
+        existingResults.set(m.match_seq, {
+          result_code: m.result_code,
+          home_score: m.home_score,
+          away_score: m.away_score
+        })
       })
     }
     
-    // 기존 결과 유지하면서 데이터 병합
+    // 새 파싱 결과 우선, 없으면 기존 결과 유지
     const matchesWithResults = matches.map(m => {
       const existing = existingResults.get(m.match_seq)
-      if (existing) {
+      // 새 파싱에서 결과가 있으면 사용, 없으면 기존 결과 유지
+      if (!m.result_code && existing?.result_code) {
         return {
           ...m,
           result_code: existing.result_code,
