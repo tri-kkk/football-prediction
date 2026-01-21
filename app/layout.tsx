@@ -205,7 +205,7 @@ export default function RootLayout({
         <AdSenseLoader />
 
         {/* Global Navigation - 모바일 최적화 */}
-        <header className="sticky top-0 z-50 bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
+        <header className="sticky top-0 z-[60] bg-[#1a1a1a] border-b border-gray-800 shadow-lg">
           <div className="container mx-auto px-3 md:px-4 py-2 md:py-3">
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center gap-2 cursor-pointer">

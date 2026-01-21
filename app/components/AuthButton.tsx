@@ -47,7 +47,7 @@ export default function AuthButton() {
     
     return (
       <>
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative z-[100]" ref={dropdownRef}>
           {/* 프로필 버튼 - 모바일 최적화 */}
           <button
             onClick={() => setShowDropdown(!showDropdown)}
@@ -75,7 +75,7 @@ export default function AuthButton() {
 
           {/* 드롭다운 메뉴 */}
           {showDropdown && (
-            <div className="absolute right-0 mt-2 w-44 md:w-48 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+            <div className="absolute right-0 mt-2 w-44 md:w-48 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-xl z-[100] overflow-hidden">
               {/* 유저 정보 */}
               <div className="px-3 md:px-4 py-2.5 md:py-3 border-b border-gray-700">
                 <div className="text-white text-xs md:text-sm font-medium truncate">{userName}</div>
@@ -84,6 +84,18 @@ export default function AuthButton() {
               
               {/* 메뉴 항목 */}
               <div className="py-1">
+                {/* 프로토 계산기 - 한국어만 */}
+                {language === 'ko' && (
+                  <Link
+                    href="/proto"
+                    onClick={() => setShowDropdown(false)}
+                    className="block px-3 md:px-4 py-2 text-xs md:text-sm text-gray-300 hover:bg-gray-800"
+                  >
+                    <span className="mr-2">🎫</span>
+                    프로토 계산기
+                  </Link>
+                )}
+                
                 {isPremium && (
                   <button
                     onClick={() => {
