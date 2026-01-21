@@ -2396,7 +2396,9 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                     <div className="w-3 h-3 md:w-4 md:h-4 bg-white rounded-full animate-pulse" />
                     <div>
                       <h2 className="text-base md:text-xl font-bold text-white mb-0.5">
-                        🔴 {t('match.liveNow', { count: liveCount })}
+                        🔴 {currentLanguage === 'ko' 
+  ? `지금 ${liveCount}개 경기 진행 중!` 
+  : `${liveCount} matches live now!`}
                       </h2>
                       <p className="text-white/90 text-xs md:text-sm">
                         {t('match.liveDescription')}
