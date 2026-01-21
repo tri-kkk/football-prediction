@@ -1,23 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getServerSession } from 'next-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// GET - 모든 조합 가져오기
+// 세션에서 user_id 가져오기
+async function getUserId(): Promise<string | null> {
+  const session = await getServerSession()
+  if (!session?.user?.email) return null
+  
+  // users 테이블에서 id 조회
+  const { data } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', session.user.email)
+    .single()
+  
+  return data?.id || null
+}
+
+// GET - 내 조합만 가져오기
 export async function GET() {
   try {
+    const userId = await getUserId()
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const { data, error } = await supabase
       .from('proto_slips')
       .select('*')
+      .eq('user_id', userId)  // 🔒 내 슬립만!
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
     // 프론트엔드 형식으로 변환
-    const slips = data.map(row => ({
+    const slips = (data || []).map(row => ({
       id: row.id,
       round: row.round,
       selections: row.selections,
@@ -54,9 +80,18 @@ export async function GET() {
   }
 }
 
-// POST - 새 조합 저장
+// POST - 새 조합 저장 (user_id 포함)
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getUserId()
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
     const { round, selections, totalOdds, amount } = body
 
@@ -70,6 +105,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('proto_slips')
       .insert({
+        user_id: userId,  // 🔒 user_id 저장!
         round,
         selections,
         total_odds: totalOdds,
@@ -102,9 +138,18 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - 조합 상태 업데이트
+// PUT - 조합 상태 업데이트 (본인 것만)
 export async function PUT(request: NextRequest) {
   try {
+    const userId = await getUserId()
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
     const { id, status } = body
 
@@ -126,6 +171,7 @@ export async function PUT(request: NextRequest) {
       .from('proto_slips')
       .update({ status })
       .eq('id', id)
+      .eq('user_id', userId)  // 🔒 본인 것만!
       .select()
       .single()
 
@@ -141,22 +187,31 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - 조합 삭제
+// DELETE - 조합 삭제 (본인 것만)
 export async function DELETE(request: NextRequest) {
   try {
+    const userId = await getUserId()
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     const deleteAll = searchParams.get('all')
 
     if (deleteAll === 'true') {
-      // 전체 삭제
+      // 내 전체 삭제
       const { error } = await supabase
         .from('proto_slips')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000') // 모두 삭제
+        .eq('user_id', userId)  // 🔒 내 것만!
 
       if (error) throw error
-      return NextResponse.json({ success: true, message: 'All slips deleted' })
+      return NextResponse.json({ success: true, message: 'All my slips deleted' })
     }
 
     if (!id) {
@@ -170,6 +225,7 @@ export async function DELETE(request: NextRequest) {
       .from('proto_slips')
       .delete()
       .eq('id', id)
+      .eq('user_id', userId)  // 🔒 본인 것만!
 
     if (error) throw error
 
