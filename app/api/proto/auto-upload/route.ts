@@ -290,6 +290,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Failed to upload matches' }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } })
     }
 
+    // 🆕 슬립 상태 자동 업데이트
+    await updateSlipStatus(round, matchesWithResults)
+
     const soccerLeagues = ['UCL', 'UEL', 'EPL', 'EFL챔', '세리에A', '라리가', '분데스', '리그1', 'U23아컵', '에레디비']
     const basketLeagues = ['KBL', 'WKBL', 'NBA', 'EASL', '남농']
     
@@ -332,4 +335,60 @@ export async function OPTIONS() {
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   })
+}
+
+// 🆕 슬립 상태 자동 업데이트 함수
+async function updateSlipStatus(round: string, matches: any[]) {
+  try {
+    // 해당 회차의 pending 슬립 조회
+    const { data: slips, error: fetchError } = await supabase
+      .from('proto_slips')
+      .select('*')
+      .eq('round', round)
+      .eq('status', 'pending')
+
+    if (fetchError || !slips || slips.length === 0) {
+      console.log('📋 업데이트할 슬립 없음')
+      return
+    }
+
+    console.log(`📋 ${slips.length}개 슬립 상태 확인 중...`)
+
+    for (const slip of slips) {
+      let allFinished = true
+      let allCorrect = true
+
+      for (const sel of slip.selections) {
+        // match_seq로 매칭
+        const match = matches.find(m => m.match_seq === sel.matchSeq)
+        
+        if (!match || !match.result_code) {
+          allFinished = false
+          break
+        }
+        
+        // 예측과 결과 비교
+        if (match.result_code !== sel.prediction) {
+          allCorrect = false
+        }
+      }
+
+      if (allFinished) {
+        const newStatus = allCorrect ? 'won' : 'lost'
+        const actualReturn = allCorrect ? Math.floor(slip.amount * slip.total_odds) : 0
+        
+        await supabase
+          .from('proto_slips')
+          .update({ 
+            status: newStatus,
+            actual_return: actualReturn
+          })
+          .eq('id', slip.id)
+        
+        console.log(`✅ 슬립 ${slip.id} → ${newStatus}`)
+      }
+    }
+  } catch (error) {
+    console.error('슬립 상태 업데이트 에러:', error)
+  }
 }
