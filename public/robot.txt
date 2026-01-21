@@ -12,3 +12,6 @@ Disallow: /assets/
 
 # Sitemap declaration
 Sitemap: https://www.trendsoccer.com/sitemap.xml
+
+User-agent: Yeti
+Allow:/
