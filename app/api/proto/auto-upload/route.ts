@@ -32,10 +32,10 @@ function parseNewlineFormat(text: string, round: string) {
     '승③패': '승3패', 
     '승④패': '승4패',
     'H': '핸디캡',
-    'U': '언오버',
+    'U': '언더오버',
     'SUM': '합계',
     'hH': '전반핸디',
-    'hU': '전반언오버',
+    'hU': '전반언더오버',
   }
 
   // 결과 코드 매핑 (한글 → 영문)
@@ -121,7 +121,7 @@ function parseNewlineFormat(text: string, round: string) {
         if (valueMatch) {
           if (betType.includes('핸디')) {
             handicapValue = parseFloat(valueMatch[0])
-          } else if (betType.includes('언오버') || betType === '합계') {
+          } else if (betType.includes('언더오버') || betType === '합계') {
             totalValue = parseFloat(valueMatch[0])
           }
         }
