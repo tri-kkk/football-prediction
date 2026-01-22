@@ -258,13 +258,7 @@ export default function ReferralPage() {
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
         
-        {/* 뒤로가기 */}
-        <Link href="/" className="text-gray-400 text-sm inline-flex items-center gap-1 hover:text-white">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          {t.back}
-        </Link>
+
 
         {/* 보상 안내 카드 */}
         <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl p-5">
