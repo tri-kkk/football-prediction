@@ -2,7 +2,7 @@
 
 import { signIn, useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useLanguage } from '../contexts/LanguageContext'
 import Link from 'next/link'
 
@@ -10,7 +10,37 @@ export default function LoginPage() {
   const { language } = useLanguage()
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState<string | null>(null)
+
+  // 🔗 레퍼럴 코드 파라미터 처리 (URL 또는 sessionStorage)
+  const [refCode, setRefCode] = useState<string | null>(null)
+
+  useEffect(() => {
+    console.log('🔍 레퍼럴 체크 시작')
+    
+    // 1. URL 파라미터 우선
+    const urlRef = searchParams.get('ref')
+    console.log('🔍 URL ref:', urlRef)
+    
+    if (urlRef) {
+      const code = urlRef.toUpperCase()
+      sessionStorage.setItem('referral_code', code)
+      setRefCode(code)
+      console.log('📌 레퍼럴 코드 저장 (URL):', code)
+      return
+    }
+    
+    // 2. sessionStorage에서 가져오기
+    if (typeof window !== 'undefined') {
+      const storedRef = sessionStorage.getItem('referral_code')
+      console.log('🔍 Storage ref:', storedRef)
+      if (storedRef) {
+        setRefCode(storedRef)
+        console.log('📌 레퍼럴 코드 로드 (Storage):', storedRef)
+      }
+    }
+  }, [searchParams])
 
   // 네이버 로그인 활성화 여부 (검수 통과 후 true로 변경)
   const NAVER_ENABLED = false
@@ -89,7 +119,7 @@ export default function LoginPage() {
           <Link href="/" className="inline-block">
             <img 
               src="/logo.svg" 
-              alt="트랜드사커" 
+              alt="트렌드사커" 
               className="h-10 w-auto mx-auto"
             />
           </Link>
@@ -122,8 +152,29 @@ export default function LoginPage() {
           </h1>
         </div>
 
+        {/* 🔗 레퍼럴 배너 (ref 코드가 있을 때만) */}
+        {refCode && (
+          <div className="bg-gradient-to-r from-[#1a2a2a] to-[#1a1a2a] border border-cyan-500/30 rounded-2xl p-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                <span className="text-xl">🎁</span>
+              </div>
+              <div>
+                <p className="text-cyan-400 text-sm font-bold">
+                  {language === 'ko' ? '친구 초대 혜택!' : 'Referral Bonus!'}
+                </p>
+                <p className="text-gray-400 text-xs">
+                  {language === 'ko' 
+                    ? '가입하면 프리미엄 3일 무료 체험' 
+                    : 'Sign up for 3 days free Premium'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 🎉 프로모션 배너 */}
-        {isPromoPeriod && (
+        {isPromoPeriod && !refCode && (
           <div className="bg-gradient-to-r from-[#1a2a1a] to-[#1a1a2a] border border-green-500/30 rounded-2xl p-5 mb-6">
             <div className="text-center">
               <div className="inline-block px-3 py-1 bg-green-500/20 rounded-full mb-3">
@@ -201,19 +252,19 @@ export default function LoginPage() {
               <div className="text-gray-500 text-xs mb-3 text-center tracking-wider">PREMIUM BENEFITS</div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="flex items-center gap-2 text-gray-400 bg-[#111] rounded-lg px-3 py-2">
-                  <span className="text-green-500">●</span>
+                  <span className="text-green-500">◆</span>
                   {language === 'ko' ? '24시간 선공개' : '24h Early Access'}
                 </div>
                 <div className="flex items-center gap-2 text-gray-400 bg-[#111] rounded-lg px-3 py-2">
-                  <span className="text-green-500">●</span>
+                  <span className="text-green-500">◆</span>
                   {language === 'ko' ? 'PICK 상세분석' : 'PICK Analysis'}
                 </div>
                 <div className="flex items-center gap-2 text-gray-400 bg-[#111] rounded-lg px-3 py-2">
-                  <span className="text-green-500">●</span>
+                  <span className="text-green-500">◆</span>
                   {language === 'ko' ? '광고 제거' : 'Ad-free'}
                 </div>
                 <div className="flex items-center gap-2 text-gray-400 bg-[#111] rounded-lg px-3 py-2">
-                  <span className="text-green-500">●</span>
+                  <span className="text-green-500">◆</span>
                   {language === 'ko' ? '픽 알림' : 'Pick Alerts'}
                 </div>
               </div>
@@ -241,8 +292,6 @@ export default function LoginPage() {
               </div>
             </div>
           )}
-
-       
         </div>
 
         {/* 홈으로 */}

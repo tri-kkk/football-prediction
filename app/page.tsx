@@ -12,7 +12,10 @@ import AdBanner from './components/AdBanner'
 import AdSenseAd from './components/AdSenseAd'
 import MobileMatchReports from './components/MobileMatchReports'
 import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
+import { useReferral } from './hooks/useReferral'
 import Link from 'next/link'
+
 
 import TopHighlights from './components/TopHighlights'
 import MatchPoll from './components/MatchPoll'
@@ -551,9 +554,22 @@ function setCachedData(key: string, data: any) {
 }
 
 export default function Home() {
+    useReferral()  // 🔗 이거 추가!
   const { t, language: currentLanguage, getLeagueName, getRegionName } = useLanguage()
   const { data: session } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
+  
+  // 🔗 레퍼럴 코드 저장 (로그인 페이지로 전달)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const refCode = urlParams.get('ref')
+      if (refCode) {
+        sessionStorage.setItem('referral_code', refCode.toUpperCase())
+        console.log('📌 메인에서 레퍼럴 코드 저장:', refCode)
+      }
+    }
+  }, [])
   
   const [selectedLeague, setSelectedLeague] = useState('ALL')
   const [matches, setMatches] = useState<Match[]>([])

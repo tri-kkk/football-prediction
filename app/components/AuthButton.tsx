@@ -84,6 +84,19 @@ export default function AuthButton() {
               
               {/* 메뉴 항목 */}
               <div className="py-1">
+                {/* 🎁 친구 초대 - NEW */}
+                <Link
+                  href="/referral"
+                  onClick={() => setShowDropdown(false)}
+                  className="block px-3 md:px-4 py-2 text-xs md:text-sm text-gray-300 hover:bg-gray-800"
+                >
+                  <span className="mr-2">🎁</span>
+                  {language === 'ko' ? '친구 초대' : 'Invite Friends'}
+                  <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-green-500 text-white rounded-full">
+                    +2일
+                  </span>
+                </Link>
+                
                 {/* 프로토 계산기 - 한국어만 */}
                 {language === 'ko' && (
                   <Link
@@ -223,48 +236,35 @@ function SubscriptionModal({
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return '-'
     const date = new Date(dateStr)
-    return language === 'ko'
-      ? date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
-      : date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    return date.toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
   }
 
-  // 플랜 표시
-  const getPlanDisplay = () => {
-    // 프로모션 코드가 있으면 프로모션 표시
-    if (promoCode) {
-      return language === 'ko' ? '오픈 프로모션' : 'Launch Promo'
-    }
-    if (subscription?.plan) {
-      if (language === 'ko') {
-        switch (subscription.plan) {
-          case 'monthly': return '1개월'
-          case 'yearly': return '1년'
-          default: return subscription.plan
-        }
-      } else {
-        switch (subscription.plan) {
-          case 'monthly': return 'Monthly'
-          case 'yearly': return 'Yearly'
-          default: return subscription.plan
-        }
-      }
-    }
-    return '-'
-  }
-
-  // D-Day 계산
+  // 남은 일수 계산
   const getDaysRemaining = () => {
     const expiresAt = subscription?.expiresAt || premiumExpiresAt
     if (!expiresAt) return null
-    const expires = new Date(expiresAt)
+    
     const now = new Date()
-    const diff = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    return diff > 0 ? diff : 0
+    const expiry = new Date(expiresAt)
+    const diff = expiry.getTime() - now.getTime()
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+    return Math.max(0, days)
   }
 
   const daysRemaining = getDaysRemaining()
-  
-  // 만료일 - 세션 데이터 또는 subscription 데이터 사용
+
+  // 플랜 표시
+  const getPlanDisplay = () => {
+    if (promoCode) return `프로모션 (${promoCode})`
+    if (subscription?.plan === 'yearly') return language === 'ko' ? '연간 구독' : 'Yearly'
+    if (subscription?.plan === 'monthly') return language === 'ko' ? '월간 구독' : 'Monthly'
+    return language === 'ko' ? '프리미엄' : 'Premium'
+  }
+
   const expiresAt = subscription?.expiresAt || premiumExpiresAt
   const startedAt = subscription?.startedAt
 
