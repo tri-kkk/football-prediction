@@ -1806,8 +1806,8 @@ export default function PremiumPredictPage() {
                   )}
                 </div>
                 
-                {/* 적중률 - 크게 강조 */}
-                {weeklyStats.totalPicks >= 1 && (
+                {/* 적중률 - 60% 이상일 때만 표시 */}
+                {weeklyStats.totalPicks >= 5 && Math.round((weeklyStats.correctPicks / weeklyStats.totalPicks) * 100) >= 60 && (
                   <div className="px-4 py-4 border-b border-gray-800">
                     <div className="flex items-center justify-between">
                       <span className="text-gray-400 text-sm">
@@ -1832,14 +1832,14 @@ export default function PremiumPredictPage() {
                   </div>
                 )}
                 
-                {/* 최근 적중 */}
+                {/* 최근 적중 - 항상 표시 */}
                 {recentCorrectPicks.length > 0 && (
                   <div className="px-4 py-3 border-b border-gray-800 bg-green-500/5">
                     <div className="text-gray-500 text-xs mb-2 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
                       {language === 'ko' ? '최근 적중' : 'Recent Wins'}
                     </div>
-                    {recentCorrectPicks.slice(0, 2).map((pick, idx) => (
+                    {recentCorrectPicks.slice(0, 3).map((pick, idx) => (
                       <div key={idx} className="flex items-center justify-between py-2 px-3 bg-green-500/10 rounded-lg mb-2 last:mb-0 border border-green-500/20">
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-1">
