@@ -2,7 +2,7 @@
 
 import { signIn, useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useLanguage } from '../contexts/LanguageContext'
 import Link from 'next/link'
 
@@ -10,7 +10,6 @@ export default function LoginPage() {
   const { language } = useLanguage()
   const { data: session, status } = useSession()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState<string | null>(null)
 
   // 🔗 레퍼럴 코드 파라미터 처리 (URL 또는 sessionStorage)
@@ -19,8 +18,11 @@ export default function LoginPage() {
   useEffect(() => {
     console.log('🔍 레퍼럴 체크 시작')
     
+    if (typeof window === 'undefined') return
+    
     // 1. URL 파라미터 우선
-    const urlRef = searchParams.get('ref')
+    const urlParams = new URLSearchParams(window.location.search)
+    const urlRef = urlParams.get('ref')
     console.log('🔍 URL ref:', urlRef)
     
     if (urlRef) {
@@ -32,15 +34,13 @@ export default function LoginPage() {
     }
     
     // 2. sessionStorage에서 가져오기
-    if (typeof window !== 'undefined') {
-      const storedRef = sessionStorage.getItem('referral_code')
-      console.log('🔍 Storage ref:', storedRef)
-      if (storedRef) {
-        setRefCode(storedRef)
-        console.log('📌 레퍼럴 코드 로드 (Storage):', storedRef)
-      }
+    const storedRef = sessionStorage.getItem('referral_code')
+    console.log('🔍 Storage ref:', storedRef)
+    if (storedRef) {
+      setRefCode(storedRef)
+      console.log('📌 레퍼럴 코드 로드 (Storage):', storedRef)
     }
-  }, [searchParams])
+  }, [])
 
   // 네이버 로그인 활성화 여부 (검수 통과 후 true로 변경)
   const NAVER_ENABLED = false
