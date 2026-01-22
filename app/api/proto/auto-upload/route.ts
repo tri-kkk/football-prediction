@@ -43,6 +43,7 @@ function parseNewlineFormat(text: string, round: string) {
     '홈승': 'home',
     '홈패': 'away',
     '무': 'draw',
+    '무승부': 'draw',  // 🆕 추가!
     '원정승': 'away',
     '원정패': 'home',
     '핸디승': 'home',
