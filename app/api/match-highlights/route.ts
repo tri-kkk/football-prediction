@@ -409,31 +409,45 @@ export async function GET(request: NextRequest) {
       away: awayData ? `${awayData.key} → ${awayData.slug}` : `NOT FOUND (${awayTeam})`
     })
 
+    // ============================================
+    // 🔥 개선: 양방향 검색 (홈팀 + 어웨이팀 모두 검색!)
+    // ============================================
     let allHighlights: any[] = []
-
-    // ============================================
-    // 검색 전략: Team 엔드포인트 우선
-    // ============================================
+    const fetchedSlugs: string[] = []
     
     // 1차: 홈팀으로 검색
     if (homeData?.slug) {
-      allHighlights = await fetchTeamHighlights(homeData.slug)
+      const homeHighlights = await fetchTeamHighlights(homeData.slug)
+      allHighlights.push(...homeHighlights)
+      fetchedSlugs.push(homeData.slug)
+      console.log(`📊 Home team (${homeData.slug}): ${homeHighlights.length} highlights`)
     }
     
-    // 2차: 어웨이팀으로 검색
-    if (allHighlights.length === 0 && awayData?.slug) {
-      allHighlights = await fetchTeamHighlights(awayData.slug)
+    // 2차: 어웨이팀으로 검색 (홈팀과 다른 경우에만)
+    if (awayData?.slug && awayData.slug !== homeData?.slug) {
+      const awayHighlights = await fetchTeamHighlights(awayData.slug)
+      allHighlights.push(...awayHighlights)
+      fetchedSlugs.push(awayData.slug)
+      console.log(`📊 Away team (${awayData.slug}): ${awayHighlights.length} highlights`)
     }
     
     // 3차: Featured Feed (슬러그 모를 때만)
     if (allHighlights.length === 0) {
       allHighlights = await fetchFeedHighlights()
+      console.log(`📊 Featured feed: ${allHighlights.length} highlights`)
     }
+
+    // 중복 제거 (같은 경기가 양쪽에 있을 수 있음)
+    const uniqueHighlights = allHighlights.filter((highlight, index, self) => 
+      index === self.findIndex(h => h.title === highlight.title)
+    )
+    
+    console.log(`📊 Total unique highlights: ${uniqueHighlights.length}`)
 
     // 디버그
     if (debug) {
       console.log('📋 Available highlights:')
-      allHighlights.slice(0, 15).forEach((h, i) => {
+      uniqueHighlights.slice(0, 20).forEach((h, i) => {
         console.log(`  ${i + 1}. ${h.title}`)
       })
     }
@@ -443,7 +457,7 @@ export async function GET(request: NextRequest) {
     // ============================================
     let bestMatch: any = null
     
-    for (const highlight of allHighlights) {
+    for (const highlight of uniqueHighlights) {
       const title = highlight.title || ''
       const teams = extractTeamsFromTitle(title)
       
@@ -453,15 +467,21 @@ export async function GET(request: NextRequest) {
       const homeMatches = isSameTeam(teams.home, homeTeam)
       const awayMatches = isSameTeam(teams.away, awayTeam)
       
+      // 🔥 추가: 순서가 바뀌어도 매칭 (ScoreBat 순서 ≠ API 순서일 수 있음)
+      const homeMatchesReverse = isSameTeam(teams.home, awayTeam)
+      const awayMatchesReverse = isSameTeam(teams.away, homeTeam)
+      
+      const isMatch = (homeMatches && awayMatches) || (homeMatchesReverse && awayMatchesReverse)
+      
       if (debug) {
         console.log(`🔍 "${title}"`)
         console.log(`   Extracted: "${teams.home}" vs "${teams.away}"`)
         console.log(`   Searching: "${homeTeam}" vs "${awayTeam}"`)
-        console.log(`   Match: home=${homeMatches}, away=${awayMatches}`)
+        console.log(`   Match: ${isMatch} (normal: ${homeMatches && awayMatches}, reverse: ${homeMatchesReverse && awayMatchesReverse})`)
       }
       
       // 🔥 핵심: 두 팀 모두 매칭되어야만 선택!
-      if (homeMatches && awayMatches) {
+      if (isMatch) {
         // 날짜도 맞으면 완벽
         if (date && highlight.date) {
           const highlightDate = highlight.date.split('T')[0]
@@ -492,7 +512,8 @@ export async function GET(request: NextRequest) {
         debug: debug ? { 
           searchedTeams: { homeTeam, awayTeam },
           foundSlugs: { home: homeData?.slug, away: awayData?.slug },
-          totalHighlights: allHighlights.length 
+          fetchedSlugs,
+          totalHighlights: uniqueHighlights.length 
         } : undefined
       })
     }
