@@ -20,7 +20,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 })
     }
 
-    const siteUrl = 'https://trendsoccer.com'
+    const siteUrl = 'https://www.trendsoccer.com'
     const now = new Date().toUTCString()
 
     // RSS 2.0 XML 생성
@@ -63,3 +63,4 @@ export async function GET() {
     return NextResponse.json({ error: 'RSS generation failed' }, { status: 500 })
   }
 }
+
