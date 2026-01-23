@@ -62,6 +62,34 @@ const texts = {
     expand: '상세보기',
     refresh: '새로고침',
     disclaimer: '※ 이 예측은 통계 기반이며, 베팅 손실에 대한 책임을 지지 않습니다.',
+    // 프리미엄 팀 분석
+    premiumTeamAnalysis: '🔐 프리미엄 팀 분석',
+    goalsByPeriod: '시간대별 득점',
+    situationResult: '상황별 결과',
+    firstGoalResult: '선제골 시',
+    concededFirst: '선실점 시',
+    leadingHalf: '전반 리드',
+    drawHalf: '전반 0-0',
+    win: '승리',
+    comeback: '역전',
+    vsTiers: '상대 등급별',
+    vsTop: 'vs 상위 (1-6위)',
+    vsMid: 'vs 중위 (7-14위)',
+    vsBottom: 'vs 하위 (15-20위)',
+    bettingMarkets: '베팅 마켓 참고',
+    over25: '오버 2.5',
+    btts: 'BTTS',
+    cleanSheet: '클린시트',
+    winToNil: '무실점승',
+    currentStreak: '현재 폼',
+    winStreak: '연승',
+    scoringStreak: '연속 득점',
+    last10: '최근 10경기',
+    weakPoints: '약점 포인트',
+    unlockPremium: '프리미엄으로 상세 분석 보기',
+    firstHalf: '전반',
+    secondHalf: '후반',
+    lateStrong: '막판 강함',
   },
   en: {
     title: 'Match Prediction',
@@ -112,6 +140,34 @@ const texts = {
     expand: 'Details',
     refresh: 'Refresh',
     disclaimer: '※ This prediction is statistics-based. We are not responsible for betting losses.',
+    // Premium Team Analysis
+    premiumTeamAnalysis: '🔐 Premium Team Analysis',
+    goalsByPeriod: 'Goals by Period',
+    situationResult: 'Situation Results',
+    firstGoalResult: '1st Goal',
+    concededFirst: 'Conceded 1st',
+    leadingHalf: 'Lead at HT',
+    drawHalf: '0-0 at HT',
+    win: 'Win',
+    comeback: 'Comeback',
+    vsTiers: 'vs Opponent Tier',
+    vsTop: 'vs Top (1-6)',
+    vsMid: 'vs Mid (7-14)',
+    vsBottom: 'vs Bottom (15-20)',
+    bettingMarkets: 'Betting Markets',
+    over25: 'Over 2.5',
+    btts: 'BTTS',
+    cleanSheet: 'Clean Sheet',
+    winToNil: 'Win to Nil',
+    currentStreak: 'Current Form',
+    winStreak: 'Win Streak',
+    scoringStreak: 'Scoring Streak',
+    last10: 'Last 10',
+    weakPoints: 'Weak Points',
+    unlockPremium: 'Unlock Premium Analysis',
+    firstHalf: '1st Half',
+    secondHalf: '2nd Half',
+    lateStrong: 'Late Game Strong',
   }
 }
 
@@ -546,12 +602,18 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
   const isPremiumUser = (session?.user as any)?.tier === 'premium'
   const { prediction, loading, error } = match
   const [timeLeft, setTimeLeft] = useState<string>('')
-  const [isFree, setIsFree] = useState(false) // 3시간 이내 = 무료회원 공개
+  const [isFree, setIsFree] = useState(false) // 12시간 이내 = 무료회원 공개
   const [isOpen, setIsOpen] = useState(false) // 24시간 이내 = 프리미엄 공개
-  const [isGuestOpen, setIsGuestOpen] = useState(false) // 1시간 이내 = 비회원도 공개
+  const [isGuestOpen, setIsGuestOpen] = useState(false) // 3시간 이내 = 비회원도 공개
   const [isExpanded, setIsExpanded] = useState(true) // 펼침/접기 상태
   const [viewedCount, setViewedCount] = useState(0)
   const [showBlurOverlay, setShowBlurOverlay] = useState(false) // 블러 오버레이 표시
+  const [selectedTeamTab, setSelectedTeamTab] = useState<'h2h' | 'home' | 'away'>('h2h') // 프리미엄 팀 분석 탭
+  
+  // 🔐 프리미엄 팀 분석용 상태 (실제 DB 데이터)
+  const [teamStats, setTeamStats] = useState<{home: any | null, away: any | null}>({ home: null, away: null })
+  const [h2hData, setH2hData] = useState<any | null>(null)
+  const [teamStatsLoading, setTeamStatsLoading] = useState(false)
   
   // 맛보기 전략: 비회원은 첫 번째만 무료
   useEffect(() => {
@@ -591,6 +653,47 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
     onAnalyze()
   }
   
+  // 🔐 프리미엄 팀 통계 + H2H 로드
+  useEffect(() => {
+    const fetchTeamStats = async () => {
+      if (!prediction || !isPremiumUser) return
+      
+      setTeamStatsLoading(true)
+      try {
+        // team_id가 있으면 추가
+        const h2hParams = new URLSearchParams({
+          homeTeam: match.home_team,
+          awayTeam: match.away_team,
+        })
+        if (match.home_team_id) h2hParams.append('homeTeamId', String(match.home_team_id))
+        if (match.away_team_id) h2hParams.append('awayTeamId', String(match.away_team_id))
+        
+        const [homeRes, awayRes, h2hRes] = await Promise.all([
+          fetch(`/api/team-stats?team=${encodeURIComponent(match.home_team)}&league=${match.league_code}`),
+          fetch(`/api/team-stats?team=${encodeURIComponent(match.away_team)}&league=${match.league_code}`),
+          fetch(`/api/h2h-analysis?${h2hParams.toString()}`)
+        ])
+        
+        const [homeData, awayData, h2hResult] = await Promise.all([homeRes.json(), awayRes.json(), h2hRes.json()])
+        
+        setTeamStats({
+          home: homeData.success ? homeData.data : null,
+          away: awayData.success ? awayData.data : null,
+        })
+        
+        if (h2hResult.success && h2hResult.data) {
+          setH2hData(h2hResult.data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch team stats:', error)
+      } finally {
+        setTeamStatsLoading(false)
+      }
+    }
+    
+    fetchTeamStats()
+  }, [prediction, isPremiumUser, match.home_team, match.away_team, match.league_code])
+  
   // 블러 조건: 비회원이고 2번째 이상 볼 때 (예측 로드 후)
   const isBlurred = !session && viewedCount > 1
   
@@ -619,8 +722,8 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
       
       // 열람 기준:
       // - 프리미엄: 24시간 전
-      // - 무료회원: 3시간 전
-      // - 비회원: 1시간 전 (1회만)
+      // - 무료회원: 12시간 전
+      // - 비회원: 3시간 전
       
       // 현재 유저 티어 확인
       const isFreeUser = session && !isPremiumUser
@@ -628,24 +731,32 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
       
       // 각 티어별 오픈 시간
       const premiumOpenHours = 24
-      const freeOpenHours = 3
-      const guestOpenHours = 1
+      const freeOpenHours = 12
+      const guestOpenHours = 3
       
       // 현재 유저의 오픈 기준 시간
       const userOpenHours = isPremiumUser ? premiumOpenHours : (isFreeUser ? freeOpenHours : guestOpenHours)
       
-      if (hours < 1) {
-        // 1시간 이내 = 모든 유저 열람 가능
+      if (hours < 3) {
+        // 3시간 이내 = 모든 유저 열람 가능
         setIsOpen(true)
         setIsFree(true)
         setIsGuestOpen(true)
         if (language === 'ko') {
-          setTimeLeft(`${minutes}분 후 시작`)
+          if (hours < 1) {
+            setTimeLeft(`${minutes}분 후 시작`)
+          } else {
+            setTimeLeft(`${hours}시간 ${minutes}분 후 시작`)
+          }
         } else {
-          setTimeLeft(`${minutes}m to start`)
+          if (hours < 1) {
+            setTimeLeft(`${minutes}m to start`)
+          } else {
+            setTimeLeft(`${hours}h ${minutes}m to start`)
+          }
         }
-      } else if (hours < 3) {
-        // 1~3시간 = 무료회원 이상 열람 가능
+      } else if (hours < 12) {
+        // 3~12시간 = 무료회원 이상 열람 가능
         setIsOpen(true)
         setIsFree(true)
         setIsGuestOpen(false)
@@ -667,7 +778,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
           }
         }
       } else if (hours < 24) {
-        // 3~24시간 = 프리미엄만 열람 가능
+        // 12~24시간 = 프리미엄만 열람 가능
         setIsOpen(true)
         setIsFree(false)
         setIsGuestOpen(false)
@@ -1193,6 +1304,467 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                   </div>
                 )}
               </div>
+              
+              
+              {/* 프리미엄 팀 분석 섹션 (클린 디자인 + 다국어) */}
+              {isPremiumUser ? (
+                <div className="bg-[#0d0d14] rounded-lg border border-gray-800 overflow-hidden">
+                  {/* 헤더 */}
+                  <div className="px-3 py-2 bg-gradient-to-r from-yellow-500/10 to-transparent border-b border-gray-800">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-yellow-500 tracking-wide uppercase">
+                        {language === 'ko' ? '프리미엄 분석' : 'Premium Analysis'}
+                      </span>
+                      {teamStatsLoading && (
+                        <span className="text-[10px] text-gray-500">
+                          {language === 'ko' ? '로딩...' : 'Loading...'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* 탭 */}
+                  <div className="flex border-b border-gray-800">
+                    <button 
+                      className={`flex-1 py-2.5 text-xs font-medium transition-all ${
+                        selectedTeamTab === 'h2h' 
+                          ? 'text-white bg-purple-600/20 border-b-2 border-purple-500' 
+                          : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                      onClick={() => setSelectedTeamTab('h2h')}
+                    >
+                      {language === 'ko' ? '상대전적' : 'H2H'}
+                    </button>
+                    <button 
+                      className={`flex-1 py-2.5 text-xs font-medium transition-all ${
+                        selectedTeamTab === 'home' 
+                          ? 'text-white bg-blue-600/20 border-b-2 border-blue-500' 
+                          : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                      onClick={() => setSelectedTeamTab('home')}
+                    >
+                      {getTeamName(match.home_team)}
+                    </button>
+                    <button 
+                      className={`flex-1 py-2.5 text-xs font-medium transition-all ${
+                        selectedTeamTab === 'away' 
+                          ? 'text-white bg-red-600/20 border-b-2 border-red-500' 
+                          : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                      onClick={() => setSelectedTeamTab('away')}
+                    >
+                      {getTeamName(match.away_team)}
+                    </button>
+                  </div>
+                  
+                  {/* 콘텐츠 */}
+                  <div className="p-3">
+                    {/* H2H 탭 */}
+                    {selectedTeamTab === 'h2h' && (
+                      <div className="space-y-4">
+                        {!h2hData ? (
+                          <div className="text-center py-8 text-gray-600 text-xs">
+                            {teamStatsLoading 
+                              ? (language === 'ko' ? '로딩 중...' : 'Loading...') 
+                              : (language === 'ko' ? '상대전적 데이터 없음' : 'No H2H data')}
+                          </div>
+                        ) : (
+                          <>
+                            {/* 역대 전적 */}
+                            <div>
+                              <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                {language === 'ko' ? '역대 전적' : 'All Time Record'} ({h2hData.overall?.totalMatches || 0}{language === 'ko' ? '경기' : ' games'})
+                              </div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-blue-400 font-bold text-sm w-6">{h2hData.overall?.homeWins || 0}</span>
+                                <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden flex">
+                                  <div className="bg-blue-500 h-full" style={{ width: `${h2hData.overall?.homeWinRate || 0}%` }} />
+                                  <div className="bg-gray-500 h-full" style={{ width: `${h2hData.overall?.drawRate || 0}%` }} />
+                                  <div className="bg-red-500 h-full" style={{ width: `${h2hData.overall?.awayWinRate || 0}%` }} />
+                                </div>
+                                <span className="text-red-400 font-bold text-sm w-6 text-right">{h2hData.overall?.awayWins || 0}</span>
+                              </div>
+                              <div className="flex justify-between text-[10px] text-gray-500">
+                                <span>{getTeamName(match.home_team)}</span>
+                                <span>{h2hData.overall?.draws || 0} {language === 'ko' ? '무' : 'D'}</span>
+                                <span>{getTeamName(match.away_team)}</span>
+                              </div>
+                            </div>
+                            
+                            {/* 최근 맞대결 */}
+                            {h2hData.recentMatches && h2hData.recentMatches.length > 0 && (
+                              <div>
+                                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                  {language === 'ko' ? '최근 맞대결' : 'Recent Meetings'}
+                                </div>
+                                <div className="flex gap-1 mb-2">
+                                  {h2hData.recentMatches.slice(0, 5).map((m: any, i: number) => {
+                                    // API가 현재 홈팀 기준으로 정규화된 result 반환
+                                    const isWin = m.result === 'W'
+                                    const isDraw = m.result === 'D'
+                                    const isLoss = m.result === 'L'
+                                    return (
+                                      <div 
+                                        key={i}
+                                        className={`flex-1 h-10 rounded flex flex-col items-center justify-center text-xs ${
+                                          isDraw ? 'bg-gray-500/20 border border-gray-500/30' : 
+                                          isWin ? 'bg-blue-500/20 border border-blue-500/30' : 
+                                          'bg-red-500/20 border border-red-500/30'
+                                        }`}
+                                      >
+                                        <span className={`font-bold ${isDraw ? 'text-gray-400' : isWin ? 'text-blue-400' : 'text-red-400'}`}>
+                                          {m.homeScore}-{m.awayScore}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                                {h2hData.recent5?.trendDescription && (
+                                  <div className="text-[10px] text-center text-amber-400">
+                                    {h2hData.recent5.trendDescription}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* 선제골 분석 */}
+                            {h2hData.firstGoalAnalysis && (
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-gray-900/50 rounded p-2.5">
+                                  <div className="text-[10px] text-gray-500 mb-1 truncate">{getTeamName(match.home_team)}</div>
+                                  <div className="text-[10px] text-gray-600 mb-1">{language === 'ko' ? '선제골 시 승률' : '1st Goal Win%'}</div>
+                                  <div className="text-xl font-bold text-emerald-400">{h2hData.firstGoalAnalysis.homeFirstGoalWinRate || 0}%</div>
+                                </div>
+                                <div className="bg-gray-900/50 rounded p-2.5">
+                                  <div className="text-[10px] text-gray-500 mb-1 truncate">{getTeamName(match.away_team)}</div>
+                                  <div className="text-[10px] text-gray-600 mb-1">{language === 'ko' ? '선제골 시 승률' : '1st Goal Win%'}</div>
+                                  <div className="text-xl font-bold text-emerald-400">{h2hData.firstGoalAnalysis.awayFirstGoalWinRate || 0}%</div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* 스코어 패턴 */}
+                            {h2hData.scorePatterns && (
+                              <div>
+                                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                  {language === 'ko' ? '통계' : 'Stats'}
+                                </div>
+                                <div className="grid grid-cols-3 gap-1 text-center">
+                                  <div className="bg-gray-900/50 rounded py-2">
+                                    <div className="text-sm font-bold text-gray-300">
+                                      {((h2hData.scorePatterns.avgHomeGoals || 0) + (h2hData.scorePatterns.avgAwayGoals || 0)).toFixed(1)}
+                                    </div>
+                                    <div className="text-[9px] text-gray-600">{language === 'ko' ? '평균 골' : 'Avg Goals'}</div>
+                                  </div>
+                                  <div className="bg-gray-900/50 rounded py-2">
+                                    <div className={`text-sm font-bold ${h2hData.scorePatterns.over25Rate >= 60 ? 'text-emerald-400' : 'text-gray-400'}`}>
+                                      {h2hData.scorePatterns.over25Rate || 0}%
+                                    </div>
+                                    <div className="text-[9px] text-gray-600">O2.5</div>
+                                  </div>
+                                  <div className="bg-gray-900/50 rounded py-2">
+                                    <div className={`text-sm font-bold ${h2hData.scorePatterns.bttsRate >= 60 ? 'text-emerald-400' : 'text-gray-400'}`}>
+                                      {h2hData.scorePatterns.bttsRate || 0}%
+                                    </div>
+                                    <div className="text-[9px] text-gray-600">BTTS</div>
+                                  </div>
+                                </div>
+                                
+                                {/* 자주 나온 스코어 */}
+                                {h2hData.scorePatterns.mostCommon && h2hData.scorePatterns.mostCommon.length > 0 && (
+                                  <div className="mt-2 flex items-center justify-between text-xs bg-gray-900/50 rounded px-3 py-2">
+                                    <span className="text-gray-500">{language === 'ko' ? '최다 스코어' : 'Most Common'}</span>
+                                    <div className="flex gap-2">
+                                      {h2hData.scorePatterns.mostCommon.slice(0, 3).map((s: any, i: number) => (
+                                        <span key={i} className="text-white font-mono">
+                                          {s.score} <span className="text-gray-500">({s.count})</span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* 인사이트 */}
+                            {h2hData.insights && h2hData.insights.length > 0 && (
+                              <div className="bg-purple-500/10 border-l-2 border-purple-500 rounded-r px-3 py-2">
+                                <div className="text-[10px] text-purple-400 font-semibold uppercase tracking-wider mb-1">
+                                  {language === 'ko' ? '인사이트' : 'Insights'}
+                                </div>
+                                <ul className="text-xs text-gray-200 space-y-1">
+                                  {h2hData.insights.slice(0, 3).map((insight: string, i: number) => (
+                                    <li key={i}>• {insight}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* 홈/원정 탭 */}
+                    {(selectedTeamTab === 'home' || selectedTeamTab === 'away') && (
+                    (() => {
+                      const currentStats = selectedTeamTab === 'home' ? teamStats.home : teamStats.away
+                      
+                      if (!currentStats) {
+                        return (
+                          <div className="text-center py-8 text-gray-600 text-xs">
+                            {teamStatsLoading 
+                              ? (language === 'ko' ? '통계 로딩 중...' : 'Loading stats...') 
+                              : (language === 'ko' ? '데이터 없음' : 'No data available')}
+                          </div>
+                        )
+                      }
+                      
+                      const relevantStats = selectedTeamTab === 'home' ? currentStats.homeStats : currentStats.awayStats
+                      const firstGoal = selectedTeamTab === 'home' ? currentStats.firstGoalStats?.home : currentStats.firstGoalStats?.away
+                      const comeback = selectedTeamTab === 'home' ? currentStats.concededFirstStats?.home : currentStats.concededFirstStats?.away
+                      const streak = currentStats.recentForm?.currentStreak
+                      const isWinStreak = streak?.type === 'W'
+                      const isLoseStreak = streak?.type === 'L'
+                      
+                      // 연속 기록 텍스트
+                      const getStreakText = () => {
+                        if (!streak || streak.count === 0) return null
+                        if (language === 'ko') {
+                          if (isWinStreak) return `${streak.count}연승`
+                          if (isLoseStreak) return `${streak.count}연패`
+                          return `${streak.count}무`
+                        } else {
+                          if (isWinStreak) return `${streak.count}W streak`
+                          if (isLoseStreak) return `${streak.count}L streak`
+                          return `${streak.count}D streak`
+                        }
+                      }
+                      
+                      return (
+                        <div className="space-y-4">
+                          {/* 현재 폼 */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+                                {language === 'ko' ? '현재 폼' : 'Current Form'}
+                              </span>
+                              {getStreakText() && (
+                                <span className={`text-xs font-bold ${
+                                  isWinStreak ? 'text-emerald-400' : isLoseStreak ? 'text-red-400' : 'text-gray-400'
+                                }`}>
+                                  {getStreakText()}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* 최근 5경기 */}
+                            <div className="flex gap-1 mb-3">
+                              {(currentStats.recentForm?.last5?.results || []).map((r: string, i: number) => (
+                                <div key={i} className={`flex-1 h-8 rounded flex items-center justify-center text-xs font-bold ${
+                                  r === 'W' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 
+                                  r === 'D' ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30' : 
+                                  'bg-red-500/20 text-red-400 border border-red-500/30'
+                                }`}>
+                                  {language === 'ko' ? (r === 'W' ? '승' : r === 'D' ? '무' : '패') : r}
+                                </div>
+                              ))}
+                            </div>
+                            
+                            {/* 최근 10경기 요약 */}
+                            {currentStats.recentForm?.last10 && (
+                              <div className="flex items-center justify-between text-xs bg-gray-900/50 rounded px-3 py-2">
+                                <span className="text-gray-500">
+                                  {language === 'ko' ? '최근 10경기' : 'Last 10'}
+                                </span>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-white font-medium">
+                                    {language === 'ko' 
+                                      ? `${currentStats.recentForm.last10.wins}승 ${currentStats.recentForm.last10.draws}무 ${currentStats.recentForm.last10.losses}패`
+                                      : `${currentStats.recentForm.last10.wins}W ${currentStats.recentForm.last10.draws}D ${currentStats.recentForm.last10.losses}L`
+                                    }
+                                  </span>
+                                  <span className="text-gray-600">|</span>
+                                  <span className="text-gray-400">
+                                    {currentStats.recentForm.last10.goalsFor}:{currentStats.recentForm.last10.goalsAgainst}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* 시즌 성적 */}
+                          {relevantStats && (
+                            <div>
+                              <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                {language === 'ko' 
+                                  ? `${currentStats.season} ${selectedTeamTab === 'home' ? '홈' : '원정'} 성적`
+                                  : `${currentStats.season} ${selectedTeamTab === 'home' ? 'Home' : 'Away'} Record`
+                                }
+                              </div>
+                              <div className="grid grid-cols-4 gap-1">
+                                {[
+                                  { label: language === 'ko' ? '승' : 'W', value: relevantStats.wins, color: 'emerald' },
+                                  { label: language === 'ko' ? '무' : 'D', value: relevantStats.draws, color: 'gray' },
+                                  { label: language === 'ko' ? '패' : 'L', value: relevantStats.losses, color: 'red' },
+                                  { label: '%', value: relevantStats.winRate, color: 'blue' },
+                                ].map((item) => (
+                                  <div key={item.label} className="bg-gray-900/50 rounded p-2 text-center">
+                                    <div className={`text-lg font-bold text-${item.color}-400`}>{item.value}</div>
+                                    <div className="text-[10px] text-gray-600">{item.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* 핵심 지표 */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-gray-900/50 rounded p-2.5">
+                              <div className="text-[10px] text-gray-500 mb-1">
+                                {language === 'ko' ? '선제골 승률' : '1st Goal Win%'}
+                              </div>
+                              <div className="flex items-end gap-1">
+                                <span className="text-xl font-bold text-emerald-400">{firstGoal?.winRate || 0}</span>
+                                <span className="text-xs text-gray-600 mb-0.5">%</span>
+                              </div>
+                              <div className="text-[10px] text-gray-600 mt-1">
+                                {firstGoal?.games || 0}{language === 'ko' ? '경기' : 'G'} / {firstGoal?.wins || 0}{language === 'ko' ? '승' : 'W'}
+                              </div>
+                            </div>
+                            <div className="bg-gray-900/50 rounded p-2.5">
+                              <div className="text-[10px] text-gray-500 mb-1">
+                                {language === 'ko' ? '역전률' : 'Comeback%'}
+                              </div>
+                              <div className="flex items-end gap-1">
+                                <span className="text-xl font-bold text-amber-400">{comeback?.comebackRate || 0}</span>
+                                <span className="text-xs text-gray-600 mb-0.5">%</span>
+                              </div>
+                              <div className="text-[10px] text-gray-600 mt-1">
+                                {comeback?.games || 0}{language === 'ko' ? '경기' : 'G'} / {comeback?.wins || 0}{language === 'ko' ? '승' : 'W'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* 베팅 마켓 */}
+                          {currentStats.markets && (
+                            <div>
+                              <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                {language === 'ko' ? '베팅 지표 (최근 10경기)' : 'Market Stats (L10)'}
+                              </div>
+                              <div className="grid grid-cols-4 gap-1 text-center">
+                                {[
+                                  { label: 'O2.5', value: currentStats.markets.over25Rate, good: currentStats.markets.over25Rate >= 60 },
+                                  { label: 'BTTS', value: currentStats.markets.bttsRate, good: currentStats.markets.bttsRate >= 60 },
+                                  { label: language === 'ko' ? 'CS' : 'CS', value: currentStats.markets.cleanSheetRate, good: currentStats.markets.cleanSheetRate >= 35 },
+                                  { label: language === 'ko' ? '무득점' : 'FTS', value: currentStats.markets.scorelessRate, bad: currentStats.markets.scorelessRate >= 30 },
+                                ].map((item) => (
+                                  <div key={item.label} className="bg-gray-900/50 rounded py-2">
+                                    <div className={`text-sm font-bold ${
+                                      item.good ? 'text-emerald-400' : item.bad ? 'text-red-400' : 'text-gray-400'
+                                    }`}>
+                                      {item.value}%
+                                    </div>
+                                    <div className="text-[9px] text-gray-600">{item.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* 최근 경기 */}
+                          {currentStats.recentMatches && currentStats.recentMatches.length > 0 && (
+                            <div>
+                              <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                {language === 'ko' ? '최근 경기' : 'Recent Matches'}
+                              </div>
+                              <div className="space-y-1">
+                                {currentStats.recentMatches.slice(0, 5).map((m: any, i: number) => (
+                                  <div key={i} className="flex items-center text-xs bg-gray-900/30 rounded px-2 py-1.5">
+                                    <span className={`w-4 h-4 rounded-sm text-[10px] font-bold flex items-center justify-center mr-2 ${
+                                      m.result === 'W' ? 'bg-emerald-500/30 text-emerald-400' : 
+                                      m.result === 'D' ? 'bg-gray-500/30 text-gray-400' : 
+                                      'bg-red-500/30 text-red-400'
+                                    }`}>
+                                      {language === 'ko' ? (m.result === 'W' ? '승' : m.result === 'D' ? '무' : '패') : m.result}
+                                    </span>
+                                    <span className="text-gray-600 w-4 text-[10px]">{m.isHome ? 'H' : 'A'}</span>
+                                    <span className="flex-1 text-gray-400 truncate ml-2">{language === 'ko' ? (m.opponentKo || m.opponent) : m.opponent}</span>
+                                    <span className="font-mono text-white ml-2">{m.goalsFor}-{m.goalsAgainst}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* 약점/강점 */}
+                          {(currentStats.weaknesses?.length > 0 || currentStats.strengths?.length > 0) && (
+                            <div className="space-y-2">
+                              {currentStats.weaknesses?.length > 0 && (
+                                <div className="bg-red-500/10 border-l-2 border-red-500 rounded-r px-3 py-2">
+                                  <div className="text-[10px] text-red-400 font-semibold uppercase tracking-wider mb-1">
+                                    {language === 'ko' ? '약점' : 'WEAK'}
+                                  </div>
+                                  <ul className="text-xs text-gray-200 space-y-1">
+                                    {currentStats.weaknesses.slice(0, 3).map((w: string, i: number) => (
+                                      <li key={i}>• {w}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {currentStats.strengths?.length > 0 && (
+                                <div className="bg-emerald-500/10 border-l-2 border-emerald-500 rounded-r px-3 py-2">
+                                  <div className="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider mb-1">
+                                    {language === 'ko' ? '강점' : 'STRONG'}
+                                  </div>
+                                  <ul className="text-xs text-gray-200 space-y-1">
+                                    {currentStats.strengths.slice(0, 3).map((s: string, i: number) => (
+                                      <li key={i}>• {s}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })())}
+                  </div>
+                </div>
+              ) : (
+                /* 비프리미엄 */
+                <div className="bg-[#0d0d14] rounded-lg border border-gray-800 relative overflow-hidden">
+                  <div className="absolute inset-0 backdrop-blur-sm bg-black/60 z-10" />
+                  <div className="opacity-20 p-4">
+                    <div className="h-6 bg-gray-800 rounded w-1/3 mb-4"></div>
+                    <div className="grid grid-cols-5 gap-1 mb-4">
+                      {[1,2,3,4,5].map(i => <div key={i} className="h-8 bg-gray-800 rounded" />)}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="h-16 bg-gray-800 rounded"></div>
+                      <div className="h-16 bg-gray-800 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                    <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3">
+                      <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <div className="text-white font-semibold text-sm mb-1">
+                      {language === 'ko' ? '프리미엄 분석' : 'Premium Analysis'}
+                    </div>
+                    <div className="text-[10px] text-gray-500 mb-3">
+                      {language === 'ko' ? '실시간 폼, 연승/연패, 약점 분석' : 'Real-time form, streaks & insights'}
+                    </div>
+                    <Link 
+                      href="/premium/pricing"
+                      className="px-4 py-1.5 bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-bold rounded-full hover:from-yellow-400 hover:to-amber-400 transition-all"
+                    >
+                      {language === 'ko' ? '잠금해제' : 'Unlock'}
+                    </Link>
+                  </div>
+                </div>
+              )}
             </>
           )}
           
