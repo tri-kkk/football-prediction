@@ -910,12 +910,11 @@ export default function MatchResultsPage() {
                       <>
                         {/* 데스크톱: 테이블 형식 */}
                         <div className="hidden md:block overflow-x-auto">
-                          <div className="grid grid-cols-[80px_1fr_120px_80px_70px] gap-2 px-4 py-2 bg-[#1a1a1a] border-b border-gray-800 text-xs text-gray-500 font-medium">
+                          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 140px 80px' }} className="gap-2 px-4 py-2 bg-[#1a1a1a] border-b border-gray-800 text-xs text-gray-500 font-medium">
                             <div className="text-center">{currentLanguage === 'ko' ? '시간' : 'Time'}</div>
                             <div className="text-center">{currentLanguage === 'ko' ? '경기' : 'Match'}</div>
                             <div className="text-center">{currentLanguage === 'ko' ? '확률 (1-X-2)' : 'Prob (1-X-2)'}</div>
                             <div className="text-center">{currentLanguage === 'ko' ? '결과' : 'Result'}</div>
-                            <div className="text-center">{currentLanguage === 'ko' ? '적중' : 'Hit'}</div>
                           </div>
                           
                           <div className="divide-y divide-gray-800/50">
@@ -928,7 +927,8 @@ export default function MatchResultsPage() {
                                 <div key={match.match_id} className={`${match.isPick ? 'bg-gradient-to-r from-yellow-900/10 to-transparent' : 'bg-[#151515]'}`}>
                                   <button
                                     onClick={() => handleMatchExpand(match)}
-                                    className="w-full grid grid-cols-[80px_1fr_120px_80px_70px] gap-2 px-4 py-3 hover:bg-[#1a1a1a] transition-colors items-center"
+                                    style={{ display: 'grid', gridTemplateColumns: '80px 1fr 140px 80px' }}
+                                    className="w-full gap-2 px-4 py-3 hover:bg-[#1a1a1a] transition-colors items-center"
                                   >
                                     {/* 시간 + PICK 배지 */}
                                     <div className="text-center">
@@ -1009,33 +1009,6 @@ export default function MatchResultsPage() {
                                       <span className={`text-sm font-bold ${match.final_score_away > match.final_score_home ? 'text-white' : 'text-gray-400'}`}>
                                         {match.final_score_away}
                                       </span>
-                                    </div>
-
-                                    {/* 적중 여부 */}
-                                    <div className="flex justify-center">
-                                      {match.isPick && match.pickInfo ? (
-                                        match.pickInfo.is_correct === true ? (
-                                          <span className="px-2 py-1 text-xs font-bold bg-gradient-to-r from-yellow-500 to-orange-500 text-black rounded">
-                                            ⭐ {currentLanguage === 'ko' ? '적중' : 'Hit'}
-                                          </span>
-                                        ) : match.pickInfo.is_correct === false ? (
-                                          <span className="px-2 py-1 text-xs font-bold bg-red-600 text-white rounded">
-                                            {currentLanguage === 'ko' ? '실패' : 'Miss'}
-                                          </span>
-                                        ) : (
-                                          <span className="px-2 py-1 text-xs font-bold bg-gray-600 text-white rounded">
-                                            {currentLanguage === 'ko' ? '진행중' : 'Pending'}
-                                          </span>
-                                        )
-                                      ) : pred ? (
-                                        match.isWinnerCorrect ? (
-                                          <span className="px-2 py-1 text-xs font-bold bg-[#A3FF4C] text-black rounded">{currentLanguage === 'ko' ? '적중' : 'Hit'}</span>
-                                        ) : (
-                                          <span className="px-2 py-1 text-xs font-bold bg-red-600 text-white rounded">{currentLanguage === 'ko' ? '실패' : 'Miss'}</span>
-                                        )
-                                      ) : (
-                                        <span className="text-gray-600 text-xs">-</span>
-                                      )}
                                     </div>
                                   </button>
 
@@ -1163,24 +1136,6 @@ export default function MatchResultsPage() {
                                       }`}>
                                         {match.final_score_home}
                                       </span>
-                                      {/* 적중/실패 배지 (홈팀 행 우측) */}
-                                      <div className="w-14 flex justify-end flex-shrink-0 ml-2">
-                                        {match.isPick && match.pickInfo ? (
-                                          match.pickInfo.is_correct === true ? (
-                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-yellow-500 to-orange-500 text-black rounded">⭐</span>
-                                          ) : match.pickInfo.is_correct === false ? (
-                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white rounded">✗</span>
-                                          ) : (
-                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gray-600 text-white rounded">-</span>
-                                          )
-                                        ) : pred ? (
-                                          match.isWinnerCorrect ? (
-                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#A3FF4C] text-black rounded">✓</span>
-                                          ) : (
-                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white rounded">✗</span>
-                                          )
-                                        ) : null}
-                                      </div>
                                     </div>
                                     
                                     {/* 원정팀 행 */}
@@ -1213,8 +1168,6 @@ export default function MatchResultsPage() {
                                       }`}>
                                         {match.final_score_away}
                                       </span>
-                                      {/* 빈 공간 (홈팀 행과 정렬 맞추기) */}
-                                      <div className="w-14 flex-shrink-0 ml-2"></div>
                                     </div>
                                   </div>
                                 </button>
