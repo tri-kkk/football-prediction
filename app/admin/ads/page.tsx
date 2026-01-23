@@ -427,6 +427,22 @@ function TrendChart({
   )
 }
 
+// ==================== 숫자 포맷 헬퍼 함수 ====================
+
+// 퍼센트 포맷 (0-1 비율이면 *100, 이미 0-100이면 그대로)
+function formatPercent(value: number | undefined | null, decimals: number = 0): string {
+  if (value === undefined || value === null || isNaN(value)) return '-'
+  // 값이 0-1 사이면 *100 (비율 → 퍼센트)
+  const percent = value <= 1 && value > 0 ? value * 100 : value
+  return percent.toFixed(decimals)
+}
+
+// 소수점 포맷
+function formatNumber(value: number | undefined | null, decimals: number = 2): string {
+  if (value === undefined || value === null || isNaN(value)) return '-'
+  return value.toFixed(decimals)
+}
+
 // ==================== 메인 컴포넌트 ====================
 
 export default function AdminDashboard() {
@@ -900,15 +916,8 @@ export default function AdminDashboard() {
         if (format === 'json') {
           content = JSON.stringify(exportMatches, null, 2)
         } else {
-          const params = new URLSearchParams({
-            secret: 'trendsoccer-internal-2026',
-            date: exportDate,
-            league: exportLeague,
-            grade: exportGrade,
-            format,
-          })
-          const response = await fetch(`/api/export?${params.toString()}`)
-          content = await response.text()
+          // 전체 경기 텍스트/마크다운 생성
+          content = formatAllMatches(exportMatches, format, exportDate)
         }
       }
       
@@ -921,51 +930,172 @@ export default function AdminDashboard() {
     }
   }
   
+  // 전체 경기 포맷
+  const formatAllMatches = (matches: any[], format: string, date: string): string => {
+    if (format === 'markdown') {
+      let md = `# 📅 ${date} 경기 예측\n\n`
+      md += `> 총 **${matches.length}경기** 분석\n\n`
+      
+      matches.forEach((match, idx) => {
+        md += formatSingleMatch(match, 'markdown')
+        md += '\n---\n\n'
+      })
+      
+      md += '*TrendSoccer 프리미엄 분석*'
+      return md
+    }
+    
+    // text
+    let text = `📅 ${date} 경기 예측\n`
+    text += `총 ${matches.length}경기\n`
+    text += '─'.repeat(50) + '\n\n'
+    
+    matches.forEach((match, idx) => {
+      text += `[${idx + 1}] `
+      text += formatSingleMatch(match, 'text')
+      text += '\n' + '─'.repeat(50) + '\n\n'
+    })
+    
+    text += '※ TrendSoccer 프리미엄 분석'
+    return text
+  }
+  
+  // 개별 경기 포맷 (새 API 구조에 맞게)
   const formatSingleMatch = (match: any, format: string): string => {
-    const p = match.prediction
-    const h = match.homeStats
-    const a = match.awayStats
+    const p = match.prediction || {}
+    const prob = match.probability || {}
+    const power = match.power || {}
+    const ts = match.teamStats || {}
+    const m3 = match.method3 || {}
+    const pattern = match.pattern || {}
+    const pa = match.pa || {}
+    
+    // 승률 가져오기
+    const winProb = p.result === 'HOME' ? prob.home : p.result === 'AWAY' ? prob.away : prob.draw
     
     if (format === 'json') {
       return JSON.stringify(match, null, 2)
     }
     
     if (format === 'markdown') {
-      let md = `## ${match.homeTeamKo} vs ${match.awayTeamKo}\n\n`
+      let md = `### ${match.homeTeamKo} vs ${match.awayTeamKo}\n\n`
+      
+      // 기본 정보
       md += `| 항목 | 내용 |\n|------|------|\n`
       md += `| ⏰ 시간 | ${match.time} |\n`
       md += `| 🏆 리그 | ${match.leagueName} |\n`
-      md += `| 📊 예측 | **${p.resultKo}** (${p.confidence}%) |\n`
-      md += `| 💰 배당 | ${match.odds.home?.toFixed(2)} / ${match.odds.draw?.toFixed(2)} / ${match.odds.away?.toFixed(2)} |\n`
-      md += `| 🎯 등급 | ${p.grade} |\n\n`
+      md += `| 🎯 예측 | **${p.resultKo || '-'}** (${winProb || 0}%) |\n`
+      md += `| ⚡ 파워차 | ${power.diff || 0}점 |\n`
+      md += `| 💰 배당 | ${match.odds?.home?.toFixed(2) || '-'} / ${match.odds?.draw?.toFixed(2) || '-'} / ${match.odds?.away?.toFixed(2) || '-'} |\n`
+      md += `| 등급 | ${p.grade || 'PASS'} |\n\n`
       
-      if (h?.recentForm) {
-        md += `**🏠 ${match.homeTeamKo}**: ${h.recentForm.currentStreak?.text || '-'} | 최근5: ${h.recentForm.last5?.results?.join(' ') || '-'}\n\n`
+      // 분석 근거
+      if (p.reasons?.length > 0) {
+        md += `**📊 분석 근거**\n`
+        p.reasons.forEach((r: string) => md += `- ${r}\n`)
+        md += '\n'
       }
-      if (a?.recentForm) {
-        md += `**🚌 ${match.awayTeamKo}**: ${a.recentForm.currentStreak?.text || '-'} | 최근5: ${a.recentForm.last5?.results?.join(' ') || '-'}\n\n`
+      
+      // 파워 지수
+      md += `**⚡ 파워 지수**: ${power.home || 0} vs ${power.away || 0}\n\n`
+      
+      // 최종 확률
+      md += `**📈 최종 확률**: 홈 ${prob.home || 0}% | 무 ${prob.draw || 0}% | 원정 ${prob.away || 0}%\n\n`
+      
+      // 팀 상세 통계
+      if (ts.home || ts.away) {
+        md += `**📋 팀 상세 통계**\n`
+        md += `| 항목 | ${match.homeTeamKo} | ${match.awayTeamKo} |\n`
+        md += `|------|------|------|\n`
+        md += `| 선제골 승률 | ${formatPercent(ts.home?.firstGoalWinRate)}% | ${formatPercent(ts.away?.firstGoalWinRate)}% |\n`
+        md += `| 역전률 | ${formatPercent(ts.home?.comebackRate)}% | ${formatPercent(ts.away?.comebackRate)}% |\n`
+        md += `| 최근 폼 | ${formatNumber(ts.home?.recentForm, 1)} | ${formatNumber(ts.away?.recentForm, 1)} |\n`
+        md += `| 득실비 | ${formatNumber(ts.home?.goalRatio)} | ${formatNumber(ts.away?.goalRatio)} |\n\n`
       }
-      if (match.h2h) {
-        md += `**⚔️ 상대전적**: ${match.h2h.summary} (${match.h2h.totalMatches}경기)\n\n`
+      
+      // 3-Method
+      if (m3.method1 || m3.method2 || m3.method3) {
+        md += `**🔬 3-Method 분석**\n`
+        if (m3.method1) md += `- P/A 비교: 홈 ${m3.method1.home}%\n`
+        if (m3.method2) md += `- Min-Max: 홈 ${m3.method2.home}%\n`
+        if (m3.method3) md += `- 선제골: 홈 ${m3.method3.home}%\n`
+        md += '\n'
       }
+      
+      // 패턴
+      if (pattern.totalMatches > 0) {
+        md += `**🎯 패턴 ${pattern.code}** (${pattern.totalMatches}경기 기반)\n`
+        md += `- 역대: 홈 ${formatPercent(pattern.homeWinRate)}% / 무 ${formatPercent(pattern.drawRate)}% / 원정 ${formatPercent(pattern.awayWinRate)}%\n\n`
+      }
+      
+      // P/A 득실
+      if (pa.home || pa.away) {
+        md += `**📊 P/A 득실 지수**\n`
+        md += `- ${match.homeTeamKo}: 전체 ${formatNumber(pa.home?.all)} / 최근5 ${formatNumber(pa.home?.five)} / 선제골 ${formatNumber(pa.home?.firstGoal)}\n`
+        md += `- ${match.awayTeamKo}: 전체 ${formatNumber(pa.away?.all)} / 최근5 ${formatNumber(pa.away?.five)} / 선제골 ${formatNumber(pa.away?.firstGoal)}\n\n`
+      }
+      
       return md
     }
     
-    // text
-    let text = `⚽ ${match.homeTeamKo} vs ${match.awayTeamKo}\n`
-    text += `⏰ ${match.time} | ${match.leagueName}\n`
-    text += `📊 예측: ${p.resultKo} (${p.confidence}%)\n`
-    text += `💰 배당: ${match.odds.home?.toFixed(2)} / ${match.odds.draw?.toFixed(2)} / ${match.odds.away?.toFixed(2)}\n`
-    text += `🎯 등급: ${p.grade}\n`
+    // text format
+    const gradeEmoji = p.grade === 'PICK' ? '🔥' : p.grade === 'GOOD' ? '✅' : '⚪'
     
-    if (h?.recentForm) {
-      text += `🏠 ${match.homeTeamKo}: ${h.recentForm.currentStreak?.text || '-'} | 최근5: ${h.recentForm.last5?.results?.join('') || '-'}\n`
+    let text = `${match.homeTeamKo} vs ${match.awayTeamKo}\n`
+    text += `⏰ ${match.time} | ${match.leagueName}\n`
+    text += `${gradeEmoji} ${p.grade || 'PASS'} | ${p.resultKo || '-'} ${winProb || 0}%\n\n`
+    
+    // 분석 근거
+    text += `📊 분석 근거\n`
+    text += `   파워 차이: ${power.diff || 0}점\n`
+    if (p.reasons?.length > 0) {
+      p.reasons.slice(0, 3).forEach((r: string) => {
+        text += `   ${r}\n`
+      })
     }
-    if (a?.recentForm) {
-      text += `🚌 ${match.awayTeamKo}: ${a.recentForm.currentStreak?.text || '-'} | 최근5: ${a.recentForm.last5?.results?.join('') || '-'}\n`
+    text += '\n'
+    
+    // 배당
+    text += `💰 배당: ${match.odds?.home?.toFixed(2) || '-'} / ${match.odds?.draw?.toFixed(2) || '-'} / ${match.odds?.away?.toFixed(2) || '-'}\n\n`
+    
+    // 파워 지수
+    text += `⚡ 파워 지수\n`
+    text += `   ${match.homeTeamKo}: ${power.home || 0}\n`
+    text += `   ${match.awayTeamKo}: ${power.away || 0}\n\n`
+    
+    // 최종 확률
+    text += `📈 최종 예측 확률\n`
+    text += `   홈승 ${prob.home || 0}% | 무 ${prob.draw || 0}% | 원정 ${prob.away || 0}%\n\n`
+    
+    // 팀 상세 통계
+    if (ts.home || ts.away) {
+      text += `📋 팀 상세 통계\n`
+      text += `   선제골 승률: ${formatPercent(ts.home?.firstGoalWinRate)}% vs ${formatPercent(ts.away?.firstGoalWinRate)}%\n`
+      text += `   역전률: ${formatPercent(ts.home?.comebackRate)}% vs ${formatPercent(ts.away?.comebackRate)}%\n`
+      text += `   최근 폼: ${formatNumber(ts.home?.recentForm, 1)} vs ${formatNumber(ts.away?.recentForm, 1)}\n`
+      text += `   득실비: ${formatNumber(ts.home?.goalRatio)} vs ${formatNumber(ts.away?.goalRatio)}\n\n`
     }
-    if (match.h2h) {
-      text += `⚔️ 상대전적: ${match.h2h.summary}\n`
+    
+    // 3-Method
+    if (m3.method1 || m3.method2 || m3.method3) {
+      text += `🔬 3-Method 분석\n`
+      if (m3.method1) text += `   P/A 비교: 홈 ${m3.method1.home}%\n`
+      if (m3.method2) text += `   Min-Max: 홈 ${m3.method2.home}%\n`
+      if (m3.method3) text += `   선제골: 홈 ${m3.method3.home}%\n`
+      text += '\n'
+    }
+    
+    // 패턴
+    if (pattern.totalMatches > 0) {
+      text += `🎯 패턴 ${pattern.code} (${pattern.totalMatches}경기 기반)\n`
+      text += `   역대: 홈 ${formatPercent(pattern.homeWinRate)}% / 무 ${formatPercent(pattern.drawRate)}% / 원정 ${formatPercent(pattern.awayWinRate)}%\n\n`
+    }
+    
+    // P/A 득실
+    if (pa.home || pa.away) {
+      text += `📊 P/A 득실 지수\n`
+      text += `   ${match.homeTeamKo}: 전체 ${formatNumber(pa.home?.all)} / 최근5 ${formatNumber(pa.home?.five)} / 선제골 ${formatNumber(pa.home?.firstGoal)}\n`
+      text += `   ${match.awayTeamKo}: 전체 ${formatNumber(pa.away?.all)} / 최근5 ${formatNumber(pa.away?.five)} / 선제골 ${formatNumber(pa.away?.firstGoal)}\n`
     }
     
     return text
@@ -3401,7 +3531,7 @@ export default function AdminDashboard() {
                         왼쪽에서 경기를 선택하세요
                       </div>
                     ) : (
-                      <div className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
+                      <div className="p-4 space-y-4 max-h-[700px] overflow-y-auto">
                         {/* 기본 정보 */}
                         <div>
                           <div className="text-lg font-bold text-white mb-2">
@@ -3411,136 +3541,201 @@ export default function AdminDashboard() {
                             <span className="px-2 py-1 bg-gray-700 rounded">{exportSelectedMatch.leagueName}</span>
                             <span className="px-2 py-1 bg-gray-700 rounded">{exportSelectedMatch.time}</span>
                             <span className={`px-2 py-1 rounded font-bold ${
-                              exportSelectedMatch.prediction.grade === 'PICK' ? 'bg-red-500/20 text-red-400' :
-                              exportSelectedMatch.prediction.grade === 'GOOD' ? 'bg-emerald-500/20 text-emerald-400' :
+                              exportSelectedMatch.prediction?.grade === 'PICK' ? 'bg-red-500/20 text-red-400' :
+                              exportSelectedMatch.prediction?.grade === 'GOOD' ? 'bg-emerald-500/20 text-emerald-400' :
                               'bg-gray-600'
                             }`}>
-                              {exportSelectedMatch.prediction.grade}
+                              {exportSelectedMatch.prediction?.grade || 'PASS'}
                             </span>
                           </div>
                         </div>
                         
-                        {/* 예측 정보 */}
+                        {/* 예측 결과 */}
+                        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg p-4 border border-purple-500/20">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-purple-400 font-semibold">
+                              {exportSelectedMatch.prediction?.resultKo || '-'}
+                            </span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-white font-bold text-xl">
+                                {exportSelectedMatch.probability?.[exportSelectedMatch.prediction?.result?.toLowerCase()] || 0}%
+                              </span>
+                              <span className="text-gray-400">|</span>
+                              <span className="text-yellow-400 font-semibold">
+                                파워차 {exportSelectedMatch.power?.diff || 0}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* 분석 근거 */}
+                          {exportSelectedMatch.prediction?.reasons?.length > 0 && (
+                            <div className="text-xs text-gray-300 space-y-1">
+                              <div className="text-gray-500 mb-1">분석 근거</div>
+                              {exportSelectedMatch.prediction.reasons.slice(0, 4).map((r: string, i: number) => (
+                                <div key={i}>• {r}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* 배당 */}
                         <div className="bg-gray-900/50 rounded-lg p-3">
-                          <div className="text-xs text-gray-400 mb-2">예측</div>
-                          <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                            <div className={`p-2 rounded ${exportSelectedMatch.prediction.result === 'home' ? 'bg-blue-500/20 border border-blue-500' : 'bg-gray-800'}`}>
-                              <div className="text-lg font-bold text-white">{exportSelectedMatch.prediction.probability.home}%</div>
+                          <div className="text-xs text-gray-500 mb-2">배당</div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="bg-gray-800 rounded p-2">
+                              <div className="text-yellow-400 font-bold">{exportSelectedMatch.odds?.home?.toFixed(2) || '-'}</div>
+                              <div className="text-[10px] text-gray-500">홈승</div>
+                            </div>
+                            <div className="bg-gray-800 rounded p-2">
+                              <div className="text-yellow-400 font-bold">{exportSelectedMatch.odds?.draw?.toFixed(2) || '-'}</div>
+                              <div className="text-[10px] text-gray-500">무승부</div>
+                            </div>
+                            <div className="bg-gray-800 rounded p-2">
+                              <div className="text-yellow-400 font-bold">{exportSelectedMatch.odds?.away?.toFixed(2) || '-'}</div>
+                              <div className="text-[10px] text-gray-500">원정승</div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* 파워 지수 */}
+                        <div className="bg-gray-900/50 rounded-lg p-3">
+                          <div className="text-xs text-gray-500 mb-2">파워 지수</div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-blue-400 font-bold text-xl w-12">{exportSelectedMatch.power?.home || 0}</div>
+                            <div className="flex-1 h-3 bg-gray-700 rounded-full overflow-hidden flex">
+                              <div 
+                                className="bg-blue-500 h-full transition-all" 
+                                style={{ width: `${exportSelectedMatch.power?.home && exportSelectedMatch.power?.away 
+                                  ? (exportSelectedMatch.power.home / (exportSelectedMatch.power.home + exportSelectedMatch.power.away)) * 100 
+                                  : 50}%` }} 
+                              />
+                              <div 
+                                className="bg-red-500 h-full transition-all" 
+                                style={{ width: `${exportSelectedMatch.power?.home && exportSelectedMatch.power?.away 
+                                  ? (exportSelectedMatch.power.away / (exportSelectedMatch.power.home + exportSelectedMatch.power.away)) * 100 
+                                  : 50}%` }} 
+                              />
+                            </div>
+                            <div className="text-red-400 font-bold text-xl w-12 text-right">{exportSelectedMatch.power?.away || 0}</div>
+                          </div>
+                        </div>
+                        
+                        {/* 최종 예측 확률 */}
+                        <div className="bg-gray-900/50 rounded-lg p-3">
+                          <div className="text-xs text-gray-500 mb-2">최종 예측 확률</div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className={`p-2 rounded ${exportSelectedMatch.prediction?.result === 'HOME' ? 'bg-blue-500/20 border border-blue-500' : 'bg-gray-800'}`}>
+                              <div className="text-lg font-bold text-white">{exportSelectedMatch.probability?.home || 0}%</div>
                               <div className="text-xs text-gray-400">홈승</div>
                             </div>
-                            <div className={`p-2 rounded ${exportSelectedMatch.prediction.result === 'draw' ? 'bg-gray-500/20 border border-gray-500' : 'bg-gray-800'}`}>
-                              <div className="text-lg font-bold text-white">{exportSelectedMatch.prediction.probability.draw}%</div>
+                            <div className={`p-2 rounded ${exportSelectedMatch.prediction?.result === 'DRAW' ? 'bg-gray-500/30 border border-gray-500' : 'bg-gray-800'}`}>
+                              <div className="text-lg font-bold text-white">{exportSelectedMatch.probability?.draw || 0}%</div>
                               <div className="text-xs text-gray-400">무승부</div>
                             </div>
-                            <div className={`p-2 rounded ${exportSelectedMatch.prediction.result === 'away' ? 'bg-red-500/20 border border-red-500' : 'bg-gray-800'}`}>
-                              <div className="text-lg font-bold text-white">{exportSelectedMatch.prediction.probability.away}%</div>
+                            <div className={`p-2 rounded ${exportSelectedMatch.prediction?.result === 'AWAY' ? 'bg-red-500/20 border border-red-500' : 'bg-gray-800'}`}>
+                              <div className="text-lg font-bold text-white">{exportSelectedMatch.probability?.away || 0}%</div>
                               <div className="text-xs text-gray-400">원정승</div>
                             </div>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">배당</span>
-                            <span className="text-yellow-400">
-                              {exportSelectedMatch.odds.home?.toFixed(2)} / {exportSelectedMatch.odds.draw?.toFixed(2)} / {exportSelectedMatch.odds.away?.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm mt-1">
-                            <span className="text-gray-400">파워</span>
-                            <span className="text-white">
-                              {exportSelectedMatch.prediction.power?.home || '-'} vs {exportSelectedMatch.prediction.power?.away || '-'}
-                              <span className={`ml-2 ${(exportSelectedMatch.prediction.power?.diff || 0) > 0 ? 'text-blue-400' : 'text-red-400'}`}>
-                                ({exportSelectedMatch.prediction.power?.diff > 0 ? '+' : ''}{exportSelectedMatch.prediction.power?.diff || 0})
-                              </span>
-                            </span>
-                          </div>
                         </div>
                         
-                        {/* 홈팀 분석 */}
-                        {exportSelectedMatch.homeStats && (
+                        {/* 팀 상세 통계 */}
+                        {exportSelectedMatch.teamStats && (
                           <div className="bg-gray-900/50 rounded-lg p-3">
-                            <div className="text-xs text-gray-400 mb-2">🏠 {exportSelectedMatch.homeTeamKo}</div>
-                            {exportSelectedMatch.homeStats.recentForm && (
-                              <>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-sm text-white">{exportSelectedMatch.homeStats.recentForm.currentStreak?.text || '-'}</span>
-                                  <div className="flex gap-1">
-                                    {exportSelectedMatch.homeStats.recentForm.last5?.results?.map((r: string, i: number) => (
-                                      <span key={i} className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-bold ${
-                                        r === 'W' ? 'bg-emerald-500/20 text-emerald-400' :
-                                        r === 'L' ? 'bg-red-500/20 text-red-400' :
-                                        'bg-gray-500/20 text-gray-400'
-                                      }`}>{r}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  최근10: {exportSelectedMatch.homeStats.recentForm.last10?.wins}W {exportSelectedMatch.homeStats.recentForm.last10?.draws}D {exportSelectedMatch.homeStats.recentForm.last10?.losses}L
-                                  ({exportSelectedMatch.homeStats.recentForm.last10?.goalsFor}득점 {exportSelectedMatch.homeStats.recentForm.last10?.goalsAgainst}실점)
-                                </div>
-                              </>
-                            )}
-                            {exportSelectedMatch.homeStats.homeStats && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                시즌 홈: {exportSelectedMatch.homeStats.homeStats.wins}W {exportSelectedMatch.homeStats.homeStats.draws}D {exportSelectedMatch.homeStats.homeStats.losses}L ({exportSelectedMatch.homeStats.homeStats.winRate}%)
+                            <div className="text-xs text-gray-500 mb-2">팀 상세 통계</div>
+                            <div className="space-y-2">
+                              {/* 선제골 승률 */}
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-blue-400 w-16">{formatPercent(exportSelectedMatch.teamStats.home?.firstGoalWinRate)}%</span>
+                                <span className="text-gray-500 text-xs">선제골 승률</span>
+                                <span className="text-red-400 w-16 text-right">{formatPercent(exportSelectedMatch.teamStats.away?.firstGoalWinRate)}%</span>
                               </div>
-                            )}
+                              {/* 역전률 */}
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-blue-400 w-16">{formatPercent(exportSelectedMatch.teamStats.home?.comebackRate)}%</span>
+                                <span className="text-gray-500 text-xs">역전률</span>
+                                <span className="text-red-400 w-16 text-right">{formatPercent(exportSelectedMatch.teamStats.away?.comebackRate)}%</span>
+                              </div>
+                              {/* 최근 폼 */}
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-blue-400 w-16">{formatNumber(exportSelectedMatch.teamStats.home?.recentForm, 1)}</span>
+                                <span className="text-gray-500 text-xs">최근 폼</span>
+                                <span className="text-red-400 w-16 text-right">{formatNumber(exportSelectedMatch.teamStats.away?.recentForm, 1)}</span>
+                              </div>
+                              {/* 득실비 */}
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-blue-400 w-16">{formatNumber(exportSelectedMatch.teamStats.home?.goalRatio)}</span>
+                                <span className="text-gray-500 text-xs">득실비</span>
+                                <span className="text-red-400 w-16 text-right">{formatNumber(exportSelectedMatch.teamStats.away?.goalRatio)}</span>
+                              </div>
+                            </div>
                           </div>
                         )}
                         
-                        {/* 원정팀 분석 */}
-                        {exportSelectedMatch.awayStats && (
+                        {/* 3-Method 분석 */}
+                        {exportSelectedMatch.method3 && (exportSelectedMatch.method3.method1 || exportSelectedMatch.method3.method2 || exportSelectedMatch.method3.method3) && (
                           <div className="bg-gray-900/50 rounded-lg p-3">
-                            <div className="text-xs text-gray-400 mb-2">🚌 {exportSelectedMatch.awayTeamKo}</div>
-                            {exportSelectedMatch.awayStats.recentForm && (
-                              <>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-sm text-white">{exportSelectedMatch.awayStats.recentForm.currentStreak?.text || '-'}</span>
-                                  <div className="flex gap-1">
-                                    {exportSelectedMatch.awayStats.recentForm.last5?.results?.map((r: string, i: number) => (
-                                      <span key={i} className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-bold ${
-                                        r === 'W' ? 'bg-emerald-500/20 text-emerald-400' :
-                                        r === 'L' ? 'bg-red-500/20 text-red-400' :
-                                        'bg-gray-500/20 text-gray-400'
-                                      }`}>{r}</span>
-                                    ))}
-                                  </div>
+                            <div className="text-xs text-gray-500 mb-2">3-Method 분석</div>
+                            <div className="space-y-1.5 text-sm">
+                              {exportSelectedMatch.method3.method1 && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">P/A 비교</span>
+                                  <span className="text-white">홈 {exportSelectedMatch.method3.method1.home}%</span>
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  최근10: {exportSelectedMatch.awayStats.recentForm.last10?.wins}W {exportSelectedMatch.awayStats.recentForm.last10?.draws}D {exportSelectedMatch.awayStats.recentForm.last10?.losses}L
-                                  ({exportSelectedMatch.awayStats.recentForm.last10?.goalsFor}득점 {exportSelectedMatch.awayStats.recentForm.last10?.goalsAgainst}실점)
+                              )}
+                              {exportSelectedMatch.method3.method2 && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">Min-Max</span>
+                                  <span className="text-white">홈 {exportSelectedMatch.method3.method2.home}%</span>
                                 </div>
-                              </>
-                            )}
-                            {exportSelectedMatch.awayStats.awayStats && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                시즌 원정: {exportSelectedMatch.awayStats.awayStats.wins}W {exportSelectedMatch.awayStats.awayStats.draws}D {exportSelectedMatch.awayStats.awayStats.losses}L ({exportSelectedMatch.awayStats.awayStats.winRate}%)
-                              </div>
-                            )}
+                              )}
+                              {exportSelectedMatch.method3.method3 && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">선제골</span>
+                                  <span className="text-white">홈 {exportSelectedMatch.method3.method3.home}%</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                         
-                        {/* H2H */}
-                        {exportSelectedMatch.h2h && (
+                        {/* 패턴 분석 */}
+                        {exportSelectedMatch.pattern && exportSelectedMatch.pattern.totalMatches > 0 && (
                           <div className="bg-gray-900/50 rounded-lg p-3">
-                            <div className="text-xs text-gray-400 mb-2">⚔️ 상대전적 ({exportSelectedMatch.h2h.totalMatches}경기)</div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-blue-400 font-bold">{exportSelectedMatch.h2h.homeWins}</span>
-                              <div className="flex-1 h-2 bg-gray-700 rounded overflow-hidden flex">
-                                <div className="bg-blue-500 h-full" style={{ width: `${exportSelectedMatch.h2h.homeWinRate}%` }} />
-                                <div className="bg-gray-500 h-full" style={{ width: `${100 - exportSelectedMatch.h2h.homeWinRate - exportSelectedMatch.h2h.awayWinRate}%` }} />
-                                <div className="bg-red-500 h-full" style={{ width: `${exportSelectedMatch.h2h.awayWinRate}%` }} />
-                              </div>
-                              <span className="text-red-400 font-bold">{exportSelectedMatch.h2h.awayWins}</span>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs text-gray-500">패턴</span>
+                              <span className="text-amber-400 font-mono font-bold">{exportSelectedMatch.pattern.code}</span>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              {exportSelectedMatch.h2h.draws}무 | 평균 {exportSelectedMatch.h2h.avgGoals}골
+                            <div className="text-xs text-gray-500 mb-2">
+                              ({exportSelectedMatch.pattern.totalMatches}경기 기반)
                             </div>
-                            {exportSelectedMatch.h2h.recentScores && (
-                              <div className="flex gap-1 mt-2">
-                                {exportSelectedMatch.h2h.recentScores.map((score: string, i: number) => (
-                                  <span key={i} className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-300">{score}</span>
-                                ))}
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-400">패턴 역대</span>
+                              <span className="text-white">
+                                홈 {formatPercent(exportSelectedMatch.pattern.homeWinRate)}% / 무 {formatPercent(exportSelectedMatch.pattern.drawRate)}% / 원정 {formatPercent(exportSelectedMatch.pattern.awayWinRate)}%
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* P/A 비교 */}
+                        {exportSelectedMatch.pa && (
+                          <div className="bg-gray-900/50 rounded-lg p-3">
+                            <div className="text-xs text-gray-500 mb-2">P/A 득실 지수</div>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <div className="text-blue-400 font-semibold mb-1">{exportSelectedMatch.homeTeamKo}</div>
+                                <div className="text-xs text-gray-400">전체: {formatNumber(exportSelectedMatch.pa.home?.all)}</div>
+                                <div className="text-xs text-gray-400">최근5: {formatNumber(exportSelectedMatch.pa.home?.five)}</div>
+                                <div className="text-xs text-gray-400">선제골: {formatNumber(exportSelectedMatch.pa.home?.firstGoal)}</div>
                               </div>
-                            )}
+                              <div className="text-right">
+                                <div className="text-red-400 font-semibold mb-1">{exportSelectedMatch.awayTeamKo}</div>
+                                <div className="text-xs text-gray-400">전체: {formatNumber(exportSelectedMatch.pa.away?.all)}</div>
+                                <div className="text-xs text-gray-400">최근5: {formatNumber(exportSelectedMatch.pa.away?.five)}</div>
+                                <div className="text-xs text-gray-400">선제골: {formatNumber(exportSelectedMatch.pa.away?.firstGoal)}</div>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
