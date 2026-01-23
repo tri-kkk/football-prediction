@@ -13,6 +13,7 @@ const KNOWN_LEAGUES = [
   '세리에A', '라리가', '분데스', '리그1',
   'UCL', 'UEL', 'EPL', 'PL',
   'WKBL', 'KBL', 'NBA',
+  'A리그',  // 🆕 호주 A리그
 ]
 
 const NO_DRAW_LEAGUES = ['WKBL', 'KBL', 'NBA', 'KOVO남', 'KOVO여', '남농EASL']
