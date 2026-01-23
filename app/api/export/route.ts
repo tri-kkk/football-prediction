@@ -88,13 +88,19 @@ export async function GET(request: NextRequest) {
       })
     }
     
-    // 각 경기에 대해 predict-v2 API 호출
+    // 현재 요청 URL에서 origin 추출 (가장 안전한 방법)
+    const requestUrl = new URL(request.url)
+    const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
+    
+    console.log('Export API - Base URL:', baseUrl)
+    console.log('Export API - Matches found:', matches.length)
+    
     const enrichedMatches = await Promise.all(
       matches.map(async (match) => {
         // predict-v2 API 호출
         let prediction = null
         try {
-          const predResponse = await fetch(`${getBaseUrl()}/api/predict-v2`, {
+          const predResponse = await fetch(`${baseUrl}/api/predict-v2`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -280,17 +286,6 @@ export async function GET(request: NextRequest) {
     console.error('Export API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
-
-// Base URL 가져오기
-function getBaseUrl() {
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`
-  }
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL
-  }
-  return 'http://localhost:3000'
 }
 
 // 텍스트 포맷
