@@ -619,7 +619,8 @@ export default function Home() {
   // 🆕 리그 그룹 펼침 상태 (기본: 모두 접힘)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   // 🆕 평균 적중률 (동적으로 가져옴)
-  const [avgAccuracy, setAvgAccuracy] = useState(67)
+  const [avgAccuracy, setAvgAccuracy] = useState<number | null>(null)
+  const [accuracyLoading, setAccuracyLoading] = useState(true)
   
   // 🆕 종료 경기 하이라이트 관련
   const [highlights, setHighlights] = useState<{ [key: number]: any }>({})
@@ -847,6 +848,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
   // 🆕 평균 적중률 가져오기
   useEffect(() => {
     const fetchAccuracy = async () => {
+      setAccuracyLoading(true)
       try {
         const res = await fetch('/api/pick-accuracy')
         const data = await res.json()
@@ -858,11 +860,17 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             // 🔥 가산점: 기본 +5%, 적중률 낮으면 더 추가
             const bonus = rawAccuracy < 50 ? 12 : rawAccuracy < 60 ? 8 : 5
             setAvgAccuracy(Math.min(rawAccuracy + bonus, 92))
+          } else {
+            setAvgAccuracy(65) // 데이터 없으면 기본값
           }
+        } else {
+          setAvgAccuracy(65) // 실패시 기본값
         }
       } catch (e) {
         console.log('적중률 로드 실패, 기본값 사용')
+        setAvgAccuracy(65) // 에러시 기본값
       }
+      setAccuracyLoading(false)
     }
     fetchAccuracy()
   }, [])
@@ -2456,7 +2464,11 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-yellow-400 font-black text-lg">{avgAccuracy}%</span>
+                      {accuracyLoading ? (
+                        <span className="inline-block w-12 h-5 bg-yellow-400/20 rounded animate-pulse"></span>
+                      ) : (
+                        <span className="text-yellow-400 font-black text-lg">{avgAccuracy}%</span>
+                      )}
                       <span className="text-gray-500 text-[10px]">적중률</span>
                       <span className="text-gray-600">|</span>
                       <span className="text-white font-bold text-xs">8,200+</span>
@@ -3787,7 +3799,11 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               <div className="text-gray-400 text-xs mb-1">
                 {t('header.pickAccuracy')}
               </div>
-              <div className="text-yellow-400 font-bold text-3xl">{avgAccuracy}%</div>
+              {accuracyLoading ? (
+                <div className="w-16 h-8 bg-yellow-400/20 rounded mx-auto animate-pulse"></div>
+              ) : (
+                <div className="text-yellow-400 font-bold text-3xl">{avgAccuracy}%</div>
+              )}
             </div>
             
             {/* CTA 버튼 */}
