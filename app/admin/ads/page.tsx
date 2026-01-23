@@ -196,12 +196,14 @@ const SLOT_TYPES = [
 
 const TABS = [
   { id: 'dashboard', label: '대시보드', icon: '📊' },
-  { id: 'traffic', label: '트래픽 분석', icon: '📈' },  // 🆕 트래픽 탭 추가
+  { id: 'traffic', label: '트래픽 분석', icon: '📈' },
   { id: 'users', label: '회원 관리', icon: '👥' },
   { id: 'subscriptions', label: '구독 관리', icon: '💳' },
   { id: 'ads', label: '광고 관리', icon: '📢' },
   { id: 'report', label: '광고 리포트', icon: '📉' },
   { id: 'blog', label: '블로그 관리', icon: '📝' },
+  { id: 'proto', label: '프로토 관리', icon: '🎫' },
+  { id: 'export', label: '예측 Export', icon: '📤' },
 ]
 
 /// 국기 이모지 매핑 - 확장
@@ -503,6 +505,23 @@ export default function AdminDashboard() {
   const [hourlyTraffic, setHourlyTraffic] = useState<HourlyTraffic[]>([])
   const [userTypeStats, setUserTypeStats] = useState<UserTypeStats[]>([])
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null)
+  
+  // ===== 🎫 프로토 관리 상태 =====
+  const [protoText, setProtoText] = useState('')
+  const [protoParseResult, setProtoParseResult] = useState('')
+  const [protoMatches, setProtoMatches] = useState<any[]>([])
+  const [protoSavedCount, setProtoSavedCount] = useState(0)
+  const [protoRound, setProtoRound] = useState('')  // 회차 입력
+  const [protoSavedRounds, setProtoSavedRounds] = useState<string[]>([])  // 저장된 회차 목록
+  
+  // ===== 📤 Export 관리 상태 =====
+  const [exportDate, setExportDate] = useState<string>(() => new Date().toISOString().split('T')[0])
+  const [exportLeague, setExportLeague] = useState<string>('all')
+  const [exportGrade, setExportGrade] = useState<string>('all')
+  const [exportMatches, setExportMatches] = useState<any[]>([])
+  const [exportLoading, setExportLoading] = useState(false)
+  const [exportSelectedMatch, setExportSelectedMatch] = useState<any | null>(null)
+  const [exportCopyStatus, setExportCopyStatus] = useState<string>('')
   
   // ===== Refs =====
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -834,6 +853,123 @@ export default function AdminDashboard() {
       return () => clearInterval(interval)
     }
   }, [isAuthenticated, activeTab, trafficDateRange])
+  
+  // 📤 Export 탭 useEffect
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'export') {
+      fetchExportData()
+    }
+  }, [isAuthenticated, activeTab, exportDate, exportLeague, exportGrade])
+  
+  // ==================== Export 관리 함수 ====================
+  
+  const fetchExportData = async () => {
+    try {
+      setExportLoading(true)
+      setExportSelectedMatch(null)
+      
+      const params = new URLSearchParams({
+        secret: 'trendsoccer-internal-2026',
+        date: exportDate,
+        league: exportLeague,
+        grade: exportGrade,
+      })
+      
+      const response = await fetch(`/api/export?${params.toString()}`)
+      if (!response.ok) throw new Error('데이터 조회 실패')
+      
+      const data = await response.json()
+      setExportMatches(data.data || [])
+    } catch (err) {
+      console.error('Export fetch error:', err)
+      setExportMatches([])
+    } finally {
+      setExportLoading(false)
+    }
+  }
+  
+  const copyExportText = async (format: 'text' | 'markdown' | 'json') => {
+    try {
+      let content: string
+      
+      if (exportSelectedMatch) {
+        // 개별 경기 복사
+        content = formatSingleMatch(exportSelectedMatch, format)
+      } else {
+        // 전체 복사
+        if (format === 'json') {
+          content = JSON.stringify(exportMatches, null, 2)
+        } else {
+          const params = new URLSearchParams({
+            secret: 'trendsoccer-internal-2026',
+            date: exportDate,
+            league: exportLeague,
+            grade: exportGrade,
+            format,
+          })
+          const response = await fetch(`/api/export?${params.toString()}`)
+          content = await response.text()
+        }
+      }
+      
+      await navigator.clipboard.writeText(content)
+      setExportCopyStatus(`${format.toUpperCase()} 복사됨!`)
+      setTimeout(() => setExportCopyStatus(''), 2000)
+    } catch (err) {
+      console.error('Copy error:', err)
+      setExportCopyStatus('복사 실패')
+    }
+  }
+  
+  const formatSingleMatch = (match: any, format: string): string => {
+    const p = match.prediction
+    const h = match.homeStats
+    const a = match.awayStats
+    
+    if (format === 'json') {
+      return JSON.stringify(match, null, 2)
+    }
+    
+    if (format === 'markdown') {
+      let md = `## ${match.homeTeamKo} vs ${match.awayTeamKo}\n\n`
+      md += `| 항목 | 내용 |\n|------|------|\n`
+      md += `| ⏰ 시간 | ${match.time} |\n`
+      md += `| 🏆 리그 | ${match.leagueName} |\n`
+      md += `| 📊 예측 | **${p.resultKo}** (${p.confidence}%) |\n`
+      md += `| 💰 배당 | ${match.odds.home?.toFixed(2)} / ${match.odds.draw?.toFixed(2)} / ${match.odds.away?.toFixed(2)} |\n`
+      md += `| 🎯 등급 | ${p.grade} |\n\n`
+      
+      if (h?.recentForm) {
+        md += `**🏠 ${match.homeTeamKo}**: ${h.recentForm.currentStreak?.text || '-'} | 최근5: ${h.recentForm.last5?.results?.join(' ') || '-'}\n\n`
+      }
+      if (a?.recentForm) {
+        md += `**🚌 ${match.awayTeamKo}**: ${a.recentForm.currentStreak?.text || '-'} | 최근5: ${a.recentForm.last5?.results?.join(' ') || '-'}\n\n`
+      }
+      if (match.h2h) {
+        md += `**⚔️ 상대전적**: ${match.h2h.summary} (${match.h2h.totalMatches}경기)\n\n`
+      }
+      return md
+    }
+    
+    // text
+    let text = `⚽ ${match.homeTeamKo} vs ${match.awayTeamKo}\n`
+    text += `⏰ ${match.time} | ${match.leagueName}\n`
+    text += `📊 예측: ${p.resultKo} (${p.confidence}%)\n`
+    text += `💰 배당: ${match.odds.home?.toFixed(2)} / ${match.odds.draw?.toFixed(2)} / ${match.odds.away?.toFixed(2)}\n`
+    text += `🎯 등급: ${p.grade}\n`
+    
+    if (h?.recentForm) {
+      text += `🏠 ${match.homeTeamKo}: ${h.recentForm.currentStreak?.text || '-'} | 최근5: ${h.recentForm.last5?.results?.join('') || '-'}\n`
+    }
+    if (a?.recentForm) {
+      text += `🚌 ${match.awayTeamKo}: ${a.recentForm.currentStreak?.text || '-'} | 최근5: ${a.recentForm.last5?.results?.join('') || '-'}\n`
+    }
+    if (match.h2h) {
+      text += `⚔️ 상대전적: ${match.h2h.summary}\n`
+    }
+    
+    return text
+  }
 
   // ==================== 블로그 관리 함수 ====================
 
@@ -896,6 +1032,421 @@ export default function AdminDashboard() {
     const totalViews = blogPosts.reduce((sum, p) => sum + (p.views || 0), 0)
     return { totalPosts, publishedPosts, totalViews }
   }, [blogPosts])
+
+  // ==================== 🎫 프로토 관리 함수 ====================
+
+  // 저장된 프로토 데이터 개수 확인
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('proto_matches')
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved)
+          setProtoSavedCount(parsed.length)
+        } catch {
+          setProtoSavedCount(0)
+        }
+      }
+    }
+  }, [])
+
+  // 와이즈토토 텍스트 파싱 (v4 - 모든 유형 지원)
+  const parseWisetotoText = (text: string) => {
+    const lines = text.split('\n')
+    const matches: any[] = []
+    const seenMatches = new Set<string>()
+    const currentYear = new Date().getFullYear()
+    
+    // 알려진 리그 (긴 것부터 매칭)
+    const knownLeagues = [
+      'U23아컵', '남농EASL', 'KOVO남', 'KOVO여', '에레디비', 'EFL챔',
+      '세리에A', '라리가', '분데스리', '리그1', '프리그1',
+      'UCL', 'UEL', 'EPL', 'PL', 'EFL챔',
+      'WKBL', 'KBL', 'NBA',
+    ]
+    
+    // 결과 텍스트 → 결과 코드 매핑 (유형별)
+    const resultMap: { [key: string]: string } = {
+      // 승무패
+      '홈승': 'home',
+      '홈패': 'away', 
+      '무승부': 'draw',
+      // 핸디캡
+      '핸디승': 'home',
+      '핸디패': 'away',
+      // 언더오버
+      '오버': 'over',
+      '언더': 'under',
+      // 홀짝
+      '홀': 'odd',
+      '짝': 'even',
+    }
+    
+    // 승/패만 있는 리그 (무승부 없음)
+    const noDrawLeagues = ['WKBL', 'KBL', 'NBA', 'KOVO남', 'KOVO여', '남농EASL']
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!/^\d{3}/.test(trimmed)) continue
+
+      // 기본 정보 추출: 번호, 날짜, 요일, 시간
+      const baseMatch = trimmed.match(/^(\d{3})(\d{2}\.\d{2})\(([월화수목금토일])\)\s*(\d{2}:\d{2})(.+)/)
+      if (!baseMatch) continue
+
+      const [, seq, date, dayOfWeek, time, rest] = baseMatch
+      
+      // 리그 찾기
+      let league = ''
+      let afterLeague = rest
+      for (const l of knownLeagues) {
+        if (rest.startsWith(l)) {
+          league = l
+          afterLeague = rest.slice(l.length)
+          break
+        }
+      }
+      
+      if (!league) continue
+      
+      // ===== 유형 감지 =====
+      let matchType = '승무패'
+      let handicapValue: number | null = null
+      let totalValue: number | null = null
+      
+      // 전반전 유형은 스킵 (hH, hU, h )
+      if (/^h[HU\s]/.test(afterLeague)) continue
+      
+      // 승5패 (승⑤패)
+      if (afterLeague.startsWith('승⑤패')) {
+        matchType = '승5패'
+        afterLeague = afterLeague.slice(3)
+      }
+      // 핸디캡 (H +1.5, H -2.0 등)
+      else if (/^H\s*[+-]?\d/.test(afterLeague)) {
+        matchType = '핸디캡'
+        const hMatch = afterLeague.match(/^H\s*([+-]?\d+\.?\d*)/)
+        if (hMatch) {
+          handicapValue = parseFloat(hMatch[1])
+          afterLeague = afterLeague.slice(hMatch[0].length)
+        }
+      }
+      // 언더오버 (U 2.5, U 134.5 등)
+      else if (/^U\s*\d/.test(afterLeague)) {
+        matchType = '언더오버'
+        const uMatch = afterLeague.match(/^U\s*(\d+\.?\d*)/)
+        if (uMatch) {
+          totalValue = parseFloat(uMatch[1])
+          afterLeague = afterLeague.slice(uMatch[0].length)
+        }
+      }
+      // 홀짝 (SUM)
+      else if (afterLeague.startsWith('SUM')) {
+        matchType = '홀짝'
+        afterLeague = afterLeague.slice(3)
+      }
+      
+      // ===== 결과 추출 =====
+      let resultCode: string | null = null
+      for (const [resultText, code] of Object.entries(resultMap)) {
+        if (afterLeague.includes(resultText)) {
+          resultCode = code
+          break
+        }
+      }
+      // 경기전이면 null
+      if (afterLeague.includes('경기전')) {
+        resultCode = null
+      }
+      
+      // 결과 텍스트 제거
+      let cleanedStr = afterLeague
+      for (const result of [...Object.keys(resultMap), '경기전']) {
+        cleanedStr = cleanedStr.replace(result, '')
+      }
+      
+      // 화살표 제거
+      cleanedStr = cleanedStr.replace(/[↑↓]/g, '')
+      
+      // 스코어 제거 (팀 사이의 숫자:숫자 또는 숫자.5:숫자)
+      cleanedStr = cleanedStr.replace(/\s+\d+\.?\d*[:]\d+\.?\d*\s+/g, ' ')
+      
+      // 배당률 추출 (X.XX 형태)
+      const oddsRegex = /(\d{1,2}\.\d{2})/g
+      const oddsMatches = cleanedStr.match(oddsRegex) || []
+      
+      // 배당률 제거 후 팀명만 남기기
+      cleanedStr = cleanedStr.replace(oddsRegex, '')
+      cleanedStr = cleanedStr.replace(/-/g, '')
+      cleanedStr = cleanedStr.trim()
+      
+      // 팀 분리
+      let homeTeam = ''
+      let awayTeam = ''
+      
+      if (cleanedStr.includes(':')) {
+        const parts = cleanedStr.split(':')
+        homeTeam = parts[0].trim()
+        awayTeam = parts[1]?.trim() || ''
+      } else {
+        const words = cleanedStr.trim().split(/\s+/).filter(w => w)
+        if (words.length === 2) {
+          homeTeam = words[0]
+          awayTeam = words[1]
+        } else if (words.length >= 2) {
+          const mid = Math.floor(words.length / 2)
+          homeTeam = words.slice(0, mid).join(' ')
+          awayTeam = words.slice(mid).join(' ')
+        }
+      }
+      
+      homeTeam = homeTeam.trim()
+      awayTeam = awayTeam.trim()
+      
+      if (!homeTeam || !awayTeam) continue
+      
+      // 중복 체크 (같은 경기 + 같은 유형)
+      const matchKey = `${seq}-${matchType}`
+      if (seenMatches.has(matchKey)) continue
+      seenMatches.add(matchKey)
+      
+      // 축구 리그 (핸디캡이 3way)
+      const soccerLeagues = ['UCL', 'UEL', 'EPL', 'EFL', '세리에', '라리가', '분데스리', '리그1', '프리그1', 'U23아컵', '에레디비', 'PL']
+      const isSoccerLeague = soccerLeagues.some(l => league.includes(l))
+      
+      // 배당률 할당 (유형별로 다름)
+      let homeOdds: number | null = null
+      let drawOdds: number | null = null
+      let awayOdds: number | null = null
+      
+      if (matchType === '승무패' || matchType === '승5패') {
+        const isNoDraw = noDrawLeagues.some(l => league.includes(l))
+        
+        if (isNoDraw) {
+          // 농구/배구 승무패 (2way)
+          if (oddsMatches.length >= 2) {
+            homeOdds = parseFloat(oddsMatches[0])
+            awayOdds = parseFloat(oddsMatches[1])
+          }
+        } else if (matchType === '승5패') {
+          // 승5패 (항상 3way)
+          if (oddsMatches.length >= 3) {
+            homeOdds = parseFloat(oddsMatches[0])
+            drawOdds = parseFloat(oddsMatches[1])
+            awayOdds = parseFloat(oddsMatches[2])
+          }
+        } else {
+          // 축구 승무패 (3way)
+          if (oddsMatches.length >= 3) {
+            homeOdds = parseFloat(oddsMatches[0])
+            drawOdds = parseFloat(oddsMatches[1])
+            awayOdds = parseFloat(oddsMatches[2])
+          }
+        }
+      } else if (matchType === '핸디캡') {
+        // 🆕 축구 핸디캡 = 3way (핸디승/핸디무/핸디패)
+        // 🆕 농구/배구 핸디캡 = 2way (핸디승/핸디패)
+        if (isSoccerLeague) {
+          // 축구 핸디캡 3way
+          if (oddsMatches.length >= 3) {
+            homeOdds = parseFloat(oddsMatches[0])  // 핸디승
+            drawOdds = parseFloat(oddsMatches[1])  // 핸디무
+            awayOdds = parseFloat(oddsMatches[2])  // 핸디패
+          }
+        } else {
+          // 농구/배구 핸디캡 2way
+          if (oddsMatches.length >= 2) {
+            homeOdds = parseFloat(oddsMatches[0])  // 핸디승
+            awayOdds = parseFloat(oddsMatches[1])  // 핸디패
+          }
+        }
+      } else {
+        // 언더오버, 홀짝 (항상 2way)
+        if (oddsMatches.length >= 2) {
+          homeOdds = parseFloat(oddsMatches[0])  // 오버/홀
+          awayOdds = parseFloat(oddsMatches[1])  // 언더/짝
+        }
+      }
+
+      matches.push({
+        matchSeq: parseInt(seq),
+        gameDate: `${currentYear}-${date.replace('.', '-')}T${time}:00`,
+        koreanDate: `${date}(${dayOfWeek})`,
+        koreanTime: time,
+        homeTeam,
+        awayTeam,
+        leagueName: league,
+        matchType,  // 🆕 유형 저장
+        handicapValue,  // 🆕 핸디캡 값
+        totalValue,  // 🆕 언오버 기준점
+        homeOdds,
+        drawOdds,
+        awayOdds,
+        resultCode,
+      })
+    }
+    return matches
+  }
+
+  // 텍스트에서 회차 자동 추출
+  const extractRoundFromText = (text: string): string => {
+    // 패턴: "9회차" 또는 "10회차"
+    const roundMatch = text.match(/(\d{1,2})회차/)
+    if (roundMatch) return roundMatch[1]
+    return ''
+  }
+
+  // 파싱 실행
+  const handleProtoParse = () => {
+    const parsed = parseWisetotoText(protoText)
+    if (parsed.length === 0) {
+      setProtoParseResult('❌ 파싱 실패 - 데이터 형식을 확인해주세요')
+      setProtoMatches([])
+      return
+    }
+    
+    // 텍스트에서 회차 자동 추출
+    const extractedRound = extractRoundFromText(protoText)
+    if (extractedRound && !protoRound) {
+      setProtoRound(extractedRound)
+    }
+    
+    // 유형별 통계
+    const typeStats = {
+      '승무패': parsed.filter((m: any) => m.matchType === '승무패').length,
+      '승5패': parsed.filter((m: any) => m.matchType === '승5패').length,
+      '핸디캡': parsed.filter((m: any) => m.matchType === '핸디캡').length,
+      '언더오버': parsed.filter((m: any) => m.matchType === '언더오버').length,
+      '홀짝': parsed.filter((m: any) => m.matchType === '홀짝').length,
+    }
+    
+    // 스포츠별 통계
+    const soccerCount = parsed.filter((m: any) => 
+      ['UCL', 'UEL', 'EPL', 'EFL', '에레디비', 'U23아컵', '세리에', '라리가', '분데스리', '프리그1', '리그1'].some(l => m.leagueName.includes(l))
+    ).length
+    const basketCount = parsed.filter((m: any) => 
+      ['KBL', 'WKBL', 'NBA', 'EASL', '남농'].some(l => m.leagueName.includes(l))
+    ).length
+    const volleyCount = parsed.filter((m: any) => m.leagueName.includes('KOVO')).length
+    
+    // 결과가 나온 경기 수
+    const finishedCount = parsed.filter((m: any) => m.resultCode !== null).length
+    
+    // 유형 통계 문자열 생성
+    const typeStatsStr = Object.entries(typeStats)
+      .filter(([_, count]) => count > 0)
+      .map(([type, count]) => `${type}:${count}`)
+      .join(' ')
+
+    setProtoParseResult(
+      `✅ ${parsed.length}경기 (⚽${soccerCount} 🏀${basketCount} 🏐${volleyCount})\n` +
+      `📊 ${typeStatsStr}` +
+      (finishedCount > 0 ? ` | 🏁 결과: ${finishedCount}` : '')
+    )
+    setProtoMatches(parsed)
+  }
+
+  // 프로토 데이터 저장 (회차별) - DB API 사용
+  const handleProtoSave = async () => {
+    if (protoMatches.length === 0) {
+      alert('저장할 경기가 없습니다')
+      return
+    }
+    if (!protoRound) {
+      alert('회차를 입력해주세요')
+      return
+    }
+    
+    try {
+      const res = await fetch('/api/proto/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          round: protoRound,
+          matches: protoMatches
+        })
+      })
+      
+      const json = await res.json()
+      
+      if (json.success) {
+        alert(`✅ ${protoRound}회차 ${protoMatches.length}개 경기가 DB에 저장되었습니다!`)
+        
+        // 회차 목록 새로고침
+        fetchProtoRounds()
+        
+        // 초기화
+        setProtoText('')
+        setProtoParseResult('')
+        setProtoMatches([])
+        setProtoRound('')
+      } else {
+        alert(`❌ 저장 실패: ${json.error}`)
+      }
+    } catch (error) {
+      console.error('Proto save error:', error)
+      alert('❌ 저장 중 오류 발생')
+    }
+  }
+
+  // 프로토 데이터 전체 삭제 - DB API
+  const handleProtoClear = async () => {
+    if (!confirm('저장된 프로토 데이터를 모두 삭제하시겠습니까?')) return
+    
+    try {
+      // 모든 회차 삭제
+      for (const round of protoSavedRounds) {
+        await fetch(`/api/proto/matches?round=${round}`, { method: 'DELETE' })
+      }
+      
+      setProtoSavedCount(0)
+      setProtoSavedRounds([])
+      alert('삭제되었습니다')
+    } catch (error) {
+      console.error('Proto clear error:', error)
+      alert('삭제 중 오류 발생')
+    }
+  }
+
+  // 특정 회차만 삭제 - DB API
+  const handleProtoRoundDelete = async (round: string) => {
+    if (!confirm(`${round}회차 데이터를 삭제하시겠습니까?`)) return
+    
+    try {
+      const res = await fetch(`/api/proto/matches?round=${round}`, { method: 'DELETE' })
+      const json = await res.json()
+      
+      if (json.success) {
+        fetchProtoRounds()
+        alert(`${round}회차가 삭제되었습니다`)
+      }
+    } catch (error) {
+      console.error('Proto round delete error:', error)
+      alert('삭제 중 오류 발생')
+    }
+  }
+
+  // DB에서 회차 목록 로드
+  const fetchProtoRounds = async () => {
+    try {
+      const res = await fetch('/api/proto/matches')
+      const json = await res.json()
+      
+      if (json.success) {
+        // 숫자 내림차순 정렬 (11 → 10 → 9)
+        const rounds = (json.rounds || [])
+          .sort((a: string, b: string) => parseInt(b) - parseInt(a))
+        setProtoSavedRounds(rounds)
+        setProtoSavedCount(json.data?.length || 0)
+      }
+    } catch (error) {
+      console.error('Fetch proto rounds error:', error)
+    }
+  }
+
+  // 저장된 회차 목록 로드 (DB)
+  useEffect(() => {
+    fetchProtoRounds()
+  }, [])
 
   // ==================== 계산된 통계 ====================
 
@@ -2487,6 +3038,514 @@ export default function AdminDashboard() {
                   >
                     📖 블로그 보기 →
                   </a>
+                </div>
+              </div>
+            )}
+
+            {/* 🎫 프로토 관리 탭 */}
+            {activeTab === 'proto' && (
+              <div className="bg-gray-800/30 rounded-2xl border border-gray-700/50 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white">🎫 프로토 경기 관리</h2>
+                  <a
+                    href="/proto"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-emerald-400 hover:text-emerald-300"
+                  >
+                    📱 프로토 페이지 보기 →
+                  </a>
+                </div>
+
+                {/* 현재 저장된 데이터 상태 - 회차별 */}
+                <div className="mb-6 p-4 bg-gray-900/50 rounded-xl border border-gray-700/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-gray-300">💾 저장된 회차 목록</h3>
+                    {protoSavedRounds.length > 0 && (
+                      <button
+                        onClick={handleProtoClear}
+                        className="px-3 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs transition-colors"
+                      >
+                        🗑️ 전체 삭제
+                      </button>
+                    )}
+                  </div>
+                  
+                  {protoSavedRounds.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {protoSavedRounds.map(round => {
+                        const savedData = localStorage.getItem('proto_data')
+                        const matchCount = savedData ? JSON.parse(savedData)[round]?.length || 0 : 0
+                        return (
+                          <div 
+                            key={round}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-700/50 rounded-lg"
+                          >
+                            <span className="text-sm text-white font-medium">
+                              {round === '0' ? '미분류' : `${round}회차`}
+                            </span>
+                            <span className="text-xs text-gray-400">({matchCount}경기)</span>
+                            <button
+                              onClick={() => handleProtoRoundDelete(round)}
+                              className="text-red-400 hover:text-red-300 text-xs ml-1"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500">저장된 데이터 없음</p>
+                  )}
+                </div>
+
+                {/* 회차 입력 */}
+                <div className="mb-4 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                  <div className="flex items-center gap-4">
+                    <label className="text-sm font-bold text-emerald-400">📋 저장할 회차</label>
+                    <input
+                      type="number"
+                      value={protoRound}
+                      onChange={(e) => setProtoRound(e.target.value)}
+                      placeholder="예: 10"
+                      className="w-24 px-3 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                    />
+                    <span className="text-xs text-gray-400">
+                      * 텍스트에서 자동 추출됩니다
+                    </span>
+                  </div>
+                </div>
+
+                {/* 입력 안내 */}
+                <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                  <h3 className="text-sm font-bold text-blue-400 mb-2">📋 사용 방법</h3>
+                  <ol className="text-xs text-gray-400 space-y-1">
+                    <li>1. <a href="https://wisetoto.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">wisetoto.com</a> 프로토 페이지 접속</li>
+                    <li>2. Ctrl+A (전체 선택) → Ctrl+C (복사)</li>
+                    <li>3. 아래 텍스트박스에 Ctrl+V (붙여넣기)</li>
+                    <li>4. &quot;파싱&quot; 버튼 클릭 → &quot;저장&quot; 버튼 클릭</li>
+                  </ol>
+                </div>
+
+                {/* 텍스트 입력 */}
+                <textarea
+                  value={protoText}
+                  onChange={(e) => setProtoText(e.target.value)}
+                  placeholder={`와이즈토토에서 복사한 텍스트를 붙여넣으세요...
+
+예시:
+00101.21(수) 19:00KBLKT소닉붐:안양정관---경기전
+03601.22(목) 02:45UCL갈라타사:AT마드---경기전`}
+                  className="w-full h-48 px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white text-sm font-mono placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
+                />
+
+                {/* 버튼 & 결과 */}
+                <div className="mt-4 flex items-center gap-3 flex-wrap">
+                  <button
+                    onClick={handleProtoParse}
+                    disabled={!protoText.trim()}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors"
+                  >
+                    🔍 파싱
+                  </button>
+                  
+                  {protoParseResult && (
+                    <>
+                      <span className={`text-sm ${protoParseResult.includes('✅') ? 'text-green-400' : 'text-red-400'}`}>
+                        {protoParseResult}
+                      </span>
+                      
+                      {protoMatches.length > 0 && (
+                        <button
+                          onClick={handleProtoSave}
+                          disabled={!protoRound}
+                          className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors"
+                        >
+                          💾 {protoRound ? `${protoRound}회차 저장` : '회차 입력 필요'} ({protoMatches.length}경기)
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* 파싱 미리보기 */}
+                {protoMatches.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-sm font-bold text-gray-300 mb-3">📋 파싱 결과 미리보기</h3>
+                    <div className="max-h-80 overflow-y-auto bg-gray-900/50 rounded-xl border border-gray-700/50">
+                      <table className="w-full text-sm">
+                        <thead className="sticky top-0 bg-gray-800">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs text-gray-400">#</th>
+                            <th className="px-3 py-2 text-left text-xs text-gray-400">일시</th>
+                            <th className="px-3 py-2 text-left text-xs text-gray-400">리그</th>
+                            <th className="px-3 py-2 text-left text-xs text-gray-400">경기</th>
+                            <th className="px-3 py-2 text-center text-xs text-gray-400">승</th>
+                            <th className="px-3 py-2 text-center text-xs text-gray-400">무</th>
+                            <th className="px-3 py-2 text-center text-xs text-gray-400">패</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/50">
+                          {protoMatches.slice(0, 30).map((match: any, i: number) => (
+                            <tr key={i} className="hover:bg-gray-700/20">
+                              <td className="px-3 py-2 text-gray-500 font-mono">
+                                {String(match.matchSeq).padStart(3, '0')}
+                              </td>
+                              <td className="px-3 py-2 text-gray-400 whitespace-nowrap">
+                                {match.koreanDate} {match.koreanTime}
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className="px-2 py-0.5 bg-gray-700 rounded text-xs">
+                                  {match.leagueName}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-white">
+                                {match.homeTeam} vs {match.awayTeam}
+                              </td>
+                              <td className="px-3 py-2 text-center text-yellow-400">
+                                {match.homeOdds?.toFixed(2) || '-'}
+                              </td>
+                              <td className="px-3 py-2 text-center text-yellow-400">
+                                {match.drawOdds?.toFixed(2) || '-'}
+                              </td>
+                              <td className="px-3 py-2 text-center text-yellow-400">
+                                {match.awayOdds?.toFixed(2) || '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {protoMatches.length > 30 && (
+                        <div className="px-3 py-2 text-center text-gray-500 text-xs border-t border-gray-700/50">
+                          +{protoMatches.length - 30}개 더...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* 📤 예측 Export 탭 */}
+            {activeTab === 'export' && (
+              <div className="space-y-6">
+                {/* 필터 영역 */}
+                <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
+                  <div className="flex flex-wrap gap-4 items-end">
+                    {/* 날짜 선택 */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">날짜</label>
+                      <input
+                        type="date"
+                        value={exportDate}
+                        onChange={(e) => setExportDate(e.target.value)}
+                        className="px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    
+                    {/* 리그 선택 */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">리그</label>
+                      <select
+                        value={exportLeague}
+                        onChange={(e) => setExportLeague(e.target.value)}
+                        className="px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="all">전체</option>
+                        <option value="PL">프리미어리그</option>
+                        <option value="PD">라리가</option>
+                        <option value="BL1">분데스리가</option>
+                        <option value="SA">세리에A</option>
+                        <option value="FL1">리그1</option>
+                        <option value="CL">챔피언스리그</option>
+                        <option value="EL">유로파리그</option>
+                      </select>
+                    </div>
+                    
+                    {/* 등급 선택 */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">등급</label>
+                      <select
+                        value={exportGrade}
+                        onChange={(e) => setExportGrade(e.target.value)}
+                        className="px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="all">전체</option>
+                        <option value="pick">PICK만</option>
+                        <option value="good">PICK + GOOD</option>
+                      </select>
+                    </div>
+                    
+                    {/* 새로고침 */}
+                    <button
+                      onClick={fetchExportData}
+                      disabled={exportLoading}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {exportLoading ? '로딩...' : '🔄 새로고침'}
+                    </button>
+                    
+                    {/* 전체 복사 버튼들 */}
+                    <div className="flex gap-2 ml-auto">
+                      <button
+                        onClick={() => copyExportText('text')}
+                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm transition-colors"
+                      >
+                        📋 텍스트
+                      </button>
+                      <button
+                        onClick={() => copyExportText('markdown')}
+                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm transition-colors"
+                      >
+                        📝 마크다운
+                      </button>
+                      <button
+                        onClick={() => copyExportText('json')}
+                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm transition-colors"
+                      >
+                        {'{ }'} JSON
+                      </button>
+                    </div>
+                    
+                    {exportCopyStatus && (
+                      <span className="text-emerald-400 text-sm">{exportCopyStatus}</span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* 경기 목록 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* 왼쪽: 경기 리스트 */}
+                  <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-700/50 flex items-center justify-between">
+                      <h3 className="font-semibold text-white">경기 목록</h3>
+                      <span className="text-sm text-gray-400">{exportMatches.length}경기</span>
+                    </div>
+                    
+                    {exportLoading ? (
+                      <div className="p-8 text-center text-gray-500">로딩 중...</div>
+                    ) : exportMatches.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">해당 조건의 경기가 없습니다</div>
+                    ) : (
+                      <div className="divide-y divide-gray-700/50 max-h-[600px] overflow-y-auto">
+                        {exportMatches.map((match, idx) => {
+                          const p = match.prediction
+                          const isSelected = exportSelectedMatch?.id === match.id
+                          
+                          return (
+                            <div
+                              key={match.id || idx}
+                              onClick={() => setExportSelectedMatch(isSelected ? null : match)}
+                              className={`px-4 py-3 cursor-pointer transition-colors ${
+                                isSelected 
+                                  ? 'bg-emerald-600/20 border-l-2 border-emerald-500' 
+                                  : 'hover:bg-gray-700/30'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                    p.grade === 'PICK' ? 'bg-red-500/20 text-red-400' :
+                                    p.grade === 'GOOD' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    'bg-gray-500/20 text-gray-400'
+                                  }`}>
+                                    {p.grade}
+                                  </span>
+                                  <span className="text-xs text-gray-500">{match.time}</span>
+                                  <span className="text-xs text-gray-600">|</span>
+                                  <span className="text-xs text-gray-500">{match.leagueName}</span>
+                                </div>
+                                <span className="text-xs text-amber-400">{p.confidence}%</span>
+                              </div>
+                              <div className="mt-1 text-white font-medium">
+                                {match.homeTeamKo} vs {match.awayTeamKo}
+                              </div>
+                              <div className="mt-1 flex items-center gap-3 text-xs">
+                                <span className="text-gray-400">
+                                  예측: <span className={
+                                    p.result === 'home' ? 'text-blue-400' :
+                                    p.result === 'away' ? 'text-red-400' :
+                                    'text-gray-300'
+                                  }>{p.resultKo}</span>
+                                </span>
+                                <span className="text-gray-500">
+                                  배당: {match.odds.home?.toFixed(2)} / {match.odds.draw?.toFixed(2)} / {match.odds.away?.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* 오른쪽: 상세 정보 */}
+                  <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-700/50 flex items-center justify-between">
+                      <h3 className="font-semibold text-white">상세 정보</h3>
+                      {exportSelectedMatch && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => copyExportText('text')}
+                            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white"
+                          >
+                            복사
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {!exportSelectedMatch ? (
+                      <div className="p-8 text-center text-gray-500">
+                        왼쪽에서 경기를 선택하세요
+                      </div>
+                    ) : (
+                      <div className="p-4 space-y-4 max-h-[600px] overflow-y-auto">
+                        {/* 기본 정보 */}
+                        <div>
+                          <div className="text-lg font-bold text-white mb-2">
+                            {exportSelectedMatch.homeTeamKo} vs {exportSelectedMatch.awayTeamKo}
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-sm">
+                            <span className="px-2 py-1 bg-gray-700 rounded">{exportSelectedMatch.leagueName}</span>
+                            <span className="px-2 py-1 bg-gray-700 rounded">{exportSelectedMatch.time}</span>
+                            <span className={`px-2 py-1 rounded font-bold ${
+                              exportSelectedMatch.prediction.grade === 'PICK' ? 'bg-red-500/20 text-red-400' :
+                              exportSelectedMatch.prediction.grade === 'GOOD' ? 'bg-emerald-500/20 text-emerald-400' :
+                              'bg-gray-600'
+                            }`}>
+                              {exportSelectedMatch.prediction.grade}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* 예측 정보 */}
+                        <div className="bg-gray-900/50 rounded-lg p-3">
+                          <div className="text-xs text-gray-400 mb-2">예측</div>
+                          <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                            <div className={`p-2 rounded ${exportSelectedMatch.prediction.result === 'home' ? 'bg-blue-500/20 border border-blue-500' : 'bg-gray-800'}`}>
+                              <div className="text-lg font-bold text-white">{exportSelectedMatch.prediction.probability.home}%</div>
+                              <div className="text-xs text-gray-400">홈승</div>
+                            </div>
+                            <div className={`p-2 rounded ${exportSelectedMatch.prediction.result === 'draw' ? 'bg-gray-500/20 border border-gray-500' : 'bg-gray-800'}`}>
+                              <div className="text-lg font-bold text-white">{exportSelectedMatch.prediction.probability.draw}%</div>
+                              <div className="text-xs text-gray-400">무승부</div>
+                            </div>
+                            <div className={`p-2 rounded ${exportSelectedMatch.prediction.result === 'away' ? 'bg-red-500/20 border border-red-500' : 'bg-gray-800'}`}>
+                              <div className="text-lg font-bold text-white">{exportSelectedMatch.prediction.probability.away}%</div>
+                              <div className="text-xs text-gray-400">원정승</div>
+                            </div>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">배당</span>
+                            <span className="text-yellow-400">
+                              {exportSelectedMatch.odds.home?.toFixed(2)} / {exportSelectedMatch.odds.draw?.toFixed(2)} / {exportSelectedMatch.odds.away?.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm mt-1">
+                            <span className="text-gray-400">파워</span>
+                            <span className="text-white">
+                              {exportSelectedMatch.prediction.power?.home || '-'} vs {exportSelectedMatch.prediction.power?.away || '-'}
+                              <span className={`ml-2 ${(exportSelectedMatch.prediction.power?.diff || 0) > 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                                ({exportSelectedMatch.prediction.power?.diff > 0 ? '+' : ''}{exportSelectedMatch.prediction.power?.diff || 0})
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* 홈팀 분석 */}
+                        {exportSelectedMatch.homeStats && (
+                          <div className="bg-gray-900/50 rounded-lg p-3">
+                            <div className="text-xs text-gray-400 mb-2">🏠 {exportSelectedMatch.homeTeamKo}</div>
+                            {exportSelectedMatch.homeStats.recentForm && (
+                              <>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-sm text-white">{exportSelectedMatch.homeStats.recentForm.currentStreak?.text || '-'}</span>
+                                  <div className="flex gap-1">
+                                    {exportSelectedMatch.homeStats.recentForm.last5?.results?.map((r: string, i: number) => (
+                                      <span key={i} className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-bold ${
+                                        r === 'W' ? 'bg-emerald-500/20 text-emerald-400' :
+                                        r === 'L' ? 'bg-red-500/20 text-red-400' :
+                                        'bg-gray-500/20 text-gray-400'
+                                      }`}>{r}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  최근10: {exportSelectedMatch.homeStats.recentForm.last10?.wins}W {exportSelectedMatch.homeStats.recentForm.last10?.draws}D {exportSelectedMatch.homeStats.recentForm.last10?.losses}L
+                                  ({exportSelectedMatch.homeStats.recentForm.last10?.goalsFor}득점 {exportSelectedMatch.homeStats.recentForm.last10?.goalsAgainst}실점)
+                                </div>
+                              </>
+                            )}
+                            {exportSelectedMatch.homeStats.homeStats && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                시즌 홈: {exportSelectedMatch.homeStats.homeStats.wins}W {exportSelectedMatch.homeStats.homeStats.draws}D {exportSelectedMatch.homeStats.homeStats.losses}L ({exportSelectedMatch.homeStats.homeStats.winRate}%)
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* 원정팀 분석 */}
+                        {exportSelectedMatch.awayStats && (
+                          <div className="bg-gray-900/50 rounded-lg p-3">
+                            <div className="text-xs text-gray-400 mb-2">🚌 {exportSelectedMatch.awayTeamKo}</div>
+                            {exportSelectedMatch.awayStats.recentForm && (
+                              <>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-sm text-white">{exportSelectedMatch.awayStats.recentForm.currentStreak?.text || '-'}</span>
+                                  <div className="flex gap-1">
+                                    {exportSelectedMatch.awayStats.recentForm.last5?.results?.map((r: string, i: number) => (
+                                      <span key={i} className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-bold ${
+                                        r === 'W' ? 'bg-emerald-500/20 text-emerald-400' :
+                                        r === 'L' ? 'bg-red-500/20 text-red-400' :
+                                        'bg-gray-500/20 text-gray-400'
+                                      }`}>{r}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  최근10: {exportSelectedMatch.awayStats.recentForm.last10?.wins}W {exportSelectedMatch.awayStats.recentForm.last10?.draws}D {exportSelectedMatch.awayStats.recentForm.last10?.losses}L
+                                  ({exportSelectedMatch.awayStats.recentForm.last10?.goalsFor}득점 {exportSelectedMatch.awayStats.recentForm.last10?.goalsAgainst}실점)
+                                </div>
+                              </>
+                            )}
+                            {exportSelectedMatch.awayStats.awayStats && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                시즌 원정: {exportSelectedMatch.awayStats.awayStats.wins}W {exportSelectedMatch.awayStats.awayStats.draws}D {exportSelectedMatch.awayStats.awayStats.losses}L ({exportSelectedMatch.awayStats.awayStats.winRate}%)
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* H2H */}
+                        {exportSelectedMatch.h2h && (
+                          <div className="bg-gray-900/50 rounded-lg p-3">
+                            <div className="text-xs text-gray-400 mb-2">⚔️ 상대전적 ({exportSelectedMatch.h2h.totalMatches}경기)</div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-blue-400 font-bold">{exportSelectedMatch.h2h.homeWins}</span>
+                              <div className="flex-1 h-2 bg-gray-700 rounded overflow-hidden flex">
+                                <div className="bg-blue-500 h-full" style={{ width: `${exportSelectedMatch.h2h.homeWinRate}%` }} />
+                                <div className="bg-gray-500 h-full" style={{ width: `${100 - exportSelectedMatch.h2h.homeWinRate - exportSelectedMatch.h2h.awayWinRate}%` }} />
+                                <div className="bg-red-500 h-full" style={{ width: `${exportSelectedMatch.h2h.awayWinRate}%` }} />
+                              </div>
+                              <span className="text-red-400 font-bold">{exportSelectedMatch.h2h.awayWins}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {exportSelectedMatch.h2h.draws}무 | 평균 {exportSelectedMatch.h2h.avgGoals}골
+                            </div>
+                            {exportSelectedMatch.h2h.recentScores && (
+                              <div className="flex gap-1 mt-2">
+                                {exportSelectedMatch.h2h.recentScores.map((score: string, i: number) => (
+                                  <span key={i} className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-300">{score}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
