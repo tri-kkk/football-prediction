@@ -34,7 +34,7 @@ function parseNewlineFormat(text: string, round: string) {
     '승④패': '승4패',
     'H': '핸디캡',
     'U': '언더오버',
-    'SUM': '합계',
+    'SUM': '홀짝',  // 🔧 합계 → 홀짝
     'hH': '전반핸디',
     'hU': '전반언더오버',
   }
@@ -143,9 +143,9 @@ function parseNewlineFormat(text: string, round: string) {
     let awayLineIdx: number
     let awayLine: string
     
-    // 언더오버/합계는 ':' 구분자 없이 스코어가 바로 나옴
+    // 언더오버/홀짝은 ':' 구분자 없이 스코어가 바로 나옴
     // 예: '안양정관', '129', '고양소노'
-    if ((betType === '언더오버' || betType === '합계' || betType === '전반언더오버') && /^\d+$/.test(separator)) {
+    if ((betType === '언더오버' || betType === '홀짝' || betType === '전반언더오버') && /^\d+$/.test(separator)) {
       // 스코어가 구분자 역할 (합산 점수)
       homeScoreLine = separator
       awayLineIdx = separatorIdx + 1
