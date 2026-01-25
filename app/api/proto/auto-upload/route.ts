@@ -134,14 +134,33 @@ function parseNewlineFormat(text: string, round: string) {
       }
     }
     
-    // 홈팀, 구분자, 원정팀
+    // 홈팀, 구분자, 원정팀 (스코어가 별도 줄일 수 있음)
     const homeLine = lines[teamStartIdx]
-    const separator = lines[teamStartIdx + 1]
-    const awayLine = lines[teamStartIdx + 2]
+    let separatorIdx = teamStartIdx + 1
+    let separator = lines[separatorIdx]
+    let homeScoreLine: string | null = null
+    let awayScoreLine: string | null = null
+    
+    // 홈 스코어가 별도 줄인 경우 (숫자만 있는 줄)
+    if (/^\d+$/.test(separator)) {
+      homeScoreLine = separator
+      separatorIdx++
+      separator = lines[separatorIdx]
+    }
     
     if (separator !== ':') {
       i++
       continue
+    }
+    
+    // 원정 스코어가 별도 줄인 경우
+    let awayLineIdx = separatorIdx + 1
+    let awayLine = lines[awayLineIdx]
+    
+    if (/^\d+$/.test(awayLine)) {
+      awayScoreLine = awayLine
+      awayLineIdx++
+      awayLine = lines[awayLineIdx]
     }
     
     // 팀명 및 스코어 추출
@@ -155,11 +174,17 @@ function parseNewlineFormat(text: string, round: string) {
     let homeScore: number | null = null
     let awayScore: number | null = null
     
-    if (homeMatch) {
+    // 스코어가 별도 줄인 경우
+    if (homeScoreLine) {
+      homeScore = parseInt(homeScoreLine)
+    } else if (homeMatch) {
       homeTeam = homeMatch[1].trim()
       homeScore = parseInt(homeMatch[2])
     }
-    if (awayMatch) {
+    
+    if (awayScoreLine) {
+      awayScore = parseInt(awayScoreLine)
+    } else if (awayMatch) {
       awayScore = parseInt(awayMatch[1])
       awayTeam = awayMatch[2].trim()
     }
@@ -169,17 +194,17 @@ function parseNewlineFormat(text: string, round: string) {
       continue
     }
     
-    // 배당률
-    const homeOddsStr = lines[teamStartIdx + 3]?.replace(/[↑↓\s]/g, '') || '-'
-    const drawOddsStr = lines[teamStartIdx + 4]?.replace(/[↑↓\s]/g, '') || '-'
-    const awayOddsStr = lines[teamStartIdx + 5]?.replace(/[↑↓\s]/g, '') || '-'
+    // 배당률 (awayLineIdx 기준)
+    const homeOddsStr = lines[awayLineIdx + 1]?.replace(/[↑↓\s]/g, '') || '-'
+    const drawOddsStr = lines[awayLineIdx + 2]?.replace(/[↑↓\s]/g, '') || '-'
+    const awayOddsStr = lines[awayLineIdx + 3]?.replace(/[↑↓\s]/g, '') || '-'
     
     const homeOdds = homeOddsStr !== '-' ? parseFloat(homeOddsStr) : null
     const drawOdds = drawOddsStr !== '-' ? parseFloat(drawOddsStr) : null
     const awayOdds = awayOddsStr !== '-' ? parseFloat(awayOddsStr) : null
     
     // 상태/결과 파싱
-    const statusOrResult = lines[teamStartIdx + 6] || '경기전'
+    const statusOrResult = lines[awayLineIdx + 4] || '경기전'
     
     // 결과인지 상태인지 판별
     let status = '경기전'
