@@ -10,10 +10,10 @@ const ADMIN_SECRET = process.env.PROTO_ADMIN_SECRET || 'trendsoccer-proto-2026'
 
 const KNOWN_LEAGUES = [
   'U23아컵', '남농EASL', 'KOVO남', 'KOVO여', '에레디비', 'EFL챔',
-  '세리에A', '라리가', '분데스', '리그1',
+  '세리에A', '라리가', '분데스', '리그1', '프리그1',  // 🆕 프리그1 추가
   'UCL', 'UEL', 'EPL', 'PL',
   'WKBL', 'KBL', 'NBA',
-  'A리그',  // 🆕 호주 A리그
+  'A리그',
 ]
 
 const NO_DRAW_LEAGUES = ['WKBL', 'KBL', 'NBA', 'KOVO남', 'KOVO여', '남농EASL']
