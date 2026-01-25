@@ -140,27 +140,40 @@ function parseNewlineFormat(text: string, round: string) {
     let separator = lines[separatorIdx]
     let homeScoreLine: string | null = null
     let awayScoreLine: string | null = null
+    let awayLineIdx: number
+    let awayLine: string
     
-    // 홈 스코어가 별도 줄인 경우 (숫자만 있는 줄)
-    if (/^\d+$/.test(separator)) {
+    // 언더오버/합계는 ':' 구분자 없이 스코어가 바로 나옴
+    // 예: '안양정관', '129', '고양소노'
+    if ((betType === '언더오버' || betType === '합계' || betType === '전반언더오버') && /^\d+$/.test(separator)) {
+      // 스코어가 구분자 역할 (합산 점수)
       homeScoreLine = separator
-      separatorIdx++
-      separator = lines[separatorIdx]
-    }
-    
-    if (separator !== ':') {
-      i++
-      continue
-    }
-    
-    // 원정 스코어가 별도 줄인 경우
-    let awayLineIdx = separatorIdx + 1
-    let awayLine = lines[awayLineIdx]
-    
-    if (/^\d+$/.test(awayLine)) {
-      awayScoreLine = awayLine
-      awayLineIdx++
+      awayLineIdx = separatorIdx + 1
       awayLine = lines[awayLineIdx]
+    } else {
+      // 기존 로직: ':' 구분자 사용
+      
+      // 홈 스코어가 별도 줄인 경우 (숫자만 있는 줄)
+      if (/^\d+$/.test(separator)) {
+        homeScoreLine = separator
+        separatorIdx++
+        separator = lines[separatorIdx]
+      }
+      
+      if (separator !== ':') {
+        i++
+        continue
+      }
+      
+      // 원정 스코어가 별도 줄인 경우
+      awayLineIdx = separatorIdx + 1
+      awayLine = lines[awayLineIdx]
+      
+      if (/^\d+$/.test(awayLine)) {
+        awayScoreLine = awayLine
+        awayLineIdx++
+        awayLine = lines[awayLineIdx]
+      }
     }
     
     // 팀명 및 스코어 추출
