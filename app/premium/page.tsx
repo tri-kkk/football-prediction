@@ -1427,65 +1427,56 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                               </div>
                             )}
                             
-                            {/* 선제골 분석 */}
-                            {h2hData.firstGoalAnalysis && (
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="bg-gray-900/50 rounded p-2.5">
-                                  <div className="text-[10px] text-gray-500 mb-1 truncate">{getTeamName(match.home_team)}</div>
-                                  <div className="text-[10px] text-gray-600 mb-1">{language === 'ko' ? '선제골 시 승률' : '1st Goal Win%'}</div>
-                                  <div className="text-xl font-bold text-emerald-400">{h2hData.firstGoalAnalysis.homeFirstGoalWinRate || 0}%</div>
+                            
+                            {/* 🔥 H2H 베팅 가이드 (선제골 대신) */}
+                            {h2hData.recentMatches && h2hData.recentMatches.length > 0 && (() => {
+                              const matches = h2hData.recentMatches
+                              const totalGoals = matches.reduce((sum: number, m: any) => sum + (m.homeScore || 0) + (m.awayScore || 0), 0)
+                              const avgTotalGoals = matches.length > 0 ? (totalGoals / matches.length).toFixed(1) : '0.0'
+                              const over15Rate = Math.round((matches.filter((m: any) => (m.homeScore || 0) + (m.awayScore || 0) > 1.5).length / matches.length) * 100)
+                              const over25Rate = Math.round((matches.filter((m: any) => (m.homeScore || 0) + (m.awayScore || 0) > 2.5).length / matches.length) * 100)
+                              const bttsRate = Math.round((matches.filter((m: any) => (m.homeScore || 0) > 0 && (m.awayScore || 0) > 0).length / matches.length) * 100)
+                              
+                              return (
+                                <div>
+                                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                    {language === 'ko' ? '통계' : 'Stats'}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-1 text-center">
+                                    <div className="bg-gray-900/50 rounded py-2">
+                                      <div className="text-sm font-bold text-yellow-400">{avgTotalGoals}</div>
+                                      <div className="text-[9px] text-gray-600">{language === 'ko' ? '평균 골' : 'Avg Goals'}</div>
+                                    </div>
+                                    <div className={`rounded py-2 border ${over25Rate >= 60 ? 'bg-emerald-900/30 border-emerald-500/30' : 'bg-gray-900/50 border-gray-700/30'}`}>
+                                      <div className={`text-sm font-bold ${over25Rate >= 60 ? 'text-emerald-400' : 'text-gray-400'}`}>
+                                        {over25Rate}%{over25Rate >= 60 && <span className="ml-1 text-[10px]">✓</span>}
+                                      </div>
+                                      <div className="text-[9px] text-gray-600">O2.5</div>
+                                    </div>
+                                    <div className={`rounded py-2 border ${bttsRate >= 60 ? 'bg-emerald-900/30 border-emerald-500/30' : 'bg-gray-900/50 border-gray-700/30'}`}>
+                                      <div className={`text-sm font-bold ${bttsRate >= 60 ? 'text-emerald-400' : 'text-gray-400'}`}>
+                                        {bttsRate}%{bttsRate >= 60 && <span className="ml-1 text-[10px]">✓</span>}
+                                      </div>
+                                      <div className="text-[9px] text-gray-600">BTTS</div>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="bg-gray-900/50 rounded p-2.5">
-                                  <div className="text-[10px] text-gray-500 mb-1 truncate">{getTeamName(match.away_team)}</div>
-                                  <div className="text-[10px] text-gray-600 mb-1">{language === 'ko' ? '선제골 시 승률' : '1st Goal Win%'}</div>
-                                  <div className="text-xl font-bold text-emerald-400">{h2hData.firstGoalAnalysis.awayFirstGoalWinRate || 0}%</div>
+                              )
+                            })()}
+                            
+                            {/* 자주 나온 스코어 */}
+                            {h2hData.scorePatterns?.mostCommon && h2hData.scorePatterns.mostCommon.length > 0 && (
+                              <div className="flex items-center justify-between text-xs bg-gray-900/50 rounded px-3 py-2">
+                                <span className="text-gray-500">{language === 'ko' ? '최다 스코어' : 'Most Common'}</span>
+                                <div className="flex gap-2">
+                                  {h2hData.scorePatterns.mostCommon.slice(0, 3).map((s: any, i: number) => (
+                                    <span key={i} className="text-white font-mono">
+                                      {s.score} <span className="text-gray-500">({s.count})</span>
+                                    </span>
+                                  ))}
                                 </div>
                               </div>
                             )}
-                            
-                            {/* 스코어 패턴 */}
-                            {h2hData.scorePatterns && (
-                              <div>
-                                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
-                                  {language === 'ko' ? '통계' : 'Stats'}
-                                </div>
-                                <div className="grid grid-cols-3 gap-1 text-center">
-                                  <div className="bg-gray-900/50 rounded py-2">
-                                    <div className="text-sm font-bold text-gray-300">
-                                      {((h2hData.scorePatterns.avgHomeGoals || 0) + (h2hData.scorePatterns.avgAwayGoals || 0)).toFixed(1)}
-                                    </div>
-                                    <div className="text-[9px] text-gray-600">{language === 'ko' ? '평균 골' : 'Avg Goals'}</div>
-                                  </div>
-                                  <div className="bg-gray-900/50 rounded py-2">
-                                    <div className={`text-sm font-bold ${h2hData.scorePatterns.over25Rate >= 60 ? 'text-emerald-400' : 'text-gray-400'}`}>
-                                      {h2hData.scorePatterns.over25Rate || 0}%
-                                    </div>
-                                    <div className="text-[9px] text-gray-600">O2.5</div>
-                                  </div>
-                                  <div className="bg-gray-900/50 rounded py-2">
-                                    <div className={`text-sm font-bold ${h2hData.scorePatterns.bttsRate >= 60 ? 'text-emerald-400' : 'text-gray-400'}`}>
-                                      {h2hData.scorePatterns.bttsRate || 0}%
-                                    </div>
-                                    <div className="text-[9px] text-gray-600">BTTS</div>
-                                  </div>
-                                </div>
-                                
-                                {/* 자주 나온 스코어 */}
-                                {h2hData.scorePatterns.mostCommon && h2hData.scorePatterns.mostCommon.length > 0 && (
-                                  <div className="mt-2 flex items-center justify-between text-xs bg-gray-900/50 rounded px-3 py-2">
-                                    <span className="text-gray-500">{language === 'ko' ? '최다 스코어' : 'Most Common'}</span>
-                                    <div className="flex gap-2">
-                                      {h2hData.scorePatterns.mostCommon.slice(0, 3).map((s: any, i: number) => (
-                                        <span key={i} className="text-white font-mono">
-                                          {s.score} <span className="text-gray-500">({s.count})</span>
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            
                             {/* 인사이트 */}
                             {h2hData.insights && h2hData.insights.length > 0 && (
                               <div className="bg-purple-500/10 border-l-2 border-purple-500 rounded-r px-3 py-2">
@@ -1617,34 +1608,77 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                             </div>
                           )}
                           
-                          {/* 핵심 지표 */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-gray-900/50 rounded p-2.5">
-                              <div className="text-[10px] text-gray-500 mb-1">
-                                {language === 'ko' ? '선제골 승률' : '1st Goal Win%'}
-                              </div>
-                              <div className="flex items-end gap-1">
-                                <span className="text-xl font-bold text-emerald-400">{firstGoal?.winRate || 0}</span>
-                                <span className="text-xs text-gray-600 mb-0.5">%</span>
-                              </div>
-                              <div className="text-[10px] text-gray-600 mt-1">
-                                {firstGoal?.games || 0}{language === 'ko' ? '경기' : 'G'} / {firstGoal?.wins || 0}{language === 'ko' ? '승' : 'W'}
-                              </div>
-                            </div>
-                            <div className="bg-gray-900/50 rounded p-2.5">
-                              <div className="text-[10px] text-gray-500 mb-1">
-                                {language === 'ko' ? '역전률' : 'Comeback%'}
-                              </div>
-                              <div className="flex items-end gap-1">
-                                <span className="text-xl font-bold text-amber-400">{comeback?.comebackRate || 0}</span>
-                                <span className="text-xs text-gray-600 mb-0.5">%</span>
-                              </div>
-                              <div className="text-[10px] text-gray-600 mt-1">
-                                {comeback?.games || 0}{language === 'ko' ? '경기' : 'G'} / {comeback?.wins || 0}{language === 'ko' ? '승' : 'W'}
-                              </div>
-                            </div>
-                          </div>
                           
+                          {/* 🔥 베팅 가이드 (선제골/역전률 대신) */}
+                          {currentStats.recentMatches && currentStats.recentMatches.length > 0 && (() => {
+                            const last10 = currentStats.recentMatches.slice(0, 10)
+                            const avgGoalsFor = (last10.reduce((sum: number, m: any) => sum + m.goalsFor, 0) / last10.length).toFixed(1)
+                            const avgGoalsAgainst = (last10.reduce((sum: number, m: any) => sum + m.goalsAgainst, 0) / last10.length).toFixed(1)
+                            const avgTotalGoals = (last10.reduce((sum: number, m: any) => sum + m.goalsFor + m.goalsAgainst, 0) / last10.length).toFixed(1)
+                            const over15Rate = Math.round((last10.filter((m: any) => m.goalsFor + m.goalsAgainst > 1.5).length / last10.length) * 100)
+                            const over25Rate = Math.round((last10.filter((m: any) => m.goalsFor + m.goalsAgainst > 2.5).length / last10.length) * 100)
+                            const over35Rate = Math.round((last10.filter((m: any) => m.goalsFor + m.goalsAgainst > 3.5).length / last10.length) * 100)
+                            
+                            return (
+                              <div className="space-y-3">
+                                {/* 득점 평균 */}
+                                <div>
+                                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                    {language === 'ko' ? '평균 득실 (최근 10경기)' : 'Avg Goals (L10)'}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div className="bg-gray-900/50 rounded p-2 text-center">
+                                      <div className="text-lg font-bold text-blue-400">{avgGoalsFor}</div>
+                                      <div className="text-[9px] text-gray-600">{language === 'ko' ? '득점' : 'GF'}</div>
+                                    </div>
+                                    <div className="bg-gray-900/50 rounded p-2 text-center">
+                                      <div className="text-lg font-bold text-red-400">{avgGoalsAgainst}</div>
+                                      <div className="text-[9px] text-gray-600">{language === 'ko' ? '실점' : 'GA'}</div>
+                                    </div>
+                                    <div className="bg-gray-900/50 rounded p-2 text-center">
+                                      <div className="text-lg font-bold text-yellow-400">{avgTotalGoals}</div>
+                                      <div className="text-[9px] text-gray-600">{language === 'ko' ? '총골' : 'Total'}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* 골 라인 */}
+                                <div>
+                                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                                    {language === 'ko' ? '골 라인' : 'Goal Lines'}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                      { label: 'O1.5', rate: over15Rate },
+                                      { label: 'O2.5', rate: over25Rate },
+                                      { label: 'O3.5', rate: over35Rate },
+                                    ].map((item) => {
+                                      const isGood = item.rate >= 70
+                                      const isBad = item.rate <= 30
+                                      return (
+                                        <div 
+                                          key={item.label} 
+                                          className={`rounded p-2 text-center border ${
+                                            isGood ? 'bg-emerald-900/30 border-emerald-500/30' : 
+                                            isBad ? 'bg-red-900/30 border-red-500/30' : 
+                                            'bg-gray-900/50 border-gray-700/30'
+                                          }`}
+                                        >
+                                          <div className={`text-sm font-bold ${
+                                            isGood ? 'text-emerald-400' : isBad ? 'text-red-400' : 'text-gray-300'
+                                          }`}>
+                                            {item.rate}%
+                                            {isGood && <span className="ml-1 text-[10px]">✓</span>}
+                                          </div>
+                                          <div className="text-[9px] text-gray-600">{item.label}</div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })()}
                           {/* 베팅 마켓 */}
                           {currentStats.markets && (
                             <div>
