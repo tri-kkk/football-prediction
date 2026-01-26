@@ -139,6 +139,7 @@ export async function GET(request: NextRequest) {
           matchId: match.match_id,
           date: targetDate,
           time: new Date(match.commence_time).toLocaleTimeString('ko-KR', { 
+            timeZone: 'Asia/Seoul',
             hour: '2-digit', minute: '2-digit', hour12: false 
           }),
           datetime: match.commence_time,
