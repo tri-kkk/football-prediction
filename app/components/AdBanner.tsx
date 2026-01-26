@@ -265,7 +265,7 @@ export function MobileBottomBanner({
   )
 }
 
-// 🎯 정적 광고 (DB 없이 하드코딩)
+// 🎯 정적 광고 (DB 없이 하드코딩) - 스포라이브 제휴 광고는 모든 티어에 노출
 export function StaticAdBanner({ 
   slot,
   className = '',
@@ -278,8 +278,7 @@ export function StaticAdBanner({
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const [isClosed, setIsClosed] = useState(false)
-  const { data: session } = useSession()
-  const isPremium = (session?.user as any)?.tier === 'premium'
+  // 🆕 스포라이브 제휴 광고는 프리미엄 사용자에게도 노출 (isPremium 체크 제거)
   
   useEffect(() => {
     setIsMounted(true)
@@ -316,7 +315,7 @@ export function StaticAdBanner({
   const ad = ADS[slot]
 
   if (!isMounted) return null
-  if (isClosed || isPremium || isAdsBlocked) return null
+  if (isClosed || isAdsBlocked) return null  // 🆕 isPremium 제거 - 스포라이브 광고는 모든 티어에 노출
 
   return (
     <div className={`relative ${className}`}>
@@ -358,12 +357,11 @@ export function StaticAdBanner({
   )
 }
 
-// 정적 버전 export
+// 정적 버전 export - 스포라이브 광고는 모든 티어에 노출
 export function StaticDesktopBanner({ className = '' }: { className?: string }) {
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
-  const { data: session } = useSession()
-  const isPremium = (session?.user as any)?.tier === 'premium'
+  // 🆕 isPremium 체크 제거
   
   useEffect(() => {
     setIsMounted(true)
@@ -373,7 +371,7 @@ export function StaticDesktopBanner({ className = '' }: { className?: string }) 
   }, [])
   
   if (!isMounted) return null
-  if (isPremium || isAdsBlocked) return null
+  if (isAdsBlocked) return null  // 🆕 isPremium 제거
   
   return (
     <div className={`hidden lg:flex justify-center ${className}`}>
@@ -385,8 +383,7 @@ export function StaticDesktopBanner({ className = '' }: { className?: string }) 
 export function StaticSidebarBanner({ className = '' }: { className?: string }) {
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
-  const { data: session } = useSession()
-  const isPremium = (session?.user as any)?.tier === 'premium'
+  // 🆕 isPremium 체크 제거
   
   useEffect(() => {
     setIsMounted(true)
@@ -396,7 +393,7 @@ export function StaticSidebarBanner({ className = '' }: { className?: string }) 
   }, [])
   
   if (!isMounted) return null
-  if (isPremium || isAdsBlocked) return null
+  if (isAdsBlocked) return null  // 🆕 isPremium 제거
   
   return (
     <div className={`hidden lg:block ${className}`}>
@@ -415,8 +412,7 @@ export function StaticMobileBottomBanner({
   const [isClosed, setIsClosed] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
-  const { data: session } = useSession()
-  const isPremium = (session?.user as any)?.tier === 'premium'
+  // 🆕 isPremium 체크 제거
 
   useEffect(() => {
     setIsMounted(true)
@@ -426,7 +422,7 @@ export function StaticMobileBottomBanner({
   }, [])
 
   if (!isMounted) return null
-  if (isClosed || isPremium || isAdsBlocked) return null
+  if (isClosed || isAdsBlocked) return null  // 🆕 isPremium 제거
 
   return (
     <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 p-2 flex justify-center safe-area-bottom ${className}`}>
