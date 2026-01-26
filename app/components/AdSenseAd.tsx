@@ -41,16 +41,6 @@ const SLOT_SIZES: Record<string, { width: string; minHeight: string; maxHeight?:
 // 🛡️ 무효 트래픽 방지 함수들
 // ==========================================
 
-// 광고 차단 상태 체크
-function isAdsBlocked(): boolean {
-  if (typeof window === 'undefined') return false
-  try {
-    return sessionStorage.getItem('ts_ads_blocked') === 'true'
-  } catch (e) {
-    return false
-  }
-}
-
 // 봇 감지
 function isBot(): boolean {
   if (typeof window === 'undefined') return false
@@ -108,6 +98,8 @@ export default function AdSenseAd({
   const [hasError, setHasError] = useState(false)
   const [isProduction, setIsProduction] = useState(false)
   const [shouldShowAd, setShouldShowAd] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   
   const { data: session, status } = useSession()
 
@@ -117,17 +109,28 @@ export default function AdSenseAd({
   // ✅ NextAuth에서 프리미엄 체크
   const isPremium = (session?.user as any)?.tier === 'premium'
 
+  // 🔧 클라이언트 마운트 체크 (Hydration 에러 방지)
+  useEffect(() => {
+    setIsMounted(true)
+    
+    // 차단 상태 체크 (클라이언트에서만)
+    try {
+      setIsAdsBlocked(sessionStorage.getItem('ts_ads_blocked') === 'true')
+    } catch (e) {}
+  }, [])
+
   // 🛡️ 무효 트래픽 보호 체크
   useEffect(() => {
+    if (!isMounted) return
     if (typeof window === 'undefined') return
     if (status === 'loading') return
     if (isPremium) return
     
-    // 1초 딜레이 후 보호 체크 (봇 우회 방지)
+    // 딜레이 후 보호 체크
     const timer = setTimeout(() => {
       // 이미 차단된 세션
-      if (isAdsBlocked()) {
-        console.log(`🚫 [AdSenseAd] ${slot}: 이전에 차단된 세션`)
+      if (isAdsBlocked) {
+        console.log(`🚫 [AdSenseAd] ${slot}: 차단된 세션`)
         setShouldShowAd(false)
         return
       }
@@ -135,40 +138,36 @@ export default function AdSenseAd({
       // 봇 감지
       if (isBot()) {
         blockAds('봇/크롤러 감지')
+        setIsAdsBlocked(true)
         setShouldShowAd(false)
         return
       }
       
       // 모든 체크 통과
       setShouldShowAd(true)
-    }, 500) // 0.5초 딜레이
+    }, 500)
     
     return () => clearTimeout(timer)
-  }, [status, isPremium, slot])
+  }, [isMounted, status, isPremium, slot, isAdsBlocked])
 
+  // 프로덕션 체크
   useEffect(() => {
-    // 세션 로딩 중이면 스킵
-    if (status === 'loading') return
+    if (!isMounted) return
     
-    // 프리미엄 사용자는 광고 로드 스킵
-    if (isPremium) return
-    
-    // 🛡️ 보호 체크 미통과
-    if (!shouldShowAd) return
-
-    // 프로덕션 환경 체크
     const isProd = typeof window !== 'undefined' && 
       !window.location.hostname.includes('localhost') &&
       !window.location.hostname.includes('127.0.0.1')
     
     setIsProduction(isProd)
+  }, [isMounted])
 
-    // 로컬 환경에서는 광고 로드 스킵
-    if (!isProd) {
-      return
-    }
-
-    // 이미 로드되었으면 스킵
+  // 광고 로드
+  useEffect(() => {
+    if (!isMounted) return
+    if (status === 'loading') return
+    if (isPremium) return
+    if (!shouldShowAd) return
+    if (!isProduction) return
     if (isLoaded) return
 
     const loadAd = () => {
@@ -176,7 +175,14 @@ export default function AdSenseAd({
         const container = adRef.current
         if (!container) return
 
-        // ✅ ins 요소가 이미 로드됐는지 확인
+        // 🔧 컨테이너 크기 확인 (No slot size 에러 방지)
+        const rect = container.getBoundingClientRect()
+        if (rect.width < 50) {
+          console.log(`⏳ [AdSenseAd] ${slot}: 컨테이너 크기 대기 중...`)
+          return
+        }
+
+        // ins 요소가 이미 로드됐는지 확인
         const insElement = container.querySelector('ins.adsbygoogle')
         if (insElement?.getAttribute('data-adsbygoogle-status') === 'done') {
           setIsLoaded(true)
@@ -188,14 +194,15 @@ export default function AdSenseAd({
         setIsLoaded(true)
         console.log(`📢 [AdSenseAd] ${slot}: 광고 로드 완료 (보호됨)`)
       } catch (error: any) {
-        // 모든 에러 조용히 처리
         if (error?.message?.includes('already have ads')) {
           setIsLoaded(true)
+        } else if (error?.message?.includes('No slot size')) {
+          console.log(`⏳ [AdSenseAd] ${slot}: 슬롯 크기 에러, 재시도...`)
         }
       }
     }
 
-    // ✅ ResizeObserver로 컨테이너 크기가 잡히면 로드
+    // ResizeObserver로 컨테이너 크기가 잡히면 로드
     const container = adRef.current
     if (!container) return
 
@@ -203,13 +210,14 @@ export default function AdSenseAd({
       for (const entry of entries) {
         const { width, height } = entry.contentRect
         
-        if (width > 50 && height > 50 && !isLoaded) {
+        // 🔧 최소 크기 확인 강화
+        if (width >= 100 && height >= 50 && !isLoaded) {
           const computedStyle = window.getComputedStyle(container)
-          if (computedStyle.display === 'none') {
+          if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
             return
           }
           
-          setTimeout(loadAd, 100)
+          setTimeout(loadAd, 200)
           observer.disconnect()
         }
       }
@@ -217,29 +225,40 @@ export default function AdSenseAd({
 
     observer.observe(container)
 
+    // 폴백 타이머
     const fallbackTimer = setTimeout(() => {
-      if (!isLoaded && container.offsetWidth > 50) {
+      if (!isLoaded && container.offsetWidth >= 100) {
         loadAd()
       }
-    }, 2000)
+    }, 3000)
 
     return () => {
       observer.disconnect()
       clearTimeout(fallbackTimer)
     }
-  }, [isLoaded, slot, isPremium, status, shouldShowAd])
+  }, [isMounted, isLoaded, slot, isPremium, status, shouldShowAd, isProduction])
+
+  // 🔧 서버 렌더링 시 플레이스홀더 (Hydration 에러 방지)
+  if (!isMounted) {
+    return <div style={{ minHeight: slotSize.minHeight }} />
+  }
 
   // 세션 로딩 중
   if (status === 'loading') {
     return <div style={{ minHeight: slotSize.minHeight }} />
   }
 
-  // ✅ 프리미엄 사용자는 아무것도 렌더링 안 함
+  // 프리미엄 사용자
   if (isPremium) {
     return null
   }
 
-  // 🛡️ 보호 체크 미통과 시 빈 공간
+  // 차단된 세션
+  if (isAdsBlocked) {
+    return null
+  }
+
+  // 보호 체크 미통과
   if (!shouldShowAd) {
     return <div style={{ minHeight: slotSize.minHeight }} />
   }
@@ -285,7 +304,6 @@ export default function AdSenseAd({
         ...style 
       }}
     >
-      {/* 🛡️ 실수 클릭 방지를 위한 여백 */}
       <div style={{ padding: '4px' }}>
         <ins
           key={`adsense-${slot}-${adSlot}`}

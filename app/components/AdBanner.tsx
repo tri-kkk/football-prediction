@@ -3,18 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 
-// ==========================================
-// 🛡️ 무효 트래픽 방지 함수
-// ==========================================
-function isAdsBlocked(): boolean {
-  if (typeof window === 'undefined') return false
-  try {
-    return sessionStorage.getItem('ts_ads_blocked') === 'true'
-  } catch (e) {
-    return false
-  }
-}
-
 // 광고 타입 정의
 interface Advertisement {
   id: string
@@ -39,24 +27,32 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   
   // 🛡️ NextAuth 세션 + 프리미엄 체크
   const { data: session, status } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
 
+  // 🔧 클라이언트 마운트 체크 (Hydration 에러 방지)
+  useEffect(() => {
+    setIsMounted(true)
+    
+    // 차단 상태 체크 (클라이언트에서만)
+    try {
+      setIsAdsBlocked(sessionStorage.getItem('ts_ads_blocked') === 'true')
+    } catch (e) {}
+  }, [])
+
   // 광고 로드
   useEffect(() => {
-    // 세션 로딩 중이면 대기
+    if (!isMounted) return
     if (status === 'loading') return
-    
-    // 🛡️ 프리미엄 사용자는 광고 로드 스킵
     if (isPremium) {
       setLoading(false)
       return
     }
-    
-    // 🛡️ 차단된 세션이면 스킵
-    if (isAdsBlocked()) {
+    if (isAdsBlocked) {
       setLoading(false)
       return
     }
@@ -70,7 +66,6 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
         const ads = data.ads || []
         
         if (ads.length > 0) {
-          // 우선순위가 가장 높은 광고 선택
           setAd(ads[0])
           
           // 노출 추적 (비동기)
@@ -86,7 +81,7 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
     }
 
     fetchAd()
-  }, [slot, isPremium, status])
+  }, [slot, isPremium, status, isMounted, isAdsBlocked])
 
   // 클릭 추적
   const handleClick = () => {
@@ -96,13 +91,26 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
     }
   }
 
-  // 🛡️ 프리미엄 사용자는 렌더링 안 함
+  // 🔧 서버 렌더링 시 플레이스홀더
+  if (!isMounted) {
+    return (
+      <div className={`animate-pulse bg-gray-800 rounded-lg ${className}`}>
+        <div className={`
+          ${slot === 'desktop_banner' ? 'h-[90px]' : ''}
+          ${slot === 'sidebar' ? 'h-[600px]' : ''}
+          ${slot === 'mobile_bottom' ? 'h-[50px]' : ''}
+        `} />
+      </div>
+    )
+  }
+
+  // 프리미엄 사용자
   if (isPremium) {
     return null
   }
   
-  // 🛡️ 차단된 세션
-  if (isAdsBlocked()) {
+  // 차단된 세션
+  if (isAdsBlocked) {
     return null
   }
 
@@ -174,10 +182,20 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
 
 // 🖥️ 데스크톱 배너 (728x90)
 export function DesktopBanner({ className = '' }: { className?: string }) {
+  const [isMounted, setIsMounted] = useState(false)
+  const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const { data: session } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
   
-  if (isPremium || isAdsBlocked()) return null
+  useEffect(() => {
+    setIsMounted(true)
+    try {
+      setIsAdsBlocked(sessionStorage.getItem('ts_ads_blocked') === 'true')
+    } catch (e) {}
+  }, [])
+  
+  if (!isMounted) return <div className="hidden lg:block h-[90px]" />
+  if (isPremium || isAdsBlocked) return null
   
   return (
     <div className={`hidden lg:flex justify-center ${className}`}>
@@ -188,10 +206,20 @@ export function DesktopBanner({ className = '' }: { className?: string }) {
 
 // 📱 사이드바 배너 (300x600)
 export function SidebarBanner({ className = '' }: { className?: string }) {
+  const [isMounted, setIsMounted] = useState(false)
+  const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const { data: session } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
   
-  if (isPremium || isAdsBlocked()) return null
+  useEffect(() => {
+    setIsMounted(true)
+    try {
+      setIsAdsBlocked(sessionStorage.getItem('ts_ads_blocked') === 'true')
+    } catch (e) {}
+  }, [])
+  
+  if (!isMounted) return <div className="hidden lg:block h-[600px]" />
+  if (isPremium || isAdsBlocked) return null
   
   return (
     <div className={`hidden lg:block ${className}`}>
@@ -209,10 +237,20 @@ export function MobileBottomBanner({
   onClose?: () => void 
 }) {
   const [isClosed, setIsClosed] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const { data: session } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
 
-  if (isClosed || isPremium || isAdsBlocked()) return null
+  useEffect(() => {
+    setIsMounted(true)
+    try {
+      setIsAdsBlocked(sessionStorage.getItem('ts_ads_blocked') === 'true')
+    } catch (e) {}
+  }, [])
+
+  if (!isMounted) return null
+  if (isClosed || isPremium || isAdsBlocked) return null
 
   return (
     <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 p-2 flex justify-center ${className}`}>
@@ -237,8 +275,18 @@ export function StaticAdBanner({
   className?: string
   onClose?: () => void
 }) {
+  const [isMounted, setIsMounted] = useState(false)
+  const [isAdsBlocked, setIsAdsBlocked] = useState(false)
+  const [isClosed, setIsClosed] = useState(false)
   const { data: session } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
+  
+  useEffect(() => {
+    setIsMounted(true)
+    try {
+      setIsAdsBlocked(sessionStorage.getItem('ts_ads_blocked') === 'true')
+    } catch (e) {}
+  }, [])
   
   // 스폴라이브 광고 하드코딩
   const ADS = {
@@ -266,10 +314,9 @@ export function StaticAdBanner({
   }
 
   const ad = ADS[slot]
-  const [isClosed, setIsClosed] = useState(false)
 
-  // 🛡️ 프리미엄 사용자 또는 차단된 세션
-  if (isClosed || isPremium || isAdsBlocked()) return null
+  if (!isMounted) return null
+  if (isClosed || isPremium || isAdsBlocked) return null
 
   return (
     <div className={`relative ${className}`}>
@@ -313,10 +360,20 @@ export function StaticAdBanner({
 
 // 정적 버전 export
 export function StaticDesktopBanner({ className = '' }: { className?: string }) {
+  const [isMounted, setIsMounted] = useState(false)
+  const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const { data: session } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
   
-  if (isPremium || isAdsBlocked()) return null
+  useEffect(() => {
+    setIsMounted(true)
+    try {
+      setIsAdsBlocked(sessionStorage.getItem('ts_ads_blocked') === 'true')
+    } catch (e) {}
+  }, [])
+  
+  if (!isMounted) return null
+  if (isPremium || isAdsBlocked) return null
   
   return (
     <div className={`hidden lg:flex justify-center ${className}`}>
@@ -326,10 +383,20 @@ export function StaticDesktopBanner({ className = '' }: { className?: string }) 
 }
 
 export function StaticSidebarBanner({ className = '' }: { className?: string }) {
+  const [isMounted, setIsMounted] = useState(false)
+  const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const { data: session } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
   
-  if (isPremium || isAdsBlocked()) return null
+  useEffect(() => {
+    setIsMounted(true)
+    try {
+      setIsAdsBlocked(sessionStorage.getItem('ts_ads_blocked') === 'true')
+    } catch (e) {}
+  }, [])
+  
+  if (!isMounted) return null
+  if (isPremium || isAdsBlocked) return null
   
   return (
     <div className={`hidden lg:block ${className}`}>
@@ -346,10 +413,20 @@ export function StaticMobileBottomBanner({
   onClose?: () => void 
 }) {
   const [isClosed, setIsClosed] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const { data: session } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
 
-  if (isClosed || isPremium || isAdsBlocked()) return null
+  useEffect(() => {
+    setIsMounted(true)
+    try {
+      setIsAdsBlocked(sessionStorage.getItem('ts_ads_blocked') === 'true')
+    } catch (e) {}
+  }, [])
+
+  if (!isMounted) return null
+  if (isClosed || isPremium || isAdsBlocked) return null
 
   return (
     <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 p-2 flex justify-center safe-area-bottom ${className}`}>
