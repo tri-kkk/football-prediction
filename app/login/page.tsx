@@ -45,8 +45,8 @@ export default function LoginPage() {
   // 네이버 로그인 활성화 여부 (검수 통과 후 true로 변경)
   const NAVER_ENABLED = false
 
-  // 🎉 프로모션 기간 체크
-  const PROMO_END = new Date('2026-02-01T00:00:00+09:00')
+  // 🎉 프로모션 기간 체크 (2월 28일까지 연장)
+  const PROMO_END = new Date('2026-03-01T00:00:00+09:00')
   const now = new Date()
   const daysLeft = Math.ceil((PROMO_END.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   const isPromoPeriod = daysLeft > 0
@@ -181,7 +181,7 @@ export default function LoginPage() {
                 <span className="text-green-400 text-xs font-bold tracking-wider">OPEN EVENT</span>
               </div>
               <h3 className="text-white font-bold text-lg mb-2">
-                {language === 'ko' ? '1월 31일까지 가입하면' : 'Sign up by Jan 31'}
+                {language === 'ko' ? '2월 28일까지 가입하면' : 'Sign up by Feb 28'}
               </h3>
               <p className="text-2xl font-black" style={{ 
                 background: 'linear-gradient(to right, #22d3ee, #34d399)', 
@@ -192,7 +192,7 @@ export default function LoginPage() {
                 {language === 'ko' ? '프리미엄 예측픽 무료' : 'FREE Premium Picks'}
               </p>
               <p className="text-gray-500 text-xs mt-2">
-                {language === 'ko' ? '* 프로모션 기간: ~2026.01.31' : '* Promo period: ~2026.01.31'}
+                {language === 'ko' ? '* 프로모션 기간: ~2026.02.28' : '* Promo period: ~2026.02.28'}
               </p>
             </div>
           </div>

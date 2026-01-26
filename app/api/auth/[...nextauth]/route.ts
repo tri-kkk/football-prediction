@@ -10,8 +10,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// 🎉 프로모션 기간 설정 (2026년 1월 31일까지)
-const PROMO_END_DATE = new Date('2026-02-01T00:00:00+09:00')
+// 🎉 프로모션 기간 설정 (2026년 2월 28일까지 연장)
+const PROMO_END_DATE = new Date('2026-03-01T00:00:00+09:00')
 
 // 이메일 해시 생성
 function hashEmail(email: string): string {
