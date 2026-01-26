@@ -289,87 +289,57 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 텍스트 포맷
+// 텍스트 포맷 - 간결한 형식
 function formatAsText(matches: any[], date: string) {
   const lines: string[] = []
   
-  lines.push(`📅 ${date} 경기 예측`)
-  lines.push(`총 ${matches.length}경기`)
-  lines.push('')
-  lines.push('─'.repeat(50))
+  // 날짜 형식: 26.01.27
+  const dateObj = new Date(date)
+  const formattedDate = `${String(dateObj.getFullYear()).slice(2)}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${String(dateObj.getDate()).padStart(2, '0')}`
   
   matches.forEach((match, idx) => {
     const p = match.prediction
     const gradeEmoji = p.grade === 'PICK' ? '🔥' : p.grade === 'GOOD' ? '✅' : '⚪'
     
-    lines.push('')
-    lines.push(`[${idx + 1}] ${match.homeTeamKo} vs ${match.awayTeamKo}`)
-    lines.push(`⏰ ${match.time} | ${match.leagueName}`)
-    lines.push(`${gradeEmoji} ${p.grade} | ${p.resultKo} ${match.probability[p.result.toLowerCase()]}%`)
-    lines.push('')
+    // 예측 결과에 따른 확률
+    const resultProb = match.probability[p.result.toLowerCase()] || 0
     
-    // 분석 근거
+    // 팀명 (한글)
+    const homeTeam = match.homeTeamKo
+    const awayTeam = match.awayTeamKo
+    
+    // 기본 정보
+    lines.push(`${homeTeam} vs ${awayTeam}`)
+    lines.push(`⏰ ${formattedDate} | ${match.time} | ${match.leagueName}`)
+    lines.push(`${gradeEmoji} ${p.grade} | ${p.resultKo} ${resultProb}%`)
+    
+    // 분석 근거 (선제골 승률 + 파워 차이)
     lines.push(`📊 분석 근거`)
-    lines.push(`   파워 차이: ${match.power.diff}점`)
-    lines.push(`   확률 우위: ${match.analysis.probAdvantage}`)
-    if (p.result === 'HOME' && match.teamStats.home.firstGoalWinRate) {
-      lines.push(`   홈 선제골 승률: ${match.teamStats.home.firstGoalWinRate}%`)
-    }
-    if (p.result === 'AWAY' && match.teamStats.away.firstGoalWinRate) {
-      lines.push(`   원정 선제골 승률: ${match.teamStats.away.firstGoalWinRate}%`)
-    }
-    lines.push('')
-    
-    // 배당
-    lines.push(`💰 배당: ${match.odds.home?.toFixed(2)} / ${match.odds.draw?.toFixed(2)} / ${match.odds.away?.toFixed(2)}`)
-    lines.push('')
+    lines.push(` 선제골 승률: ${match.teamStats.home.firstGoalWinRate || 0}% vs ${match.teamStats.away.firstGoalWinRate || 0}%`)
+    lines.push(` 파워 차이: ${match.power.diff}점`)
     
     // 파워 지수
     lines.push(`⚡ 파워 지수`)
-    lines.push(`   ${match.homeTeamKo}: ${match.power.home}`)
-    lines.push(`   ${match.awayTeamKo}: ${match.power.away}`)
-    lines.push('')
+    lines.push(` ${homeTeam} : ${match.power.home}`)
+    lines.push(` ${awayTeam} : ${match.power.away}`)
     
-    // 최종 확률
+    // 최종 예측 확률
     lines.push(`📈 최종 예측 확률`)
-    lines.push(`   홈승 ${match.probability.home}% | 무 ${match.probability.draw}% | 원정 ${match.probability.away}%`)
-    lines.push('')
+    lines.push(` ${homeTeam} ${match.probability.home}% | 무 ${match.probability.draw}% | ${awayTeam} ${match.probability.away}%`)
     
-    // 팀 상세 통계
-    lines.push(`📋 팀 상세 통계`)
-    lines.push(`   선제골 승률: ${match.teamStats.home.firstGoalWinRate || '-'}% vs ${match.teamStats.away.firstGoalWinRate || '-'}%`)
-    lines.push(`   역전률: ${match.teamStats.home.comebackRate || '-'}% vs ${match.teamStats.away.comebackRate || '-'}%`)
-    lines.push(`   최근 폼: ${match.teamStats.home.recentForm?.toFixed(1) || '-'} vs ${match.teamStats.away.recentForm?.toFixed(1) || '-'}`)
-    lines.push(`   득실비: ${match.teamStats.home.goalRatio?.toFixed(2) || '-'} vs ${match.teamStats.away.goalRatio?.toFixed(2) || '-'}`)
-    lines.push('')
-    
-    // 3-Method 분석
-    if (match.method3.method1 || match.method3.method2 || match.method3.method3) {
-      lines.push(`🔬 3-Method 분석`)
-      if (match.method3.method1) {
-        lines.push(`   P/A 비교: 홈 ${match.method3.method1.home}%`)
-      }
-      if (match.method3.method2) {
-        lines.push(`   Min-Max: 홈 ${match.method3.method2.home}%`)
-      }
-      if (match.method3.method3) {
-        lines.push(`   선제골: 홈 ${match.method3.method3.home}%`)
-      }
-      lines.push('')
+    // 패턴 (있을 경우만)
+    if (match.pattern && match.pattern.totalMatches > 0) {
+      lines.push(`🎯 패턴 ${match.pattern.code}`)
+      lines.push(` 역대 : 홈 ${match.pattern.homeWinRate}% / 무 ${match.pattern.drawRate}% / 원정 ${match.pattern.awayWinRate}%`)
     }
     
-    // 패턴 분석
-    if (match.pattern.totalMatches > 0) {
-      lines.push(`🎯 패턴 ${match.pattern.code} (${match.pattern.totalMatches}경기 기반)`)
-      lines.push(`   역대: 홈 ${match.pattern.homeWinRate}% / 무 ${match.pattern.drawRate}% / 원정 ${match.pattern.awayWinRate}%`)
+    // 경기 간 구분선
+    if (idx < matches.length - 1) {
+      lines.push('')
+      lines.push('─'.repeat(30))
       lines.push('')
     }
-    
-    lines.push('─'.repeat(50))
   })
-  
-  lines.push('')
-  lines.push('※ TrendSoccer 프리미엄 분석')
   
   return lines.join('\n')
 }

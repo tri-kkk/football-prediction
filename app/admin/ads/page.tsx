@@ -973,6 +973,10 @@ export default function AdminDashboard() {
     // 승률 가져오기
     const winProb = p.result === 'HOME' ? prob.home : p.result === 'AWAY' ? prob.away : prob.draw
     
+    // 날짜 형식: YY.MM.DD
+    const now = new Date()
+    const dateStr = `${String(now.getFullYear()).slice(2)}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
+    
     if (format === 'json') {
       return JSON.stringify(match, null, 2)
     }
@@ -1038,64 +1042,31 @@ export default function AdminDashboard() {
       return md
     }
     
-    // text format
+    // ========== 🆕 text format - 간결한 형식 ==========
     const gradeEmoji = p.grade === 'PICK' ? '🔥' : p.grade === 'GOOD' ? '✅' : '⚪'
     
     let text = `${match.homeTeamKo} vs ${match.awayTeamKo}\n`
-    text += `⏰ ${match.time} | ${match.leagueName}\n`
-    text += `${gradeEmoji} ${p.grade || 'PASS'} | ${p.resultKo || '-'} ${winProb || 0}%\n\n`
+    text += `⏰ ${dateStr} | ${match.time} | ${match.leagueName}\n`
+    text += `${gradeEmoji} ${p.grade || 'PASS'} | ${p.resultKo || '-'} ${winProb || 0}%\n`
     
-    // 분석 근거
+    // 분석 근거 (선제골 승률 + 파워 차이만)
     text += `📊 분석 근거\n`
-    text += `   파워 차이: ${power.diff || 0}점\n`
-    if (p.reasons?.length > 0) {
-      p.reasons.slice(0, 3).forEach((r: string) => {
-        text += `   ${r}\n`
-      })
-    }
-    text += '\n'
-    
-    // 배당
-    text += `💰 배당: ${match.odds?.home?.toFixed(2) || '-'} / ${match.odds?.draw?.toFixed(2) || '-'} / ${match.odds?.away?.toFixed(2) || '-'}\n\n`
+    text += ` 선제골 승률: ${formatPercent(ts.home?.firstGoalWinRate)}% vs ${formatPercent(ts.away?.firstGoalWinRate)}%\n`
+    text += ` 파워 차이: ${power.diff || 0}점\n`
     
     // 파워 지수
     text += `⚡ 파워 지수\n`
-    text += `   ${match.homeTeamKo}: ${power.home || 0}\n`
-    text += `   ${match.awayTeamKo}: ${power.away || 0}\n\n`
+    text += ` ${match.homeTeamKo} : ${power.home || 0}\n`
+    text += ` ${match.awayTeamKo} : ${power.away || 0}\n`
     
-    // 최종 확률
+    // 최종 확률 (팀명 사용)
     text += `📈 최종 예측 확률\n`
-    text += `   홈승 ${prob.home || 0}% | 무 ${prob.draw || 0}% | 원정 ${prob.away || 0}%\n\n`
+    text += ` ${match.homeTeamKo} ${prob.home || 0}% | 무 ${prob.draw || 0}% | ${match.awayTeamKo} ${prob.away || 0}%\n`
     
-    // 팀 상세 통계
-    if (ts.home || ts.away) {
-      text += `📋 팀 상세 통계\n`
-      text += `   선제골 승률: ${formatPercent(ts.home?.firstGoalWinRate)}% vs ${formatPercent(ts.away?.firstGoalWinRate)}%\n`
-      text += `   역전률: ${formatPercent(ts.home?.comebackRate)}% vs ${formatPercent(ts.away?.comebackRate)}%\n`
-      text += `   최근 폼: ${formatNumber(ts.home?.recentForm, 1)} vs ${formatNumber(ts.away?.recentForm, 1)}\n`
-      text += `   득실비: ${formatNumber(ts.home?.goalRatio)} vs ${formatNumber(ts.away?.goalRatio)}\n\n`
-    }
-    
-    // 3-Method
-    if (m3.method1 || m3.method2 || m3.method3) {
-      text += `🔬 3-Method 분석\n`
-      if (m3.method1) text += `   P/A 비교: 홈 ${m3.method1.home}%\n`
-      if (m3.method2) text += `   Min-Max: 홈 ${m3.method2.home}%\n`
-      if (m3.method3) text += `   선제골: 홈 ${m3.method3.home}%\n`
-      text += '\n'
-    }
-    
-    // 패턴
+    // 패턴 (있을 경우만)
     if (pattern.totalMatches > 0) {
-      text += `🎯 패턴 ${pattern.code} (${pattern.totalMatches}경기 기반)\n`
-      text += `   역대: 홈 ${formatPercent(pattern.homeWinRate)}% / 무 ${formatPercent(pattern.drawRate)}% / 원정 ${formatPercent(pattern.awayWinRate)}%\n\n`
-    }
-    
-    // P/A 득실
-    if (pa.home || pa.away) {
-      text += `📊 P/A 득실 지수\n`
-      text += `   ${match.homeTeamKo}: 전체 ${formatNumber(pa.home?.all)} / 최근5 ${formatNumber(pa.home?.five)} / 선제골 ${formatNumber(pa.home?.firstGoal)}\n`
-      text += `   ${match.awayTeamKo}: 전체 ${formatNumber(pa.away?.all)} / 최근5 ${formatNumber(pa.away?.five)} / 선제골 ${formatNumber(pa.away?.firstGoal)}\n`
+      text += `🎯 패턴 ${pattern.code}\n`
+      text += ` 역대 : 홈 ${formatPercent(pattern.homeWinRate)}% / 무 ${formatPercent(pattern.drawRate)}% / 원정 ${formatPercent(pattern.awayWinRate)}%\n`
     }
     
     return text
