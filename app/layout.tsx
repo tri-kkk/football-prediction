@@ -15,7 +15,7 @@ import { IOSInstallGuide } from './components/pwa/IOSInstallGuide'
 import InstallBanner from './components/InstallBanner'
 import FooterBusinessInfo from './components/FooterBusinessInfo'
 import AdSenseLoader from './components/AdSenseLoader'
-import TermsGuard from './components/TermsGuard'  // ✅ 추가
+import TermsGuard from './components/TermsGuard'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
@@ -191,17 +191,121 @@ export default function RootLayout({
         
         <GoogleTagManager />
 
-        {/* ✅ 프리미엄 사용자 제외 - 조건부 AdSense 로더 */}
-        {/* 
-          기존 코드 (모든 사용자에게 로드):
-          <Script
-            id="google-adsense"
-            async
-            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7853814871438044"
-            crossOrigin="anonymous"
-            strategy="afterInteractive"
-          />
+        {/* ============================================
+            🛡️ 무효 트래픽 방지 스크립트 (애드센스 보호)
+            ============================================
+            - 봇/크롤러 감지
+            - 비정상적 클릭 패턴 감지  
+            - 광고 영역 클릭 추적
+            - 의심스러운 활동 시 광고 숨김
         */}
+        <Script
+          id="adsense-protection"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                'use strict';
+                
+                var STORAGE_KEY = 'ts_ads_blocked';
+                var CLICK_KEY = 'ts_ad_clicks';
+                
+                // 이미 차단된 세션인지 확인
+                function isBlocked() {
+                  try {
+                    return sessionStorage.getItem(STORAGE_KEY) === 'true';
+                  } catch(e) { return false; }
+                }
+                
+                // 광고 차단 설정
+                function blockAds(reason) {
+                  try {
+                    sessionStorage.setItem(STORAGE_KEY, 'true');
+                    console.warn('[TrendSoccer] 광고 보호 활성화:', reason);
+                    hideAllAds();
+                  } catch(e) {}
+                }
+                
+                // 모든 광고 숨기기
+                function hideAllAds() {
+                  var ads = document.querySelectorAll('.adsbygoogle, ins.adsbygoogle, [data-ad-slot]');
+                  ads.forEach(function(ad) {
+                    ad.style.display = 'none';
+                    ad.style.visibility = 'hidden';
+                    ad.style.height = '0';
+                    ad.style.overflow = 'hidden';
+                  });
+                }
+                
+                // 광고 클릭 추적
+                function trackAdClick() {
+                  try {
+                    var now = Date.now();
+                    var clicks = JSON.parse(sessionStorage.getItem(CLICK_KEY) || '[]');
+                    
+                    // 1분 이내 클릭만 유지
+                    clicks = clicks.filter(function(t) { return now - t < 60000; });
+                    clicks.push(now);
+                    sessionStorage.setItem(CLICK_KEY, JSON.stringify(clicks));
+                    
+                    // 1분 내 3회 이상 광고 클릭 = 의심
+                    if (clicks.length >= 3) {
+                      blockAds('광고 과다 클릭 감지');
+                    }
+                  } catch(e) {}
+                }
+                
+                // 이미 차단된 경우 즉시 숨김
+                if (isBlocked()) {
+                  hideAllAds();
+                  
+                  // DOM 변경 감시하여 새 광고도 숨김
+                  var observer = new MutationObserver(function() {
+                    hideAllAds();
+                  });
+                  observer.observe(document.body, { childList: true, subtree: true });
+                  return;
+                }
+                
+                // 광고 클릭 이벤트 감지
+                document.addEventListener('click', function(e) {
+                  var target = e.target;
+                  
+                  // 광고 영역 클릭 감지
+                  while (target && target !== document.body) {
+                    if (target.classList && 
+                        (target.classList.contains('adsbygoogle') || 
+                         target.tagName === 'INS' ||
+                         target.hasAttribute('data-ad-slot'))) {
+                      trackAdClick();
+                      break;
+                    }
+                    target = target.parentElement;
+                  }
+                }, true);
+                
+                // 페이지 가시성 변경 감지 (탭 전환 후 광고 클릭 패턴)
+                var hiddenCount = 0;
+                document.addEventListener('visibilitychange', function() {
+                  if (document.hidden) {
+                    hiddenCount++;
+                    // 짧은 시간 내 너무 많은 탭 전환 = 의심
+                    if (hiddenCount > 10) {
+                      blockAds('비정상적 탭 전환 패턴');
+                    }
+                  }
+                });
+                
+                // 5분 후 카운터 리셋
+                setTimeout(function() { hiddenCount = 0; }, 300000);
+                
+                console.log('[TrendSoccer] 광고 보호 스크립트 활성화');
+              })();
+            `
+          }}
+        />
+
+        {/* ✅ 프리미엄 사용자 제외 - 조건부 AdSense 로더 */}
         <AdSenseLoader />
 
         {/* Global Navigation - 모바일 최적화 */}
