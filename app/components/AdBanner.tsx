@@ -1,6 +1,19 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+
+// ==========================================
+// 🛡️ 무효 트래픽 방지 함수
+// ==========================================
+function isAdsBlocked(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return sessionStorage.getItem('ts_ads_blocked') === 'true'
+  } catch (e) {
+    return false
+  }
+}
 
 // 광고 타입 정의
 interface Advertisement {
@@ -18,7 +31,7 @@ interface AdBannerProps {
   slot: 'desktop_banner' | 'sidebar' | 'mobile_bottom'
   className?: string
   fallback?: React.ReactNode
-  onClose?: () => void  // 모바일 하단 광고 닫기용
+  onClose?: () => void
 }
 
 export default function AdBanner({ slot, className = '', fallback, onClose }: AdBannerProps) {
@@ -26,9 +39,28 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  
+  // 🛡️ NextAuth 세션 + 프리미엄 체크
+  const { data: session, status } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
 
   // 광고 로드
   useEffect(() => {
+    // 세션 로딩 중이면 대기
+    if (status === 'loading') return
+    
+    // 🛡️ 프리미엄 사용자는 광고 로드 스킵
+    if (isPremium) {
+      setLoading(false)
+      return
+    }
+    
+    // 🛡️ 차단된 세션이면 스킵
+    if (isAdsBlocked()) {
+      setLoading(false)
+      return
+    }
+
     const fetchAd = async () => {
       try {
         const response = await fetch(`/api/ads?slot=${slot}&active=true`)
@@ -43,7 +75,7 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
           
           // 노출 추적 (비동기)
           fetch(`/api/ads/track?id=${ads[0].id}&type=impression`, { method: 'POST' })
-            .catch(() => {}) // 에러 무시
+            .catch(() => {})
         }
       } catch (err) {
         console.error('광고 로드 에러:', err)
@@ -54,18 +86,27 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
     }
 
     fetchAd()
-  }, [slot])
+  }, [slot, isPremium, status])
 
   // 클릭 추적
   const handleClick = () => {
     if (ad) {
-      // 클릭 추적 (비동기)
       fetch(`/api/ads/track?id=${ad.id}&type=click`, { method: 'POST' })
-        .catch(() => {}) // 에러 무시
+        .catch(() => {})
     }
   }
 
-  // 로딩 중이거나 광고 없으면 fallback 또는 null
+  // 🛡️ 프리미엄 사용자는 렌더링 안 함
+  if (isPremium) {
+    return null
+  }
+  
+  // 🛡️ 차단된 세션
+  if (isAdsBlocked()) {
+    return null
+  }
+
+  // 로딩 중
   if (loading) {
     return (
       <div className={`animate-pulse bg-gray-800 rounded-lg ${className}`}>
@@ -133,6 +174,11 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
 
 // 🖥️ 데스크톱 배너 (728x90)
 export function DesktopBanner({ className = '' }: { className?: string }) {
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
+  
+  if (isPremium || isAdsBlocked()) return null
+  
   return (
     <div className={`hidden lg:flex justify-center ${className}`}>
       <AdBanner slot="desktop_banner" />
@@ -142,6 +188,11 @@ export function DesktopBanner({ className = '' }: { className?: string }) {
 
 // 📱 사이드바 배너 (300x600)
 export function SidebarBanner({ className = '' }: { className?: string }) {
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
+  
+  if (isPremium || isAdsBlocked()) return null
+  
   return (
     <div className={`hidden lg:block ${className}`}>
       <AdBanner slot="sidebar" />
@@ -158,8 +209,10 @@ export function MobileBottomBanner({
   onClose?: () => void 
 }) {
   const [isClosed, setIsClosed] = useState(false)
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
 
-  if (isClosed) return null
+  if (isClosed || isPremium || isAdsBlocked()) return null
 
   return (
     <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 p-2 flex justify-center ${className}`}>
@@ -175,7 +228,6 @@ export function MobileBottomBanner({
 }
 
 // 🎯 정적 광고 (DB 없이 하드코딩)
-// Supabase 연동 전 임시 사용
 export function StaticAdBanner({ 
   slot,
   className = '',
@@ -185,26 +237,29 @@ export function StaticAdBanner({
   className?: string
   onClose?: () => void
 }) {
-  // 스포라이브 광고 하드코딩
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
+  
+  // 스폴라이브 광고 하드코딩
   const ADS = {
     desktop_banner: {
       image: '/ads/ad-banner-728x90.png',
       link: 'https://www.spolive.com/?ref=trendsoccer',
-      alt: 'TrendSoccer 제휴 기념 - 스포라이브 신규가입 시 1만원 상당 혜택 지급',
+      alt: 'TrendSoccer 제휴 기념 - 스폴라이브 신규가입 시 1만원 상당 혜택 지급',
       width: 728,
       height: 90,
     },
     sidebar: {
       image: '/ads/ad-banner-300x600.png',
       link: 'https://www.spolive.com/?ref=trendsoccer',
-      alt: 'TrendSoccer 제휴 기념 - 스포라이브 신규가입 시 1만원 상당 혜택 지급',
+      alt: 'TrendSoccer 제휴 기념 - 스폴라이브 신규가입 시 1만원 상당 혜택 지급',
       width: 300,
       height: 600,
     },
     mobile_bottom: {
       image: '/ads/ad-banner-320x50.png',
       link: 'https://www.spolive.com/?ref=trendsoccer',
-      alt: 'TrendSoccer 제휴 기념 - 스포라이브 신규가입 시 1만원 상당 혜택 지급',
+      alt: 'TrendSoccer 제휴 기념 - 스폴라이브 신규가입 시 1만원 상당 혜택 지급',
       width: 320,
       height: 50,
     },
@@ -213,7 +268,8 @@ export function StaticAdBanner({
   const ad = ADS[slot]
   const [isClosed, setIsClosed] = useState(false)
 
-  if (isClosed) return null
+  // 🛡️ 프리미엄 사용자 또는 차단된 세션
+  if (isClosed || isPremium || isAdsBlocked()) return null
 
   return (
     <div className={`relative ${className}`}>
@@ -257,6 +313,11 @@ export function StaticAdBanner({
 
 // 정적 버전 export
 export function StaticDesktopBanner({ className = '' }: { className?: string }) {
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
+  
+  if (isPremium || isAdsBlocked()) return null
+  
   return (
     <div className={`hidden lg:flex justify-center ${className}`}>
       <StaticAdBanner slot="desktop_banner" />
@@ -265,6 +326,11 @@ export function StaticDesktopBanner({ className = '' }: { className?: string }) 
 }
 
 export function StaticSidebarBanner({ className = '' }: { className?: string }) {
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
+  
+  if (isPremium || isAdsBlocked()) return null
+  
   return (
     <div className={`hidden lg:block ${className}`}>
       <StaticAdBanner slot="sidebar" />
@@ -280,8 +346,10 @@ export function StaticMobileBottomBanner({
   onClose?: () => void 
 }) {
   const [isClosed, setIsClosed] = useState(false)
+  const { data: session } = useSession()
+  const isPremium = (session?.user as any)?.tier === 'premium'
 
-  if (isClosed) return null
+  if (isClosed || isPremium || isAdsBlocked()) return null
 
   return (
     <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 p-2 flex justify-center safe-area-bottom ${className}`}>

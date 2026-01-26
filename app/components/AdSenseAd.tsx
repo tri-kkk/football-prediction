@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useSession } from 'next-auth/react'  // ✅ NextAuth 사용
+import { useSession } from 'next-auth/react'
 
 // ==========================================
 // 🎯 Google AdSense 설정
@@ -37,6 +37,49 @@ const SLOT_SIZES: Record<string, { width: string; minHeight: string; maxHeight?:
   in_article: { width: '100%', minHeight: '100px' },
 }
 
+// ==========================================
+// 🛡️ 무효 트래픽 방지 함수들
+// ==========================================
+
+// 광고 차단 상태 체크
+function isAdsBlocked(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return sessionStorage.getItem('ts_ads_blocked') === 'true'
+  } catch (e) {
+    return false
+  }
+}
+
+// 봇 감지
+function isBot(): boolean {
+  if (typeof window === 'undefined') return false
+  
+  const botPatterns = [
+    /bot/i, /crawler/i, /spider/i, /crawling/i,
+    /headless/i, /phantom/i, /selenium/i, /puppeteer/i,
+    /scraper/i, /scraping/i, /lighthouse/i, /pagespeed/i
+  ]
+  
+  const ua = navigator.userAgent || ''
+  for (const pattern of botPatterns) {
+    if (pattern.test(ua)) return true
+  }
+  
+  if ((navigator as any).webdriver) return true
+  
+  return false
+}
+
+// 광고 차단 설정
+function blockAds(reason: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem('ts_ads_blocked', 'true')
+    console.warn(`🚫 [AdSenseAd] 광고 차단: ${reason}`)
+  } catch (e) {}
+}
+
 interface AdSenseAdProps {
   slot: keyof typeof ADSENSE_SLOTS
   format?: 'auto' | 'fluid' | 'rectangle' | 'vertical' | 'horizontal'
@@ -64,6 +107,7 @@ export default function AdSenseAd({
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [isProduction, setIsProduction] = useState(false)
+  const [shouldShowAd, setShouldShowAd] = useState(false)
   
   const { data: session, status } = useSession()
 
@@ -73,12 +117,44 @@ export default function AdSenseAd({
   // ✅ NextAuth에서 프리미엄 체크
   const isPremium = (session?.user as any)?.tier === 'premium'
 
+  // 🛡️ 무효 트래픽 보호 체크
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (status === 'loading') return
+    if (isPremium) return
+    
+    // 1초 딜레이 후 보호 체크 (봇 우회 방지)
+    const timer = setTimeout(() => {
+      // 이미 차단된 세션
+      if (isAdsBlocked()) {
+        console.log(`🚫 [AdSenseAd] ${slot}: 이전에 차단된 세션`)
+        setShouldShowAd(false)
+        return
+      }
+      
+      // 봇 감지
+      if (isBot()) {
+        blockAds('봇/크롤러 감지')
+        setShouldShowAd(false)
+        return
+      }
+      
+      // 모든 체크 통과
+      setShouldShowAd(true)
+    }, 500) // 0.5초 딜레이
+    
+    return () => clearTimeout(timer)
+  }, [status, isPremium, slot])
+
   useEffect(() => {
     // 세션 로딩 중이면 스킵
     if (status === 'loading') return
     
     // 프리미엄 사용자는 광고 로드 스킵
     if (isPremium) return
+    
+    // 🛡️ 보호 체크 미통과
+    if (!shouldShowAd) return
 
     // 프로덕션 환경 체크
     const isProd = typeof window !== 'undefined' && 
@@ -110,6 +186,7 @@ export default function AdSenseAd({
         window.adsbygoogle = window.adsbygoogle || []
         window.adsbygoogle.push({})
         setIsLoaded(true)
+        console.log(`📢 [AdSenseAd] ${slot}: 광고 로드 완료 (보호됨)`)
       } catch (error: any) {
         // 모든 에러 조용히 처리
         if (error?.message?.includes('already have ads')) {
@@ -150,7 +227,7 @@ export default function AdSenseAd({
       observer.disconnect()
       clearTimeout(fallbackTimer)
     }
-  }, [isLoaded, slot, isPremium, status])
+  }, [isLoaded, slot, isPremium, status, shouldShowAd])
 
   // 세션 로딩 중
   if (status === 'loading') {
@@ -160,6 +237,11 @@ export default function AdSenseAd({
   // ✅ 프리미엄 사용자는 아무것도 렌더링 안 함
   if (isPremium) {
     return null
+  }
+
+  // 🛡️ 보호 체크 미통과 시 빈 공간
+  if (!shouldShowAd) {
+    return <div style={{ minHeight: slotSize.minHeight }} />
   }
 
   // 로컬 환경 플레이스홀더
@@ -203,16 +285,19 @@ export default function AdSenseAd({
         ...style 
       }}
     >
-      <ins
-        key={`adsense-${slot}-${adSlot}`}
-        className="adsbygoogle"
-        style={{ display: 'block', textAlign: 'center' }}
-        data-ad-client={ADSENSE_CLIENT_ID}
-        data-ad-slot={adSlot}
-        data-ad-format={slot === 'in_article' ? 'fluid' : format}
-        data-ad-layout={slot === 'in_article' ? 'in-article' : undefined}
-        data-full-width-responsive={responsive ? 'true' : 'false'}
-      />
+      {/* 🛡️ 실수 클릭 방지를 위한 여백 */}
+      <div style={{ padding: '4px' }}>
+        <ins
+          key={`adsense-${slot}-${adSlot}`}
+          className="adsbygoogle"
+          style={{ display: 'block', textAlign: 'center' }}
+          data-ad-client={ADSENSE_CLIENT_ID}
+          data-ad-slot={adSlot}
+          data-ad-format={slot === 'in_article' ? 'fluid' : format}
+          data-ad-layout={slot === 'in_article' ? 'in-article' : undefined}
+          data-full-width-responsive={responsive ? 'true' : 'false'}
+        />
+      </div>
     </div>
   )
 }
