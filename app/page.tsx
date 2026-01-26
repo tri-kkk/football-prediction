@@ -2268,14 +2268,12 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
         
         <div className="flex gap-8 relative">
-          {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) - 프리미엄 제외 */}
-          {!isPremium && (
-            <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
-              <div className="sticky top-20">
-                <AdBanner slot="sidebar" />
-              </div>
-            </aside>
-          )}
+          {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) - 🆕 스포라이브: 모든 티어 노출 */}
+          <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
+            <div className="sticky top-20">
+              <AdBanner slot="sidebar" />
+            </div>
+          </aside>
 
           {/* 왼쪽 사이드바: Popular Leagues (PC 전용) */}
           <aside className={`hidden lg:block w-64 flex-shrink-0`}>
@@ -2436,12 +2434,10 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               </a>
             )}
             
-            {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) - 프리미엄 제외 */}
-            {!isPremium && (
-              <div className="hidden lg:flex justify-center mb-6">
-                <AdBanner slot="desktop_banner" />
-              </div>
-            )}
+            {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) - 🆕 스포라이브: 모든 티어 노출 */}
+            <div className="hidden lg:flex justify-center mb-6">
+              <AdBanner slot="desktop_banner" />
+            </div>
 
         {/* 🔥 모바일 PICK 배너 - 컴팩트 버전 (최상단) */}
         <a 
@@ -3192,8 +3188,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                               </div>
                             </div>
                             
-                            {/* 📱 모바일 인피드 배너 - 첫 번째 리그 다음에 표시 - 프리미엄 제외 */}
-                            {leagueIndex === 0 && !isPremium && (
+                            {/* 📱 모바일 인피드 배너 - 첫 번째 리그 다음에 표시 - 🆕 스포라이브: 모든 티어 노출 */}
+                            {leagueIndex === 0 && (
                               <div className="block lg:hidden mb-4 flex justify-center">
                                 <AdBanner slot="mobile_bottom" />
                               </div>
@@ -3817,8 +3813,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
       </a>
 
 
-      {/* 📢 모바일 하단 고정 배너 (320x50) - 프리미엄 제외 */}
-      {!isMobileAdClosed && !isPremium && (
+      {/* 📢 모바일 하단 고정 배너 (320x50) - 🆕 스포라이브: 모든 티어 노출 */}
+      {!isMobileAdClosed && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 safe-area-bottom">
           <div className="relative flex justify-center py-2">
             <button

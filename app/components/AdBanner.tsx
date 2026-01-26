@@ -44,14 +44,11 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
     } catch (e) {}
   }, [])
 
-  // 광고 로드
+  // 광고 로드 - 🆕 프리미엄도 광고 노출
   useEffect(() => {
     if (!isMounted) return
     if (status === 'loading') return
-    if (isPremium) {
-      setLoading(false)
-      return
-    }
+    // 🆕 isPremium 체크 제거 - 모든 티어에 광고 노출
     if (isAdsBlocked) {
       setLoading(false)
       return
@@ -104,10 +101,7 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
     )
   }
 
-  // 프리미엄 사용자
-  if (isPremium) {
-    return null
-  }
+  // 🆕 프리미엄 체크 제거 - 모든 티어에 광고 노출
   
   // 차단된 세션
   if (isAdsBlocked) {
@@ -180,12 +174,11 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
   )
 }
 
-// 🖥️ 데스크톱 배너 (728x90)
+// 🖥️ 데스크톱 배너 (728x90) - 🆕 모든 티어에 노출
 export function DesktopBanner({ className = '' }: { className?: string }) {
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
-  const { data: session } = useSession()
-  const isPremium = (session?.user as any)?.tier === 'premium'
+  // 🆕 isPremium 체크 제거
   
   useEffect(() => {
     setIsMounted(true)
@@ -195,7 +188,7 @@ export function DesktopBanner({ className = '' }: { className?: string }) {
   }, [])
   
   if (!isMounted) return <div className="hidden lg:block h-[90px]" />
-  if (isPremium || isAdsBlocked) return null
+  if (isAdsBlocked) return null  // 🆕 isPremium 제거
   
   return (
     <div className={`hidden lg:flex justify-center ${className}`}>
@@ -204,12 +197,11 @@ export function DesktopBanner({ className = '' }: { className?: string }) {
   )
 }
 
-// 📱 사이드바 배너 (300x600)
+// 📱 사이드바 배너 (300x600) - 🆕 모든 티어에 노출
 export function SidebarBanner({ className = '' }: { className?: string }) {
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
-  const { data: session } = useSession()
-  const isPremium = (session?.user as any)?.tier === 'premium'
+  // 🆕 isPremium 체크 제거
   
   useEffect(() => {
     setIsMounted(true)
@@ -219,7 +211,7 @@ export function SidebarBanner({ className = '' }: { className?: string }) {
   }, [])
   
   if (!isMounted) return <div className="hidden lg:block h-[600px]" />
-  if (isPremium || isAdsBlocked) return null
+  if (isAdsBlocked) return null  // 🆕 isPremium 제거
   
   return (
     <div className={`hidden lg:block ${className}`}>
@@ -228,7 +220,7 @@ export function SidebarBanner({ className = '' }: { className?: string }) {
   )
 }
 
-// 📱 모바일 하단 고정 배너 (320x50)
+// 📱 모바일 하단 고정 배너 (320x50) - 🆕 모든 티어에 노출
 export function MobileBottomBanner({ 
   className = '',
   onClose 
@@ -239,8 +231,7 @@ export function MobileBottomBanner({
   const [isClosed, setIsClosed] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
-  const { data: session } = useSession()
-  const isPremium = (session?.user as any)?.tier === 'premium'
+  // 🆕 isPremium 체크 제거
 
   useEffect(() => {
     setIsMounted(true)
@@ -250,7 +241,7 @@ export function MobileBottomBanner({
   }, [])
 
   if (!isMounted) return null
-  if (isClosed || isPremium || isAdsBlocked) return null
+  if (isClosed || isAdsBlocked) return null  // 🆕 isPremium 제거
 
   return (
     <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 p-2 flex justify-center ${className}`}>
@@ -265,7 +256,7 @@ export function MobileBottomBanner({
   )
 }
 
-// 🎯 정적 광고 (DB 없이 하드코딩) - 스포라이브 제휴 광고는 모든 티어에 노출
+// 🎯 정적 광고 (DB 없이 하드코딩) - 🆕 모든 티어에 노출
 export function StaticAdBanner({ 
   slot,
   className = '',
@@ -278,7 +269,7 @@ export function StaticAdBanner({
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const [isClosed, setIsClosed] = useState(false)
-  // 🆕 스포라이브 제휴 광고는 프리미엄 사용자에게도 노출 (isPremium 체크 제거)
+  // 🆕 isPremium 체크 제거
   
   useEffect(() => {
     setIsMounted(true)
@@ -315,7 +306,7 @@ export function StaticAdBanner({
   const ad = ADS[slot]
 
   if (!isMounted) return null
-  if (isClosed || isAdsBlocked) return null  // 🆕 isPremium 제거 - 스포라이브 광고는 모든 티어에 노출
+  if (isClosed || isAdsBlocked) return null  // 🆕 isPremium 제거
 
   return (
     <div className={`relative ${className}`}>
@@ -357,7 +348,7 @@ export function StaticAdBanner({
   )
 }
 
-// 정적 버전 export - 스포라이브 광고는 모든 티어에 노출
+// 정적 버전 export - 🆕 모든 티어에 노출
 export function StaticDesktopBanner({ className = '' }: { className?: string }) {
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
