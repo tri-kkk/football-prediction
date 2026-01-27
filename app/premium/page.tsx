@@ -2506,26 +2506,76 @@ export default function PremiumPredictPage() {
                     </p>
                   </div>
                 ) : !isPremium ? (
-                  /* 비프리미엄 유저: 컴팩트 프로모션 (블러 없이) */
+                  /* 비프리미엄 유저: 단계별 전환 유도 */
                   <div className="p-6 text-center">
-                    <div className="text-4xl mb-3">💎</div>
-                    <div className="text-white font-bold text-xl mb-2">
-                      {language === 'ko' ? '트렌드사커 픽' : 'TrendSoccer Picks'}
-                    </div>
-                    <div className="text-gray-300 text-sm mb-4">
-                      {language === 'ko' 
-                        ? '10,000+ 경기 빅데이터 기반 프리미엄 매치' 
-                        : 'Data-driven Premium Matches'}
-                    </div>
-                    <Link 
-                      href="/premium/pricing"
-                      className="inline-block px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-lg font-bold transition-all"
-                    >
-                      {language === 'ko' ? '프리미엄 시작하기' : 'Start Premium'}
-                    </Link>
-                    <div className="text-gray-400 text-xs mt-3">
-                      {language === 'ko' ? '월 ₩4,900 · 3개월 ₩9,900' : '$3.99/mo · $7.99/3mo'}
-                    </div>
+                    {!session ? (
+                      /* 🔹 비로그인 상태: 무료 가입 유도 */
+                      <>
+                        <div className="text-4xl mb-3">🎯</div>
+                        <div className="text-white font-bold text-xl mb-2">
+                          {language === 'ko' ? '오늘의 PICK 확인하기' : "See Today's PICK"}
+                        </div>
+                        <div className="text-gray-400 text-sm mb-4">
+                          {language === 'ko' 
+                            ? '10,000+ 경기 분석 기반 · 매일 엄선된 경기' 
+                            : '10,000+ Matches Analyzed · Daily Picks'}
+                        </div>
+                        
+                        {/* 무료 가입 버튼 (메인) */}
+                        <Link 
+                          href="/login"
+                          className="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-xl font-bold transition-all shadow-lg shadow-green-500/20"
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                          </svg>
+                          {language === 'ko' ? '무료로 시작하기' : 'Get Started Free'}
+                        </Link>
+                        
+                        <div className="text-gray-500 text-xs mt-3 flex items-center justify-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                          </svg>
+                          {language === 'ko' ? '30초면 가입 완료 · 결제 정보 필요 없음' : 'Sign up in 30 seconds · No payment required'}
+                        </div>
+                      </>
+                    ) : (
+                      /* 🔹 무료 회원 상태: 프리미엄 혜택 강조 */
+                      <>
+                        <div className="text-4xl mb-3">💎</div>
+                        <div className="text-white font-bold text-xl mb-2">
+                          {language === 'ko' ? '프리미엄으로 더 빠르게' : 'Go Premium for Early Access'}
+                        </div>
+                        
+                        {/* 프리미엄 혜택 리스트 */}
+                        <div className="text-left bg-black/30 rounded-lg p-4 mb-4 space-y-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-green-400">✓</span>
+                            <span className="text-gray-300">{language === 'ko' ? '24시간 선공개 예측' : '24h Early Access'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-green-400">✓</span>
+                            <span className="text-gray-300">{language === 'ko' ? '신뢰도 점수 & AI 분석' : 'Confidence Score & AI Analysis'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-green-400">✓</span>
+                            <span className="text-gray-300">{language === 'ko' ? '광고 완전 제거' : 'Ad-free Experience'}</span>
+                          </div>
+                        </div>
+                        
+                        {/* 프리미엄 버튼 */}
+                        <Link 
+                          href="/premium/pricing"
+                          className="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold transition-all shadow-lg shadow-yellow-500/20"
+                        >
+                          {language === 'ko' ? '프리미엄 업그레이드' : 'Upgrade to Premium'}
+                        </Link>
+                        
+                        <div className="text-gray-500 text-xs mt-3">
+                          {language === 'ko' ? '첫 달 50% 할인 · 언제든 해지 가능' : '50% off first month · Cancel anytime'}
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : noPremiumPicks ? (
                   <div className="p-6 text-center">
