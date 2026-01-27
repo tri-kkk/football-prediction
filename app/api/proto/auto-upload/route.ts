@@ -133,8 +133,8 @@ function parseNewlineFormat(text: string, round: string) {
         betType = value
         teamStartIdx = i + 4  // 베팅 타입이 있으면 팀 시작 인덱스 +1
         
-        // 핸디캡/언오버 값 추출 (예: "H -3.5" → -3.5)
-        const valueMatch = possibleBetType.match(/[-+]?\d+\.?\d*/)
+        // 핸디캡/언오버 값 추출 (예: "H -3.5" → -3.5, "H +7.5" → +7.5)
+        const valueMatch = possibleBetType.match(/[-+]?\d+(?:\.\d+)?/)
         if (valueMatch) {
           if (betType.includes('핸디')) {
             handicapValue = parseFloat(valueMatch[0])
