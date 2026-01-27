@@ -10,10 +10,11 @@ const ADMIN_SECRET = process.env.PROTO_ADMIN_SECRET || 'trendsoccer-proto-2026'
 
 const KNOWN_LEAGUES = [
   'U23아컵', '남농EASL', 'KOVO남', 'KOVO여', '에레디비', 'EFL챔',
-  '세리에A', '라리가', '분데스', '리그1', '프리그1',  // 🆕 프리그1 추가
+  '세리에A', '라리가', '분데스리', '리그1', '프리그1',
   'UCL', 'UEL', 'EPL', 'PL',
   'WKBL', 'KBL', 'NBA',
   'A리그',
+  '이탈FA컵', '스페인컵', '독일컵', '잉글FA컵', '프랑스컵',  // 🆕 컵대회 추가
 ]
 
 const NO_DRAW_LEAGUES = ['WKBL', 'KBL', 'NBA', 'KOVO남', 'KOVO여', '남농EASL']
@@ -22,7 +23,14 @@ const NO_DRAW_LEAGUES = ['WKBL', 'KBL', 'NBA', 'KOVO남', 'KOVO여', '남농EASL
  * 줄바꿈 형식 파싱
  */
 function parseNewlineFormat(text: string, round: string) {
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l)
+  // 헤더와 노이즈 제거
+  const noisePatterns = ['번호', '일시', '리그', '유형', '홈팀', '원정팀', '배당률', '결과', '비고', '상세', '보기', '정렬', '※']
+  
+  const lines = text.split('\n')
+    .map(l => l.trim())
+    .filter(l => l)
+    .filter(l => !noisePatterns.some(p => l.includes(p)))  // 노이즈 제거
+  
   const matches: any[] = []
   const seenMatches = new Set<string>()
   const currentYear = new Date().getFullYear()
@@ -69,6 +77,8 @@ function parseNewlineFormat(text: string, round: string) {
   const resultCodes = Object.keys(resultCodeMap)
 
   let i = 0
+  console.log(`📋 파싱 시작: ${lines.length}줄 (노이즈 제거 후)`)
+  
   while (i < lines.length) {
     const line = lines[i]
     
@@ -88,21 +98,23 @@ function parseNewlineFormat(text: string, round: string) {
     // 날짜 파싱
     const dateMatch = dateTimeLine.match(/(\d{2})\.(\d{2})\(([월화수목금토일])\)\s*(\d{2}):(\d{2})/)
     if (!dateMatch) {
+      console.log(`⚠️ 날짜 파싱 실패: ${matchSeq} - "${dateTimeLine}"`)
       i++
       continue
     }
     
     const [, month, day, dayOfWeek, hour, minute] = dateMatch
     
-    // 리그 확인
+    // 리그 확인 - 부분 매칭으로 변경
     let league = ''
     for (const l of KNOWN_LEAGUES) {
-      if (leagueLine === l) {
-        league = l
+      if (leagueLine === l || leagueLine.includes(l) || l.includes(leagueLine)) {
+        league = leagueLine  // 실제 텍스트 그대로 저장
         break
       }
     }
     if (!league) {
+      console.log(`⚠️ 리그 매칭 실패: ${matchSeq} - "${leagueLine}"`)
       i++
       continue
     }
@@ -269,7 +281,9 @@ function parseNewlineFormat(text: string, round: string) {
 
 function parseWisetotoText(text: string, round: string) {
   console.log('📋 Parsing with newline format')
-  return parseNewlineFormat(text, round)
+  const matches = parseNewlineFormat(text, round)
+  console.log(`✅ 파싱 완료: ${matches.length}경기`)
+  return matches
 }
 
 export async function POST(request: NextRequest) {
