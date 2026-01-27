@@ -244,8 +244,8 @@ function parseNewlineFormat(text: string, round: string) {
       status = statusOrResult
     }
     
-    // 중복 체크 (팀 + 베팅타입 조합)
-    const matchKey = `${homeTeam}-${awayTeam}-${betType}`
+    // 중복 체크 (팀 + 베팅타입 + 핸디캡/언오버 값 조합)
+    const matchKey = `${homeTeam}-${awayTeam}-${betType}-${handicapValue ?? ''}-${totalValue ?? ''}`
     if (seenMatches.has(matchKey)) {
       i = i + 10
       continue
