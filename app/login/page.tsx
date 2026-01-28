@@ -43,7 +43,7 @@ export default function LoginPage() {
   }, [])
 
   // 네이버 로그인 활성화 여부 (검수 통과 후 true로 변경)
-  const NAVER_ENABLED = false
+  const NAVER_ENABLED = true
 
   // 🎉 프로모션 기간 체크 (2월 28일까지 연장)
   const PROMO_END = new Date('2026-03-01T00:00:00+09:00')
