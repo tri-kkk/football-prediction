@@ -13,7 +13,6 @@ import AuthButton from './components/AuthButton'
 import { PWAInstallProvider } from './components/pwa/PWAInstallContext'
 import { IOSInstallGuide } from './components/pwa/IOSInstallGuide'
 import InstallBanner from './components/InstallBanner'
-import FooterBusinessInfo from './components/FooterBusinessInfo'
 import AdSenseLoader from './components/AdSenseLoader'
 import TermsGuard from './components/TermsGuard'
 
@@ -416,8 +415,23 @@ export default function RootLayout({
                 </div>
               </div>
 
-              {/* 사업자 정보 - 토글 컴포넌트 */}
-              <FooterBusinessInfo />
+              {/* 사업자 정보 - 2열 레이아웃 */}
+              <div>
+                <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  사업자 정보
+                </h3>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-gray-400 text-xs">
+                  <p><span className="text-gray-500">상호:</span> 주식회사 트리기</p>
+                  <p><span className="text-gray-500">대표자:</span> 김기탁</p>
+                  <p><span className="text-gray-500">연락처:</span> 070-5029-3063</p>
+                  <p><span className="text-gray-500">사업자등록번호:</span> 406-88-03260</p>
+                  <p className="col-span-2"><span className="text-gray-500">통신판매업신고:</span> 제 2025-서울영등포-0011 호</p>
+                  <p className="col-span-2"><span className="text-gray-500">주소:</span> 서울특별시 영등포구 국제금융로6길 33, 919호 (여의도동, 맨하탄빌딩)</p>
+                </div>
+              </div>
             </div>
 
             {/* 하단: 저작권 + 면책조항 */}
