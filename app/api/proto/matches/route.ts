@@ -12,16 +12,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const round = searchParams.get('round')
 
-    // 회차 목록 조회 - 전체 가져와서 JS에서 정렬
-    const { data: roundData } = await supabase
-      .from('proto_matches')
-      .select('round')
-      .limit(10000)
+    // 회차 목록 조회 - RPC 함수 사용 (DISTINCT + 정렬)
+    const { data: roundData, error: roundError } = await supabase
+      .rpc('get_proto_rounds')
     
-    // 유니크 처리 후 숫자 정렬, 최신 3개만
-    const allRounds = [...new Set(roundData?.map(row => row.round) || [])]
-      .sort((a, b) => parseInt(b) - parseInt(a))
-    const rounds = allRounds.slice(0, 3)
+    const rounds = roundData?.map((r: any) => r.round) || []
+    
+    console.log('📋 [DEBUG] rounds:', rounds, 'error:', roundError?.message)
 
     if (round) {
       // 특정 회차 조회
