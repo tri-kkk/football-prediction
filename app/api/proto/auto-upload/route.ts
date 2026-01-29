@@ -77,6 +77,7 @@ function parseNewlineFormat(text: string, round: string) {
   const resultCodes = Object.keys(resultCodeMap)
 
   let i = 0
+  let lastLeague = ''  // 🆕 마지막 성공 리그 기억
   console.log(`📋 파싱 시작: ${lines.length}줄 (노이즈 제거 후)`)
   
   while (i < lines.length) {
@@ -107,31 +108,47 @@ function parseNewlineFormat(text: string, round: string) {
     
     // 리그 확인 - 부분 매칭으로 변경
     let league = ''
+    let leagueFoundAtPos2 = false  // 리그가 정상 위치(i+2)에 있는지
+    
     for (const l of KNOWN_LEAGUES) {
       if (leagueLine === l || leagueLine.includes(l) || l.includes(leagueLine)) {
-        league = leagueLine  // 실제 텍스트 그대로 저장
+        league = leagueLine
+        lastLeague = league  // 🆕 성공 시 기억
+        leagueFoundAtPos2 = true
         break
       }
     }
-    if (!league) {
-      console.log(`⚠️ 리그 매칭 실패: ${matchSeq} - "${leagueLine}"`)
+    
+    // 🆕 리그 매칭 실패 시 - 이전 리그 사용
+    if (!league && lastLeague) {
+      league = lastLeague
+      // 리그가 생략됨 → leagueLine은 실제로 베팅타입이나 팀명
+    } else if (!league) {
+      console.log(`⚠️ 리그 매칭 실패 (첫 경기): ${matchSeq} - "${leagueLine}"`)
       i++
       continue
     }
     
-    // 베팅 타입 확인 (3번 인덱스가 베팅타입인지 홈팀인지)
+    // 베팅 타입 확인
     let betType = '승무패'
     let teamStartIdx = i + 3
     let handicapValue: number | null = null
     let totalValue: number | null = null
     
-    const possibleBetType = lines[i + 3]
+    // 🆕 리그가 생략된 경우 (leagueLine이 베팅타입일 수 있음)
+    let possibleBetType = leagueFoundAtPos2 ? lines[i + 3] : leagueLine
     
     // 베팅 타입 감지
     for (const [key, value] of Object.entries(betTypeMap)) {
       if (possibleBetType.startsWith(key) || possibleBetType === key) {
         betType = value
-        teamStartIdx = i + 4  // 베팅 타입이 있으면 팀 시작 인덱스 +1
+        
+        // 🆕 인덱스 조정
+        if (leagueFoundAtPos2) {
+          teamStartIdx = i + 4  // 정상: 리그(i+2) → 베팅타입(i+3) → 팀(i+4)
+        } else {
+          teamStartIdx = i + 3  // 생략: 베팅타입(i+2) → 팀(i+3)
+        }
         
         // 핸디캡/언오버 값 추출 (예: "H -3.5" → -3.5, "H +7.5" → +7.5)
         const valueMatch = possibleBetType.match(/[-+]?\d+(?:\.\d+)?/)
@@ -144,6 +161,11 @@ function parseNewlineFormat(text: string, round: string) {
         }
         break
       }
+    }
+    
+    // 🆕 베팅타입도 없고 리그도 생략된 경우 (팀명이 i+2에 있음)
+    if (betType === '승무패' && !leagueFoundAtPos2) {
+      teamStartIdx = i + 2  // 팀이 바로 시작
     }
     
     // 홈팀, 구분자, 원정팀 (스코어가 별도 줄일 수 있음)
