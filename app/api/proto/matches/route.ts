@@ -12,10 +12,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const round = searchParams.get('round')
 
-    // 회차 목록 항상 조회
+    // 회차 목록 항상 조회 (기본 1000개 제한 해제)
     const { data: roundData } = await supabase
       .from('proto_matches')
       .select('round')
+      .limit(10000)
     
     // 숫자로 내림차순 정렬 (11 → 10 → 9)
     const rounds = [...new Set(roundData?.map(row => row.round) || [])]
