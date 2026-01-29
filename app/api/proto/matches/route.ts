@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const { data: roundData } = await supabase
       .from('proto_matches')
       .select('round')
-      .limit(10000)
+      .limit(50000)
     
     // 숫자로 내림차순 정렬 (11 → 10 → 9)
     const rounds = [...new Set(roundData?.map(row => row.round) || [])]
