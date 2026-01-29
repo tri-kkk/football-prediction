@@ -12,13 +12,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const round = searchParams.get('round')
 
-    // 회차 목록 조회 - 최신 3개만
+    // 회차 목록 조회 - 전체 가져와서 JS에서 정렬
     const { data: roundData } = await supabase
       .from('proto_matches')
       .select('round')
-      .limit(5000)
+      .limit(10000)
     
-    // 숫자로 내림차순 정렬 후 최신 3개만
+    // 유니크 처리 후 숫자 정렬, 최신 3개만
     const allRounds = [...new Set(roundData?.map(row => row.round) || [])]
       .sort((a, b) => parseInt(b) - parseInt(a))
     const rounds = allRounds.slice(0, 3)
