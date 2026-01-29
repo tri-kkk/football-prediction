@@ -12,15 +12,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const round = searchParams.get('round')
 
-    // 회차 목록 항상 조회 (기본 1000개 제한 해제)
+    // 회차 목록 조회 - 최신 3개만
     const { data: roundData } = await supabase
       .from('proto_matches')
       .select('round')
-      .limit(50000)
+      .limit(5000)
     
-    // 숫자로 내림차순 정렬 (11 → 10 → 9)
-    const rounds = [...new Set(roundData?.map(row => row.round) || [])]
+    // 숫자로 내림차순 정렬 후 최신 3개만
+    const allRounds = [...new Set(roundData?.map(row => row.round) || [])]
       .sort((a, b) => parseInt(b) - parseInt(a))
+    const rounds = allRounds.slice(0, 3)
 
     if (round) {
       // 특정 회차 조회
