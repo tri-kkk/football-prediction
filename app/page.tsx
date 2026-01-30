@@ -12,12 +12,12 @@ import AdBanner from './components/AdBanner'
 import AdSenseAd from './components/AdSenseAd'
 import MobileMatchReports from './components/MobileMatchReports'
 import { useSession } from 'next-auth/react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useReferral } from './hooks/useReferral'
 import Link from 'next/link'
 
 
-import TopHighlights from './components/TopHighlights'
+// import TopHighlights from './components/TopHighlights'  // 🆕 제거됨 - 필터 버튼으로 대체
 import MatchPoll from './components/MatchPoll'
 
 // 🌐 다국어 지원 데이터 import
@@ -203,31 +203,42 @@ interface Match {
 // 🆕 경기 상태 타입
 type MatchStatus = 'SCHEDULED' | 'LIVE' | 'HALFTIME' | 'FINISHED'
 
-// 🆕 경기 상태 판별 함수
+// 🆕 경기 상태 판별 함수 - 시간 기반 체크 우선
 function getMatchStatus(match: Match): MatchStatus {
-  const status = match.status?.toUpperCase() || ''
+  const status = (match.status || '').toUpperCase()
   
-  // API에서 직접 제공하는 상태 확인
+  // 1️⃣ 명확한 종료 상태
   if (['FINISHED', 'FT', 'AET', 'PEN'].includes(status)) {
     return 'FINISHED'
   }
-  if (['IN_PLAY', 'LIVE', '1H', '2H', 'ET'].includes(status)) {
+  
+  // 2️⃣ 명확한 라이브 상태
+  if (['IN_PLAY', 'LIVE', '1H', '2H', 'ET', 'BT', 'P'].includes(status)) {
     return 'LIVE'
   }
+  
+  // 3️⃣ 하프타임
   if (['HT', 'HALFTIME', 'BREAK'].includes(status)) {
     return 'HALFTIME'
   }
-  if (['SCHEDULED', 'TIMED', 'NS', 'TBD'].includes(status)) {
-    return 'SCHEDULED'
-  }
   
-  // 시간 기반 판별 (fallback)
+  // 4️⃣ 시간 기반 판별 (API status가 부정확할 때)
   const matchTime = new Date(match.utcDate || match.date).getTime()
   const now = Date.now()
-  const hoursSinceStart = (now - matchTime) / (1000 * 60 * 60)
+  const minutesSinceStart = (now - matchTime) / (1000 * 60)
   
-  if (hoursSinceStart > 2) return 'FINISHED'
-  if (hoursSinceStart > 0) return 'LIVE'
+  // 경기 시작 후 2시간(120분) 이상 지났으면 종료
+  if (minutesSinceStart > 120) {
+    return 'FINISHED'
+  }
+  
+  // 경기 시작 시간이 지났으면 라이브 (0분 이상)
+  if (minutesSinceStart >= 0) {
+    console.log(`🔴 시간 기반 LIVE 판정: ${match.homeTeam} vs ${match.awayTeam} (${Math.round(minutesSinceStart)}분 경과)`)
+    return 'LIVE'
+  }
+  
+  // 아직 시작 전
   return 'SCHEDULED'
 }
 
@@ -612,6 +623,13 @@ export default function Home() {
   const [sidebarNews, setSidebarNews] = useState<any[]>([])
   // 🔴 라이브 경기 수
   const [liveCount, setLiveCount] = useState(0)
+  // 🔴 라이브 스코어 실시간 데이터
+  const [liveScores, setLiveScores] = useState<Record<number, { 
+    homeScore: number, 
+    awayScore: number, 
+    elapsed: number,
+    status: string 
+  }>>({})
   // 📊 배너 자동 롤링
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0)
   // 📱 모바일 하단 광고 닫기 상태
@@ -621,6 +639,13 @@ export default function Home() {
   // 🆕 평균 적중률 (동적으로 가져옴)
   const [avgAccuracy, setAvgAccuracy] = useState<number | null>(null)
   const [accuracyLoading, setAccuracyLoading] = useState(true)
+  
+  // 🆕 필터 상태 (FotMob 스타일)
+  const [matchFilter, setMatchFilter] = useState<'all' | 'live' | 'tv'>('all')
+  const [sortByTime, setSortByTime] = useState(true)
+  
+  // 🆕 라우터 (라이브 경기 상세 페이지 이동용)
+  const router = useRouter()
   
   // 🆕 종료 경기 통계 관련
   const [matchStatistics, setMatchStatistics] = useState<{ [key: number]: any }>({})
@@ -893,6 +918,45 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
       document.documentElement.classList.remove('dark')
     }
   }, [darkMode])
+
+  // 🔴 라이브 스코어 실시간 갱신 (30초마다)
+  useEffect(() => {
+    const fetchLiveScores = async () => {
+      try {
+        const response = await fetch('/api/live-matches', { cache: 'no-store' })
+        if (!response.ok) return
+        
+        const data = await response.json()
+        if (!data.success || !data.matches) return
+        
+        // 라이브 스코어 업데이트
+        const scores: Record<number, { homeScore: number, awayScore: number, elapsed: number, status: string }> = {}
+        data.matches.forEach((m: any) => {
+          scores[m.id] = {
+            homeScore: m.homeScore ?? 0,
+            awayScore: m.awayScore ?? 0,
+            elapsed: m.elapsed ?? 0,
+            status: m.status || 'LIVE'
+          }
+        })
+        
+        setLiveScores(scores)
+        setLiveCount(data.matches.length)
+        
+        console.log(`🔴 라이브 스코어 갱신: ${data.matches.length}경기`)
+      } catch (error) {
+        console.error('라이브 스코어 갱신 실패:', error)
+      }
+    }
+
+    // 초기 로드
+    fetchLiveScores()
+    
+    // 30초마다 갱신
+    const interval = setInterval(fetchLiveScores, 30000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
   // 📊 배너 자동 롤링 타이머 (5초마다)
   useEffect(() => {
@@ -1414,21 +1478,27 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
           return new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
         })
         
-        // 통계 로그
-        const scheduledCount = filteredMatches.filter((m: any) => 
-          !m.status || m.status === 'SCHEDULED' || m.status === 'TIMED' || m.status === 'NS'
-        ).length
-        const finishedCount = filteredMatches.filter((m: any) => 
-          m.status === 'FINISHED' || m.status === 'FT' || m.status === 'AET' || m.status === 'PEN'
-        ).length
-        const liveCount = filteredMatches.filter((m: any) => 
-          m.status === 'IN_PLAY' || m.status === 'LIVE' || m.status === '1H' || m.status === '2H' || m.status === 'HT'
-        ).length
+        // 통계 로그 - getMatchStatus 사용으로 일관성 유지
+        const scheduledCount = filteredMatches.filter((m: any) => {
+          const status = getMatchStatus(m as Match)
+          return status === 'SCHEDULED'
+        }).length
+        const finishedCount = filteredMatches.filter((m: any) => {
+          const status = getMatchStatus(m as Match)
+          return status === 'FINISHED'
+        }).length
+        const liveMatchCount = filteredMatches.filter((m: any) => {
+          const status = getMatchStatus(m as Match)
+          return status === 'LIVE' || status === 'HALFTIME'
+        }).length
+        
+        // 🆕 liveCount state 설정
+        setLiveCount(liveMatchCount)
         
         console.log('✅ 전체 경기:', convertedMatches.length)
         console.log('📅 필터링된 경기:', filteredMatches.length)
         console.log('   - 예정:', scheduledCount)
-        console.log('   - 진행중:', liveCount)  
+        console.log('   - 진행중:', liveMatchCount)  
         console.log('   - 완료:', finishedCount)
         
         // 리그 정보 확인
@@ -1758,6 +1828,15 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
   // 경기 클릭 핸들러
   const handleMatchClick = async (match: Match) => {
+    // 🆕 라이브 경기면 상세 페이지로 이동
+    const matchStatus = getMatchStatus(match)
+    const isLive = matchStatus === 'LIVE' || matchStatus === 'HALFTIME'
+    
+    if (isLive) {
+      router.push(`/live/${match.id}`)
+      return
+    }
+    
     if (expandedMatchId === match.id) {
       setExpandedMatchId(null)
     } else {
@@ -2413,37 +2492,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
           {/* 메인 콘텐츠 */}
           <main className="flex-1 min-w-0">
             
-            {/* 🔴 라이브 중계 배너 - 모바일 최적화 */}
-            {liveCount > 0 && (
-              <a 
-                href="/live"
-                className={`block mb-4 rounded-xl p-3 md:p-5 cursor-pointer transition-all hover:scale-[1.02] ${
-                  darkMode 
-                    ? 'bg-gradient-to-r from-red-600 via-pink-600 to-purple-600' 
-                    : 'bg-gradient-to-r from-red-500 via-pink-500 to-purple-500'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 md:gap-4">
-                    <div className="w-3 h-3 md:w-4 md:h-4 bg-white rounded-full animate-pulse" />
-                    <div>
-                      <h2 className="text-base md:text-xl font-bold text-white mb-0.5">
-                        🔴 {currentLanguage === 'ko' 
-  ? `지금 ${liveCount}개 경기 진행 중!` 
-  : `${liveCount} matches live now!`}
-                      </h2>
-                      <p className="text-white/90 text-xs md:text-sm">
-                        {t('match.liveDescription')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-white text-2xl md:text-4xl font-bold hidden sm:block">
-                    →
-                  </div>
-                </div>
-              </a>
-            )}
-            
+            {/* 🔴 라이브 중계 배너 - 필터로 대체되어 제거됨 */}
+
             {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) - 🆕 스포라이브: 모든 티어 노출 */}
             <div className="hidden lg:flex justify-center mb-6">
               <AdBanner slot="desktop_banner" />
@@ -2608,9 +2658,67 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
           </div>
         </div>
 
-{/* 💻 PC: 유튜브 하이라이트 */}
-<div className="hidden md:block mb-4">
-  <TopHighlights darkMode={darkMode} />
+{/* 🆕 FotMob 스타일 필터 버튼 */}
+<div className="mb-4">
+  <div className="flex items-center justify-center gap-2 pb-2">
+    {/* 진행중 필터 */}
+    <button
+      onClick={() => setMatchFilter(matchFilter === 'live' ? 'all' : 'live')}
+      className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+        matchFilter === 'live'
+          ? 'bg-red-500 text-white'
+          : darkMode 
+            ? 'bg-[#2a2a2a] text-gray-300 hover:bg-[#333]' 
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      }`}
+    >
+      {matchFilter === 'live' ? (
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute h-full w-full rounded-full bg-white opacity-75" />
+          <span className="relative rounded-full h-2 w-2 bg-white" />
+        </span>
+      ) : (
+        <span className="w-2 h-2 rounded-full bg-red-500" />
+      )}
+      {currentLanguage === 'ko' ? '진행중' : 'Live'}
+      {liveCount > 0 && (
+        <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+          matchFilter === 'live' ? 'bg-white/20' : 'bg-red-500 text-white'
+        }`}>
+          {liveCount}
+        </span>
+      )}
+    </button>
+
+    {/* 시간순 정렬 */}
+    <button
+      onClick={() => setSortByTime(!sortByTime)}
+      className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+        sortByTime
+          ? 'bg-[#A3FF4C] text-gray-900'
+          : darkMode 
+            ? 'bg-[#2a2a2a] text-gray-300 hover:bg-[#333]' 
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      }`}
+    >
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {currentLanguage === 'ko' ? '시간으로 정렬' : 'Sort by time'}
+    </button>
+
+    {/* 필터 초기화 */}
+    {(matchFilter !== 'all') && (
+      <button
+        onClick={() => setMatchFilter('all')}
+        className={`px-3 py-2 rounded-full text-sm transition-all ${
+          darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+        }`}
+      >
+        ✕ {currentLanguage === 'ko' ? '초기화' : 'Reset'}
+      </button>
+    )}
+  </div>
 </div>
 
         {/* 상단 광고 배너 */}
@@ -2643,8 +2751,25 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               let filteredMatches = matches.filter(match => {
                 const matchKST = getMatchKSTDate(match.utcDate)
                 const matchKey = formatDateKey(matchKST)
-                return matchKey === selectedDateKey
+                const dateMatch = matchKey === selectedDateKey
+                
+                // 🆕 필터 적용 - getMatchStatus 사용
+                if (matchFilter === 'live') {
+                  const status = getMatchStatus(match)
+                  return dateMatch && (status === 'LIVE' || status === 'HALFTIME')
+                }
+                
+                return dateMatch
               })
+              
+              // 🆕 시간순 정렬
+              if (sortByTime) {
+                filteredMatches = filteredMatches.sort((a, b) => {
+                  const timeA = new Date(a.utcDate).getTime()
+                  const timeB = new Date(b.utcDate).getTime()
+                  return timeA - timeB
+                })
+              }
               
               return (
                 <>
@@ -2653,19 +2778,33 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                     <div className={`text-center py-12 rounded-2xl ${
                       darkMode ? 'bg-[#1a1a1a]' : 'bg-gray-100'
                     }`}>
-                      <div className="text-4xl mb-4">⚽</div>
+                      <div className="text-4xl mb-4">
+                        {matchFilter === 'live' ? '🔴' : '⚽'}
+                      </div>
                       <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                        {t('common.noMatches')}
+                        {matchFilter === 'live' 
+                          ? (currentLanguage === 'ko' ? '진행 중인 경기가 없습니다' : 'No live matches')
+                          : t('common.noMatches')
+                        }
                       </p>
-                      <button
-                        onClick={() => {
-                          const earliest = findEarliestMatchDate()
-                          if (earliest) setSelectedDate(earliest)
-                        }}
-                        className="mt-4 px-4 py-2 bg-[#A3FF4C] text-gray-900 rounded-lg text-sm font-medium hover:bg-[#8FE63D] transition-colors"
-                      >
-                        {t('match.goToEarliest')}
-                      </button>
+                      {matchFilter !== 'all' ? (
+                        <button
+                          onClick={() => setMatchFilter('all')}
+                          className="mt-4 px-4 py-2 bg-[#A3FF4C] text-gray-900 rounded-lg text-sm font-medium hover:bg-[#8FE63D] transition-colors"
+                        >
+                          {currentLanguage === 'ko' ? '모든 경기 보기' : 'Show all matches'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            const earliest = findEarliestMatchDate()
+                            if (earliest) setSelectedDate(earliest)
+                          }}
+                          className="mt-4 px-4 py-2 bg-[#A3FF4C] text-gray-900 rounded-lg text-sm font-medium hover:bg-[#8FE63D] transition-colors"
+                        >
+                          {t('match.goToEarliest')}
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -2799,9 +2938,17 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                         {/* 📱 모바일: 2줄 스택 레이아웃 */}
                                         <div className="md:hidden">
                                           {(() => {
+                                            // 🆕 getMatchStatus 사용
                                             const matchStatus = getMatchStatus(match)
-                                            const isFinished = matchStatus === 'FINISHED' && match.homeScore !== null
                                             const isLive = matchStatus === 'LIVE' || matchStatus === 'HALFTIME'
+                                            const isHT = matchStatus === 'HALFTIME'
+                                            const isFinished = matchStatus === 'FINISHED' && match.homeScore !== null
+                                            
+                                            // 🔴 라이브 스코어 우선 사용
+                                            const liveData = liveScores[match.id]
+                                            const homeScore = liveData?.homeScore ?? match.homeScore ?? 0
+                                            const awayScore = liveData?.awayScore ?? match.awayScore ?? 0
+                                            const elapsed = liveData?.elapsed ?? match.minutesPlayed ?? 0
                                             
                                             return (
                                               <div className="flex flex-col gap-1.5">
@@ -2812,8 +2959,13 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                                   }`}>
                                                     {isLive ? (
                                                       <span className="text-red-500 flex items-center gap-1">
-                                                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                                                        {matchStatus === 'HALFTIME' ? 'HT' : 'LIVE'}
+                                                        <span className="relative flex h-1.5 w-1.5">
+                                                          <span className="animate-ping absolute h-full w-full rounded-full bg-red-400 opacity-75" />
+                                                          <span className="relative rounded-full h-1.5 w-1.5 bg-red-500" />
+                                                        </span>
+                                                        <span className="font-bold">
+                                                          {isHT ? 'HT' : (elapsed > 0 ? `${elapsed}'` : 'LIVE')}
+                                                        </span>
                                                       </span>
                                                     ) : isFinished ? (
                                                       <span className="text-gray-500">FT</span>
@@ -2836,10 +2988,10 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                                   </span>
                                                   <span className={`w-8 text-right text-base font-bold tabular-nums ${
                                                     isFinished || isLive
-                                                      ? (match.homeScore > match.awayScore ? 'text-white' : 'text-gray-500')
+                                                      ? (homeScore > awayScore ? 'text-white' : 'text-gray-500')
                                                       : 'text-gray-600'
                                                   }`}>
-                                                    {isFinished || isLive ? (match.homeScore ?? 0) : ''}
+                                                    {isFinished || isLive ? homeScore : ''}
                                                   </span>
                                                   {/* 확장 화살표 - 홈팀 행 우측 */}
                                                   <div className="w-6 flex-shrink-0 flex justify-end">
@@ -2871,10 +3023,10 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                                   </span>
                                                   <span className={`w-8 text-right text-base font-bold tabular-nums ${
                                                     isFinished || isLive
-                                                      ? (match.awayScore > match.homeScore ? 'text-white' : 'text-gray-500')
+                                                      ? (awayScore > homeScore ? 'text-white' : 'text-gray-500')
                                                       : 'text-gray-600'
                                                   }`}>
-                                                    {isFinished || isLive ? (match.awayScore ?? 0) : ''}
+                                                    {isFinished || isLive ? awayScore : ''}
                                                   </span>
                                                   <div className="w-6 flex-shrink-0"></div>
                                                 </div>
@@ -2914,6 +3066,12 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                           {/* 중앙 스코어/상태 영역 */}
                                           {(() => {
                                             const matchStatus = getMatchStatus(match)
+                                            
+                                            // 🔴 라이브 스코어 우선 사용
+                                            const liveData = liveScores[match.id]
+                                            const homeScore = liveData?.homeScore ?? match.homeScore ?? 0
+                                            const awayScore = liveData?.awayScore ?? match.awayScore ?? 0
+                                            const elapsed = liveData?.elapsed ?? match.minutesPlayed ?? 0
 
                                             // 종료된 경기
                                             if (matchStatus === 'FINISHED' && match.homeScore !== null && match.awayScore !== null) {
@@ -2921,12 +3079,12 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                                 <div className="w-28 flex-shrink-0 flex flex-col items-center justify-center">
                                                   <span className="text-[10px] text-gray-500 mb-0.5">FT</span>
                                                   <div className="flex items-center gap-2">
-                                                    <span className={`text-lg font-bold ${match.homeScore > match.awayScore ? 'text-white' : 'text-gray-500'}`}>
-                                                      {match.homeScore}
+                                                    <span className={`text-lg font-bold ${homeScore > awayScore ? 'text-white' : 'text-gray-500'}`}>
+                                                      {homeScore}
                                                     </span>
                                                     <span className="text-gray-600">-</span>
-                                                    <span className={`text-lg font-bold ${match.awayScore > match.homeScore ? 'text-white' : 'text-gray-500'}`}>
-                                                      {match.awayScore}
+                                                    <span className={`text-lg font-bold ${awayScore > homeScore ? 'text-white' : 'text-gray-500'}`}>
+                                                      {awayScore}
                                                     </span>
                                                   </div>
                                                 </div>
@@ -2938,16 +3096,19 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                               return (
                                                 <div className="w-28 flex-shrink-0 flex flex-col items-center justify-center">
                                                   <span className="text-[10px] text-red-500 font-bold flex items-center gap-1 mb-0.5">
-                                                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                                                    {matchStatus === 'HALFTIME' ? 'HT' : 'LIVE'}
+                                                    <span className="relative flex h-1.5 w-1.5">
+                                                      <span className="animate-ping absolute h-full w-full rounded-full bg-red-400 opacity-75" />
+                                                      <span className="relative rounded-full h-1.5 w-1.5 bg-red-500" />
+                                                    </span>
+                                                    {matchStatus === 'HALFTIME' ? 'HT' : (elapsed > 0 ? `${elapsed}'` : 'LIVE')}
                                                   </span>
                                                   <div className="flex items-center gap-2">
                                                     <span className="text-lg font-bold text-white">
-                                                      {match.homeScore ?? 0}
+                                                      {homeScore}
                                                     </span>
                                                     <span className="text-gray-600">-</span>
                                                     <span className="text-lg font-bold text-white">
-                                                      {match.awayScore ?? 0}
+                                                      {awayScore}
                                                     </span>
                                                   </div>
                                                 </div>
