@@ -330,12 +330,14 @@ function processStats(apiStats: any[]): any {
   return {
     shotsOnGoal: getStat('Shots on Goal'),
     shotsOffGoal: getStat('Shots off Goal'),
+    totalShots: getStat('Total Shots'),
     possession: getPossession(),
     corners: getStat('Corner Kicks'),
     offsides: getStat('Offsides'),
     fouls: getStat('Fouls'),
     yellowCards: getStat('Yellow Cards'),
-    redCards: getStat('Red Cards')
+    redCards: getStat('Red Cards'),
+    saves: getStat('Goalkeeper Saves')
   }
 }
 

@@ -26,8 +26,7 @@ interface MatchStats {
   fouls: { home: number; away: number }
   yellowCards: { home: number; away: number }
   redCards: { home: number; away: number }
-  xg: { home: number; away: number }
-  bigChances: { home: number; away: number }
+  saves: { home: number; away: number }
 }
 
 interface LiveMatch {
@@ -244,9 +243,9 @@ const KeyStatsCard = ({
 }) => {
   const statItems = [
     { key: 'possession', ko: '점유율', en: 'Possession', suffix: '%' },
-    { key: 'xg', ko: 'xG', en: 'xG', decimals: 2 },
+    { key: 'totalShots', ko: '슈팅', en: 'Total Shots' },
     { key: 'shotsOnGoal', ko: '유효슈팅', en: 'Shots on Target' },
-    { key: 'bigChances', ko: '빅찬스', en: 'Big Chances' },
+    { key: 'corners', ko: '코너킥', en: 'Corners' },
   ]
 
   return (
