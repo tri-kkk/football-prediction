@@ -622,10 +622,24 @@ export default function Home() {
   const [avgAccuracy, setAvgAccuracy] = useState<number | null>(null)
   const [accuracyLoading, setAccuracyLoading] = useState(true)
   
-  // 🆕 종료 경기 하이라이트 관련
-  const [highlights, setHighlights] = useState<{ [key: number]: any }>({})
-  const [loadingHighlight, setLoadingHighlight] = useState<number | null>(null)
-  const highlightCache = useRef<{ [key: string]: any }>({})
+  // 🆕 종료 경기 통계 관련
+  const [matchStatistics, setMatchStatistics] = useState<{ [key: number]: any }>({})
+  const [loadingStats, setLoadingStats] = useState<number | null>(null)
+  const statsCache = useRef<{ [key: string]: any }>({})
+  
+  // 🆕 API-Football 위젯 스크립트 로드
+  useEffect(() => {
+    // 이미 로드되었으면 스킵
+    if (document.querySelector('script[src*="widgets.api-sports.io"]')) {
+      return
+    }
+    
+    const script = document.createElement('script')
+    script.src = 'https://widgets.api-sports.io/3.1.0/widgets.js'
+    script.type = 'module'
+    script.async = true
+    document.body.appendChild(script)
+  }, [])
 
   // 전체 리그 목록 (전체 제외)
   const availableLeagues = LEAGUES.filter(l => l.code !== 'ALL')
@@ -776,37 +790,33 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
     return getMatchKSTDate(sortedFuture[0].utcDate)
   }
   
-  // 🆕 종료 경기 하이라이트 로드
-  const loadHighlight = async (match: Match) => {
-    const cacheKey = `${match.homeTeam}-${match.awayTeam}-${match.utcDate?.split('T')[0]}`
+  // 🆕 종료 경기 통계 로드
+  const loadMatchStatistics = async (match: Match) => {
+    const cacheKey = `stats-${match.id}`
     
-    if (highlightCache.current[cacheKey] !== undefined) {
-      setHighlights(prev => ({ ...prev, [match.id]: highlightCache.current[cacheKey] }))
+    if (statsCache.current[cacheKey] !== undefined) {
+      setMatchStatistics(prev => ({ ...prev, [match.id]: statsCache.current[cacheKey] }))
       return
     }
 
-    setLoadingHighlight(match.id)
+    setLoadingStats(match.id)
 
     try {
-      const matchDate = match.utcDate?.split('T')[0] || new Date().toISOString().split('T')[0]
-      const leagueCode = match.leagueCode || 'PL'
-      const response = await fetch(
-        `/api/match-highlights?date=${matchDate}&homeTeam=${encodeURIComponent(match.homeTeam)}&awayTeam=${encodeURIComponent(match.awayTeam)}&league=${leagueCode}`
-      )
+      const response = await fetch(`/api/match-statistics?fixtureId=${match.id}`)
       
-      if (!response.ok) throw new Error('Failed to fetch highlight')
+      if (!response.ok) throw new Error('Failed to fetch statistics')
       
       const data = await response.json()
-      const highlight = data.highlights?.[0] || null
+      const stats = data.statistics || null
       
-      highlightCache.current[cacheKey] = highlight
-      setHighlights(prev => ({ ...prev, [match.id]: highlight }))
+      statsCache.current[cacheKey] = stats
+      setMatchStatistics(prev => ({ ...prev, [match.id]: stats }))
     } catch (error) {
-      console.error('Failed to load highlight:', error)
-      highlightCache.current[cacheKey] = null
-      setHighlights(prev => ({ ...prev, [match.id]: null }))
+      console.error('Failed to load match statistics:', error)
+      statsCache.current[cacheKey] = null
+      setMatchStatistics(prev => ({ ...prev, [match.id]: null }))
     } finally {
-      setLoadingHighlight(null)
+      setLoadingStats(null)
     }
   }
 
@@ -1753,11 +1763,11 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
     } else {
       setExpandedMatchId(match.id)
       
-      // 🆕 종료된 경기면 하이라이트 로드
+      // 🆕 종료된 경기면 통계 로드
       const matchStatus = getMatchStatus(match)
       if (matchStatus === 'FINISHED') {
-        if (highlights[match.id] === undefined) {
-          loadHighlight(match)
+        if (matchStatistics[match.id] === undefined) {
+          loadMatchStatistics(match)
         }
       } else {
         // 예정된 경기: 기존 로직
@@ -3047,44 +3057,41 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                                     </span>
                                                   </div>
                                                   
-                                                  {/* 🆕 하이라이트 영역 */}
+                                                  {/* 🆕 경기 통계 영역 - API-Football 공식 위젯 */}
                                                   <div className="mt-4 border-t border-gray-800 pt-4">
-                                                    {loadingHighlight === match.id ? (
-                                                      <div className="flex items-center justify-center py-12">
-                                                        <div className="w-8 h-8 border-2 border-gray-600 border-t-[#A3FF4C] rounded-full animate-spin"></div>
-                                                      </div>
-                                                    ) : highlights[match.id] && highlights[match.id].matchviewUrl ? (
-                                                      <div className="relative">
-                                                        <iframe
-                                                          src={highlights[match.id].matchviewUrl}
-                                                          className="w-full border-0 rounded-lg"
-                                                          style={{ height: '600px', minHeight: '500px' }}
-                                                          allow="autoplay; fullscreen"
-                                                          allowFullScreen
-                                                          loading="lazy"
-                                                        />
-                                                        <div className="absolute top-2 right-2">
-                                                          <a
-                                                            href={highlights[match.id].matchviewUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-1 px-3 py-1.5 bg-black/70 hover:bg-black/90 rounded-lg text-xs text-white transition-colors"
-                                                          >
-                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                            </svg>
-                                                            {t('common.newTab')}
-                                                          </a>
-                                                        </div>
-                                                      </div>
-                                                    ) : (
-                                                      <div className="py-8 text-center">
-                                                        <div className="text-3xl mb-2">📺</div>
-                                                        <p className="text-gray-500 text-sm">
-                                                          {t('match.highlightsComingSoon')}
-                                                        </p>
-                                                      </div>
-                                                    )}
+                                                    {/* API-Sports Game Widget - 헤더 숨김 (상단 잘라내기) */}
+                                                    <div 
+                                                      key={`widget-${match.id}-${darkMode}-${currentLanguage}`}
+                                                      className="rounded-xl overflow-hidden"
+                                                      style={{ 
+                                                        minHeight: '300px',
+                                                        marginTop: '-300px',  /* 헤더 높이만큼 위로 */
+                                                        paddingTop: '180px',  /* 잘린 만큼 보정 */
+                                                        clipPath: 'inset(150px 0 0 0)'  /* 상단 180px 잘라내기 */
+                                                      }}
+                                                    >
+                                                      <div
+                                                        ref={(el) => {
+                                                          if (el && !el.hasChildNodes()) {
+                                                            el.innerHTML = `
+                                                              <api-sports-widget 
+                                                                data-type="game"
+                                                                data-game-id="${match.id}"
+                                                              ></api-sports-widget>
+                                                              <api-sports-widget 
+                                                                data-type="config"
+                                                                data-key="${process.env.NEXT_PUBLIC_API_FOOTBALL_KEY || ''}"
+                                                                data-sport="football"
+                                                                data-lang="en"
+                                                                data-theme="${darkMode ? 'dark' : 'white'}"
+                                                                data-show-errors="false"
+                                                                data-show-logos="true"
+                                                              ></api-sports-widget>
+                                                            `
+                                                          }
+                                                        }}
+                                                      />
+                                                    </div>
                                                   </div>
                                                 </div>
                                               )
