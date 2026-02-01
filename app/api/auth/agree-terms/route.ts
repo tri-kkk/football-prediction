@@ -7,8 +7,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// 🎉 프로모션 기간 설정
-const PROMO_END_DATE = new Date('2026-02-01T00:00:00+09:00')
+// 🎉 프로모션 기간 설정 (2026년 2월 28일까지 연장)
+const PROMO_END_DATE = new Date('2026-03-01T00:00:00+09:00')
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const isPromoPeriod = now < PROMO_END_DATE
     const promoCode = pendingUser.pending_promo && isPromoPeriod ? pendingUser.pending_promo : null
     
-    // 프리미엄 만료일 계산 (프로모션 적용 시 2026년 1월 31일까지)
+    // 프리미엄 만료일 계산 (프로모션 적용 시 2026년 2월 28일까지)
     let tier = 'free'
     let premiumExpiresAt = null
     let promoAppliedAt = null
