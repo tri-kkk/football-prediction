@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import * as XLSX from 'xlsx'
 
 // ==================== 타입 정의 ====================
 
@@ -501,6 +502,9 @@ export default function AdminDashboard() {
   const [adPerformance, setAdPerformance] = useState<AdPerformance[]>([])
   const [reportSlotFilter, setReportSlotFilter] = useState('all')
   const [reportDateRange, setReportDateRange] = useState('7')
+  const [reportStartDate, setReportStartDate] = useState('')
+  const [reportEndDate, setReportEndDate] = useState('')
+  const [reportDateMode, setReportDateMode] = useState<'preset' | 'custom'>('preset')
   
   // ===== 블로그 상태 =====
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
@@ -698,10 +702,21 @@ export default function AdminDashboard() {
 
   const fetchReportStats = async () => {
     try {
-      let url = `/api/ads/track?days=${reportDateRange}`
+      let url = '/api/ads/track?'
+      
+      // 날짜 모드에 따라 다른 파라미터 사용
+      if (reportDateMode === 'preset') {
+        url += `days=${reportDateRange}`
+      } else {
+        // 커스텀 날짜 범위
+        if (reportStartDate) url += `start=${reportStartDate}&`
+        if (reportEndDate) url += `end=${reportEndDate}&`
+      }
+      
       if (reportSlotFilter !== 'all') {
         url += `&slot=${reportSlotFilter}`
       }
+      
       const response = await fetch(url)
       if (!response.ok) return
       const data = await response.json()
@@ -744,6 +759,103 @@ export default function AdminDashboard() {
       setAdPerformance(perf.sort((a, b) => b.totalImpressions - a.totalImpressions))
     } catch (err) {
       console.error('Report stats fetch error:', err)
+    }
+  }
+
+  // 엑셀 다운로드 함수
+  const downloadReportExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new()
+      
+      // 슬롯 타입 라벨 함수
+      const getSlotLabel = (type: string) => {
+        return SLOT_TYPES.find(s => s.value === type)?.label || type
+      }
+
+      // 시트 1: 일별 상세 (날짜 + 광고별)
+      const detailData = reportStats.map(stat => ({
+        '날짜': new Date(stat.date).toLocaleDateString('ko-KR'),
+        '광고명': stat.advertisements?.name || '-',
+        '슬롯': getSlotLabel(stat.advertisements?.slot_type || ''),
+        '노출': stat.impressions,
+        '클릭': stat.clicks,
+        'CTR': stat.impressions > 0 
+          ? `${((stat.clicks / stat.impressions) * 100).toFixed(2)}%` 
+          : '0.00%'
+      }))
+
+      if (detailData.length > 0) {
+        const ws1 = XLSX.utils.json_to_sheet(detailData)
+        ws1['!cols'] = [
+          { wch: 12 }, { wch: 20 }, { wch: 15 }, 
+          { wch: 10 }, { wch: 10 }, { wch: 10 }
+        ]
+        XLSX.utils.book_append_sheet(wb, ws1, '일별 상세')
+      }
+
+      // 시트 2: 광고별 성과
+      const adData = adPerformance.map(ad => ({
+        '광고명': ad.name,
+        '슬롯': getSlotLabel(ad.slot_type),
+        '총 노출': ad.totalImpressions,
+        '총 클릭': ad.totalClicks,
+        'CTR': `${ad.ctr.toFixed(2)}%`
+      }))
+
+      if (adData.length > 0) {
+        const ws2 = XLSX.utils.json_to_sheet(adData)
+        ws2['!cols'] = [
+          { wch: 20 }, { wch: 15 }, { wch: 12 }, 
+          { wch: 12 }, { wch: 10 }
+        ]
+        XLSX.utils.book_append_sheet(wb, ws2, '광고별 성과')
+      }
+
+      // 시트 3: 일별 합계
+      const summaryData = reportSummary.map(day => ({
+        '날짜': new Date(day.date).toLocaleDateString('ko-KR'),
+        '노출': day.impressions,
+        '클릭': day.clicks,
+        'CTR': day.impressions > 0 
+          ? `${((day.clicks / day.impressions) * 100).toFixed(2)}%` 
+          : '0.00%'
+      }))
+
+      if (summaryData.length > 0) {
+        const ws3 = XLSX.utils.json_to_sheet(summaryData)
+        ws3['!cols'] = [
+          { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }
+        ]
+        XLSX.utils.book_append_sheet(wb, ws3, '일별 합계')
+      }
+
+      // 시트 4: 요약
+      const totalImpressions = reportSummary.reduce((sum, s) => sum + s.impressions, 0)
+      const totalClicks = reportSummary.reduce((sum, s) => sum + s.clicks, 0)
+      const totalCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
+
+      const overviewData = [
+        { '항목': '기간', '값': reportDateMode === 'preset' ? `${reportDateRange}일` : `${reportStartDate} ~ ${reportEndDate}` },
+        { '항목': '슬롯 필터', '값': getSlotLabel(reportSlotFilter) },
+        { '항목': '총 노출', '값': totalImpressions },
+        { '항목': '총 클릭', '값': totalClicks },
+        { '항목': '평균 CTR', '값': `${totalCTR.toFixed(2)}%` },
+      ]
+
+      const ws4 = XLSX.utils.json_to_sheet(overviewData)
+      ws4['!cols'] = [{ wch: 15 }, { wch: 20 }]
+      XLSX.utils.book_append_sheet(wb, ws4, '요약')
+
+      // 파일명 생성
+      const today = new Date().toISOString().split('T')[0]
+      const fileName = `광고_리포트_${today}.xlsx`
+
+      // 다운로드
+      XLSX.writeFile(wb, fileName)
+      console.log('✅ 엑셀 다운로드 완료:', fileName)
+    } catch (error) {
+      console.error('❌ 엑셀 다운로드 에러:', error)
+      alert('엑셀 다운로드 중 오류가 발생했습니다.')
     }
   }
 
@@ -850,7 +962,7 @@ export default function AdminDashboard() {
     if (isAuthenticated && activeTab === 'report') {
       fetchReportStats()
     }
-  }, [isAuthenticated, activeTab, reportDateRange, reportSlotFilter])
+  }, [isAuthenticated, activeTab, reportDateRange, reportSlotFilter, reportStartDate, reportEndDate, reportDateMode])
 
   useEffect(() => {
     if (isAuthenticated && activeTab === 'blog') {
@@ -2915,31 +3027,111 @@ export default function AdminDashboard() {
             {/* 광고 리포트 탭 */}
             {activeTab === 'report' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <select
-                      value={reportSlotFilter}
-                      onChange={(e) => setReportSlotFilter(e.target.value)}
-                      className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                {/* 필터 바 */}
+                <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* 슬롯 타입 */}
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-2">슬롯 타입</label>
+                      <select
+                        value={reportSlotFilter}
+                        onChange={(e) => setReportSlotFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="all">전체</option>
+                        {SLOT_TYPES.map((slot) => (
+                          <option key={slot.value} value={slot.value}>{slot.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 날짜 모드 */}
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-2">기간</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setReportDateMode('preset')}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            reportDateMode === 'preset'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                          }`}
+                        >
+                          기본
+                        </button>
+                        <button
+                          onClick={() => setReportDateMode('custom')}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            reportDateMode === 'custom'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                          }`}
+                        >
+                          커스텀
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 날짜 선택 (조건부) */}
+                    {reportDateMode === 'preset' ? (
+                      <div className="md:col-span-2">
+                        <label className="block text-gray-400 text-sm mb-2">기간 선택</label>
+                        <div className="flex gap-2">
+                          {['7', '14', '30'].map(days => (
+                            <button
+                              key={days}
+                              onClick={() => setReportDateRange(days)}
+                              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                reportDateRange === days
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                              }`}
+                            >
+                              {days}일
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="block text-gray-400 text-sm mb-2">시작일</label>
+                          <input
+                            type="date"
+                            value={reportStartDate}
+                            onChange={(e) => setReportStartDate(e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-400 text-sm mb-2">종료일</label>
+                          <input
+                            type="date"
+                            value={reportEndDate}
+                            onChange={(e) => setReportEndDate(e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* 엑셀 다운로드 버튼 */}
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={downloadReportExcel}
+                      disabled={reportStats.length === 0}
+                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
                     >
-                      <option value="all">전체 슬롯</option>
-                      {SLOT_TYPES.map((slot) => (
-                        <option key={slot.value} value={slot.value}>{slot.label}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={reportDateRange}
-                      onChange={(e) => setReportDateRange(e.target.value)}
-                      className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
-                    >
-                      <option value="7">최근 7일</option>
-                      <option value="14">최근 14일</option>
-                      <option value="30">최근 30일</option>
-                    </select>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      엑셀 다운로드
+                    </button>
                   </div>
                 </div>
 
-                {/* 요약 */}
+                {/* 요약 카드 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">👁️</div>
@@ -2967,27 +3159,191 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* 일별 추이 차트 */}
+                {reportSummary.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                    <h3 className="text-lg font-semibold text-white mb-6">일별 추이</h3>
+                    <div className="space-y-3">
+                      {reportSummary.slice(-14).reverse().map((day) => {
+                        const maxImpressions = Math.max(...reportSummary.map(s => s.impressions), 1)
+                        const maxClicks = Math.max(...reportSummary.map(s => s.clicks), 1)
+                        const ctr = day.impressions > 0 ? (day.clicks / day.impressions) * 100 : 0
+                        return (
+                          <div key={day.date} className="flex items-center gap-4">
+                            {/* 날짜 */}
+                            <div className="w-24 text-sm text-gray-400">
+                              {new Date(day.date).toLocaleDateString('ko-KR', { 
+                                month: 'short', 
+                                day: 'numeric' 
+                              })}
+                            </div>
+                            
+                            {/* 바 차트 */}
+                            <div className="flex-1 flex gap-2">
+                              {/* 노출 바 */}
+                              <div className="flex-1 h-6 bg-gray-700 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${(day.impressions / maxImpressions) * 100}%` }}
+                                />
+                              </div>
+                              {/* 클릭 바 */}
+                              <div className="flex-1 h-6 bg-gray-700 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${(day.clicks / maxClicks) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* 수치 */}
+                            <div className="w-40 flex gap-4 text-sm">
+                              <span className="text-blue-400 w-16 text-right">{day.impressions}</span>
+                              <span className="text-emerald-400 w-12 text-right">{day.clicks}</span>
+                              <span className="text-gray-500 w-12 text-right">{ctr.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    
+                    {/* 범례 */}
+                    <div className="flex items-center gap-6 mt-6 pt-4 border-t border-gray-700/50">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                        <span className="text-sm text-gray-400">노출</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-emerald-500 rounded-full" />
+                        <span className="text-sm text-gray-400">클릭</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* 광고별 성과 */}
                 {adPerformance.length > 0 && (
                   <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
                     <h3 className="text-lg font-semibold text-white mb-4">광고별 성과</h3>
-                    <div className="space-y-4">
-                      {adPerformance.map((perf) => (
-                        <div key={perf.id} className="flex items-center justify-between py-3 border-b border-gray-700/50 last:border-0">
-                          <div>
-                            <div className="text-white font-medium">{perf.name}</div>
-                            <div className="text-sm text-gray-500">
-                              {SLOT_TYPES.find(s => s.value === perf.slot_type)?.label}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-6 text-sm">
-                            <span className="text-gray-400">👁️ {perf.totalImpressions.toLocaleString()}</span>
-                            <span className="text-gray-400">👆 {perf.totalClicks.toLocaleString()}</span>
-                            <span className="text-emerald-400 font-medium">{perf.ctr.toFixed(2)}%</span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-left text-gray-400 text-sm border-b border-gray-700/50">
+                            <th className="px-4 py-3">광고명</th>
+                            <th className="px-4 py-3">슬롯</th>
+                            <th className="px-4 py-3 text-right">노출</th>
+                            <th className="px-4 py-3 text-right">클릭</th>
+                            <th className="px-4 py-3 text-right">CTR</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adPerformance.map((perf) => (
+                            <tr key={perf.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                              <td className="px-4 py-3 text-white font-medium">{perf.name}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  perf.slot_type === 'desktop_banner' ? 'bg-blue-500/20 text-blue-400' :
+                                  perf.slot_type === 'sidebar' ? 'bg-purple-500/20 text-purple-400' :
+                                  'bg-orange-500/20 text-orange-400'
+                                }`}>
+                                  {SLOT_TYPES.find(s => s.value === perf.slot_type)?.label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right text-blue-400">
+                                {perf.totalImpressions.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-right text-emerald-400">
+                                {perf.totalClicks.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <span className={`font-bold ${
+                                  perf.ctr >= 1 ? 'text-emerald-400' : 
+                                  perf.ctr >= 0.5 ? 'text-yellow-400' : 
+                                  'text-gray-400'
+                                }`}>
+                                  {perf.ctr.toFixed(2)}%
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
+                  </div>
+                )}
+
+                {/* 일별 상세 테이블 */}
+                {reportStats.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-xl overflow-hidden border border-gray-700/50">
+                    <div className="p-6 border-b border-gray-700/50">
+                      <h3 className="text-lg font-semibold text-white">일별 상세</h3>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-left text-gray-400 text-sm border-b border-gray-700/50">
+                            <th className="px-6 py-4">날짜</th>
+                            <th className="px-6 py-4">광고명</th>
+                            <th className="px-6 py-4">슬롯</th>
+                            <th className="px-6 py-4 text-right">노출</th>
+                            <th className="px-6 py-4 text-right">클릭</th>
+                            <th className="px-6 py-4 text-right">CTR</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reportStats.map((stat, index) => {
+                            const ctr = stat.impressions > 0 
+                              ? (stat.clicks / stat.impressions) * 100 
+                              : 0
+                            return (
+                              <tr 
+                                key={`${stat.date}-${stat.advertisements?.id || index}`}
+                                className="border-b border-gray-700/50 hover:bg-gray-700/30"
+                              >
+                                <td className="px-6 py-4 text-sm text-gray-300">
+                                  {new Date(stat.date).toLocaleDateString('ko-KR')}
+                                </td>
+                                <td className="px-6 py-4 text-white font-medium">
+                                  {stat.advertisements?.name || '-'}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className={`px-2 py-1 rounded text-xs ${
+                                    stat.advertisements?.slot_type === 'desktop_banner' ? 'bg-blue-500/20 text-blue-400' :
+                                    stat.advertisements?.slot_type === 'sidebar' ? 'bg-purple-500/20 text-purple-400' :
+                                    'bg-orange-500/20 text-orange-400'
+                                  }`}>
+                                    {SLOT_TYPES.find(s => s.value === stat.advertisements?.slot_type)?.label || '-'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-right text-blue-400">
+                                  {stat.impressions.toLocaleString()}
+                                </td>
+                                <td className="px-6 py-4 text-right text-emerald-400">
+                                  {stat.clicks.toLocaleString()}
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className={`font-bold ${
+                                    ctr >= 1 ? 'text-emerald-400' : 
+                                    ctr >= 0.5 ? 'text-yellow-400' : 
+                                    'text-gray-400'
+                                  }`}>
+                                    {ctr.toFixed(2)}%
+                                  </span>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* 데이터 없음 */}
+                {reportStats.length === 0 && (
+                  <div className="text-center py-20 text-gray-500">
+                    데이터가 없습니다
                   </div>
                 )}
               </div>
