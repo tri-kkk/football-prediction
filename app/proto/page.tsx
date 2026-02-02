@@ -57,6 +57,8 @@ interface SlipStats {
   totalInvested: number
   totalReturn: number
   hitRate: number
+  totalDeleted?: number  // 삭제된 내역 수
+  lastUpdated?: string   // 마지막 업데이트 시간
 }
 
 // 스포츠 필터 (컴포넌트 외부)
@@ -116,6 +118,11 @@ export default function ProtoPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [betAmount, setBetAmount] = useState<number>(10000)
   const [slipStats, setSlipStats] = useState<SlipStats | null>(null)
+  
+  // ✅ 페이지네이션 상태
+  const [historyPage, setHistoryPage] = useState(1)
+  const [expandedSlips, setExpandedSlips] = useState<Set<string>>(new Set())
+  const HISTORY_PAGE_SIZE = 10
 
   // KST 기준 현재 시간
   const getKSTNow = useCallback(() => {
@@ -190,6 +197,7 @@ export default function ProtoPage() {
   
   const changeTab = (tab: 'calculator' | 'history' | 'stats') => {
     setActiveTab(tab)
+    setHistoryPage(1) // ✅ 탭 전환 시 페이지 초기화
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   
@@ -225,15 +233,27 @@ export default function ProtoPage() {
     }
   }
 
+  // ✅ 통계 조회 (DB에서)
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/api/proto/stats')
+      const json = await res.json()
+      if (json.success && json.data) {
+        setSlipStats(json.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+    }
+  }
+
   const fetchSlips = async () => {
     try {
       const res = await fetch('/api/proto/slips')
       const json = await res.json()
       if (json.success) {
         setSavedSlips(json.data)
-        if (json.stats) {
-          setSlipStats(json.stats)
-        }
+        // ✅ 통계는 별도로 조회
+        await fetchStats()
       }
     } catch (error) {
       console.error('Failed to fetch slips:', error)
@@ -432,7 +452,10 @@ export default function ProtoPage() {
     }
   }
 
+  // ✅ 내역만 삭제 (통계 유지)
   const deleteSlip = async (id: string) => {
+    if (!confirm('이 조합을 삭제하시겠습니까?\n※ 통계는 유지됩니다.')) return
+    
     try {
       const res = await fetch(`/api/proto/slips?id=${id}`, {
         method: 'DELETE'
@@ -441,14 +464,16 @@ export default function ProtoPage() {
       const json = await res.json()
       if (json.success) {
         setSavedSlips(prev => prev.filter(s => s.id !== id))
+        // ✅ 통계는 그대로 유지됨 (DB 트리거가 자동 처리)
       }
     } catch (error) {
       console.error('Failed to delete slip:', error)
     }
   }
 
+  // ✅ 내역만 전체 삭제 (통계 유지)
   const deleteAllSlips = async () => {
-    if (!confirm('모든 기록을 삭제하시겠습니까?')) return
+    if (!confirm('모든 내역을 삭제하시겠습니까?\n※ 통계는 유지됩니다.')) return
     
     setIsLoading(true)
     try {
@@ -459,12 +484,49 @@ export default function ProtoPage() {
       const json = await res.json()
       if (json.success) {
         setSavedSlips([])
+        // ✅ 통계는 그대로 유지됨 (DB 트리거가 자동 처리)
       }
     } catch (error) {
       console.error('Failed to delete all slips:', error)
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // ✅ 통계 포함 전체 초기화
+  const resetAllData = async () => {
+    if (!confirm('⚠️ 내역과 통계를 모두 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return
+    
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/proto/stats', {
+        method: 'DELETE'
+      })
+      
+      const json = await res.json()
+      if (json.success) {
+        setSavedSlips([])
+        setSlipStats(null)
+        alert('모든 데이터가 초기화되었습니다')
+      }
+    } catch (error) {
+      console.error('Failed to reset all data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // ✅ 접기/펼치기 토글
+  const toggleSlipExpand = (id: string) => {
+    setExpandedSlips(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
   }
 
   // 필터링
@@ -506,6 +568,34 @@ export default function ProtoPage() {
       return acc
     }, {} as Record<string, ProtoMatch[]>)
   }, [filteredMatches])
+
+  // ✅ 페이지네이션된 내역
+  const filteredHistory = useMemo(() => {
+    let filtered = savedSlips
+    if (historyFilter !== 'all') {
+      filtered = filtered.filter(s => s.status === historyFilter)
+    }
+    return filtered
+  }, [savedSlips, historyFilter])
+
+  const paginatedHistory = useMemo(() => {
+    const startIndex = (historyPage - 1) * HISTORY_PAGE_SIZE
+    const endIndex = startIndex + HISTORY_PAGE_SIZE
+    return filteredHistory.slice(startIndex, endIndex)
+  }, [filteredHistory, historyPage])
+
+  const totalHistoryPages = Math.ceil(filteredHistory.length / HISTORY_PAGE_SIZE)
+  const hasMoreHistory = historyPage < totalHistoryPages
+
+  // ✅ 필터별 카운트
+  const historyCounts = useMemo(() => {
+    return {
+      all: savedSlips.length,
+      pending: savedSlips.filter(s => s.status === 'pending').length,
+      won: savedSlips.filter(s => s.status === 'won').length,
+      lost: savedSlips.filter(s => s.status === 'lost').length
+    }
+  }, [savedSlips])
 
   const clearAllFilters = () => {
     setDateFilter('ALL')
@@ -1189,179 +1279,250 @@ export default function ProtoPage() {
         {/* 기록 탭 */}
         {activeTab === 'history' && (
           <div className="mt-1">
-            <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
-              {[
-                { key: 'all', label: '전체', icon: '📋' },
-                { key: 'pending', label: '대기중', icon: '⏳' },
-                { key: 'won', label: '적중', icon: '✅' },
-                { key: 'lost', label: '실패', icon: '❌' },
-              ].map((filter) => {
-                const count = filter.key === 'all' 
-                  ? savedSlips.length 
-                  : savedSlips.filter(s => s.status === filter.key).length
-                return (
-                  <button
-                    key={filter.key}
-                    onClick={() => setHistoryFilter(filter.key as any)}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                      historyFilter === filter.key
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-gray-800/50 text-gray-400'
-                    }`}
-                  >
-                    <span>{filter.icon}</span>
-                    <span>{filter.label}</span>
-                    <span className="opacity-60">({count})</span>
-                  </button>
-                )
-              })}
+            {/* ✅ 필터 + 카운트 */}
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex gap-2 overflow-x-auto">
+                <button
+                  onClick={() => {
+                    setHistoryFilter('all')
+                    setHistoryPage(1)
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
+                    historyFilter === 'all'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  전체 ({historyCounts.all})
+                </button>
+                <button
+                  onClick={() => {
+                    setHistoryFilter('pending')
+                    setHistoryPage(1)
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
+                    historyFilter === 'pending'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  대기 ({historyCounts.pending})
+                </button>
+                <button
+                  onClick={() => {
+                    setHistoryFilter('won')
+                    setHistoryPage(1)
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
+                    historyFilter === 'won'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  적중 ({historyCounts.won})
+                </button>
+                <button
+                  onClick={() => {
+                    setHistoryFilter('lost')
+                    setHistoryPage(1)
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
+                    historyFilter === 'lost'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  미적중 ({historyCounts.lost})
+                </button>
+              </div>
+
+              {/* ✅ 삭제 버튼 */}
+              {savedSlips.length > 0 && (
+                <button
+                  onClick={deleteAllSlips}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg text-xs text-white whitespace-nowrap"
+                  disabled={isLoading}
+                >
+                  {isLoading ? '삭제 중...' : '전체 정리'}
+                </button>
+              )}
             </div>
 
-            {slipStats && savedSlips.length > 0 && (
-              <div className="mt-2 grid grid-cols-3 md:grid-cols-6 gap-1.5">
-                <div className="bg-gray-800/50 rounded-lg p-2 text-center border border-gray-700/50">
-                  <p className="text-lg font-bold text-white">{slipStats.totalSlips}</p>
-                  <p className="text-[10px] text-gray-500">총 조합</p>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-2 text-center border border-gray-700/50">
-                  <p className="text-lg font-bold text-yellow-400">{slipStats.pending}</p>
-                  <p className="text-[10px] text-gray-500">대기</p>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-2 text-center border border-gray-700/50">
-                  <p className="text-lg font-bold text-green-400">{slipStats.won}</p>
-                  <p className="text-[10px] text-gray-500">적중</p>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-2 text-center border border-gray-700/50">
-                  <p className="text-lg font-bold text-red-400">{slipStats.lost}</p>
-                  <p className="text-[10px] text-gray-500">실패</p>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-2 text-center border border-gray-700/50">
-                  <p className="text-lg font-bold text-blue-400">{slipStats.totalInvested.toLocaleString()}</p>
-                  <p className="text-[10px] text-gray-500">총 투자</p>
-                </div>
-                <div className="bg-gray-800/50 rounded-lg p-2 text-center border border-gray-700/50">
-                  <p className={`text-lg font-bold ${slipStats.totalReturn >= slipStats.totalInvested ? 'text-green-400' : 'text-red-400'}`}>
-                    {slipStats.totalReturn.toLocaleString()}
-                  </p>
-                  <p className="text-[10px] text-gray-500">총 수익</p>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-3 space-y-2">
-              {savedSlips.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p className="text-4xl mb-2">📜</p>
-                  <p className="text-sm">저장된 기록이 없습니다</p>
-                </div>
-              ) : (
-                <>
-                  <div className="flex justify-end mb-2">
-                    <button
-                      onClick={deleteAllSlips}
-                      disabled={isLoading}
-                      className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-xs transition-colors disabled:opacity-50"
+            {/* ✅ 내역 리스트 */}
+            {paginatedHistory.length > 0 ? (
+              <div className="space-y-3">
+                {paginatedHistory.map(slip => {
+                  const isExpanded = expandedSlips.has(slip.id)
+                  
+                  return (
+                    <div
+                      key={slip.id}
+                      className={`bg-gray-800/50 rounded-xl border ${
+                        slip.status === 'won'
+                          ? 'border-green-500/50'
+                          : slip.status === 'lost'
+                          ? 'border-red-500/50'
+                          : 'border-gray-700/50'
+                      } overflow-hidden`}
                     >
-                      전체 삭제
-                    </button>
-                  </div>
-
-                  {savedSlips
-                    .filter(slip => historyFilter === 'all' || slip.status === historyFilter)
-                    .map((slip) => (
+                      {/* ✅ 헤더 (클릭 시 접기/펼치기) */}
                       <div
-                        key={slip.id}
-                        className={`bg-gray-800/50 rounded-lg border p-3 ${
-                          slip.status === 'won' ? 'border-green-500/30' :
-                          slip.status === 'lost' ? 'border-red-500/30' :
-                          'border-gray-700/50'
-                        }`}
+                        onClick={() => toggleSlipExpand(slip.id)}
+                        className="p-4 cursor-pointer hover:bg-gray-700/30 transition-colors"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">{slip.round}회차</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                              slip.status === 'won' ? 'bg-green-500/20 text-green-400' :
-                              slip.status === 'lost' ? 'bg-red-500/20 text-red-400' :
-                              'bg-yellow-500/20 text-yellow-400'
+                            <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-300">
+                              {slip.round}회
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                              slip.status === 'won'
+                                ? 'bg-green-500/20 text-green-400'
+                                : slip.status === 'lost'
+                                ? 'bg-red-500/20 text-red-400'
+                                : 'bg-blue-500/20 text-blue-400'
                             }`}>
-                              {slip.status === 'won' ? '적중' : slip.status === 'lost' ? '실패' : '대기중'}
+                              {slip.status === 'won' ? '✅ 적중' : slip.status === 'lost' ? '❌ 미적중' : '⏳ 대기'}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-emerald-400 font-bold text-sm">{slip.totalOdds.toFixed(2)}배</span>
-                            <button
-                              onClick={() => deleteSlip(slip.id)}
-                              className="text-gray-500 hover:text-red-400 text-xs"
-                            >
-                              ✕
-                            </button>
+                            <span className="text-xs text-gray-500">
+                              {new Date(slip.createdAt).toLocaleDateString()}
+                            </span>
+                            <span className="text-gray-400">
+                              {isExpanded ? '🔼' : '🔽'}
+                            </span>
                           </div>
                         </div>
 
-                        <div className="space-y-1">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">조합:</span>
+                            <span className="ml-2 text-white font-medium">{slip.selections.length}폴더</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">배당:</span>
+                            <span className="ml-2 text-emerald-400 font-bold">{slip.totalOdds.toFixed(2)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">투자:</span>
+                            <span className="ml-2 text-white">{slip.amount.toLocaleString()}원</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">예상:</span>
+                            <span className={`ml-2 font-medium ${
+                              slip.status === 'won' ? 'text-green-400' : 'text-gray-400'
+                            }`}>
+                              {(slip.amount * slip.totalOdds).toLocaleString()}원
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ✅ 상세 내역 (펼쳤을 때만) */}
+                      {isExpanded && (
+                        <div className="border-t border-gray-700/50 p-4 space-y-2 bg-gray-900/30">
                           {slip.selections.map((sel, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-xs">
-                              <span className="text-gray-400 truncate max-w-[60%]">
-                                #{String(sel.matchSeq).padStart(3, '0')} {sel.homeTeam} vs {sel.awayTeam}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <span className={`px-1 py-0.5 rounded text-[10px] ${
-                                  ['home', 'over', 'odd'].includes(sel.prediction) ? 'bg-blue-500/20 text-blue-400' :
-                                  sel.prediction === 'draw' ? 'bg-gray-500/20 text-gray-400' :
-                                  'bg-red-500/20 text-red-400'
-                                }`}>
-                                  {sel.prediction === 'home' ? '승' :
-                                   sel.prediction === 'draw' ? '무' :
-                                   sel.prediction === 'away' ? '패' :
-                                   sel.prediction === 'over' ? 'O' :
-                                   sel.prediction === 'under' ? 'U' :
-                                   sel.prediction === 'odd' ? '홀' : '짝'}
+                            <div key={idx} className="text-xs bg-gray-800/50 rounded-lg p-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-gray-400">{sel.homeTeam} vs {sel.awayTeam}</span>
+                                <span className="text-emerald-400 font-medium">{sel.odds.toFixed(2)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500">{sel.matchType}</span>
+                                <span className="text-white">
+                                  {sel.matchType === '승무패' && (
+                                    sel.prediction === 'home' ? '홈승' : 
+                                    sel.prediction === 'draw' ? '무승부' : '원정승'
+                                  )}
+                                  {sel.matchType === '핸디캡' && (
+                                    `${sel.prediction === 'home' ? '홈' : '원정'} (${sel.handicapValue})`
+                                  )}
+                                  {sel.matchType === '언더오버' && (
+                                    `${sel.prediction === 'under' ? '언더' : '오버'} ${sel.totalValue}`
+                                  )}
+                                  {sel.matchType === '홀짝' && (
+                                    sel.prediction === 'odd' ? '홀' : '짝'
+                                  )}
                                 </span>
-                                <span className="text-emerald-400">{sel.odds.toFixed(2)}</span>
                               </div>
                             </div>
                           ))}
-                        </div>
 
-                        <div className="mt-2 pt-2 border-t border-gray-700/30 flex items-center justify-between text-xs">
-                          <span className="text-gray-500">투자: {slip.amount.toLocaleString()}원</span>
-                          <span className={`font-bold ${
-                            slip.status === 'won' ? 'text-green-400' :
-                            slip.status === 'lost' ? 'text-red-400' : 'text-gray-400'
-                          }`}>
-                            {slip.status === 'won' 
-                              ? `+${Math.floor(slip.amount * slip.totalOdds - slip.amount).toLocaleString()}원`
-                              : slip.status === 'lost'
-                                ? `-${slip.amount.toLocaleString()}원`
-                                : `예상: ${Math.floor(slip.amount * slip.totalOdds).toLocaleString()}원`
-                            }
-                          </span>
+                          {/* 삭제 버튼 */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteSlip(slip.id)
+                            }}
+                            className="w-full mt-2 py-2 bg-red-600/20 hover:bg-red-600/40 rounded-lg text-xs text-red-400 transition-colors"
+                          >
+                            삭제
+                          </button>
                         </div>
+                      )}
+                    </div>
+                  )
+                })}
 
-                        <div className="mt-1 text-[10px] text-gray-600">
-                          {new Date(slip.createdAt).toLocaleString('ko-KR')}
-                        </div>
-                      </div>
-                    ))}
-                </>
-              )}
-            </div>
+                {/* ✅ 페이지네이션 */}
+                {totalHistoryPages > 1 && (
+                  <div className="mt-4 flex items-center justify-between">
+                    <button
+                      onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
+                      disabled={historyPage === 1}
+                      className="px-4 py-2 bg-gray-700 rounded-lg text-sm text-white disabled:opacity-50"
+                    >
+                      이전
+                    </button>
+
+                    <span className="text-sm text-gray-400">
+                      {historyPage} / {totalHistoryPages}
+                    </span>
+
+                    <button
+                      onClick={() => setHistoryPage(prev => Math.min(totalHistoryPages, prev + 1))}
+                      disabled={!hasMoreHistory}
+                      className="px-4 py-2 bg-gray-700 rounded-lg text-sm text-white disabled:opacity-50"
+                    >
+                      다음
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <p className="text-4xl mb-2">📜</p>
+                <p className="text-sm">저장된 내역이 없습니다</p>
+              </div>
+            )}
           </div>
         )}
 
         {/* 통계 탭 */}
         {activeTab === 'stats' && (
           <div className="mt-1">
-            {slipStats && savedSlips.length > 0 ? (
+            {slipStats && (slipStats.totalSlips > 0 || (slipStats.totalDeleted && slipStats.totalDeleted > 0)) ? (
               <>
                 <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
-                  <h3 className="text-sm font-bold text-white mb-3">통계</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-white">누적 통계</h3>
+                    {slipStats.lastUpdated && (
+                      <span className="text-[10px] text-gray-500">
+                        {new Date(slipStats.lastUpdated).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
                   
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-gray-900/50 rounded-lg p-3 text-center">
                       <p className="text-2xl font-bold text-white">{slipStats.totalSlips}</p>
                       <p className="text-xs text-gray-500">총 조합</p>
+                      {slipStats.totalDeleted && slipStats.totalDeleted > 0 && (
+                        <p className="text-[10px] text-gray-600 mt-1">
+                          (삭제된 {slipStats.totalDeleted}건 포함)
+                        </p>
+                      )}
                     </div>
                     <div className="bg-gray-900/50 rounded-lg p-3 text-center">
                       <p className="text-2xl font-bold text-emerald-400">{slipStats.hitRate.toFixed(1)}%</p>
@@ -1424,6 +1585,20 @@ export default function ProtoPage() {
                     <span>적중 {slipStats.won}건</span>
                     <span>실패 {slipStats.lost}건</span>
                   </div>
+                </div>
+
+                {/* ✅ 전체 초기화 버튼 */}
+                <div className="mt-4">
+                  <button
+                    onClick={resetAllData}
+                    className="w-full py-3 bg-red-600/20 hover:bg-red-600/40 border border-red-500/50 rounded-lg text-sm text-red-400 transition-colors"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? '초기화 중...' : '⚠️ 내역 + 통계 전체 초기화'}
+                  </button>
+                  <p className="text-[10px] text-gray-600 text-center mt-2">
+                    ※ 내역만 정리하려면 "내역" 탭에서 "전체 정리" 사용
+                  </p>
                 </div>
               </>
             ) : (

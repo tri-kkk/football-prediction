@@ -40,7 +40,13 @@ export async function GET() {
       .eq('user_id', userId)  // 🔒 내 슬립만!
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Proto slips fetch error:', error)
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      )
+    }
 
     // 프론트엔드 형식으로 변환
     const slips = (data || []).map(row => ({
@@ -54,23 +60,9 @@ export async function GET() {
       actualReturn: row.actual_return || 0
     }))
 
-    // 통계 계산
-    const stats = {
-      totalSlips: slips.length,
-      pending: slips.filter(s => s.status === 'pending').length,
-      won: slips.filter(s => s.status === 'won').length,
-      lost: slips.filter(s => s.status === 'lost').length,
-      totalInvested: slips.reduce((sum, s) => sum + s.amount, 0),
-      totalReturn: slips.reduce((sum, s) => sum + s.actualReturn, 0),
-      hitRate: 0
-    }
-    
-    const finished = stats.won + stats.lost
-    if (finished > 0) {
-      stats.hitRate = Math.round((stats.won / finished) * 100 * 10) / 10
-    }
-
-    return NextResponse.json({ success: true, data: slips, stats })
+    // ✅ 통계는 제거 (별도 API로 분리)
+    // 클라이언트에서 /api/proto/stats 호출하여 조회
+    return NextResponse.json({ success: true, data: slips })
   } catch (error) {
     console.error('Proto slips GET error:', error)
     return NextResponse.json(
@@ -110,12 +102,19 @@ export async function POST(request: NextRequest) {
         selections,
         total_odds: totalOdds,
         amount: amount || 0,
-        status: 'pending'
+        status: 'pending',
+        actual_return: 0
       })
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Proto slips insert error:', error)
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      )
+    }
 
     const slip = {
       id: data.id,
@@ -128,6 +127,7 @@ export async function POST(request: NextRequest) {
       actualReturn: data.actual_return || 0
     }
 
+    // ✅ DB 트리거가 자동으로 proto_stats 업데이트
     return NextResponse.json({ success: true, data: slip })
   } catch (error) {
     console.error('Proto slips POST error:', error)
@@ -151,7 +151,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status } = body
+    const { id, status, actualReturn } = body
 
     if (!id || !status) {
       return NextResponse.json(
@@ -167,16 +167,33 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // 업데이트할 데이터 준비
+    const updateData: any = { status }
+    
+    // 적중 시 실제 수익 업데이트
+    if (status === 'won' && actualReturn !== undefined) {
+      updateData.actual_return = actualReturn
+    } else if (status === 'lost') {
+      updateData.actual_return = 0
+    }
+
     const { data, error } = await supabase
       .from('proto_slips')
-      .update({ status })
+      .update(updateData)
       .eq('id', id)
       .eq('user_id', userId)  // 🔒 본인 것만!
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Proto slips update error:', error)
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      )
+    }
 
+    // ✅ DB 트리거가 자동으로 proto_stats 업데이트
     return NextResponse.json({ success: true, data })
   } catch (error) {
     console.error('Proto slips PUT error:', error)
@@ -204,14 +221,24 @@ export async function DELETE(request: NextRequest) {
     const deleteAll = searchParams.get('all')
 
     if (deleteAll === 'true') {
-      // 내 전체 삭제
+      // ✅ 내 전체 내역 삭제 (통계는 유지됨)
       const { error } = await supabase
         .from('proto_slips')
         .delete()
         .eq('user_id', userId)  // 🔒 내 것만!
 
-      if (error) throw error
-      return NextResponse.json({ success: true, message: 'All my slips deleted' })
+      if (error) {
+        console.error('Proto slips delete all error:', error)
+        return NextResponse.json(
+          { success: false, error: error.message },
+          { status: 500 }
+        )
+      }
+
+      // ✅ DB 트리거가 자동으로:
+      // - total_deleted 증가
+      // - 남은 슬립으로 통계 재계산
+      return NextResponse.json({ success: true, message: 'All slips deleted' })
     }
 
     if (!id) {
@@ -221,14 +248,24 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    // ✅ 단일 슬립 삭제 (통계는 유지됨)
     const { error } = await supabase
       .from('proto_slips')
       .delete()
       .eq('id', id)
       .eq('user_id', userId)  // 🔒 본인 것만!
 
-    if (error) throw error
+    if (error) {
+      console.error('Proto slips delete error:', error)
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      )
+    }
 
+    // ✅ DB 트리거가 자동으로:
+    // - total_deleted 증가
+    // - 남은 슬립으로 통계 재계산
     return NextResponse.json({ success: true, message: 'Slip deleted' })
   } catch (error) {
     console.error('Proto slips DELETE error:', error)
