@@ -27,10 +27,10 @@ export default function MobileBottomNav() {
       hidden: false
     },
     {
-      href: '/results',
-      icon: '/event.svg',
-      labelKo: '결과',
-      labelEn: 'Results',
+      href: '/highlights',
+      icon: 'play',
+      labelKo: '하이라이트',
+      labelEn: 'Highlights',
       hidden: false
     },
     {
@@ -106,6 +106,18 @@ export default function MobileBottomNav() {
                     <path d="M3 3v18h18" stroke={isActive ? '#3b82f6' : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M7 14l4-4 4 4 5-5" stroke={isActive ? '#3b82f6' : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     <circle cx="20" cy="9" r="2" fill={isActive ? '#3b82f6' : '#9ca3af'}/>
+                  </svg>
+                ) : item.icon === 'play' ? (
+                  <svg 
+                    width="24" 
+                    height="24" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={isActive ? 'brightness-125' : ''}
+                  >
+                    <rect x="3" y="5" width="18" height="14" rx="2" stroke={isActive ? '#3b82f6' : '#9ca3af'} strokeWidth="2"/>
+                    <path d="M10 9l5 3-5 3V9z" fill={isActive ? '#3b82f6' : '#9ca3af'}/>
                   </svg>
                 ) : (
                   <Image 

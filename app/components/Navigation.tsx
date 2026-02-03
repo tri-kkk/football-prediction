@@ -32,10 +32,10 @@ const menuItems: MenuItem[] = [
     hidden: false
   },
   { 
-    labelKo: '경기 결과',
-    labelEn: 'Results',
-    href: '/results', 
-    icon: '/event.svg'
+    labelKo: '하이라이트',
+    labelEn: 'Highlights',
+    href: '/highlights', 
+    icon: 'play'
   },
   { 
     labelKo: '대시보드',
@@ -95,6 +95,22 @@ export default function Navigation() {
           <path d="M3 3v18h18" stroke={isActive ? '#ffffff' : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           <path d="M7 14l4-4 4 4 5-5" stroke={isActive ? '#ffffff' : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           <circle cx="20" cy="9" r="2" fill={isActive ? '#ffffff' : '#9ca3af'}/>
+        </svg>
+      )
+    }
+    
+    if (item.icon === 'play') {
+      return (
+        <svg 
+          width={size} 
+          height={size} 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+          className={isActive ? 'brightness-125' : ''}
+        >
+          <rect x="3" y="5" width="18" height="14" rx="2" stroke={isActive ? '#ffffff' : '#9ca3af'} strokeWidth="2"/>
+          <path d="M10 9l5 3-5 3V9z" fill={isActive ? '#ffffff' : '#9ca3af'}/>
         </svg>
       )
     }
