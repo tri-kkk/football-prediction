@@ -300,7 +300,7 @@ const KeyStatsCard = ({
 }
 
 // ============================================================
-// 📝 이벤트 타임라인
+// 📝 이벤트 타임라인 (홈/원정 렌더링 수정)
 // ============================================================
 const EventsSection = ({ 
   events = [], 
@@ -348,12 +348,14 @@ const EventsSection = ({
           <div 
             key={idx}
             className={`flex items-center gap-3 ${
-              event.team === 'home' ? 'flex-row' : 'flex-row-reverse'
+              // ⚠️ 수정: home과 away를 반대로 변경
+              event.team === 'home' ? 'flex-row-reverse' : 'flex-row'
             }`}
           >
             {/* 이벤트 내용 */}
             <div className={`flex-1 flex items-center gap-2 ${
-              event.team === 'home' ? 'justify-end text-right' : 'justify-start text-left'
+              // ⚠️ 수정: home과 away를 반대로 변경
+              event.team === 'home' ? 'justify-start text-left' : 'justify-end text-right'
             }`}>
               <div>
                 <p className="text-sm text-white font-medium">{event.player}</p>
@@ -372,7 +374,8 @@ const EventsSection = ({
 
             {/* 시간 */}
             <div className={`w-12 flex items-center ${
-              event.team === 'home' ? 'justify-start' : 'justify-end'
+              // ⚠️ 수정: home과 away를 반대로 변경
+              event.team === 'home' ? 'justify-end' : 'justify-start'
             }`}>
               <span className={`text-sm font-bold px-2 py-0.5 rounded ${
                 event.team === 'home' ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'
