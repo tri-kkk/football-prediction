@@ -10,7 +10,11 @@ export default function MobileBottomNav() {
   const { language } = useLanguage()
   const { canInstall, isInstalled, triggerInstall } = usePWAInstall()
 
-  const navItems = [
+  // 현재 스포츠 감지
+  const isBaseball = pathname.startsWith('/baseball')
+
+  // ⚽ 축구 메뉴
+  const footballNavItems = [
     {
       href: '/',
       icon: '/preview.svg',
@@ -47,15 +51,42 @@ export default function MobileBottomNav() {
       labelEn: 'News',
       hidden: false
     },
-    {
-      href: '/dashboard',
-      icon: '/dashboard.svg',
-      labelKo: '대시보드',
-      labelEn: 'Dashboard',
-      hidden: true
-    }
   ]
 
+  // ⚾ 야구 메뉴
+  const baseballNavItems = [
+    {
+      href: '/baseball',
+      icon: '/preview.svg',
+      labelKo: '홈',
+      labelEn: 'Home',
+      hidden: false
+    },
+    {
+      href: '/baseball/predictions',
+      icon: 'insights',
+      labelKo: '예측',
+      labelEn: 'Predict',
+      hidden: false
+    },
+    {
+      href: '/baseball/results',
+      icon: 'play',
+      labelKo: '결과',
+      labelEn: 'Results',
+      hidden: false
+    },
+    {
+      href: '/baseball/standings',
+      icon: '/dashboard.svg',
+      labelKo: '순위표',
+      labelEn: 'Standings',
+      hidden: false
+    },
+  ]
+
+  // 스포츠에 맞는 메뉴 선택
+  const navItems = isBaseball ? baseballNavItems : footballNavItems
   const visibleNavItems = navItems.filter(item => !item.hidden)
   
   // 설치 가능하고 아직 설치 안 했으면 설치 버튼 추가
@@ -77,7 +108,9 @@ export default function MobileBottomNav() {
               href={item.href}
               className={`relative flex flex-col items-center gap-2 py-2 rounded-lg transition-all ${
                 isActive 
-                  ? 'text-blue-500' 
+                  ? isBaseball 
+                    ? 'text-blue-500' 
+                    : 'text-emerald-500'
                   : 'text-gray-400 active:bg-gray-800/50'
               }`}
             >
@@ -91,8 +124,8 @@ export default function MobileBottomNav() {
                     xmlns="http://www.w3.org/2000/svg" 
                     className={isActive ? 'brightness-125' : ''}
                   >
-                    <circle cx="6.18" cy="17.82" r="2.18" fill={isActive ? '#3b82f6' : '#9ca3af'}/>
-                    <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z" fill={isActive ? '#3b82f6' : '#9ca3af'}/>
+                    <circle cx="6.18" cy="17.82" r="2.18" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
+                    <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
                   </svg>
                 ) : item.icon === 'insights' ? (
                   <svg 
@@ -103,9 +136,9 @@ export default function MobileBottomNav() {
                     xmlns="http://www.w3.org/2000/svg"
                     className={isActive ? 'brightness-125' : ''}
                   >
-                    <path d="M3 3v18h18" stroke={isActive ? '#3b82f6' : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M7 14l4-4 4 4 5-5" stroke={isActive ? '#3b82f6' : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="20" cy="9" r="2" fill={isActive ? '#3b82f6' : '#9ca3af'}/>
+                    <path d="M3 3v18h18" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M7 14l4-4 4 4 5-5" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="20" cy="9" r="2" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
                   </svg>
                 ) : item.icon === 'play' ? (
                   <svg 
@@ -116,8 +149,8 @@ export default function MobileBottomNav() {
                     xmlns="http://www.w3.org/2000/svg"
                     className={isActive ? 'brightness-125' : ''}
                   >
-                    <rect x="3" y="5" width="18" height="14" rx="2" stroke={isActive ? '#3b82f6' : '#9ca3af'} strokeWidth="2"/>
-                    <path d="M10 9l5 3-5 3V9z" fill={isActive ? '#3b82f6' : '#9ca3af'}/>
+                    <rect x="3" y="5" width="18" height="14" rx="2" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2"/>
+                    <path d="M10 9l5 3-5 3V9z" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
                   </svg>
                 ) : (
                   <Image 

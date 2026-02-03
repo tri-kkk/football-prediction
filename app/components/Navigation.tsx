@@ -16,7 +16,8 @@ interface MenuItem {
   hidden?: boolean
 }
 
-const menuItems: MenuItem[] = [
+// ⚽ 축구 메뉴
+const footballMenuItems: MenuItem[] = [
   { 
     labelKo: '트렌드',
     labelEn: 'Trend',
@@ -58,11 +59,44 @@ const menuItems: MenuItem[] = [
   },
 ]
 
+// ⚾ 야구 메뉴
+const baseballMenuItems: MenuItem[] = [
+  { 
+    labelKo: '홈',
+    labelEn: 'Home',
+    href: '/baseball', 
+    icon: '/preview.svg'
+  },
+  { 
+    labelKo: '예측',
+    labelEn: 'Predict',
+    href: '/baseball/predictions', 
+    icon: 'insights'
+  },
+  { 
+    labelKo: '결과',
+    labelEn: 'Results',
+    href: '/baseball/results', 
+    icon: 'play'
+  },
+  { 
+    labelKo: '순위표',
+    labelEn: 'Standings',
+    href: '/baseball/standings', 
+    icon: '/dashboard.svg'
+  },
+]
+
 export default function Navigation() {
   const pathname = usePathname()
   const { language } = useLanguage()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // 현재 스포츠 감지
+  const isBaseball = pathname.startsWith('/baseball')
+  
+  // 스포츠에 맞는 메뉴 선택
+  const menuItems = isBaseball ? baseballMenuItems : footballMenuItems
   const visibleMenuItems = menuItems.filter(item => !item.hidden)
 
   const renderIcon = (item: MenuItem, isActive: boolean, size: number = 20) => {
@@ -130,6 +164,9 @@ export default function Navigation() {
     <>
       {/* Desktop Navigation */}
       <nav className="hidden md:flex items-center gap-1">
+
+
+        {/* 메뉴 아이템 */}
         {visibleMenuItems.map((item) => {
           const isActive = pathname === item.href
           const isDisabled = item.disabled
@@ -141,7 +178,9 @@ export default function Navigation() {
               className={`
                 relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all
                 ${isActive 
-                  ? 'bg-blue-500 text-white shadow-md' 
+                  ? isBaseball 
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : 'bg-emerald-500 text-white shadow-md'
                   : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
                 }
                 ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}
@@ -188,6 +227,32 @@ export default function Navigation() {
       {mobileMenuOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-[#0f0f0f] border-t border-gray-800 shadow-2xl z-50">
           <div className="container mx-auto px-4 py-3">
+            {/* 모바일 스포츠 전환 */}
+            <div className="flex items-center gap-2 mb-3 p-2 bg-gray-800/50 rounded-lg">
+              <Link
+                href="/"
+                className={`flex-1 py-2 rounded-md text-sm font-medium text-center transition-all ${
+                  !isBaseball 
+                    ? 'bg-emerald-500 text-white shadow-md' 
+                    : 'text-gray-400 hover:bg-gray-700/50'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                ⚽ {language === 'ko' ? '축구' : 'Football'}
+              </Link>
+              <Link
+                href="/baseball"
+                className={`flex-1 py-2 rounded-md text-sm font-medium text-center transition-all ${
+                  isBaseball 
+                    ? 'bg-blue-500 text-white shadow-md' 
+                    : 'text-gray-400 hover:bg-gray-700/50'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                ⚾ {language === 'ko' ? '야구' : 'Baseball'}
+              </Link>
+            </div>
+
             <div className="flex flex-col gap-1">
               {visibleMenuItems.map((item) => {
                 const isActive = pathname === item.href
@@ -200,7 +265,9 @@ export default function Navigation() {
                     className={`
                       relative flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all
                       ${isActive 
-                        ? 'bg-blue-500 text-white shadow-md' 
+                        ? isBaseball
+                          ? 'bg-blue-500 text-white shadow-md'
+                          : 'bg-emerald-500 text-white shadow-md'
                         : 'text-gray-300 hover:bg-gray-800/50 hover:text-white'
                       }
                       ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}
