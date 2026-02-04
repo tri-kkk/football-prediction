@@ -87,11 +87,11 @@ export default function AdSenseAd({
   darkMode = true
 }: AdSenseAdProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [adStatus, setAdStatus] = useState<'loading' | 'success' | 'failed' | 'hidden'>('loading')
+  const [adStatus, setAdStatus] = useState<'loading' | 'success' | 'failed'>('loading')
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const [isProduction, setIsProduction] = useState(false)
-  const [loadAttempts, setLoadAttempts] = useState(0)
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
   
   const { data: session, status } = useSession()
 
@@ -122,24 +122,23 @@ export default function AdSenseAd({
 
   // 광고 로드 함수
   const loadAd = useCallback(() => {
-    if (adStatus === 'success' || adStatus === 'hidden') return
+    if (adStatus === 'success') return
     if (!containerRef.current) return
-    if (loadAttempts >= 3) {
-      // 🔧 3번 실패하면 숨김
-      setAdStatus('hidden')
-      return
-    }
+    if (hasAttemptedLoad) return
     
     // 요소가 보이는지 확인
     if (!isElementVisible(containerRef.current)) {
-      return // 보이지 않으면 스킵 (나중에 다시 시도)
+      console.log(`⏸️ [AdSenseAd] ${slot}: 컨테이너가 보이지 않음, 대기 중...`)
+      return
     }
 
     const insElement = containerRef.current.querySelector('ins.adsbygoogle')
     if (!insElement) return
     
     // 이미 로드된 광고인지 확인
-    if (insElement.getAttribute('data-adsbygoogle-status') === 'done') {
+    const adStatus = insElement.getAttribute('data-adsbygoogle-status')
+    if (adStatus === 'done') {
+      console.log(`✅ [AdSenseAd] ${slot}: 이미 로드된 광고`)
       setAdStatus('success')
       return
     }
@@ -147,26 +146,23 @@ export default function AdSenseAd({
     try {
       window.adsbygoogle = window.adsbygoogle || []
       window.adsbygoogle.push({})
-      setAdStatus('success')
-      console.log(`📢 [AdSenseAd] ${slot}: 광고 로드 완료`)
+      setHasAttemptedLoad(true)
+      console.log(`🔄 [AdSenseAd] ${slot}: 광고 로드 요청`)
     } catch (error: any) {
-      setLoadAttempts(prev => prev + 1)
+      console.error(`❌ [AdSenseAd] ${slot}: 광고 로드 에러:`, error?.message || error)
       
       if (error?.message?.includes('already have ads')) {
         setAdStatus('success')
       } else {
-        // 실패 카운트 증가, 3번 이상이면 숨김
-        if (loadAttempts >= 2) {
-          setAdStatus('hidden')
-        }
+        // 에러가 있어도 실패로 표시하지 않고 계속 시도
+        console.log(`⚠️ [AdSenseAd] ${slot}: 재시도 대기 중...`)
       }
     }
-  }, [adStatus, slot, loadAttempts])
+  }, [adStatus, slot, hasAttemptedLoad])
 
-  // 🔧 광고 로드 성공 여부 감지 (MutationObserver)
+  // 광고 로드 성공 여부 감지 (MutationObserver)
   useEffect(() => {
     if (!isMounted || !isProduction) return
-    if (adStatus !== 'loading') return
     if (!containerRef.current) return
 
     const insElement = containerRef.current.querySelector('ins.adsbygoogle')
@@ -176,18 +172,12 @@ export default function AdSenseAd({
       mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'data-adsbygoogle-status') {
           const status = insElement.getAttribute('data-adsbygoogle-status')
+          console.log(`📊 [AdSenseAd] ${slot}: 광고 상태 변경 →`, status)
+          
           if (status === 'done') {
-            // 광고 로드 성공 - 실제로 콘텐츠가 있는지 확인
-            const hasContent = insElement.querySelector('iframe') || 
-                              insElement.querySelector('ins') ||
-                              (insElement as HTMLElement).offsetHeight > 10
-            
-            if (hasContent) {
-              setAdStatus('success')
-            } else {
-              // 콘텐츠 없음 = 광고 없음
-              setAdStatus('hidden')
-            }
+            // 광고 로드 완료 - 성공으로 표시
+            setAdStatus('success')
+            console.log(`✅ [AdSenseAd] ${slot}: 광고 로드 성공`)
           }
         }
       })
@@ -196,53 +186,44 @@ export default function AdSenseAd({
     observer.observe(insElement, { attributes: true })
 
     return () => observer.disconnect()
-  }, [isMounted, isProduction, adStatus])
+  }, [isMounted, isProduction, slot])
 
-  // 광고 로드 시도
+  // 광고 로드 시도 - 여러 시점에서 재시도
   useEffect(() => {
     if (!isMounted) return
     if (status === 'loading') return
     if (isPremium || isAdsBlocked || !isProduction) return
-    if (adStatus === 'success' || adStatus === 'hidden') return
+    if (adStatus === 'success') return
 
-    const timer1 = setTimeout(() => loadAd(), 2000)
-    const timer2 = setTimeout(() => loadAd(), 5000)
-    const timer3 = setTimeout(() => {
-      loadAd()
-      // 🔧 10초 후에도 loading이면 숨김
-      setTimeout(() => {
-        if (adStatus === 'loading') {
-          setAdStatus('hidden')
-        }
-      }, 1000)
-    }, 10000)
+    // 다양한 시점에서 로드 시도 (타임아웃 없음, 계속 시도)
+    const timers = [
+      setTimeout(() => loadAd(), 1000),   // 1초
+      setTimeout(() => loadAd(), 3000),   // 3초
+      setTimeout(() => loadAd(), 5000),   // 5초
+      setTimeout(() => loadAd(), 10000),  // 10초
+      setTimeout(() => loadAd(), 15000),  // 15초
+      setTimeout(() => loadAd(), 20000),  // 20초
+    ]
 
     return () => {
-      clearTimeout(timer1)
-      clearTimeout(timer2)
-      clearTimeout(timer3)
+      timers.forEach(timer => clearTimeout(timer))
     }
   }, [isMounted, status, isPremium, isAdsBlocked, isProduction, adStatus, loadAd])
 
-  // 🔧 실패/숨김 상태면 아무것도 렌더링 안 함
-  if (adStatus === 'hidden' || adStatus === 'failed') {
+  // 서버 렌더링 / 마운트 전
+  if (!isMounted) {
     return null
   }
 
-  // 서버 렌더링 / 마운트 전
-  if (!isMounted) {
-    return null // 🔧 빈 박스 대신 null 반환
-  }
-
   if (status === 'loading') {
-    return null // 🔧 빈 박스 대신 null 반환
+    return null
   }
 
   if (isPremium || isAdsBlocked) {
     return null
   }
 
-  // 로컬 환경
+  // 로컬 환경 - 플레이스홀더
   if (!isProduction) {
     return (
       <div 
@@ -260,23 +241,22 @@ export default function AdSenseAd({
         <div className="text-center py-2">
           <span className="text-lg">📢</span>
           <span className={`text-[10px] ml-2 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
-            {slot}
+            {slot} (로컬)
           </span>
         </div>
       </div>
     )
   }
 
+  // 프로덕션 환경 - 실제 광고
   return (
     <div 
       ref={containerRef}
       className={`overflow-hidden ${className}`}
       style={{ 
         width: slotSize.width,
-        minHeight: adStatus === 'success' ? slotSize.minHeight : '0',
+        minHeight: slotSize.minHeight,
         maxHeight: slotSize.maxHeight,
-        // 🔧 로딩 중에는 높이 0, 성공하면 원래 높이
-        transition: 'min-height 0.3s ease',
         ...style 
       }}
     >

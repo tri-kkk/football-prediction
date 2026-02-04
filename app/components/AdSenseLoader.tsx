@@ -110,6 +110,7 @@ export default function AdSenseLoader() {
       
       // 모든 체크 통과 - 광고 로드 허용
       setShouldLoad(true)
+      console.log('✅ 광고 로드 체크 통과')
     }, 1000)
     
     return () => clearTimeout(timer)
@@ -155,7 +156,7 @@ export default function AdSenseLoader() {
       async
       src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
       crossOrigin="anonymous"
-      strategy="lazyOnload"  // ✅ afterInteractive → lazyOnload (성능 + 봇 우회)
+      strategy="lazyOnload"
       onLoad={() => {
         console.log('📢 AdSense 스크립트 로드 완료 (보호됨)')
         setIsLoaded(true)
