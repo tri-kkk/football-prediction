@@ -14,7 +14,7 @@ const KNOWN_LEAGUES = [
   'UCL', 'UEL', 'EPL', 'PL',
   'WKBL', 'KBL', 'NBA',
   'A리그',
-  '이탈FA컵', '스페인컵', '독일컵', '잉글FA컵', '프랑스컵',  // 🆕 컵대회 추가
+  '이탈FA컵', '스페인컵', '독일컵', '잉글FA컵', '프랑스컵','네덜FA컵','프랑FA컵','프랑스컵','스페FA컵','독일FA컵',  // 🆕 컵대회 추가
 ]
 
 const NO_DRAW_LEAGUES = ['WKBL', 'KBL', 'NBA', 'KOVO남', 'KOVO여', '남농EASL']
