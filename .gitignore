@@ -9,3 +9,9 @@ node_modules/
 # Baseball (개발 중)
 /app/baseball/
 /app/api/baseball/
+
+# Backup files
+*.bak
+*.tsx.bak
+*.ts.bak
+*.json.bak
