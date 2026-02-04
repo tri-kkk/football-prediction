@@ -64,7 +64,7 @@ interface SlipStats {
 // 스포츠 필터 (컴포넌트 외부)
 const SPORT_FILTERS_CONFIG = [
   { key: 'ALL', label: '전체', icon: '🏆', leagues: null as string[] | null },
-  { key: 'SOCCER', label: '축구', icon: '⚽', leagues: ['UCL', 'UEL', 'EPL', 'PL', 'U23아컵', '에레디비', 'EFL챔', 'EFL', '라리가', '분데스리', '세리에', '리그', '프리그', 'A리그'] },
+  { key: 'SOCCER', label: '축구', icon: '⚽', leagues: ['UCL', 'UEL', 'EPL', 'PL', 'U23아컵', '에레디비', 'EFL챔', 'EFL', '라리가', '분데스리', '세리에', '리그', '프리그', 'A리그', 'J1백년', 'J2J3백년', 'J백년', '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵'] },
   { key: 'BASKETBALL', label: '농구', icon: '🏀', leagues: ['KBL', 'WKBL', 'NBA', 'EASL', '남농'] },
   { key: 'VOLLEYBALL', label: '배구', icon: '🏐', leagues: ['KOVO'] },
 ]
@@ -1014,7 +1014,7 @@ export default function ProtoPage() {
                     return null
                   }
                   
-                  const soccerLeagues = ['UCL', 'UEL', 'EPL', 'EFL', '세리에', '라리가', '분데스리', '리그1', '프리그1', 'U23아컵', '에레디비', 'PL', 'A리그']
+                  const soccerLeagues = ['UCL', 'UEL', 'EPL', 'EFL', '세리에', '라리가', '분데스리', '리그1', '프리그1', 'U23아컵', '에레디비', 'PL', 'A리그', 'J1백년', 'J2J3백년', 'J백년', '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵']
                   const isSoccerLeague = soccerLeagues.some(l => match.leagueName.includes(l))
                   
                   const getButtonLabels = (type: string) => {

@@ -13,8 +13,8 @@ const KNOWN_LEAGUES = [
   '세리에A', '라리가', '분데스리', '리그1', '프리그1',
   'UCL', 'UEL', 'EPL', 'PL',
   'WKBL', 'KBL', 'NBA',
-  'A리그',
-  '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵',  // 🆕 스페FA 양쪽 표기
+  'A리그', 'J1백년', 'J2J3백년', 'J백년',  // 🆕 일본 J리그 추가
+  '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵',
 ]
 
 const NO_DRAW_LEAGUES = ['WKBL', 'KBL', 'NBA', 'KOVO남', 'KOVO여', '남농EASL']
@@ -376,7 +376,8 @@ export async function POST(request: NextRequest) {
       'UCL', 'UEL', 'EPL', 'PL', 'EFL챔',
       '세리에A', '라리가', '분데스리', '리그1', '프리그1',
       'U23아컵', '에레디비', 'A리그',
-      '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵',  // 🆕 스페FA 양쪽 표기
+      'J1백년', 'J2J3백년', 'J백년',  // 🆕 일본 J리그
+      '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵',
     ]
     const basketLeagues = ['KBL', 'WKBL', 'NBA', 'EASL', '남농']
     
