@@ -58,7 +58,7 @@ const LEAGUE_MAP: Record<string, { id: string; name: string; nameKR: string; log
     id: 'england-championship', 
     name: 'Championship', 
     nameKR: '챔피언십',
-    logo: 'https://media.api-sports.io/football/leagues/180.png'
+    logo: 'https://media.api-sports.io/football/leagues/40.png'
   },
 }
 

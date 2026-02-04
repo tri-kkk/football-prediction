@@ -14,8 +14,9 @@ const LEAGUES = [
   { code: 'FL1', name: '리그1', nameEN: 'Ligue 1', logo: 'https://media.api-sports.io/football/leagues/61.png' },
   { code: 'CL', name: 'UCL', nameEN: 'UCL', logo: 'https://media.api-sports.io/football/leagues/2.png' },
   { code: 'DED', name: '에레디비시', nameEN: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png' },
-  { code: 'ELC', name: '챔피언십', nameEN: 'Championship', logo: 'https://media.api-sports.io/football/leagues/180.png' },
+  { code: 'ELC', name: '챔피언십', nameEN: 'Championship', logo: 'https://media.api-sports.io/football/leagues/40.png' },
 ]
+
 
 interface Video {
   id: string
