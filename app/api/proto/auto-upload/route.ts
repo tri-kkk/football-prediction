@@ -14,7 +14,7 @@ const KNOWN_LEAGUES = [
   'UCL', 'UEL', 'EPL', 'PL',
   'WKBL', 'KBL', 'NBA',
   'A리그',
-  '이탈FA컵', '스페FA컵', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵',  // 🆕 컵대회 (프로토 공식 표기)
+  '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵',  // 🆕 스페FA 양쪽 표기
 ]
 
 const NO_DRAW_LEAGUES = ['WKBL', 'KBL', 'NBA', 'KOVO남', 'KOVO여', '남농EASL']
@@ -376,7 +376,7 @@ export async function POST(request: NextRequest) {
       'UCL', 'UEL', 'EPL', 'PL', 'EFL챔',
       '세리에A', '라리가', '분데스리', '리그1', '프리그1',
       'U23아컵', '에레디비', 'A리그',
-      '이탈FA컵', '스페FA컵', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵',  // 🆕 컵대회
+      '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵',  // 🆕 스페FA 양쪽 표기
     ]
     const basketLeagues = ['KBL', 'WKBL', 'NBA', 'EASL', '남농']
     
