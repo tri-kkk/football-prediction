@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 
-// 리그 정보
+// 리그 정보 (8개)
 const LEAGUES = [
   { code: 'ALL', name: '전체', nameEN: 'All', logo: null },
   { code: 'PL', name: '프리미어리그', nameEN: 'EPL', logo: 'https://media.api-sports.io/football/leagues/39.png' },
@@ -13,6 +13,8 @@ const LEAGUES = [
   { code: 'SA', name: '세리에A', nameEN: 'Serie A', logo: 'https://media.api-sports.io/football/leagues/135.png' },
   { code: 'FL1', name: '리그1', nameEN: 'Ligue 1', logo: 'https://media.api-sports.io/football/leagues/61.png' },
   { code: 'CL', name: 'UCL', nameEN: 'UCL', logo: 'https://media.api-sports.io/football/leagues/2.png' },
+  { code: 'DED', name: '에레디비시', nameEN: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png' },
+  { code: 'ELC', name: '챔피언십', nameEN: 'Championship', logo: 'https://media.api-sports.io/football/leagues/180.png' },
 ]
 
 interface Video {

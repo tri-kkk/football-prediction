@@ -9,7 +9,7 @@ const supabase = createClient(
 // ScoreBat API 토큰
 const SCOREBAT_API_TOKEN = 'MjU4NjkzXzE3Njk3Mzk4OTZfMWVhN2ZlMGE0Y2Q3ZDY0MDYyOWM3N2NkM2M1M2E3OGViYjEzODdmOA=='
 
-// 리그 매핑
+// 리그 매핑 (8개)
 const LEAGUE_MAP: Record<string, { id: string; name: string; nameKR: string; logo: string }> = {
   'PL': { 
     id: 'england-premier-league', 
@@ -18,7 +18,7 @@ const LEAGUE_MAP: Record<string, { id: string; name: string; nameKR: string; log
     logo: 'https://media.api-sports.io/football/leagues/39.png'
   },
   'PD': { 
-    id: 'spain-laliga', 
+    id: 'spain-la-liga', 
     name: 'La Liga', 
     nameKR: '라리가',
     logo: 'https://media.api-sports.io/football/leagues/140.png'
@@ -46,6 +46,19 @@ const LEAGUE_MAP: Record<string, { id: string; name: string; nameKR: string; log
     name: 'Champions League', 
     nameKR: '챔피언스리그',
     logo: 'https://media.api-sports.io/football/leagues/2.png'
+  },
+  // 🆕 추가 2개
+  'DED': { 
+    id: 'netherlands-eredivisie', 
+    name: 'Eredivisie', 
+    nameKR: '에레디비시',
+    logo: 'https://media.api-sports.io/football/leagues/88.png'
+  },
+  'ELC': { 
+    id: 'england-championship', 
+    name: 'Championship', 
+    nameKR: '챔피언십',
+    logo: 'https://media.api-sports.io/football/leagues/180.png'
   },
 }
 
