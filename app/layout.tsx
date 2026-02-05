@@ -149,6 +149,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* Facebook 도메인 인증 */}
+        <meta name="facebook-domain-verification" content="6jaoly9e4zuusvbebvi6f91jy0pjlv" />
+        
         {/* PWA 메타 태그 */}
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
