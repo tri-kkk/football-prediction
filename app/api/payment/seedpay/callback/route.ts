@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
       }, { onConflict: 'order_id' })
 
       return NextResponse.redirect(
-        `${baseUrl}/premium/pricing/result?status=failed&message=${encodeURIComponent(data.resultMsg || '결제실패')}`
+        `${baseUrl}/premium/pricing/result?status=failed&message=${encodeURIComponent(data.resultMsg || '결제실패')}`,
+        { status: 303 }
       )
     }
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (user && planInfo) {
-        // 4. 구독 만료일 계산 (기존 프리미엄이면 연장)
+        // 4. 이용권 만료일 계산 (기존 프리미엄이면 연장)
         const now = new Date()
         let startDate = now
         
@@ -142,15 +143,17 @@ export async function POST(request: NextRequest) {
       email: userEmail,
     })
 
-return NextResponse.redirect(
-  `${baseUrl}/premium/pricing/result?status=success&amount=${data.goodsAmt || ''}`
-)
+    return NextResponse.redirect(
+      `${baseUrl}/premium/pricing/result?status=success&amount=${data.goodsAmt || ''}`,
+      { status: 303 }
+    )
 
   } catch (error) {
     console.error('SeedPay callback error:', error)
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin
     return NextResponse.redirect(
-      `${baseUrl}/premium/pricing/result?status=error&message=${encodeURIComponent('서버 오류')}`
+      `${baseUrl}/premium/pricing/result?status=error&message=${encodeURIComponent('서버 오류')}`,
+      { status: 303 }
     )
   }
 }
