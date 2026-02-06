@@ -32,13 +32,37 @@ interface Subscription {
   user_id: string
   user_email?: string
   user_name?: string
-  plan: 'monthly' | 'yearly'
+  plan: 'monthly' | 'quarterly' | 'yearly'
   status: 'active' | 'cancelled' | 'expired'
   started_at: string
   expires_at: string
   cancelled_at: string | null
   payment_id: string | null
   price: number
+}
+
+interface Payment {
+  id: string
+  order_id: string
+  user_email: string
+  amount: number
+  status: 'success' | 'failed' | 'pending'
+  method: string
+  tid: string | null
+  card_name: string | null
+  approval_number: string | null
+  plan: string | null
+  created_at: string
+}
+
+interface PaymentStats {
+  totalPayments: number
+  successCount: number
+  failedCount: number
+  totalRevenue: number
+  todayRevenue: number
+  todayCount: number
+  monthlyRevenue: Record<string, number>
 }
 
 interface Advertisement {
@@ -462,6 +486,8 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([])
   const [countryStats, setCountryStats] = useState<CountryStat[]>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null)
   const [ads, setAds] = useState<Advertisement[]>([])
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([])
   const [todayAdStats, setTodayAdStats] = useState<Record<string, AdStats>>({})
@@ -656,6 +682,18 @@ export default function AdminDashboard() {
       setSubscriptions(data.subscriptions || [])
     } catch (err: any) {
       console.error('Subscriptions fetch error:', err)
+    }
+  }
+
+  const fetchPayments = async () => {
+    try {
+      const response = await fetch('/api/admin/payments')
+      if (!response.ok) return
+      const data = await response.json()
+      setPayments(data.payments || [])
+      setPaymentStats(data.stats || null)
+    } catch (err) {
+      console.error('Payments fetch error:', err)
     }
   }
 
@@ -941,6 +979,7 @@ export default function AdminDashboard() {
         fetchUsers(),
         fetchCountryStats(),
         fetchSubscriptions(),
+        fetchPayments(),
         fetchAds(),
         fetchDailyStats(),
         fetchAdStats(),
@@ -1672,9 +1711,9 @@ export default function AdminDashboard() {
     const todayUsers = users.filter(u => u.created_at.startsWith(today)).length
     
     const activeSubscriptions = subscriptions.filter(s => s.status === 'active').length
-    const monthlyRevenue = subscriptions
+    const monthlyRevenue = paymentStats?.totalRevenue || subscriptions
       .filter(s => s.status === 'active')
-      .reduce((sum, s) => sum + (s.plan === 'monthly' ? (s.price || 9900) : Math.round((s.price || 79000) / 12)), 0)
+      .reduce((sum, s) => sum + (s.price || 0), 0)
     
     const activeAds = ads.filter(a => a.is_active).length
     const todayImpressions = Object.values(todayAdStats).reduce((sum, s) => sum + (s.impressions || 0), 0)
@@ -1691,7 +1730,7 @@ export default function AdminDashboard() {
       todayImpressions,
       todayClicks,
     }
-  }, [users, subscriptions, ads, todayAdStats])
+  }, [users, subscriptions, ads, todayAdStats, paymentStats])
 
   // ==================== 필터된 데이터 ====================
 
@@ -2112,7 +2151,7 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <div className="text-3xl font-bold text-white mb-1">{formatCurrency(stats.monthlyRevenue)}</div>
-                    <div className="text-sm text-gray-400">예상 수익</div>
+                    <div className="text-sm text-gray-400">총 매출</div>
                   </div>
                 </div>
 
@@ -2806,29 +2845,76 @@ export default function AdminDashboard() {
             {/* 구독 관리 탭 */}
             {activeTab === 'subscriptions' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* 매출 요약 카드 */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
-                    <div className="text-2xl mb-2">💳</div>
-                    <div className="text-2xl font-bold text-white">{subscriptions.filter(s => s.status === 'active').length}</div>
-                    <div className="text-sm text-gray-400">활성 구독</div>
+                    <div className="text-2xl mb-2">💰</div>
+                    <div className="text-2xl font-bold text-emerald-400">
+                      {formatCurrency(paymentStats?.totalRevenue || 0)}
+                    </div>
+                    <div className="text-sm text-gray-400">총 매출</div>
                   </div>
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">📅</div>
-                    <div className="text-2xl font-bold text-white">{subscriptions.filter(s => s.plan === 'monthly' && s.status === 'active').length}</div>
-                    <div className="text-sm text-gray-400">월간 구독</div>
+                    <div className="text-2xl font-bold text-white">
+                      {formatCurrency(paymentStats?.todayRevenue || 0)}
+                    </div>
+                    <div className="text-sm text-gray-400">오늘 매출 ({paymentStats?.todayCount || 0}건)</div>
                   </div>
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
-                    <div className="text-2xl mb-2">🗓️</div>
-                    <div className="text-2xl font-bold text-white">{subscriptions.filter(s => s.plan === 'yearly' && s.status === 'active').length}</div>
-                    <div className="text-sm text-gray-400">연간 구독</div>
+                    <div className="text-2xl mb-2">💳</div>
+                    <div className="text-2xl font-bold text-white">
+                      {subscriptions.filter(s => s.status === 'active').length}
+                    </div>
+                    <div className="text-sm text-gray-400">활성 구독</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                    <div className="text-2xl mb-2">✅</div>
+                    <div className="text-2xl font-bold text-white">
+                      {paymentStats?.successCount || 0}
+                    </div>
+                    <div className="text-sm text-gray-400">성공 결제</div>
                   </div>
                   <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">❌</div>
-                    <div className="text-2xl font-bold text-white">{subscriptions.filter(s => s.status === 'cancelled').length}</div>
-                    <div className="text-sm text-gray-400">취소됨</div>
+                    <div className="text-2xl font-bold text-white">
+                      {paymentStats?.failedCount || 0}
+                    </div>
+                    <div className="text-sm text-gray-400">실패/취소</div>
                   </div>
                 </div>
 
+                {/* 월별 매출 차트 */}
+                {paymentStats?.monthlyRevenue && Object.keys(paymentStats.monthlyRevenue).length > 0 && (
+                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                    <h3 className="text-white font-bold mb-4">📊 월별 매출</h3>
+                    <div className="flex items-end gap-2 h-32">
+                      {Object.entries(paymentStats.monthlyRevenue)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .slice(-6)
+                        .map(([month, revenue]) => {
+                          const maxRevenue = Math.max(...Object.values(paymentStats.monthlyRevenue), 1)
+                          return (
+                            <div key={month} className="flex-1 flex flex-col items-center gap-1">
+                              <div className="text-xs text-emerald-400 font-medium">
+                                {formatCurrency(revenue)}
+                              </div>
+                              <div
+                                className="w-full bg-emerald-500/60 rounded-t hover:bg-emerald-500/80 transition-colors"
+                                style={{
+                                  height: `${(revenue / maxRevenue) * 100}%`,
+                                  minHeight: revenue > 0 ? '8px' : '0',
+                                }}
+                              />
+                              <div className="text-[10px] text-gray-500">{month.slice(5)}월</div>
+                            </div>
+                          )
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 구독 필터 */}
                 <div className="flex items-center gap-2">
                   {(['all', 'active', 'cancelled', 'expired'] as const).map((filter) => (
                     <button
@@ -2847,6 +2933,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
 
+                {/* 구독 테이블 */}
                 <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -2879,11 +2966,14 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-4">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  sub.plan === 'yearly' 
+                                  sub.plan === 'quarterly' 
                                     ? 'bg-purple-500/20 text-purple-400'
+                                    : sub.plan === 'yearly'
+                                    ? 'bg-orange-500/20 text-orange-400'
                                     : 'bg-blue-500/20 text-blue-400'
                                 }`}>
-                                  {sub.plan === 'yearly' ? '🗓️ 연간' : '📅 월간'}
+                                  {sub.plan === 'quarterly' ? '📅 3개월' : 
+                                   sub.plan === 'yearly' ? '🗓️ 연간' : '📅 월간'}
                                 </span>
                               </td>
                               <td className="px-4 py-4">
@@ -2905,7 +2995,7 @@ export default function AdminDashboard() {
                                 {formatDate(sub.expires_at)}
                               </td>
                               <td className="px-4 py-4 text-sm text-white font-medium">
-                                {formatCurrency(sub.price || (sub.plan === 'monthly' ? 9900 : 79000))}
+                                {formatCurrency(sub.price || 0)}
                               </td>
                               <td className="px-4 py-4 text-right">
                                 {sub.status === 'active' && (
@@ -2924,6 +3014,69 @@ export default function AdminDashboard() {
                     </table>
                   </div>
                 </div>
+
+                {/* SeedPay 결제 내역 */}
+                {payments.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-700/50">
+                      <h3 className="text-white font-bold">💳 SeedPay 결제 내역</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-900/50">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">일시</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">이메일</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">플랜</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">금액</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">상태</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">카드</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">승인번호</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/50">
+                          {payments.slice(0, 20).map((p) => (
+                            <tr key={p.id} className="hover:bg-gray-700/20 transition-colors">
+                              <td className="px-4 py-3 text-sm text-gray-400">
+                                {formatDateTime(p.created_at)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-white">
+                                {p.user_email}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  p.plan === 'quarterly' 
+                                    ? 'bg-purple-500/20 text-purple-400'
+                                    : 'bg-blue-500/20 text-blue-400'
+                                }`}>
+                                  {p.plan === 'quarterly' ? '3개월' : '월간'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-white font-medium">
+                                {formatCurrency(p.amount)}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  p.status === 'success' 
+                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                    : 'bg-red-500/20 text-red-400'
+                                }`}>
+                                  {p.status === 'success' ? '성공' : '실패'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-400">
+                                {p.card_name || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500 font-mono">
+                                {p.approval_number || '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

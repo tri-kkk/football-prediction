@@ -1,26 +1,59 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '../../contexts/LanguageContext'
+
+declare global {
+  interface Window {
+    SendPay: (form: HTMLFormElement) => void
+    pay_result_submit: () => void
+    pay_result_close: () => void
+  }
+}
 
 export default function PricingPage() {
   const { language } = useLanguage()
   const { data: session } = useSession()
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly'>('quarterly')
+  const [loading, setLoading] = useState(false)
+  const [sdkLoaded, setSdkLoaded] = useState(false)
   
   const isPremium = (session?.user as any)?.tier === 'premium'
+
+// SeedPay SDK 로드
+useEffect(() => {
+  // 1. 콜백 함수 먼저 등록
+  window.pay_result_submit = function() {
+    if (typeof (window as any).payResultSubmit === 'function') {
+      (window as any).payResultSubmit()
+    }
+  }
+  window.pay_result_close = function() {
+    alert('결제를 취소하였습니다.')
+  }
+
+  // 2. SDK 로드
+  const script = document.createElement('script')
+  script.src = 'https://pay.seedpayments.co.kr/js/pgAsistant.js'
+  script.onload = () => setSdkLoaded(true)
+  document.head.appendChild(script)
+
+  return () => {
+    if (script.parentNode) script.parentNode.removeChild(script)
+  }
+}, [])
   
-  // 🎉 프로모션 기간 체크
-  const PROMO_END = new Date('2026-02-01T00:00:00+09:00')
+  // 프로모션 기간 체크
+  const PROMO_END = new Date('2026-03-01T00:00:00+09:00')
   const isPromoPeriod = new Date() < PROMO_END
   
   const plans = {
     monthly: {
       price: language === 'ko' ? 4900 : 3.99,
       priceDisplay: language === 'ko' ? '₩4,900' : '$3.99',
-      period: language === 'ko' ? '/월' : '/mo',
+      period: language === 'ko' ? '/1개월' : '/1mo',
     },
     quarterly: {
       price: language === 'ko' ? 9900 : 7.99,
@@ -30,11 +63,82 @@ export default function PricingPage() {
     },
   }
 
+  // SeedPay 결제 실행
+  const handlePayment = async () => {
+    if (!session?.user?.email) {
+      window.location.href = '/login'
+      return
+    }
+    if (!sdkLoaded) {
+      alert(language === 'ko' ? '결제 시스템 로딩 중입니다.' : 'Payment system loading...')
+      return
+    }
+
+    setLoading(true)
+    try {
+      // 1. init API 호출
+      const res = await fetch('/api/payment/seedpay/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: selectedPlan }),
+      })
+      const data = await res.json()
+
+      if (!data.success) {
+        alert(data.error || '결제 초기화 실패')
+        setLoading(false)
+        return
+      }
+
+      // 2. 동적 Form 생성
+      const existingForm = document.querySelector('form[name="payInit"]')
+      if (existingForm) existingForm.remove()
+
+      const form = document.createElement('form')
+      form.name = 'payInit'
+      form.method = 'post'
+      form.style.display = 'none'
+
+      const fields: Record<string, string> = {
+        mid: data.mid,
+        method: 'CARD',
+        goodsNm: data.goodsNm,
+        ordNo: data.ordNo,
+        goodsAmt: data.goodsAmt,
+        ordNm: data.userName,
+        ordEmail: data.userEmail,
+        returnUrl: `${window.location.origin}/api/payment/seedpay/callback`,
+        ediDate: data.ediDate,
+        hashString: data.hashString,
+        mbsReserved: JSON.stringify({ email: data.userEmail, plan: data.plan }),
+      }
+
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = value
+        form.appendChild(input)
+      })
+
+      document.body.appendChild(form)
+
+      // 3. SeedPay 결제창 호출
+      window.SendPay(form)
+
+    } catch (err) {
+      console.error('Payment error:', err)
+      alert(language === 'ko' ? '결제 처리 중 오류가 발생했습니다.' : 'Payment error occurred.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white">
       <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
         
-        {/* 🎉 프로모션 배너 - 비로그인 + 프로모션 기간 */}
+        {/* 프로모션 배너 - 비로그인 + 프로모션 기간 */}
         {!session && isPromoPeriod && (
           <div className="bg-gradient-to-r from-[#1a2a1a] to-[#1a1a2a] border border-green-500/30 rounded-2xl p-6 mb-8">
             <div className="text-center">
@@ -42,7 +146,7 @@ export default function PricingPage() {
                 <span className="text-green-400 text-xs font-bold tracking-wider">OPEN EVENT</span>
               </div>
               <h3 className="text-white font-bold text-xl mb-2">
-                {language === 'ko' ? '1월 31일까지 가입하면' : 'Sign up by Jan 31'}
+                {language === 'ko' ? '가입하면 프리미엄 무료!' : 'Sign up for FREE Premium!'}
               </h3>
               <p className="text-3xl font-black mb-4" style={{ 
                 background: 'linear-gradient(to right, #22d3ee, #34d399)', 
@@ -58,9 +162,6 @@ export default function PricingPage() {
               >
                 {language === 'ko' ? '지금 무료로 가입하기 →' : 'Join Free Now →'}
               </Link>
-              <p className="text-gray-500 text-xs mt-3">
-                {language === 'ko' ? '* 프로모션 기간: ~2026.01.31' : '* Promo period: ~2026.01.31'}
-              </p>
             </div>
           </div>
         )}
@@ -83,22 +184,18 @@ export default function PricingPage() {
           <>
             {/* 헤더 */}
             <div className="text-center mb-8">
-              <span className="text-cyan-400 text-sm font-medium tracking-wider">PREMIUM</span>
+              
               <h1 className="text-3xl md:text-4xl font-bold mt-2 mb-3">
                 <span className="text-white">{language === 'ko' ? '트렌드사커' : 'TrendSoccer'}</span>
                 <br />
                 <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                  {language === 'ko' ? '프리미엄 픽' : 'Premium Picks'}
+                  {language === 'ko' ? '프리미엄 구독' : 'Premium Picks'}
                 </span>
               </h1>
-              <p className="text-gray-400">
-                {language === 'ko' 
-                  ? '적중률 68% · 매일 저녁 6시 갱신 · 확신 있을 때만' 
-                  : '68% accuracy · Updated 6 PM daily · Only when confident'}
-              </p>
+              
             </div>
 
-            {/* 가격 카드 2개 - 나란히 */}
+            {/* 가격 카드 2개 */}
             <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-10">
               {/* 월간 */}
               <div
@@ -110,7 +207,7 @@ export default function PricingPage() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-400 text-sm">{language === 'ko' ? '월간' : 'Monthly'}</span>
+                  <span className="text-gray-400 text-sm">{language === 'ko' ? '1개월' : 'Monthly'}</span>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                     selectedPlan === 'monthly' 
                       ? 'border-yellow-500 bg-yellow-500' 
@@ -134,7 +231,6 @@ export default function PricingPage() {
                     : 'border-gray-700 bg-[#1a1a1a] hover:border-gray-600'
                 }`}
               >
-                {/* 할인 뱃지 */}
                 <div className="absolute -top-3 right-4 px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
                   -33%
                 </div>
@@ -161,38 +257,29 @@ export default function PricingPage() {
               </div>
             </div>
 
-            {/* CTA 버튼 - 비로그인이면 alert 후 가입, 로그인이면 alert 후 메인 */}
+            {/* CTA 버튼 */}
             <div className="text-center mb-12">
               {!session ? (
-                // 비로그인: alert 후 가입 페이지로
-                <button
-                  onClick={() => {
-                    alert(language === 'ko' ? '결제 시스템 준비중입니다.' : 'Payment system coming soon.')
-                    window.location.href = '/login'
-                  }}
-                  className="w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg transition-all"
+                <Link
+                  href="/login"
+                  className="inline-block w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg transition-all text-center"
                 >
                   {language === 'ko' 
                     ? isPromoPeriod ? '무료로 시작하기' : '로그인하고 시작하기'
                     : isPromoPeriod ? 'Start Free' : 'Sign in to Start'}
-                </button>
+                </Link>
               ) : (
-                // 로그인 상태: alert 도우고 메인으로
                 <button
-                  className="w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg transition-all"
-                  onClick={() => {
-                    alert(language === 'ko' ? '결제 시스템 준비중입니다.' : 'Payment system coming soon.')
-                    window.location.href = '/'
-                  }}
+                  onClick={handlePayment}
+                  disabled={loading}
+                  className="w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 disabled:from-gray-600 disabled:to-gray-600 text-white rounded-xl font-bold text-lg transition-all"
                 >
-                  {language === 'ko' ? '프리미엄 시작하기' : 'Start Premium'}
+                  {loading 
+                    ? (language === 'ko' ? '결제 처리 중...' : 'Processing...') 
+                    : (language === 'ko' ? '프리미엄 시작하기' : 'Start Premium')}
                 </button>
               )}
-              <p className="text-gray-500 text-xs mt-3">
-                {!session && isPromoPeriod
-                  ? (language === 'ko' ? '1월 31일까지 가입하면 프리미엄 무료!' : 'Sign up by Jan 31 for FREE Premium!')
-                  : (language === 'ko' ? '언제든지 취소 가능 · 안전한 결제' : 'Cancel anytime · Secure payment')}
-              </p>
+              
             </div>
 
             {/* 프리미엄 혜택 */}
@@ -215,6 +302,14 @@ export default function PricingPage() {
                     title: language === 'ko' ? '광고 완전 제거' : 'Ad-free Experience',
                     desc: language === 'ko' ? '깔끔한 화면으로 집중' : 'Clean interface, no distractions'
                   },
+                   { 
+    title: language === 'ko' ? '하이라이트 무제한' : 'Unlimited Highlights',
+    desc: language === 'ko' ? '모든 경기 하이라이트 무제한 시청' : 'Watch all match highlights unlimited'
+  },
+  { 
+    title: language === 'ko' ? '프로토 계산기' : 'Proto Calculator',
+    desc: language === 'ko' ? '무제한 저장 및 관리' : 'Unlimited saves & management'
+  },
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
