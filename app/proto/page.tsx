@@ -615,7 +615,7 @@ export default function ProtoPage() {
   }, [dateFilter, leagueFilter, searchQuery])
 
   const getLeagueIcon = (league: string) => {
-    if (['UCL', 'UEL', 'EPL', 'PL', '라리가', '분데스리', '세리에', '리그', '프리그', 'EFL', 'U23아컵', 'A리그'].some(l => league.includes(l))) return '⚽'
+    if (['UCL', 'UEL', 'EPL', 'PL', '라리가', '분데스리', '세리에', '리그', '프리그', 'EFL', 'U23아컵', 'A리그', 'J1백년', 'J2J3백년', 'J백년', '에레디비', '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵'].some(l => league.includes(l))) return '⚽'
     if (['KBL', 'WKBL', 'NBA', 'EASL'].some(l => league.includes(l))) return '🏀'
     if (league.includes('KOVO')) return '🏐'
     return '🎯'
