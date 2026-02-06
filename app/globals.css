@@ -196,7 +196,7 @@ body {
 /* 코너 스파클 */
 .corner-sparkle::before,
 .corner-sparkle::after {
-  content: '✦';
+  content: '';
   position: absolute;
   color: #A3FF4C;
   font-size: 10px;
