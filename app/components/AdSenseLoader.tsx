@@ -88,7 +88,7 @@ export default function AdSenseLoader() {
     if (status === 'loading') return
     if (isPremium) return
     
-    // 1초 딜레이 후 체크 (봇 우회 방지)
+    // ✅ 딜레이 500ms로 단축 (기존 1000ms)
     const timer = setTimeout(() => {
       // 이미 차단된 경우
       if (isAdsBlocked()) {
@@ -111,7 +111,7 @@ export default function AdSenseLoader() {
       // 모든 체크 통과 - 광고 로드 허용
       setShouldLoad(true)
       console.log('✅ 광고 로드 체크 통과')
-    }, 1000)
+    }, 500)
     
     return () => clearTimeout(timer)
   }, [status, isPremium])
@@ -130,35 +130,25 @@ export default function AdSenseLoader() {
   }, [session, status, isPremium])
 
   // 세션 로딩 중
-  if (status === 'loading') {
-    return null
-  }
-
+  if (status === 'loading') return null
   // 프리미엄 사용자
-  if (isPremium) {
-    return null
-  }
-
+  if (isPremium) return null
   // 이미 로드됨
-  if (isLoaded) {
-    return null
-  }
-
+  if (isLoaded) return null
   // 🛡️ 보호 체크 미통과
-  if (!shouldLoad) {
-    return null
-  }
+  if (!shouldLoad) return null
 
-  // 비프리미엄 사용자 + 보호 체크 통과 → AdSense 스크립트 로드
+  // ✅ 핵심 변경: strategy를 afterInteractive로 변경
+  // lazyOnload는 너무 늦게 로드되어 수동 슬롯이 빈 박스로 남는 원인
   return (
     <Script
       id="google-adsense"
       async
       src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
       crossOrigin="anonymous"
-      strategy="lazyOnload"
+      strategy="afterInteractive"
       onLoad={() => {
-        console.log('📢 AdSense 스크립트 로드 완료 (보호됨)')
+        console.log('📢 AdSense 스크립트 로드 완료')
         setIsLoaded(true)
       }}
       onError={(e) => {

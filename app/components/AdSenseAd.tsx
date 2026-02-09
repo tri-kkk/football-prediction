@@ -63,6 +63,12 @@ function isElementVisible(element: HTMLElement | null): boolean {
   return true
 }
 
+// ✅ AdSense 스크립트가 로드되었는지 확인
+function isAdSenseReady(): boolean {
+  if (typeof window === 'undefined') return false
+  return typeof window.adsbygoogle !== 'undefined'
+}
+
 interface AdSenseAdProps {
   slot: keyof typeof ADSENSE_SLOTS
   format?: 'auto' | 'fluid' | 'rectangle' | 'vertical' | 'horizontal'
@@ -87,11 +93,11 @@ export default function AdSenseAd({
   darkMode = true
 }: AdSenseAdProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const pushAttemptedRef = useRef(false)  // ✅ ref로 변경 (리렌더 없이 추적)
   const [adStatus, setAdStatus] = useState<'loading' | 'success' | 'failed'>('loading')
   const [isMounted, setIsMounted] = useState(false)
   const [isAdsBlocked, setIsAdsBlocked] = useState(false)
   const [isProduction, setIsProduction] = useState(false)
-  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
   
   const { data: session, status } = useSession()
 
@@ -120,45 +126,59 @@ export default function AdSenseAd({
     }
   }, [])
 
-  // 광고 로드 함수
+  // ✅ 핵심 수정: 광고 로드 함수 - 스크립트 준비 상태 확인 후 push
   const loadAd = useCallback(() => {
-    if (adStatus === 'success') return
+    // 이미 성공했거나 이미 push 했으면 스킵
+    if (pushAttemptedRef.current) return
     if (!containerRef.current) return
-    if (hasAttemptedLoad) return
     
-    // 요소가 보이는지 확인
+    // 컨테이너가 보이는지 확인
     if (!isElementVisible(containerRef.current)) {
       console.log(`⏸️ [AdSenseAd] ${slot}: 컨테이너가 보이지 않음, 대기 중...`)
       return
     }
 
+    // ✅ AdSense 스크립트가 로드되었는지 확인
+    if (!isAdSenseReady()) {
+      console.log(`⏳ [AdSenseAd] ${slot}: AdSense 스크립트 아직 미로드, 대기 중...`)
+      return  // 아직 준비 안 됨 → 다음 타이머에서 재시도
+    }
+
     const insElement = containerRef.current.querySelector('ins.adsbygoogle')
     if (!insElement) return
     
-    // 이미 로드된 광고인지 확인
-    const adStatus = insElement.getAttribute('data-adsbygoogle-status')
-    if (adStatus === 'done') {
+    // 이미 로드된 광고인지 확인 (변수명 충돌 수정)
+    const currentStatus = insElement.getAttribute('data-adsbygoogle-status')
+    if (currentStatus === 'done') {
       console.log(`✅ [AdSenseAd] ${slot}: 이미 로드된 광고`)
       setAdStatus('success')
+      pushAttemptedRef.current = true
+      return
+    }
+
+    // ✅ 이미 push된 상태인지 확인 (data-adsbygoogle-status가 있으면 이미 처리 중)
+    if (currentStatus) {
+      console.log(`⏳ [AdSenseAd] ${slot}: 이미 처리 중 (status: ${currentStatus})`)
+      pushAttemptedRef.current = true
       return
     }
 
     try {
       window.adsbygoogle = window.adsbygoogle || []
       window.adsbygoogle.push({})
-      setHasAttemptedLoad(true)
-      console.log(`🔄 [AdSenseAd] ${slot}: 광고 로드 요청`)
+      pushAttemptedRef.current = true
+      console.log(`🔄 [AdSenseAd] ${slot}: 광고 로드 요청 성공`)
     } catch (error: any) {
       console.error(`❌ [AdSenseAd] ${slot}: 광고 로드 에러:`, error?.message || error)
       
-      if (error?.message?.includes('already have ads')) {
+      if (error?.message?.includes('already have ads') || 
+          error?.message?.includes('All ins elements')) {
         setAdStatus('success')
-      } else {
-        // 에러가 있어도 실패로 표시하지 않고 계속 시도
-        console.log(`⚠️ [AdSenseAd] ${slot}: 재시도 대기 중...`)
+        pushAttemptedRef.current = true
       }
+      // 다른 에러의 경우 pushAttemptedRef를 설정하지 않아 재시도 가능
     }
-  }, [adStatus, slot, hasAttemptedLoad])
+  }, [slot])
 
   // 광고 로드 성공 여부 감지 (MutationObserver)
   useEffect(() => {
@@ -171,57 +191,85 @@ export default function AdSenseAd({
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'data-adsbygoogle-status') {
-          const status = insElement.getAttribute('data-adsbygoogle-status')
-          console.log(`📊 [AdSenseAd] ${slot}: 광고 상태 변경 →`, status)
+          const newStatus = insElement.getAttribute('data-adsbygoogle-status')
+          console.log(`📊 [AdSenseAd] ${slot}: 광고 상태 변경 →`, newStatus)
           
-          if (status === 'done') {
-            // 광고 로드 완료 - 성공으로 표시
+          if (newStatus === 'done') {
             setAdStatus('success')
             console.log(`✅ [AdSenseAd] ${slot}: 광고 로드 성공`)
+          }
+        }
+        
+        // ✅ 자식 요소 추가도 감지 (광고 iframe이 삽입되면 성공)
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          const hasIframe = insElement.querySelector('iframe')
+          if (hasIframe) {
+            setAdStatus('success')
+            console.log(`✅ [AdSenseAd] ${slot}: 광고 iframe 감지 - 성공`)
           }
         }
       })
     })
 
-    observer.observe(insElement, { attributes: true })
+    observer.observe(insElement, { 
+      attributes: true, 
+      childList: true,  // ✅ 자식 요소 변경도 감시
+      subtree: true     // ✅ 하위 요소도 감시
+    })
 
     return () => observer.disconnect()
   }, [isMounted, isProduction, slot])
 
-  // 광고 로드 시도 - 여러 시점에서 재시도
+  // ✅ 핵심 수정: 광고 로드 시도 - 스크립트 로드 대기 포함
   useEffect(() => {
     if (!isMounted) return
     if (status === 'loading') return
     if (isPremium || isAdsBlocked || !isProduction) return
-    if (adStatus === 'success') return
+    if (pushAttemptedRef.current) return
 
-    // 다양한 시점에서 로드 시도 (타임아웃 없음, 계속 시도)
+    // ✅ 더 넓은 간격으로 재시도 (스크립트 lazyOnload 대기)
     const timers = [
-      setTimeout(() => loadAd(), 1000),   // 1초
-      setTimeout(() => loadAd(), 3000),   // 3초
-      setTimeout(() => loadAd(), 5000),   // 5초
-      setTimeout(() => loadAd(), 10000),  // 10초
-      setTimeout(() => loadAd(), 15000),  // 15초
-      setTimeout(() => loadAd(), 20000),  // 20초
+      setTimeout(() => loadAd(), 2000),   // 2초 (스크립트 로딩 대기)
+      setTimeout(() => loadAd(), 4000),   // 4초
+      setTimeout(() => loadAd(), 7000),   // 7초
+      setTimeout(() => loadAd(), 12000),  // 12초
+      setTimeout(() => loadAd(), 18000),  // 18초
+      setTimeout(() => loadAd(), 25000),  // 25초
+      setTimeout(() => loadAd(), 35000),  // 35초 (느린 네트워크 대비)
     ]
 
     return () => {
       timers.forEach(timer => clearTimeout(timer))
     }
-  }, [isMounted, status, isPremium, isAdsBlocked, isProduction, adStatus, loadAd])
+  }, [isMounted, status, isPremium, isAdsBlocked, isProduction, loadAd])
+
+  // ✅ 추가: IntersectionObserver로 뷰포트 진입 시 로드 시도
+  useEffect(() => {
+    if (!isMounted || !isProduction) return
+    if (isPremium || isAdsBlocked) return
+    if (!containerRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !pushAttemptedRef.current) {
+            console.log(`👁️ [AdSenseAd] ${slot}: 뷰포트 진입 - 로드 시도`)
+            // 뷰포트 진입 후 약간의 딜레이
+            setTimeout(() => loadAd(), 500)
+          }
+        })
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [isMounted, isProduction, isPremium, isAdsBlocked, slot, loadAd])
 
   // 서버 렌더링 / 마운트 전
-  if (!isMounted) {
-    return null
-  }
-
-  if (status === 'loading') {
-    return null
-  }
-
-  if (isPremium || isAdsBlocked) {
-    return null
-  }
+  if (!isMounted) return null
+  if (status === 'loading') return null
+  if (isPremium || isAdsBlocked) return null
 
   // 로컬 환경 - 플레이스홀더
   if (!isProduction) {
@@ -256,7 +304,7 @@ export default function AdSenseAd({
       style={{ 
         width: slotSize.width,
         minHeight: slotSize.minHeight,
-        maxHeight: slotSize.maxHeight,
+        // ✅ maxHeight 제거 - 광고 크기를 AdSense가 결정하도록
         ...style 
       }}
     >
