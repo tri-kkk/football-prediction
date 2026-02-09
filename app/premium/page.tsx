@@ -1906,6 +1906,8 @@ export default function PremiumPredictPage() {
     match_id: string
     home_team: string
     away_team: string
+    home_team_id?: string
+    away_team_id?: string
     pick_result: string
     league_code: string
     commence_time: string
@@ -2462,34 +2464,40 @@ export default function PremiumPredictPage() {
                       <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
                       {language === 'ko' ? '최근 적중' : 'Recent Wins'}
                     </div>
+                    <div className="max-w-lg mx-auto">
                     {recentCorrectPicks.slice(0, 3).map((pick, idx) => (
                       <div key={idx} className="flex items-center justify-between py-2 px-3 bg-green-500/10 rounded-lg mb-2 last:mb-0 border border-green-500/20">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1">
+                        {/* 팀 영역 */}
+                        <div className="flex-1 grid min-w-0" style={{ gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)', alignItems: 'center', gap: '0 6px' }}>
+                          {/* 홈팀 - 우측 정렬 */}
+                          <div className="flex items-center gap-1.5 justify-end overflow-hidden">
+                            <span className="text-white font-medium text-sm truncate text-right">{language === 'ko' ? (teamNameKo[pick.home_team] || pick.home_team) : pick.home_team}</span>
                             <img 
                               src={pick.home_team_id 
                                 ? `https://media.api-sports.io/football/teams/${pick.home_team_id}.png`
                                 : getTeamLogo(pick.home_team)} 
                               alt="" 
-                              className="w-6 h-6 object-contain"
+                              className="w-6 h-6 object-contain flex-shrink-0"
                               onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
                             />
-                            <span className="text-white font-medium text-sm">{language === 'ko' ? (teamNameKo[pick.home_team] || pick.home_team) : pick.home_team}</span>
                           </div>
+                          {/* vs 중앙 고정 */}
                           <span className="text-gray-500 text-xs">vs</span>
-                          <div className="flex items-center gap-1">
+                          {/* 원정팀 - 좌측 정렬 */}
+                          <div className="flex items-center gap-1.5 overflow-hidden">
                             <img 
                               src={pick.away_team_id 
                                 ? `https://media.api-sports.io/football/teams/${pick.away_team_id}.png`
                                 : getTeamLogo(pick.away_team)} 
                               alt="" 
-                              className="w-6 h-6 object-contain"
+                              className="w-6 h-6 object-contain flex-shrink-0"
                               onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
                             />
-                            <span className="text-white font-medium text-sm">{language === 'ko' ? (teamNameKo[pick.away_team] || pick.away_team) : pick.away_team}</span>
+                            <span className="text-white font-medium text-sm truncate">{language === 'ko' ? (teamNameKo[pick.away_team] || pick.away_team) : pick.away_team}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
+                        {/* 배지 - 우측 고정 */}
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-3">
                           <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded">WIN</span>
                           <span className="text-yellow-400 text-xs font-bold px-2 py-0.5 bg-yellow-500/20 rounded border border-yellow-500/30">
                             {pick.pick_result}
@@ -2497,6 +2505,7 @@ export default function PremiumPredictPage() {
                         </div>
                       </div>
                     ))}
+                    </div>
                   </div>
                 )}
                 
@@ -2515,7 +2524,7 @@ export default function PremiumPredictPage() {
                       disabled={loading || matches.length === 0}
                       className="w-full py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 disabled:from-gray-700 disabled:to-gray-700 text-white rounded-xl font-bold text-lg transition-all shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 hover:scale-[1.02] transform flex items-center justify-center gap-2"
                     >
-                      <span>{language === 'ko' ? '오늘의 PICK 확인하기' : "Check Today's PICK"}</span>
+                      <span>{language === 'ko' ? '오늘의 경기 확인하기' : "Check Today's PICK"}</span>
                       <span className="text-xl">→</span>
                     </button>
                     <p className="text-center text-gray-500 text-xs mt-2">
@@ -2528,9 +2537,8 @@ export default function PremiumPredictPage() {
                     {!session ? (
                       /* 🔹 비로그인 상태: 무료 가입 유도 */
                       <>
-                        <div className="text-4xl mb-3">🎯</div>
-                        <div className="text-white font-bold text-xl mb-2">
-                          {language === 'ko' ? '오늘의 PICK 확인하기' : "See Today's PICK"}
+                                                <div className="text-white font-bold text-xl mb-2">
+                          {language === 'ko' ? '오늘의 경기 확인하기' : "See Today's PICK"}
                         </div>
                         <div className="text-gray-400 text-sm mb-4">
                           {language === 'ko' 
