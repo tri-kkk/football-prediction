@@ -490,6 +490,10 @@ const leagueIdMap: Record<string, number> = {
   'DED': 88,
   'CL': 2,
   'EL': 3,
+  'KL1': 292,
+  'KL2': 293,
+  'J1': 98,
+  'J2': 99,
 }
 
 // ============================================
@@ -1924,8 +1928,8 @@ export default function PremiumPredictPage() {
     { code: 'SA', name: 'SERIE A', nameKo: '세리에A', logo: 'https://media.api-sports.io/football/leagues/135.png', flag: 'https://media.api-sports.io/flags/it.svg' },
     { code: 'FL1', name: 'LIGUE 1', nameKo: '리그1', logo: 'https://media.api-sports.io/football/leagues/61.png', flag: 'https://media.api-sports.io/flags/fr.svg' },
     { code: 'DED', name: 'EREDIVISIE', nameKo: '에레디비시', logo: 'https://media.api-sports.io/football/leagues/88.png', flag: 'https://media.api-sports.io/flags/nl.svg' },
-    { code: 'KL1', name: 'K LEAGUE', nameKo: 'K리그', logo: 'https://media.api-sports.io/football/leagues/292.png', flag: 'https://media.api-sports.io/flags/kr.svg' },
-    { code: 'J1', name: 'J LEAGUE', nameKo: 'J리그', logo: 'https://media.api-sports.io/football/leagues/98.png', flag: 'https://media.api-sports.io/flags/jp.svg' },
+    { code: 'KL', name: 'K LEAGUE', nameKo: 'K리그', logo: 'https://media.api-sports.io/football/leagues/292.png', flag: 'https://media.api-sports.io/flags/kr.svg' },
+    { code: 'J', name: 'J1/2', nameKo: 'J리그', logo: 'https://media.api-sports.io/football/leagues/98.png', flag: 'https://media.api-sports.io/flags/jp.svg' },
   ]
   
   // 예정 경기 로드
@@ -2098,7 +2102,7 @@ export default function PremiumPredictPage() {
     setLoading(true)
     try {
       // 여러 리그 조회해서 합치기
-      const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED']
+      const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'KL1', 'KL2', 'J1', 'J2']
       let allMatches: any[] = []
       
       for (const league of leagueCodes) {
@@ -2152,7 +2156,7 @@ export default function PremiumPredictPage() {
       // ✅ 서버에서 계산된 리그별 적중률 사용
       if (data.leagueAccuracy) {
         // 🎯 주요 6개 리그만 표시
-        const MAIN_LEAGUES = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED']
+        const MAIN_LEAGUES = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'KL1', 'J1']
         
         const accuracyData = Object.entries(data.leagueAccuracy)
           .filter(([league_code, stats]: [string, any]) => 
@@ -2286,7 +2290,14 @@ export default function PremiumPredictPage() {
     
     for (let i = 0; i < matches.length; i++) {
       const match = matches[i]
-      if (selectedLeague !== 'ALL' && match.league_code !== selectedLeague) continue
+      if (selectedLeague !== 'ALL') {
+        const matchLeague = selectedLeague === 'J' 
+          ? (match.league_code === 'J1' || match.league_code === 'J2')
+          : selectedLeague === 'KL'
+            ? (match.league_code === 'KL1' || match.league_code === 'KL2')
+            : match.league_code === selectedLeague
+        if (!matchLeague) continue
+      }
       if (match.prediction) continue
       
       await analyzeMatch(i)
@@ -2305,7 +2316,13 @@ export default function PremiumPredictPage() {
   })
   const filteredMatches = selectedLeague === 'ALL'
     ? upcomingMatches
-    : upcomingMatches.filter(m => m.league_code === selectedLeague)
+    : upcomingMatches.filter(m => 
+        selectedLeague === 'J' 
+          ? m.league_code === 'J1' || m.league_code === 'J2'
+          : selectedLeague === 'KL'
+            ? m.league_code === 'KL1' || m.league_code === 'KL2'
+            : m.league_code === selectedLeague
+      )
   
   // 💎 프리미엄 픽은 premiumPicksData state 사용 (별도 관리)
   const premiumPicks = premiumPicksData
