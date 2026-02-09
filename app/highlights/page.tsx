@@ -175,7 +175,7 @@ export default function HighlightsPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* 고정 헤더 영역 (제목 + 필터) */}
-      <div className="fixed top-[60px] left-0 right-0 z-40 bg-[#0a0a0a] border-b border-gray-800">
+      <div className="fixed top-[65px] left-0 right-0 z-40 bg-[#0a0a0a] border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4">
           {/* 헤더 */}
           <div className="py-4">
@@ -200,14 +200,7 @@ export default function HighlightsPage() {
                     {viewsRemaining}/3
                   </div>
                 </div>
-              )}
-              
-              {/* 프리미엄 배지 */}
-              {isPremium && (
-                <div className="px-3 py-1 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full text-black text-sm font-bold">
-                  👑 PREMIUM
-                </div>
-              )}
+              )}              
             </div>
           </div>
 
@@ -420,12 +413,7 @@ export default function HighlightsPage() {
         </div>
       )}
 
-      {/* 푸터 */}
-      <footer className="border-t border-gray-800 mt-12 py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>© 2025 TrendSoccer. Highlights by ScoreBat</p>
-        </div>
-      </footer>
+
     </div>
   )
 }
