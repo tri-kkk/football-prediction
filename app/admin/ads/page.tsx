@@ -484,6 +484,7 @@ export default function AdminDashboard() {
   
   // ===== 데이터 상태 =====
   const [users, setUsers] = useState<User[]>([])
+  const [totalUserCount, setTotalUserCount] = useState(0)  // ✅ API의 정확한 total count
   const [countryStats, setCountryStats] = useState<CountryStat[]>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
@@ -658,6 +659,7 @@ export default function AdminDashboard() {
       if (!response.ok) throw new Error('회원 목록을 불러오는데 실패했습니다')
       const data = await response.json()
       setUsers(data.users || [])
+      setTotalUserCount(data.total || data.users?.length || 0)  // ✅ API의 정확한 count 사용
     } catch (err: any) {
       console.error('Users fetch error:', err)
     }
@@ -1703,7 +1705,8 @@ export default function AdminDashboard() {
   // ==================== 계산된 통계 ====================
 
   const stats = useMemo(() => {
-    const totalUsers = users.length
+    // ✅ API의 정확한 total count 사용 (100명 제한 문제 해결)
+    const totalUsers = totalUserCount || users.length
     const freeUsers = users.filter(u => u.tier === 'free').length
     const premiumUsers = users.filter(u => u.tier === 'premium').length
     
@@ -1730,7 +1733,7 @@ export default function AdminDashboard() {
       todayImpressions,
       todayClicks,
     }
-  }, [users, subscriptions, ads, todayAdStats, paymentStats])
+  }, [users, totalUserCount, subscriptions, ads, todayAdStats, paymentStats])
 
   // ==================== 필터된 데이터 ====================
 
@@ -2269,7 +2272,7 @@ export default function AdminDashboard() {
                           </div>
                           <div>
                             <div className="text-white font-medium flex items-center gap-2">
-                              {user.name || '이름 없음'}
+                              {user.name || user.email?.split('@')[0] || '이름 없음'}
                               <span className="text-sm">{getCountryFlag(user.signup_country_code)}</span>
                             </div>
                             <div className="text-sm text-gray-500">{user.email}</div>
@@ -2718,7 +2721,7 @@ export default function AdminDashboard() {
                         {filter === 'all' ? '전체' : filter === 'free' ? '무료' : '프리미엄'}
                         <span className="ml-2 text-xs opacity-70">
                           ({filter === 'all' 
-                            ? users.length 
+                            ? (totalUserCount || users.length) 
                             : users.filter(u => u.tier === filter).length})
                         </span>
                       </button>
@@ -2778,10 +2781,10 @@ export default function AdminDashboard() {
                               <td className="px-4 py-4">
                                 <div className="flex items-center gap-3">
                                   <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
-                                    {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                                    {(user.name || user.email?.split('@')[0] || '?').charAt(0).toUpperCase()}
                                   </div>
                                   <div>
-                                    <div className="text-white font-medium">{user.name || '이름 없음'}</div>
+                                    <div className="text-white font-medium">{user.name || user.email?.split('@')[0] || '이름 없음'}</div>
                                     <div className="text-sm text-gray-500">{user.email}</div>
                                   </div>
                                 </div>
@@ -2837,7 +2840,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-gray-500">
-                  <span>총 {filteredUsers.length}명</span>
+                  <span>총 {filteredUsers.length}명 {userFilter === 'all' && countryFilter === 'all' && !userSearch && totalUserCount > filteredUsers.length ? `(전체 ${totalUserCount}명)` : ''}</span>
                 </div>
               </div>
             )}
@@ -2960,7 +2963,7 @@ export default function AdminDashboard() {
                             <tr key={sub.id} className="hover:bg-gray-700/20 transition-colors">
                               <td className="px-4 py-4">
                                 <div>
-                                  <div className="text-white font-medium">{sub.user_name || '이름 없음'}</div>
+                                  <div className="text-white font-medium">{sub.user_name || sub.user_email?.split('@')[0] || '이름 없음'}</div>
                                   <div className="text-sm text-gray-500">{sub.user_email}</div>
                                 </div>
                               </td>

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 // GET: 회원 목록 조회
@@ -11,9 +11,43 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const tier = searchParams.get('tier') // 'free' | 'premium' | null
-    const limit = parseInt(searchParams.get('limit') || '100')
+    const country = searchParams.get('country') // 국가 코드 필터
+    const stats = searchParams.get('stats') // 'country' - 국가별 통계
+    // ✅ 수정: 기본 limit을 1000으로 변경 (기존 100 → 1000)
+    const limit = parseInt(searchParams.get('limit') || '1000')
     const offset = parseInt(searchParams.get('offset') || '0')
 
+    // 📊 국가별 통계 요청
+    if (stats === 'country') {
+      const { data, error } = await supabase
+        .from('users')
+        .select('signup_country, signup_country_code')
+      
+      if (error) throw error
+      
+      // 국가별 집계
+      const countryStats: Record<string, { country: string; code: string; count: number }> = {}
+      
+      data?.forEach(user => {
+        const code = user.signup_country_code || 'XX'
+        const name = user.signup_country || 'Unknown'
+        
+        if (!countryStats[code]) {
+          countryStats[code] = { country: name, code, count: 0 }
+        }
+        countryStats[code].count++
+      })
+      
+      // 정렬 (많은 순)
+      const sorted = Object.values(countryStats).sort((a, b) => b.count - a.count)
+      
+      return NextResponse.json({
+        stats: sorted,
+        total: data?.length || 0
+      })
+    }
+
+    // 📋 회원 목록 조회
     let query = supabase
       .from('users')
       .select('*', { count: 'exact' })
@@ -24,13 +58,17 @@ export async function GET(request: NextRequest) {
       query = query.eq('tier', tier)
     }
 
+    if (country && country !== 'all') {
+      query = query.eq('signup_country_code', country)
+    }
+
     const { data: users, error, count } = await query
 
     if (error) throw error
 
     return NextResponse.json({
       users: users || [],
-      total: count || 0,
+      total: count || 0,  // ✅ Supabase의 정확한 count 값 반환
       limit,
       offset,
     })
@@ -72,7 +110,6 @@ export async function PUT(request: NextRequest) {
 
     // 등급이 변경된 경우 구독 상태도 업데이트
     if (tier === 'free') {
-      // 프리미엄에서 무료로 변경시 활성 구독 취소
       await supabase
         .from('subscriptions')
         .update({ status: 'cancelled' })
@@ -90,7 +127,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE: 회원 삭제 (soft delete 권장)
+// DELETE: 회원 삭제
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -103,18 +140,20 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Soft delete: is_deleted 플래그 설정
+    // 관련 구독도 함께 삭제
+    await supabase
+      .from('subscriptions')
+      .delete()
+      .eq('user_id', id)
+
     const { error } = await supabase
       .from('users')
-      .update({ 
-        is_deleted: true,
-        deleted_at: new Date().toISOString()
-      })
+      .delete()
       .eq('id', id)
 
     if (error) throw error
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, message: '회원이 삭제되었습니다' })
   } catch (error: any) {
     console.error('Users DELETE error:', error)
     return NextResponse.json(

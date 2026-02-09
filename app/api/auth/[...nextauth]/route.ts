@@ -52,7 +52,7 @@ const handler = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (!user.email) return false
 
       try {
@@ -66,18 +66,33 @@ const handler = NextAuth({
         // ✅ 1. 기존 users 테이블에서 확인 (이미 가입 완료된 회원)
         const { data: existingUser } = await supabase
           .from('users')
-          .select('id, terms_agreed_at')
+          .select('id, name, terms_agreed_at')
           .eq('email', user.email)
           .single()
 
         if (existingUser) {
-          // ✅ 기존 회원: 로그인 시간만 업데이트
+          // ✅ 기존 회원: 로그인 시간 업데이트
+          const updateData: any = { 
+            last_login_at: now,
+            last_login_ip: ip
+          }
+
+          // 🔑 이름이 비어있으면 업데이트 (네이버 이름없음 해결)
+          if (!existingUser.name) {
+            const userName = user.name 
+              || (profile as any)?.response?.name 
+              || (profile as any)?.response?.nickname
+              || (profile as any)?.name
+              || null
+            if (userName) {
+              updateData.name = userName
+              console.log(`🔄 Updating empty name for ${user.email} → "${userName}"`)
+            }
+          }
+
           await supabase
             .from('users')
-            .update({ 
-              last_login_at: now,
-              last_login_ip: ip
-            })
+            .update(updateData)
             .eq('email', user.email)
           
           console.log(`✅ Existing user login: ${user.email}`)
@@ -123,9 +138,16 @@ const handler = NextAuth({
         const canGetPromo = isPromoPeriod && !hadPromo
         
         // ⚠️ 핵심 변경: users가 아닌 pending_users에 저장!
+        // 🔑 네이버 이름 추출 (네이버는 profile.response 안에 있음)
+        const userName = user.name 
+          || (profile as any)?.response?.name 
+          || (profile as any)?.response?.nickname
+          || (profile as any)?.name
+          || null
+
         await supabase.from('pending_users').insert({
           email: user.email,
-          name: user.name,
+          name: userName,
           avatar_url: user.image,
           provider: account?.provider,
           provider_id: account?.providerAccountId,
@@ -151,15 +173,19 @@ const handler = NextAuth({
         // ✅ 1. 먼저 users 테이블에서 확인
         const { data: userData } = await supabase
           .from('users')
-          .select('id, tier, premium_expires_at, promo_code, terms_agreed_at, privacy_agreed_at')
+          .select('id, tier, name, premium_expires_at, promo_code, terms_agreed_at, privacy_agreed_at')
           .eq('email', session.user.email)
           .single()
 
         if (userData) {
           // ✅ 정식 회원
           session.user.id = userData.id
-          session.user.termsAgreed = true  // users에 있으면 무조건 동의 완료
+          session.user.termsAgreed = true
           session.user.pendingPromo = null
+          // 🔑 DB의 이름으로 세션 업데이트
+          if (userData.name) {
+            session.user.name = userData.name
+          }
           
           // 프리미엄 만료 체크
           let currentTier = userData.tier
