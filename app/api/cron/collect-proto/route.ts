@@ -168,7 +168,7 @@ function parseWisetotoHtml(html: string, round: string): ProtoMatch[] {
         '언더': 'under',
         '홀': 'odd',
         '짝': 'even',
-        '⑤': 'five',
+        '⑤': 'draw',
         '적특': 'void',
         '발매취소': 'cancelled',
       }
