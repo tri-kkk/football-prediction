@@ -114,14 +114,15 @@ function parseWisetotoHtml(html: string, round: string): ProtoMatch[] {
     
     // 홈팀 (li.a6 > span.tn 또는 span.tnb)
     // 경기전: <span class="tn">KT소닉붐</span>
-    // 종료후: <span class="tnb">KT소닉붐</span> <span class="win">104</span>
+    // 종료(승): <span class="tnb">KT소닉붐</span> <span class="win">104</span>
+    // 종료(패): <span class="tn">KT소닉붐</span> <span class="lose">99.5</span>
     const homeMatch = ulContent.match(/<li\s+class="a6"[^>]*>[\s\S]*?<span\s+class="tn[b]?"[^>]*>([\s\S]*?)<\/span>/)
     const homeTeam = homeMatch ? homeMatch[1].replace(/<[^>]*>/g, '').trim() : ''
     
-    // 원정팀 (li.a8 > span.tn)
-    // 경기전: <span class="tn">서울삼성</span>
-    // 종료후: <span class="lose">101</span> <span class="tn">서울삼성</span>
-    const awayMatch = ulContent.match(/<li\s+class="a8"[^>]*>[\s\S]*?<span\s+class="tn"[^>]*>([\s\S]*?)<\/span>/)
+    // 원정팀 (li.a8 > span.tn 또는 span.tnb)
+    // 종료(승): <span class="win">101</span> <span class="tnb">서울삼성</span>
+    // 종료(패): <span class="lose">101</span> <span class="tn">서울삼성</span>
+    const awayMatch = ulContent.match(/<li\s+class="a8"[^>]*>[\s\S]*?<span\s+class="tn[b]?"[^>]*>([\s\S]*?)<\/span>/)
     const awayTeam = awayMatch ? awayMatch[1].replace(/<[^>]*>/g, '').trim() : ''
     
     if (!homeTeam || !awayTeam) continue
@@ -158,32 +159,25 @@ function parseWisetotoHtml(html: string, round: string): ProtoMatch[] {
     }
     
     // 스코어 파싱 (종료된 경기)
-    // <span class="win">104</span> : <span class="lose">101</span>
+    // 핸디캡: win/lose 값이 핸디캡 적용된 조정 점수 (99.5 등) → 파싱 안 함
+    // 승패/승5패: win/lose 값이 실제 점수 → 파싱
     let homeScore: number | null = null
     let awayScore: number | null = null
     
-    // 1차: win/lose 스팬에서 스코어 추출 (가장 정확)
-    const winMatch = ulContent.match(/<span\s+class="win"[^>]*>(\d+)<\/span>/)
-    const loseMatch = ulContent.match(/<span\s+class="lose"[^>]*>(\d+)<\/span>/)
+    const isRealScore = gameType === '승패' || gameType === '승5패'
     
-    if (winMatch && loseMatch) {
-      // a6(홈)에 win이 있으면 홈이 이긴 것
+    if (isRealScore && status === '종료') {
+      // a6(홈)에서 점수 추출
       const a6Content = ulContent.match(/<li\s+class="a6"[^>]*>([\s\S]*?)<\/li>/)
-      if (a6Content && a6Content[1].includes('class="win"')) {
-        homeScore = parseInt(winMatch[1])
-        awayScore = parseInt(loseMatch[1])
-      } else {
-        // a6에 lose가 있으면 홈이 진 것
-        homeScore = parseInt(loseMatch[1])
-        awayScore = parseInt(winMatch[1])
+      const a8Content = ulContent.match(/<li\s+class="a8"[^>]*>([\s\S]*?)<\/li>/)
+      
+      if (a6Content) {
+        const a6Score = a6Content[1].match(/<span\s+class="(?:win|lose)"[^>]*>(\d+)<\/span>/)
+        if (a6Score) homeScore = parseInt(a6Score[1])
       }
-    } else if (status === '종료') {
-      // 2차: 폴백 - 숫자:숫자 패턴
-      const scorePattern = /(\d+)\s*:\s*(\d+)/
-      const scoreInContent = ulContent.match(scorePattern)
-      if (scoreInContent) {
-        homeScore = parseInt(scoreInContent[1])
-        awayScore = parseInt(scoreInContent[2])
+      if (a8Content) {
+        const a8Score = a8Content[1].match(/<span\s+class="(?:win|lose)"[^>]*>(\d+)<\/span>/)
+        if (a8Score) awayScore = parseInt(a8Score[1])
       }
     }
     
