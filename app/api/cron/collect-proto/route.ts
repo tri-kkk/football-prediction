@@ -391,7 +391,7 @@ async function saveMatchesToDB(matches: ProtoMatch[]) {
         } else if (match.game_type === '언더오버' || match.game_type === 'SUM') {
           // "U 160.5"
           const numMatch = match.handicap_value.match(/\d+\.?\d*/)
-          if (numMatch) totalLine = parseFloat(numMatch[0])
+          if (numMatch && parseFloat(numMatch[0]) > 0) totalLine = parseFloat(numMatch[0])
         }
       }
       

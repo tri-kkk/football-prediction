@@ -55,9 +55,9 @@ export async function GET(request: NextRequest) {
           drawOdds: row.draw_odds ? parseFloat(row.draw_odds) : null,
           awayOdds: row.away_odds ? parseFloat(row.away_odds) : null,
           resultCode: row.result_code,
-          matchType: row.match_type || '승무패',
+          matchType: row.match_type || '승패',
           handicapValue: row.handicap_value ? parseFloat(row.handicap_value) : null,
-          totalValue: row.total_value ? parseFloat(row.total_value) : null,
+          totalValue: row.total_line && parseFloat(row.total_line) > 0 ? parseFloat(row.total_line) : null,
         }
       })
 
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       draw_odds: match.drawOdds,
       away_odds: match.awayOdds,
       result_code: match.resultCode,
-      match_type: match.matchType || '승무패',
+      match_type: match.matchType || '승패',
       handicap_value: match.handicapValue,
       total_value: match.totalValue,
     }))
