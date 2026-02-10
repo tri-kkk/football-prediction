@@ -252,9 +252,9 @@ function analyzeH2H(matches: any[], homeTeamId: number, homeTeam: string, awayTe
   }
   
   const avgTotal = (homeGoals + awayGoals) / total
-  if (avgTotal >= 3.0) {
-    insights.push(`두 팀 맞대결은 수비적 (평균 ${avgTotal.toFixed(1)}골)`)
-  } else if (avgTotal <= 2.0) {
+   if (avgTotal >= 2.5) {
+    insights.push(`두 팀 맞대결은 공격적 (평균 ${avgTotal.toFixed(1)}골)`)
+  } else {
     insights.push(`두 팀 맞대결은 수비적 (평균 ${avgTotal.toFixed(1)}골)`)
   }
   
