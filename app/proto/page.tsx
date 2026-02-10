@@ -278,7 +278,13 @@ export default function ProtoPage() {
         if (rounds.length > 0) {
           setAvailableRounds(rounds)
           if (!currentRound) {
-            setCurrentRound(rounds[0])
+            // API에서 진행중인 회차를 알려줌
+            const active = json.activeRound
+            if (active && rounds.includes(active)) {
+              setCurrentRound(active)
+            } else {
+              setCurrentRound(rounds[0])
+            }
           }
         }
       }

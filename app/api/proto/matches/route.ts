@@ -18,7 +18,25 @@ export async function GET(request: NextRequest) {
     
     const rounds = roundData?.map((r: any) => r.round) || []
     
-    console.log('📋 [DEBUG] rounds:', rounds, 'error:', roundError?.message)
+    // 활성 회차 판별
+    let activeRound = rounds[0] || ''
+    if (rounds.length > 0) {
+      const { data: statusData } = await supabase
+        .rpc('get_proto_round_status')
+      
+      if (statusData && statusData.length > 0) {
+        // 우선순위: 진행중(결과 일부) > 발매전(결과 0) > 최신
+        const inProgress = statusData.find((r: any) => r.finished > 0 && r.finished < r.total)
+        if (inProgress) {
+          activeRound = inProgress.round
+        } else {
+          // 진행중 없으면 가장 높은 회차
+          activeRound = statusData[0].round
+        }
+      }
+    }
+    
+    console.log('📋 [DEBUG] rounds:', rounds, 'activeRound:', activeRound)
 
     if (round) {
       // 특정 회차 조회
@@ -61,10 +79,10 @@ export async function GET(request: NextRequest) {
         }
       })
 
-      return NextResponse.json({ success: true, data: matches, rounds })
+      return NextResponse.json({ success: true, data: matches, rounds, activeRound })
     } else {
       // 회차 목록만 반환
-      return NextResponse.json({ success: true, rounds })
+      return NextResponse.json({ success: true, rounds, activeRound })
     }
   } catch (error) {
     console.error('Proto matches GET error:', error)
