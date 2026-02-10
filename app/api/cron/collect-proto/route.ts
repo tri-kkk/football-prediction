@@ -112,11 +112,15 @@ function parseWisetotoHtml(html: string, round: string): ProtoMatch[] {
       }
     }
     
-    // 홈팀 (li.a6 > span.tn)
-    const homeMatch = ulContent.match(/<li\s+class="a6"[^>]*>[\s\S]*?<span\s+class="tn"[^>]*>([\s\S]*?)<\/span>/)
+    // 홈팀 (li.a6 > span.tn 또는 span.tnb)
+    // 경기전: <span class="tn">KT소닉붐</span>
+    // 종료후: <span class="tnb">KT소닉붐</span> <span class="win">104</span>
+    const homeMatch = ulContent.match(/<li\s+class="a6"[^>]*>[\s\S]*?<span\s+class="tn[b]?"[^>]*>([\s\S]*?)<\/span>/)
     const homeTeam = homeMatch ? homeMatch[1].replace(/<[^>]*>/g, '').trim() : ''
     
     // 원정팀 (li.a8 > span.tn)
+    // 경기전: <span class="tn">서울삼성</span>
+    // 종료후: <span class="lose">101</span> <span class="tn">서울삼성</span>
     const awayMatch = ulContent.match(/<li\s+class="a8"[^>]*>[\s\S]*?<span\s+class="tn"[^>]*>([\s\S]*?)<\/span>/)
     const awayTeam = awayMatch ? awayMatch[1].replace(/<[^>]*>/g, '').trim() : ''
     
@@ -154,15 +158,33 @@ function parseWisetotoHtml(html: string, round: string): ProtoMatch[] {
     }
     
     // 스코어 파싱 (종료된 경기)
+    // <span class="win">104</span> : <span class="lose">101</span>
     let homeScore: number | null = null
     let awayScore: number | null = null
     
-    // 스코어가 팀 이름 옆에 표시될 수 있음
-    const scorePattern = /(\d+)\s*:\s*(\d+)/
-    const scoreInContent = ulContent.match(scorePattern)
-    if (scoreInContent && status === '종료') {
-      homeScore = parseInt(scoreInContent[1])
-      awayScore = parseInt(scoreInContent[2])
+    // 1차: win/lose 스팬에서 스코어 추출 (가장 정확)
+    const winMatch = ulContent.match(/<span\s+class="win"[^>]*>(\d+)<\/span>/)
+    const loseMatch = ulContent.match(/<span\s+class="lose"[^>]*>(\d+)<\/span>/)
+    
+    if (winMatch && loseMatch) {
+      // a6(홈)에 win이 있으면 홈이 이긴 것
+      const a6Content = ulContent.match(/<li\s+class="a6"[^>]*>([\s\S]*?)<\/li>/)
+      if (a6Content && a6Content[1].includes('class="win"')) {
+        homeScore = parseInt(winMatch[1])
+        awayScore = parseInt(loseMatch[1])
+      } else {
+        // a6에 lose가 있으면 홈이 진 것
+        homeScore = parseInt(loseMatch[1])
+        awayScore = parseInt(winMatch[1])
+      }
+    } else if (status === '종료') {
+      // 2차: 폴백 - 숫자:숫자 패턴
+      const scorePattern = /(\d+)\s*:\s*(\d+)/
+      const scoreInContent = ulContent.match(scorePattern)
+      if (scoreInContent) {
+        homeScore = parseInt(scoreInContent[1])
+        awayScore = parseInt(scoreInContent[2])
+      }
     }
     
     // 날짜 파싱: "02.09(월) 19:00" → "2026-02-09T19:00:00"
@@ -515,11 +537,13 @@ export async function GET(request: Request) {
         sports: sportCounts,
         gameTypes: typeCounts,
         dbResults,
-        preview: matches.slice(0, 3).map(m => ({
+        preview: matches.slice(0, 5).map(m => ({
           no: m.match_number,
           teams: `${m.home_team} vs ${m.away_team}`,
           type: m.game_type,
           odds: `${m.odds_home} / ${m.odds_draw ?? '-'} / ${m.odds_away}`,
+          score: m.home_score !== null ? `${m.home_score}:${m.away_score}` : null,
+          result: m.result_code,
           status: m.status,
         })),
       },
