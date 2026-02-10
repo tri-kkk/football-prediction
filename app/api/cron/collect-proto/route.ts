@@ -112,17 +112,14 @@ function parseWisetotoHtml(html: string, round: string): ProtoMatch[] {
       }
     }
     
-    // 홈팀 (li.a6 > span.tn 또는 span.tnb)
-    // 경기전: <span class="tn">KT소닉붐</span>
-    // 종료(승): <span class="tnb">KT소닉붐</span> <span class="win">104</span>
-    // 종료(패): <span class="tn">KT소닉붐</span> <span class="lose">99.5</span>
-    const homeMatch = ulContent.match(/<li\s+class="a6"[^>]*>[\s\S]*?<span\s+class="tn[b]?"[^>]*>([\s\S]*?)<\/span>/)
+    // 홈팀 (li.a6 또는 li.a6_un > span.tn 또는 span.tnb)
+    // 승패: <li class="a6"><span class="tn">팀명</span></li>
+    // 언더오버: <li class="a6_un"><span class="tn">팀명</span></li>
+    const homeMatch = ulContent.match(/<li\s+class="a6(?:_un)?"[^>]*>[\s\S]*?<span\s+class="tn[b]?"[^>]*>([\s\S]*?)<\/span>/)
     const homeTeam = homeMatch ? homeMatch[1].replace(/<[^>]*>/g, '').trim() : ''
     
-    // 원정팀 (li.a8 > span.tn 또는 span.tnb)
-    // 종료(승): <span class="win">101</span> <span class="tnb">서울삼성</span>
-    // 종료(패): <span class="lose">101</span> <span class="tn">서울삼성</span>
-    const awayMatch = ulContent.match(/<li\s+class="a8"[^>]*>[\s\S]*?<span\s+class="tn[b]?"[^>]*>([\s\S]*?)<\/span>/)
+    // 원정팀 (li.a8 또는 li.a8_un > span.tn 또는 span.tnb)
+    const awayMatch = ulContent.match(/<li\s+class="a8(?:_un)?"[^>]*>[\s\S]*?<span\s+class="tn[b]?"[^>]*>([\s\S]*?)<\/span>/)
     const awayTeam = awayMatch ? awayMatch[1].replace(/<[^>]*>/g, '').trim() : ''
     
     if (!homeTeam || !awayTeam) continue

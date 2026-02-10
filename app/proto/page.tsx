@@ -540,7 +540,9 @@ export default function ProtoPage() {
       }
       if (typeFilter !== 'ALL') {
         if (typeFilter === '언더오버') {
-          if (match.matchType !== '언더오버' && match.matchType !== 'SUM') return false
+          if (match.matchType !== '언더오버') return false
+        } else if (typeFilter === '홀짝') {
+          if (match.matchType !== '홀짝' && match.matchType !== 'SUM') return false
         } else if (match.matchType !== typeFilter) {
           return false
         }
@@ -931,8 +933,8 @@ export default function ProtoPage() {
                     {filter.short}
                     {filter.key !== 'ALL' && (
                       <span className="ml-0.5 md:ml-1 opacity-60">
-                        {filter.key === '언더오버' 
-                          ? matches.filter(m => m.matchType === '언더오버' || m.matchType === 'SUM').length
+                        {filter.key === '홀짝' 
+                          ? matches.filter(m => m.matchType === '홀짝' || m.matchType === 'SUM').length
                           : matches.filter(m => m.matchType === filter.key).length}
                       </span>
                     )}
@@ -1005,10 +1007,10 @@ export default function ProtoPage() {
                   
                   const getResultText = (code: string | null, type: string) => {
                     if (!code) return null
-                    if (type === '언더오버' || type === 'SUM') {
+                    if (type === '언더오버') {
                       return code === 'over' ? '오버' : code === 'under' ? '언더' : null
                     }
-                    if (type === '홀짝') {
+                    if (type === '홀짝' || type === 'SUM') {
                       return code === 'odd' ? '홀' : code === 'even' ? '짝' : null
                     }
                     if (type === '핸디캡') {
@@ -1040,9 +1042,9 @@ export default function ProtoPage() {
                           }
                         }
                       case '언더오버':
-                      case 'SUM':
                         return { home: `O ${match.totalValue || ''}`, draw: null, away: `U ${match.totalValue || ''}` }
                       case '홀짝':
+                      case 'SUM':
                         return { home: '홀', draw: null, away: '짝' }
                       case '승5패':
                         return { home: '승', draw: '무5', away: '패' }
@@ -1060,10 +1062,10 @@ export default function ProtoPage() {
                   }
                   
                   const getPrediction = (type: string, btn: 'home' | 'draw' | 'away') => {
-                    if (type === '언더오버' || type === 'SUM') {
+                    if (type === '언더오버') {
                       return btn === 'home' ? 'over' : 'under'
                     }
-                    if (type === '홀짝') {
+                    if (type === '홀짝' || type === 'SUM') {
                       return btn === 'home' ? 'odd' : 'even'
                     }
                     return btn
@@ -1073,7 +1075,7 @@ export default function ProtoPage() {
                     switch (type) {
                       case '핸디캡': return 'bg-purple-500/20 text-purple-400'
                       case '언더오버': return 'bg-orange-500/20 text-orange-400'
-                      case 'SUM': return 'bg-orange-500/20 text-orange-400'
+                      case 'SUM': return 'bg-pink-500/20 text-pink-400'
                       case '홀짝': return 'bg-pink-500/20 text-pink-400'
                       case '승5패': return 'bg-cyan-500/20 text-cyan-400'
                       default: return 'bg-gray-500/20 text-gray-400'
@@ -1108,7 +1110,8 @@ export default function ProtoPage() {
                           {match.matchType !== '승패' && (
                             <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${getTypeBadgeColor(match.matchType)}`}>
                               {match.matchType === '핸디캡' ? `H${match.handicapValue}` :
-                               match.matchType === '언더오버' || match.matchType === 'SUM' ? `U/O ${match.totalValue || ''}` :
+                               match.matchType === '언더오버' ? `U/O ${match.totalValue || ''}` :
+                               match.matchType === 'SUM' ? 'SUM' :
                                match.matchType === '홀짝' ? 'O/E' :
                                match.matchType}
                             </span>
@@ -1446,11 +1449,11 @@ export default function ProtoPage() {
                                   {sel.matchType === '핸디캡' && (
                                     `${sel.prediction === 'home' ? '홈' : '원정'} (${sel.handicapValue})`
                                   )}
-                                  {(sel.matchType === '언더오버' || sel.matchType === 'SUM') && (
-                                    `${sel.prediction === 'under' ? '언더' : '오버'} ${sel.totalValue}`
-                                  )}
-                                  {sel.matchType === '홀짝' && (
+                                  {(sel.matchType === '홀짝' || sel.matchType === 'SUM') && (
                                     sel.prediction === 'odd' ? '홀' : '짝'
+                                  )}
+                                  {sel.matchType === '언더오버' && (
+                                    `${sel.prediction === 'under' ? '언더' : '오버'} ${sel.totalValue}`
                                   )}
                                 </span>
                               </div>
