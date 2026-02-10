@@ -217,23 +217,37 @@ function calculateMasterSeq(round: number): string {
 
 // DB에서 가장 최근 회차 조회하여 다음 회차 결정
 async function getLatestRoundFromDB(): Promise<number> {
-  try {
-    // round가 varchar라 문자열 정렬 문제 있음 → JS에서 숫자 변환 후 최대값
-    const { data, error } = await supabase
-      .from('proto_matches')
-      .select('round')
-      .limit(1000)
-    
-    if (data && data.length > 0) {
-      const rounds = [...new Set(data.map(r => parseInt(r.round) || 0))]
-      const maxRound = Math.max(...rounds)
-      console.log(`📋 DB 회차 목록: ${rounds.sort((a,b) => a-b).join(', ')} → 최신: ${maxRound}`)
-      return maxRound
+  // DB 조회 대신 Wisetoto에서 직접 최신 회차 탐색
+  // 높은 회차부터 시도해서 데이터 있는 회차 찾기
+  const currentMonth = new Date().getMonth() + 1 // 1-12
+  const estimatedMax = currentMonth * 5 + 10 // 여유있게 상한선
+  
+  for (let r = estimatedMax; r >= Math.max(1, estimatedMax - 5); r--) {
+    try {
+      const seq = calculateMasterSeq(r)
+      const res = await fetch(
+        `https://www.wisetoto.com/util/gameinfo/get_proto_list.htm?game_category=pt1&game_year=2026&game_round=${r}&game_info_master_seq=${seq}&tab_type=proto`,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html, */*',
+            'Accept-Language': 'ko-KR,ko;q=0.9',
+            'Referer': 'https://www.wisetoto.com/',
+          },
+        }
+      )
+      const html = await res.text()
+      // gameinfo 클래스가 있으면 유효한 회차
+      if (html.includes('class="gameinfo"') && html.includes('<ul')) {
+        console.log(`📋 Wisetoto 최신 회차 감지: ${r}회차 (seq: ${seq})`)
+        return r
+      }
+    } catch {
+      continue
     }
-    return 18
-  } catch {
-    return 18
   }
+  
+  return 19 // 기본값
 }
 
 // ============================================================
@@ -385,7 +399,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         success: totalMatches > 0,
         message: `${totalMatches}경기 수집 완료`,
-        data: { results: allResults, totalMatches },
+        data: { detectedLatestRound: latestRound, rounds: [latestRound, latestRound + 1], results: allResults, totalMatches },
       })
     }
     
