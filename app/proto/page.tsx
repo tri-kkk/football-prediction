@@ -182,7 +182,7 @@ export default function ProtoPage() {
       setTimeout(() => {
         const element = matchRefs.current[nextMatch.matchSeq] || dateRefs.current[nextMatch.koreanDate]
         if (element) {
-          const headerHeight = 165 // 메인헤더(48px) + 프로토헤더(~117px)
+          const headerHeight = 200 // 메인헤더(48px) + 프로토헤더(~117px)
           const elementPosition = element.getBoundingClientRect().top + window.scrollY
           const offsetPosition = elementPosition - headerHeight - 10
           
@@ -220,7 +220,7 @@ export default function ProtoPage() {
       setTimeout(() => {
         const element = dateRefs.current[date]
         if (element) {
-          const headerHeight = 165 // 메인헤더(48px) + 프로토헤더(~117px)
+          const headerHeight = 200 // 메인헤더(48px) + 프로토헤더(~117px)
           const elementPosition = element.getBoundingClientRect().top + window.scrollY
           const offsetPosition = elementPosition - headerHeight
           
@@ -700,7 +700,7 @@ export default function ProtoPage() {
       )}
 
       {/* 헤더 - 완전 고정, 불투명 배경 */}
-      <header className="fixed top-[70px] left-0 right-0 z-40 bg-gray-950 shadow-lg shadow-black/50">
+      <header className="fixed top-[70px] md:top-[73px] left-0 right-0 z-50 bg-gray-950 shadow-lg shadow-black/50">
         <div className="max-w-4xl mx-auto px-3 md:px-4 py-1.5 md:py-2 space-y-1.5 md:space-y-2">
           {/* 상단: 타이틀 + 탭 */}
           <div className="flex items-center justify-between">
@@ -953,7 +953,7 @@ export default function ProtoPage() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main ref={mainContentRef} className="max-w-4xl mx-auto px-3 pb-24 pt-[100px]">
+      <main ref={mainContentRef} className="max-w-4xl mx-auto px-3 pb-24 pt-[146px] md:pt-[155px]">
         {/* 계산기 탭 */}
         {activeTab === 'calculator' && (
         <>
@@ -985,10 +985,10 @@ export default function ProtoPage() {
             <div 
               key={date} 
               ref={(el) => { dateRefs.current[date] = el }}
-              className="mb-3 scroll-mt-[168px]"
+              className="mb-3 scroll-mt-[200px]"
             >
               {/* 날짜 헤더 */}
-              <div className="flex items-center gap-2 mb-1.5 sticky top-[160px] z-20 bg-gray-950 py-1.5 md:py-2 -mx-3 px-3 md:-mx-4 md:px-4 border-b border-gray-800/30">
+              <div className="flex items-center gap-2 mb-3 sticky top-[176px] md:top-[195px] z-20 bg-gray-950 py-2 md:py-2.5 -mx-3 px-3 md:-mx-4 md:px-4 border-b border-gray-800/30">
                 <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-emerald-500 rounded-full" />
                 <h2 className="text-xs md:text-sm font-bold text-white">{date}</h2>
                 <span className="text-[10px] md:text-xs text-gray-500">{dateMatches.length}경기</span>

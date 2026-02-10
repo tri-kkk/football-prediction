@@ -344,9 +344,9 @@ export default function RootLayout({
         {/* ✅ TermsGuard로 감싸서 약관 미동의 시 리다이렉트 */}
         <TermsGuard>
           {/* Main Content */}
-          <main>
-            {children}
-          </main>
+<main className="overflow-visible">
+  {children}
+</main>
         </TermsGuard>
 
         {/* Footer - 개선된 디자인 */}
