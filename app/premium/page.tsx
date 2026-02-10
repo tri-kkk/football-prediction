@@ -1825,7 +1825,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               </div>
               <div className="text-gray-400 text-sm mb-4">
                 {language === 'ko' 
-                  ? '10,000+ 경기 데이터 기반 AI 예측' 
+                  ? '10,000+ 경기 데이터 기반 통계 예측' 
                   : 'AI predictions based on 10,000+ matches'}
               </div>
               <Link 
@@ -2533,71 +2533,179 @@ export default function PremiumPredictPage() {
                   </div>
                 ) : !isPremium ? (
                   /* 비프리미엄 유저: 단계별 전환 유도 */
-                  <div className="p-6 text-center">
+                  <div className="p-6 md:p-10 lg:p-12 text-center">
                     {!session ? (
                       /* 🔹 비로그인 상태: 무료 가입 유도 */
                       <>
-                                                <div className="text-white font-bold text-xl mb-2">
+                        <div className="text-white font-bold text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-3">
                           {language === 'ko' ? '오늘의 경기 확인하기' : "See Today's PICK"}
                         </div>
-                        <div className="text-gray-400 text-sm mb-4">
+                        <div className="text-gray-400 text-sm md:text-base lg:text-lg mb-6 md:mb-8">
                           {language === 'ko' 
                             ? '10,000+ 경기 분석 기반 · 매일 엄선된 경기' 
                             : '10,000+ Matches Analyzed · Daily Picks'}
                         </div>
                         
                         {/* 무료 가입 버튼 (메인) */}
-                        <Link 
-                          href="/login"
-                          className="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-xl font-bold transition-all shadow-lg shadow-green-500/20"
-                        >
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                          </svg>
-                          {language === 'ko' ? '무료로 시작하기' : 'Get Started Free'}
-                        </Link>
+                        <div className="max-w-md mx-auto">
+                          <Link 
+                            href="/login"
+                            className="inline-flex items-center justify-center gap-2 w-full py-4 md:py-5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-xl font-bold text-lg md:text-xl transition-all shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:scale-[1.02] transform"
+                          >
+                            <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                            {language === 'ko' ? '무료로 시작하기' : 'Get Started Free'}
+                          </Link>
+                        </div>
                         
-                        <div className="text-gray-500 text-xs mt-3 flex items-center justify-center gap-1">
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="text-gray-500 text-xs md:text-sm mt-3 md:mt-4 flex items-center justify-center gap-1">
+                          <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
                           </svg>
                           {language === 'ko' ? '30초면 가입 완료 · 결제 정보 필요 없음' : 'Sign up in 30 seconds · No payment required'}
                         </div>
                       </>
                     ) : (
-                      /* 🔹 무료 회원 상태: 프리미엄 혜택 강조 */
+                      /* 🔹 무료 회원 상태: 프리미엄 혜택 강조 (개선된 CTA) */
                       <>
-                        <div className="text-4xl mb-3">💎</div>
-                        <div className="text-white font-bold text-xl mb-2">
-                          {language === 'ko' ? '프리미엄으로 더 빠르게' : 'Go Premium for Early Access'}
+                        {/* 상단 배지 + 제목 */}
+                        <div className="relative py-2 md:py-4">
+                          {/* 장식용 배경 글로우 */}
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 md:w-64 h-48 md:h-64 bg-yellow-500/8 rounded-full blur-3xl pointer-events-none" />
+                          
+                          {/* PREMIUM 배지 */}
+                          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-full px-4 py-1.5 mb-4">
+                            <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+                            <span className="text-yellow-400 text-xs md:text-sm font-bold tracking-wider">PREMIUM</span>
+                          </div>
+                          
+                          <h3 className="text-white font-black text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-3 leading-tight">
+                            {language === 'ko' ? '남들보다 12시간 먼저 보세요' : 'See Picks 12 Hours Earlier'}
+                          </h3>
+                          <p className="text-gray-400 text-sm md:text-base lg:text-lg mb-6 md:mb-8 max-w-md mx-auto">
+                            {language === 'ko' 
+                              ? '경기 시작 24시간 전, 엄선된 분석을 먼저 받아보세요' 
+                              : 'Get curated analysis 24h before match starts'}
+                          </p>
                         </div>
                         
-                        {/* 프리미엄 혜택 리스트 */}
-                        <div className="text-left bg-black/30 rounded-lg p-4 mb-4 space-y-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-green-400">✓</span>
-                            <span className="text-gray-300">{language === 'ko' ? '24시간 선공개 예측' : '24h Early Access'}</span>
+                        {/* 무료 vs 프리미엄 비교 카드 */}
+                        <div className="grid grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8 max-w-xl mx-auto">
+                          {/* Free 카드 */}
+                          <div className="bg-gray-800/40 rounded-xl p-4 md:p-5 border border-gray-700/50 relative text-center">
+                            <div className="text-gray-500 text-xs md:text-sm font-bold tracking-wider mb-3 md:mb-4">FREE</div>
+                            <div className="space-y-2.5 md:space-y-3">
+                              <div className="flex items-center justify-center gap-2">
+                                
+                                <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '12시간 전 공개' : '12h before'}</span>
+                              </div>
+                              <div className="flex items-center justify-center gap-2">
+                                
+                                <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '기본 예측만' : 'Basic picks'}</span>
+                              </div>
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="text-gray-600 text-sm md:text-base">📺</span>
+                                <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '광고 포함' : 'With ads'}</span>
+                              </div>
+                            </div>
+                            {/* 현재 플랜 표시 */}
+                            <div className="absolute top-3 right-3">
+                              <span className="text-[10px] md:text-xs text-gray-600 bg-gray-700/50 px-2 py-0.5 rounded">
+                                {language === 'ko' ? '현재' : 'Current'}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-green-400">✓</span>
-                            <span className="text-gray-300">{language === 'ko' ? '신뢰도 점수 & AI 분석' : 'Confidence Score & AI Analysis'}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-green-400">✓</span>
-                            <span className="text-gray-300">{language === 'ko' ? '광고 완전 제거' : 'Ad-free Experience'}</span>
+                          
+                          {/* Premium 카드 */}
+                          <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl p-4 md:p-5 border border-yellow-500/40 relative overflow-hidden text-center">
+                            {/* 코너 리본 효과 */}
+                            <div className="absolute -top-1 -right-7 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-[8px] md:text-[9px] font-bold px-7 py-0.5 rotate-[30deg] transform shadow-lg">
+                              HOT
+                            </div>
+                            <div className="text-yellow-400 text-xs md:text-sm font-bold tracking-wider mb-3 md:mb-4">PREMIUM</div>
+                            <div className="space-y-2.5 md:space-y-3">
+                              <div className="flex items-center justify-center gap-2">
+                                
+                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '24시간 전 선공개' : '24h early access'}</span>
+                              </div>
+                              <div className="flex items-center justify-center gap-2">
+                                
+                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '빅데이터 분석 + 신뢰도' : 'AI + confidence'}</span>
+                              </div>
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="text-yellow-400 text-sm md:text-base">✨</span>
+                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '광고 완전 제거' : 'No ads ever'}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                         
-                        {/* 프리미엄 버튼 */}
-                        <Link 
-                          href="/premium/pricing"
-                          className="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold transition-all shadow-lg shadow-yellow-500/20"
-                        >
-                          {language === 'ko' ? '프리미엄 업그레이드' : 'Upgrade to Premium'}
-                        </Link>
+                        {/* 적중률 사회적 증거 - 60% 이상 & 5경기 이상일 때만 */}
+                        {weeklyStats.totalPicks >= 5 && Math.round((weeklyStats.correctPicks / weeklyStats.totalPicks) * 100) >= 60 && (
+                          <div className="flex items-center justify-center gap-4 md:gap-6 mb-6 md:mb-8 bg-green-500/5 border border-green-500/20 rounded-xl py-3 md:py-4 px-4 max-w-md mx-auto">
+                            <div className="text-center">
+                              <span className="text-green-400 text-2xl md:text-3xl font-black block">
+                                {Math.round((weeklyStats.correctPicks / weeklyStats.totalPicks) * 100)}%
+                              </span>
+                              <span className="text-gray-500 text-xs md:text-sm">
+                                {language === 'ko' ? '적중률' : 'Win Rate'}
+                              </span>
+                            </div>
+                            <div className="w-px h-8 bg-gray-700" />
+                            <div className="text-center">
+                              <span className="text-white text-2xl md:text-3xl font-black block">
+                                {weeklyStats.correctPicks}/{weeklyStats.totalPicks}
+                              </span>
+                              <span className="text-gray-500 text-xs md:text-sm">
+                                {language === 'ko' ? '최근 성적' : 'Recent'}
+                              </span>
+                            </div>
+                            {weeklyStats.streak >= 2 && (
+                              <>
+                                <div className="w-px h-8 bg-gray-700" />
+                                <div className="text-center">
+                                  <span className="text-orange-400 text-2xl md:text-3xl font-black block">
+                                    {weeklyStats.streak}
+                                  </span>
+                                  <span className="text-gray-500 text-xs md:text-sm">
+                                    {language === 'ko' ? '연승' : 'Streak'}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
                         
-                        <div className="text-gray-500 text-xs mt-3">
-                          {language === 'ko' ? '첫 달 50% 할인 · 언제든 해지 가능' : '50% off first month · Cancel anytime'}
+                        {/* CTA 버튼 */}
+                        <div className="relative max-w-md mx-auto">
+                          <Link 
+                            href="/premium/pricing"
+                            className="group relative inline-flex items-center justify-center gap-2 w-full py-4 md:py-5 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 hover:from-yellow-400 hover:via-amber-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg md:text-xl transition-all shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40 hover:scale-[1.02] transform overflow-hidden"
+                          >
+                            {/* 버튼 내부 빛 효과 */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                            <span className="relative">{language === 'ko' ? '프리미엄 시작하기' : 'Start Premium'}</span>
+                            <span className="relative text-xl md:text-2xl group-hover:translate-x-1 transition-transform">→</span>
+                          </Link>
+                        </div>
+                        
+                        {/* 가격 정보 */}
+                        <div className="mt-4 md:mt-5">
+                          <div className="flex items-center justify-center gap-3 md:gap-4">
+                            <div className="flex items-center gap-1">
+                              <span className="text-white font-bold text-base md:text-lg">₩4,900</span>
+                              <span className="text-gray-500 text-sm">/{language === 'ko' ? '월' : 'mo'}</span>
+                            </div>
+                            <div className="w-px h-4 bg-gray-700" />
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-yellow-400 font-bold text-base md:text-lg">₩9,900</span>
+                              <span className="text-gray-500 text-sm">/{language === 'ko' ? '3개월' : '3mo'}</span>
+                              <span className="text-[10px] md:text-xs text-orange-400 bg-orange-500/15 px-2 py-0.5 rounded font-bold">
+                                33% OFF
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </>
                     )}
