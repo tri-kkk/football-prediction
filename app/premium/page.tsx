@@ -1825,7 +1825,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               </div>
               <div className="text-gray-400 text-sm mb-4">
                 {language === 'ko' 
-                  ? '10,000+ 경기 데이터 기반 통계 예측' 
+                  ? '10,000+ 경기 데이터 기반 AI 예측' 
                   : 'AI predictions based on 10,000+ matches'}
               </div>
               <Link 
@@ -2581,12 +2581,12 @@ export default function PremiumPredictPage() {
                           </div>
                           
                           <h3 className="text-white font-black text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-3 leading-tight">
-                            {language === 'ko' ? '남들보다 12시간 먼저 보세요' : 'See Picks 12 Hours Earlier'}
+                            {language === 'ko' ? '데이터는 이미 답을 알고 있습니다' : 'The Data Already Knows the Answer'}
                           </h3>
-                          <p className="text-gray-400 text-sm md:text-base lg:text-lg mb-6 md:mb-8 max-w-md mx-auto">
+                          <p className="text-gray-400 text-sm md:text-base lg:text-lg mb-6 md:mb-8 max-w-lg mx-auto">
                             {language === 'ko' 
-                              ? '경기 시작 24시간 전, 엄선된 분석을 먼저 받아보세요' 
-                              : 'Get curated analysis 24h before match starts'}
+                              ? '통계가 찾아낸 확신 경기, 프리미엄은 24시간 먼저 봅니다' 
+                              : 'High-confidence picks from data — Premium sees them 24 hours early'}
                           </p>
                         </div>
                         
@@ -2597,12 +2597,20 @@ export default function PremiumPredictPage() {
                             <div className="text-gray-500 text-xs md:text-sm font-bold tracking-wider mb-3 md:mb-4">FREE</div>
                             <div className="space-y-2.5 md:space-y-3">
                               <div className="flex items-center justify-center gap-2">
-                                
+                                <span className="text-gray-600 text-sm md:text-base">⏰</span>
                                 <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '12시간 전 공개' : '12h before'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
-                                
+                                <span className="text-gray-600 text-sm md:text-base">📊</span>
                                 <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '기본 예측만' : 'Basic picks'}</span>
+                              </div>
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="text-gray-600 text-sm md:text-base">🎬</span>
+                                <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '하이라이트 1일 3회' : '3 highlights/day'}</span>
+                              </div>
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="text-gray-600 text-sm md:text-base">🧮</span>
+                                <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '프로토 계산기 1일 3회' : 'Proto calc 3/day'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
                                 <span className="text-gray-600 text-sm md:text-base">📺</span>
@@ -2626,12 +2634,20 @@ export default function PremiumPredictPage() {
                             <div className="text-yellow-400 text-xs md:text-sm font-bold tracking-wider mb-3 md:mb-4">PREMIUM</div>
                             <div className="space-y-2.5 md:space-y-3">
                               <div className="flex items-center justify-center gap-2">
-                                
+                                <span className="text-yellow-400 text-sm md:text-base">⚡</span>
                                 <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '24시간 전 선공개' : '24h early access'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
-                                
-                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '빅데이터 분석 + 신뢰도' : 'AI + confidence'}</span>
+                                <span className="text-yellow-400 text-sm md:text-base">🎯</span>
+                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '오늘의 경기 제공' : 'AI + confidence'}</span>
+                              </div>
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="text-yellow-400 text-sm md:text-base">🎬</span>
+                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '하이라이트 무제한' : 'Unlimited highlights'}</span>
+                              </div>
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="text-yellow-400 text-sm md:text-base">🧮</span>
+                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '프로토 계산기 무제한' : 'Proto calculator unlimited'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
                                 <span className="text-yellow-400 text-sm md:text-base">✨</span>
