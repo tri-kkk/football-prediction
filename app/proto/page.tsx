@@ -1014,7 +1014,7 @@ export default function ProtoPage() {
                     return null
                   }
                   
-                  const soccerLeagues = ['UCL', 'UEL', 'EPL', 'EFL', '세리에', '라리가', '분데스리', '리그1', '프리그1', 'U23아컵', '에레디비', 'PL', 'A리그', 'J1백년', 'J2J3백년', 'J백년', '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵']
+                  const soccerLeagues = ['UCL', 'UEL', 'EPL', 'EFL', '세리에', '라리가', '분데스리', '리그1', '프리그1', 'U23아컵', '에레디비', 'PL', 'A리그', 'J1백년', 'J2J3백년', 'J백년', '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵', 'ACLE', 'ACL2']
                   const isSoccerLeague = soccerLeagues.some(l => match.leagueName.includes(l))
                   
                   const getButtonLabels = (type: string) => {

@@ -155,7 +155,24 @@ function parseWisetotoHtml(html: string, round: string): ProtoMatch[] {
     } else {
       // 경기 결과: 홈승, 홈패, 무, 적특, 발매취소 등
       status = '종료'
-      resultCode = statusText
+      // 한글 결과 → 영어 코드 변환 (page.tsx 호환)
+      const resultMap: Record<string, string> = {
+        '홈승': 'home',
+        '홈패': 'away',
+        '무승부': 'draw',
+        '무': 'draw',
+        '핸디승': 'home',
+        '핸디패': 'away',
+        '핸디무': 'draw',
+        '오버': 'over',
+        '언더': 'under',
+        '홀': 'odd',
+        '짝': 'even',
+        '⑤': 'five',
+        '적특': 'void',
+        '발매취소': 'cancelled',
+      }
+      resultCode = resultMap[statusText] || statusText
     }
     
     // 스코어 파싱 (종료된 경기)
