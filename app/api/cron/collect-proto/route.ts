@@ -216,38 +216,100 @@ function calculateMasterSeq(round: number): string {
 }
 
 // DB에서 가장 최근 회차 조회하여 다음 회차 결정
-async function getLatestRoundFromDB(): Promise<number> {
-  // DB 조회 대신 Wisetoto에서 직접 최신 회차 탐색
-  // 높은 회차부터 시도해서 데이터 있는 회차 찾기
-  const currentMonth = new Date().getMonth() + 1 // 1-12
-  const estimatedMax = currentMonth * 5 + 10 // 여유있게 상한선
+async function getActiveRound(): Promise<number> {
+  try {
+    // 1차: Wisetoto 메인 페이지에서 현재 활성 회차 가져오기
+    const mainRes = await fetch('https://www.wisetoto.com/index.htm?tab_type=proto&game_type=pt&game_category=pt1', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'ko-KR,ko;q=0.9',
+      },
+    })
+    const mainHtml = await mainRes.text()
+    
+    // get_gameinfo_body('proto','pt1','2026','19','','','30392','','game_no_asc')
+    const jsMatch = mainHtml.match(/get_gameinfo_body\('proto','pt1','\d{4}','(\d+)'/)
+    if (jsMatch) {
+      const activeRound = parseInt(jsMatch[1])
+      console.log(`📋 메인 페이지에서 활성 회차 감지: ${activeRound}`)
+      return activeRound
+    }
+    
+    // 2차: game_round 파라미터에서 추출
+    const roundMatch = mainHtml.match(/game_round[=:][\s'"]*(\d+)/)
+    if (roundMatch) {
+      const activeRound = parseInt(roundMatch[1])
+      console.log(`📋 파라미터에서 활성 회차 감지: ${activeRound}`)
+      return activeRound
+    }
+    
+    // 3차: "발매기간" 날짜로 판단 (높은 회차부터 탐색)
+    console.log('⚠️ 메인 페이지 파싱 실패, 발매기간 체크로 대체')
+    return await findActiveRoundByDate()
+    
+  } catch (err) {
+    console.error('⚠️ 메인 페이지 접근 실패:', err)
+    return await findActiveRoundByDate()
+  }
+}
+
+async function findActiveRoundByDate(): Promise<number> {
+  const now = new Date()
+  const currentMonth = now.getMonth() + 1
+  const estimatedMax = currentMonth * 5 + 10
   
-  for (let r = estimatedMax; r >= Math.max(1, estimatedMax - 5); r--) {
+  for (let r = estimatedMax; r >= Math.max(1, estimatedMax - 8); r--) {
     try {
       const seq = calculateMasterSeq(r)
-      const res = await fetch(
-        `https://www.wisetoto.com/util/gameinfo/get_proto_list.htm?game_category=pt1&game_year=2026&game_round=${r}&game_info_master_seq=${seq}&tab_type=proto`,
-        {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html, */*',
-            'Accept-Language': 'ko-KR,ko;q=0.9',
-            'Referer': 'https://www.wisetoto.com/',
-          },
+      const html = await fetchWisetotoGameList(String(r), seq)
+      
+      if (!html.includes('<ul')) continue
+      
+      // "발매기간 : 2026-02-09 14:00 ~" 패턴에서 시작 날짜 추출
+      const saleMatch = html.match(/발매기간\s*:\s*(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/)
+      if (saleMatch) {
+        const saleStart = new Date(
+          parseInt(saleMatch[1]), parseInt(saleMatch[2]) - 1, parseInt(saleMatch[3]),
+          parseInt(saleMatch[4]), parseInt(saleMatch[5])
+        )
+        
+        // 발매 시작일이 아직 안 왔으면 → 미래 회차, 스킵
+        if (saleStart > now) {
+          console.log(`⏭️ ${r}회차: 발매 시작 ${saleMatch[0]} (미래 → 스킵)`)
+          continue
         }
-      )
-      const html = await res.text()
-      // gameinfo 클래스가 있으면 유효한 회차
-      if (html.includes('class="gameinfo"') && html.includes('<ul')) {
-        console.log(`📋 Wisetoto 최신 회차 감지: ${r}회차 (seq: ${seq})`)
+        
+        console.log(`📋 ${r}회차: 발매 중 (시작: ${saleMatch[0]})`)
         return r
+      }
+      
+      // 발매기간 텍스트 없지만 데이터 있으면 → 경기 날짜로 판단
+      // 경기 날짜가 오늘 이후면 현재 또는 미래 회차
+      const dateMatch = html.match(/(\d{2})\.(\d{2})\([^)]+\)\s+(\d{2}):(\d{2})/)
+      if (dateMatch) {
+        const gameMonth = parseInt(dateMatch[1])
+        const gameDay = parseInt(dateMatch[2])
+        const gameDate = new Date(now.getFullYear(), gameMonth - 1, gameDay)
+        const daysUntilGame = (gameDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        
+        // 경기가 7일 이내 미래면 현재 회차로 판단
+        if (daysUntilGame >= -1 && daysUntilGame <= 7) {
+          console.log(`📋 ${r}회차: 경기일 ${gameMonth}/${gameDay} (현재 회차로 판단)`)
+          return r
+        }
+        
+        if (daysUntilGame > 7) {
+          console.log(`⏭️ ${r}회차: 경기일 ${gameMonth}/${gameDay} (너무 먼 미래 → 스킵)`)
+          continue
+        }
       }
     } catch {
       continue
     }
   }
   
-  return 19 // 기본값
+  return 19
 }
 
 // ============================================================
@@ -367,9 +429,9 @@ export async function GET(request: Request) {
     
     // 회차 미지정시 → DB에서 최신 회차 조회 후 현재+다음 회차 수집
     if (!round) {
-      const latestRound = await getLatestRoundFromDB()
-      // 현재 회차와 다음 회차 둘 다 수집 시도
-      const rounds = [latestRound, latestRound + 1]
+      const latestRound = await getActiveRound()
+      // 이전 회차(결과 업데이트) + 현재 회차(배당률 수집)
+      const rounds = [latestRound - 1, latestRound]
       
       let totalMatches = 0
       const allResults: any[] = []
@@ -399,7 +461,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         success: totalMatches > 0,
         message: `${totalMatches}경기 수집 완료`,
-        data: { detectedLatestRound: latestRound, rounds: [latestRound, latestRound + 1], results: allResults, totalMatches },
+        data: { detectedActiveRound: latestRound, collectRounds: [latestRound - 1, latestRound], results: allResults, totalMatches },
       })
     }
     
