@@ -218,16 +218,19 @@ function calculateMasterSeq(round: number): string {
 // DB에서 가장 최근 회차 조회하여 다음 회차 결정
 async function getLatestRoundFromDB(): Promise<number> {
   try {
+    // round가 varchar라 문자열 정렬 문제 있음 → JS에서 숫자 변환 후 최대값
     const { data, error } = await supabase
       .from('proto_matches')
       .select('round')
-      .order('round', { ascending: false })
-      .limit(1)
+      .limit(1000)
     
     if (data && data.length > 0) {
-      return parseInt(data[0].round)
+      const rounds = [...new Set(data.map(r => parseInt(r.round) || 0))]
+      const maxRound = Math.max(...rounds)
+      console.log(`📋 DB 회차 목록: ${rounds.sort((a,b) => a-b).join(', ')} → 최신: ${maxRound}`)
+      return maxRound
     }
-    return 18 // 기본값
+    return 18
   } catch {
     return 18
   }
