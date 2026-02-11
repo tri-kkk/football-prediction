@@ -3114,7 +3114,9 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
                                       {/* ━━━ 확장된 상세 정보 ━━━ */}
                                       {isExpanded && (
-                                        <div className="border-t border-[#A3FF4C]/20 animate-fadeIn">
+                                        <div className={`border-t animate-fadeIn ${
+                                          darkMode ? 'border-gray-800' : 'border-gray-200'
+                                        }`}>
                                           {/* 🆕 종료된 경기: 스코어 + 승리팀만 깔끔하게 */}
                                           {(() => {
                                             const matchStatus = getMatchStatus(match)
@@ -3212,60 +3214,76 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                             return null
                                           })()}
 
-                                          {/* 예정된 경기: 기존 승률 바 + 트렌드 */}
+                                          {/* 예정된 경기: 리디자인된 확장 영역 */}
                                           {getMatchStatus(match) === 'SCHEDULED' && (
                                             <>
-                                          {/* 승률 바 */}
-                                          <div className="px-4 py-4">
-                                            <div className="flex h-2 rounded-full overflow-hidden bg-gray-900 mb-3">
-                                              <div className="bg-blue-500 transition-all duration-500" style={{ width: `${displayHomeProb}%` }} />
-                                              <div className="bg-gray-600 transition-all duration-500" style={{ width: `${displayDrawProb}%` }} />
-                                              <div className="bg-red-500 transition-all duration-500" style={{ width: `${displayAwayProb}%` }} />
+                                          {/* ━━━ 승률 바 (cyan/amber 스타일) ━━━ */}
+                                          <div className="px-4 py-3">
+                                            {/* Probability bar */}
+                                            <div className={`flex h-2 rounded-full overflow-hidden gap-px mb-3 ${
+                                              darkMode ? 'bg-gray-900' : 'bg-gray-200'
+                                            }`}>
+                                              <div className="bg-cyan-500 rounded-l-full transition-all duration-500" style={{ width: `${displayHomeProb}%` }} />
+                                              <div className={`transition-all duration-500 ${darkMode ? 'bg-gray-700' : 'bg-gray-400'}`} style={{ width: `${displayDrawProb}%` }} />
+                                              <div className="bg-amber-500 rounded-r-full transition-all duration-500" style={{ width: `${displayAwayProb}%` }} />
                                             </div>
 
+                                            {/* Percentages */}
                                             <div className="flex items-center justify-between text-sm">
-                                              <div className="flex items-center gap-2">
-                                                <span className="text-blue-400 font-bold">{Math.round(displayHomeProb)}%</span>
+                                              <div className="flex items-center gap-1.5">
+                                                <span className={`font-mono font-bold tabular-nums ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                                                  {Math.round(displayHomeProb)}%
+                                                </span>
                                                 {homeChange !== 0 && (
-                                                  <span className={`text-xs ${homeChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                  <span className={`text-[10px] font-mono ${homeChange > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                                     {homeChange > 0 ? '↑' : '↓'}{Math.abs(homeChange).toFixed(1)}
                                                   </span>
                                                 )}
                                               </div>
-                                              <span className="text-gray-500 font-medium">{Math.round(displayDrawProb)}%</span>
-                                              <div className="flex items-center gap-2">
+                                              <span className={`font-mono tabular-nums ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+                                                {Math.round(displayDrawProb)}%
+                                              </span>
+                                              <div className="flex items-center gap-1.5">
                                                 {awayChange !== 0 && (
-                                                  <span className={`text-xs ${awayChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                  <span className={`text-[10px] font-mono ${awayChange > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                                     {awayChange > 0 ? '↑' : '↓'}{Math.abs(awayChange).toFixed(1)}
                                                   </span>
                                                 )}
-                                                <span className="text-red-400 font-bold">{Math.round(displayAwayProb)}%</span>
+                                                <span className={`font-mono font-bold tabular-nums ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+                                                  {Math.round(displayAwayProb)}%
+                                                </span>
                                               </div>
                                             </div>
-                                            <div className="flex items-center justify-between text-xs text-gray-600 mt-1">
+                                            <div className={`flex items-center justify-between text-[10px] mt-1 ${
+                                              darkMode ? 'text-gray-700' : 'text-gray-400'
+                                            }`}>
                                               <span>{t('match.homeWin')}</span>
                                               <span>{t('match.drawResult')}</span>
                                               <span>{t('match.awayWin')}</span>
                                             </div>
                                           </div>
 
-                                          {/* 액션 버튼 */}
-                                          <div className="flex gap-2 px-4 pb-4">
+                                          {/* ━━━ 라인업 버튼 ━━━ */}
+                                          <div className="flex gap-2 px-4 pb-3">
                                             <button
                                               onClick={(e) => {
                                                 e.stopPropagation()
                                                 setSelectedMatchForLineup(match)
                                                 setLineupModalOpen(true)
                                               }}
-                                              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#A3FF4C] hover:bg-[#92FF3A] text-gray-900 text-sm font-semibold transition-all"
+                                              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xs font-semibold transition-all border ${
+                                                darkMode 
+                                                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20' 
+                                                  : 'bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-100'
+                                              }`}
                                             >
                                               <span>⚽</span>
                                               <span>{t('match.lineup')}</span>
                                             </button>
                                           </div>
 
-                                          {/* 🗳️ 경기 예측 Poll */}
-                                          <div className="px-4 pb-4">
+                                          {/* ━━━ 경기 예측 Poll ━━━ */}
+                                          <div className="px-4 pb-3">
                                             <MatchPoll
                                               matchId={match.id?.toString() || ''}
                                               homeTeam={match.homeTeam}
@@ -3284,8 +3302,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                             />
                                           </div>
 
-                                          {/* AI 경기 예측 분석 */}
-                                          <div className="border-t border-[#A3FF4C]/20">
+                                          {/* ━━━ AI 경기 예측 분석 ━━━ */}
+                                          <div className={`border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                                             <MatchPrediction
                                               fixtureId={match.id}
                                               homeTeam={match.homeTeam}
