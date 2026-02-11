@@ -2508,7 +2508,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         {/* 🔥 트렌드 PICK CTA 배너 (모바일 + PC 통합) */}
         <Link 
           href={session ? "/premium" : "/login?callbackUrl=/premium"}
-          className="block mb-3 active:scale-[0.99] transition-transform"
+          className="block mt-2 mb-3 active:scale-[0.99] transition-transform"
         >
           <div className="relative rounded-2xl overflow-hidden" style={{background: 'linear-gradient(135deg, #0c1222 0%, #162033 40%, #1a2740 100%)'}}>
             <div className="absolute -top-6 -right-6 w-28 h-28 lg:w-40 lg:h-40 bg-orange-500/20 rounded-full blur-2xl" />
