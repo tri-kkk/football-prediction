@@ -447,12 +447,7 @@ export default function RootLayout({
             {/* 하단: 저작권 + 면책조항 */}
             <div className="py-6 border-t border-gray-800">
               <div className="space-y-3">
-                {/* 면책조항 */}
-                <p className="text-gray-600 text-[11px] leading-relaxed">
-                  트랜드사커는 스포츠 경기 결과에 대한 통계 분석 및 예측 정보를 제공하는 서비스입니다. 
-                  본 사이트에서 제공하는 정보는 참고용이며, 이를 기반으로 한 의사결정에 대한 책임은 전적으로 이용자에게 있습니다. 
-                  불법 도박은 법적 처벌의 대상이 됩니다.
-                </p>
+ 
                 
                 {/* 저작권 */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 pt-2">

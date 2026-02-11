@@ -15,3 +15,7 @@ node_modules/
 *.tsx.bak
 *.ts.bak
 *.json.bak
+# 토토 작업중
+app/api/cron/collect-toto/
+app/api/toto/
+app/toto/
