@@ -20,6 +20,8 @@ const LEAGUES = [
   { code: 'UECL', id: 848, name: 'UEFA Conference League' },
   { code: 'UNL', id: 5, name: 'UEFA Nations League' },
   { code: 'AFCON', id: 6, name: 'Africa Cup of Nations', season: 2025 },
+  { code: 'ACL', id: 17, name: 'AFC Champions League Elite' },
+  { code: 'ACL2', id: 18, name: 'AFC Champions League Two' },
   
   // ===== 🌍 아프리카 리그 (5개) - NEW! =====
   { code: 'EGY', id: 233, name: 'Egyptian Premier League' },

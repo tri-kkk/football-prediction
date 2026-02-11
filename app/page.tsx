@@ -38,6 +38,8 @@ function getLeagueLogo(league: string): string {
     'COP': 'https://media.api-sports.io/football/leagues/13.png',
     'COS': 'https://media.api-sports.io/football/leagues/11.png',
     'AFCON': 'https://media.api-sports.io/football/leagues/6.png',
+    'ACL': 'https://media.api-sports.io/football/leagues/17.png',
+    'ACL2': 'https://media.api-sports.io/football/leagues/18.png',
     // 아프리카
     'EGY': 'https://media.api-sports.io/football/leagues/233.png',
     'RSA': 'https://media.api-sports.io/football/leagues/288.png',
@@ -106,6 +108,8 @@ function getLeagueFlag(leagueCode: string): { url: string; isEmoji: boolean } {
     'COP': { url: 'https://flagcdn.com/w40/br.png', isEmoji: false },
     'COS': { url: 'https://flagcdn.com/w40/ar.png', isEmoji: false },
     'AFCON': { url: 'https://img.icons8.com/color/48/africa.png', isEmoji: false },
+    'ACL': { url: 'https://flagcdn.com/w40/kr.png', isEmoji: false },
+    'ACL2': { url: 'https://flagcdn.com/w40/kr.png', isEmoji: false },
     // 아프리카
     'EGY': { url: 'https://flagcdn.com/w40/eg.png', isEmoji: false },
     'RSA': { url: 'https://flagcdn.com/w40/za.png', isEmoji: false },
@@ -701,6 +705,8 @@ const CUP_COMPETITIONS = [
   'AFCON',  // 아프리카 네이션스컵
   'COP',    // 코파 리베르타도레스 (그룹 스테이지 있지만 복잡)
   'COS',    // 코파 수다메리카나
+  'ACL',    // AFC 챔피언스리그
+  'ACL2',   // AFC 챔피언스리그2
 ]
 const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes(l.code))
 
@@ -1239,8 +1245,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         if (selectedLeague === 'ALL') {
           // 🔥 모든 리그의 경기 가져오기 (50개 - Cron과 동일!)
           const leagues = [
-            // ===== 🏆 국제 대회 (5개) =====
-            'CL', 'EL', 'UECL', 'UNL', 'AFCON',
+            // ===== 🏆 국제 대회 (7개) =====
+            'CL', 'EL', 'UECL', 'UNL', 'AFCON', 'ACL', 'ACL2',
             
             // ===== 🌍 아프리카 리그 (5개) =====
             'EGY', 'RSA', 'MAR', 'DZA', 'TUN',
