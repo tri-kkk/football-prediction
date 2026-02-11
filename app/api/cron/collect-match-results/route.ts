@@ -10,15 +10,17 @@ const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY!
 const API_FOOTBALL_HOST = 'v3.football.api-sports.io'
 
 // ============================================================
-// 🔥 리그 설정 (50개 - 아프리카 추가!)
+// 🔥 리그 설정 (52개 - ACL 추가!)
 // ============================================================
 const LEAGUES = [
-  // ===== 🏆 국제 대회 (5개) =====
+  // ===== 🏆 국제 대회 (7개) =====
   { code: 'CL', apiId: 2, name: 'Champions League' },
   { code: 'EL', apiId: 3, name: 'Europa League' },
   { code: 'UECL', apiId: 848, name: 'Conference League' },
   { code: 'UNL', apiId: 5, name: 'Nations League' },
   { code: 'AFCON', apiId: 6, name: 'Africa Cup of Nations' },
+  { code: 'ACL', apiId: 17, name: 'AFC Champions League Elite' },
+  { code: 'ACL2', apiId: 18, name: 'AFC Champions League Two' },
   
   // ===== 🌍 아프리카 리그 (5개) - NEW! =====
   { code: 'EGY', apiId: 233, name: 'Egyptian Premier League' },
@@ -494,6 +496,22 @@ const TEAM_KR_MAP: { [key: string]: string } = {
   'Etoile Sahel': '에투알 사헬',
   'US Monastir': 'US 모나스티르',
   'Stade Tunisien': '스타드 튀니지앵',
+
+  // ===== 🏆 ACL (아시아 챔피언스리그) =====
+  'Ulsan Hyundai FC': '울산 HD',
+  'Melbourne City': '멜버른 시티',
+  'SHANGHAI SIPG': '상하이 하이강',
+  'Shanghai SIPG': '상하이 하이강',
+  'Shanghai Port': '상하이 포트',
+  'Johor Darul Tazim': '조호르 다룰 타크짐',
+  'Buriram United': '부리람 유나이티드',
+  'Yokohama F.Marinos': '요코하마 F 마리노스',
+  'Guangzhou FC': '광저우 FC',
+  'Jeonbuk Motors FC': '전북 현대',
+  'Al Ain': '알 아인',
+  'Persepolis': '페르세폴리스',
+  'Al Sadd': '알 사드',
+  'Esteghlal': '에스테글랄',
 }
 
 // ============================================================
@@ -588,8 +606,21 @@ export async function GET(request: NextRequest) {
         const matchId = String(match.fixture.id)
         const prediction = predictions?.find(p => String(p.match_id) === matchId)
 
-        // 예측 데이터 없으면 스킵
+        // 예측 데이터 없으면 결과 저장은 스킵하되, status는 업데이트!
         if (!prediction) {
+          // 🔥 예측 없어도 match_odds_latest status 업데이트
+          const { error: statusUpdateError } = await supabase
+            .from('match_odds_latest')
+            .update({ 
+              status: match.fixture.status.short,
+              updated_at: new Date().toISOString()
+            })
+            .eq('match_id', matchId)
+          
+          if (!statusUpdateError) {
+            console.log(`  🔄 Status 업데이트 (예측 없음): ${match.teams.home.name} vs ${match.teams.away.name} → ${match.fixture.status.short}`)
+          }
+          
           skippedCount++
           continue
         }
@@ -651,6 +682,19 @@ export async function GET(request: NextRequest) {
           savedCount++
           const correctIcon = isCorrect ? '✅' : '❌'
           console.log(`${correctIcon} ${match.teams.home.name} ${finalScoreHome}-${finalScoreAway} ${match.teams.away.name}`)
+          
+          // 🔥 핵심: match_odds_latest의 status도 업데이트!
+          const { error: updateError } = await supabase
+            .from('match_odds_latest')
+            .update({ 
+              status: match.fixture.status.short,  // FT, AET, PEN 등
+              updated_at: new Date().toISOString()
+            })
+            .eq('match_id', matchId)
+          
+          if (updateError) {
+            console.error(`  ⚠️ match_odds_latest 업데이트 실패 (${matchId}):`, updateError.message)
+          }
         }
       } catch (matchError) {
         console.error(`❌ 경기 처리 실패:`, matchError)
