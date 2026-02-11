@@ -95,10 +95,30 @@ export async function GET(
 
     // 리그 코드 매핑
     const LEAGUE_IDS: Record<number, string> = {
-      39: 'PL', 140: 'PD', 78: 'BL1', 135: 'SA', 61: 'FL1',
-      2: 'CL', 3: 'EL', 40: 'ELC', 94: 'PPL', 88: 'DED',
-      292: 'KL1', 98: 'J1', 188: 'ALG'
-    }
+  39: 'PL', 140: 'PD', 78: 'BL1', 135: 'SA', 61: 'FL1',
+  2: 'CL', 3: 'EL', 40: 'ELC', 94: 'PPL', 88: 'DED',
+  292: 'KL1', 98: 'J1', 188: 'ALG',
+  17: 'ACL', 18: 'ACL2',       // AFC Champions League
+  848: 'UECL', 5: 'UNL',       // UEFA
+  141: 'SD', 143: 'CDR',       // 스페인
+  79: 'BL2', 81: 'DFB',        // 독일
+  136: 'SB', 137: 'CIT',       // 이탈리아
+  62: 'FL2', 66: 'CDF',        // 프랑스
+  45: 'FAC', 48: 'EFL',        // 잉글랜드
+  293: 'KL2', 99: 'J2',        // 아시아
+  307: 'SAL', 169: 'CSL',      // 사우디/중국
+  203: 'TSL', 144: 'JPL',      // 터키/벨기에
+  179: 'SPL', 207: 'SSL',      // 스코틀랜드/스위스
+  218: 'ABL', 197: 'GSL',      // 오스트리아/그리스
+  119: 'DSL', 71: 'BSA',       // 덴마크/브라질
+  128: 'ARG', 253: 'MLS',      // 아르헨티나/미국
+  262: 'LMX', 13: 'COP',       // 멕시코/코파
+  11: 'COS', 6: 'AFCON',       // 남미/아프리카
+  233: 'EGY', 288: 'RSA',      // 이집트/남아공
+  200: 'MAR', 187: 'DZA',      // 모로코/알제리
+  202: 'TUN', 96: 'TDP',       // 튀니지/포르투갈컵
+  90: 'KNV',                    // 네덜란드컵
+}
 
     const leagueCode = LEAGUE_IDS[match.league.id] || 'OTHER'
 

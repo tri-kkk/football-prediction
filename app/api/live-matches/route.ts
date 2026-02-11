@@ -11,6 +11,9 @@ const LEAGUE_IDS: Record<string, number> = {
   'UECL': 848,  // UEFA Conference League
   'UNL': 5,     // UEFA Nations League
   'AFCON': 6,   // Africa Cup of Nations
+  'ACL': 17,    // AFC Champions League Elite    ← 추가
+'ACL2': 18,   // AFC Champions League Two      ← 추가
+
   
   // ===== 🌍 아프리카 리그 (5개) =====
   'EGY': 233,   // Egyptian Premier League
