@@ -15,6 +15,8 @@ const LEAGUES = [
   { code: 'CL', name: 'UCL', nameEN: 'UCL', logo: 'https://media.api-sports.io/football/leagues/2.png' },
   { code: 'DED', name: '에레디비시', nameEN: 'Eredivisie', logo: 'https://media.api-sports.io/football/leagues/88.png' },
   { code: 'ELC', name: '챔피언십', nameEN: 'Championship', logo: 'https://media.api-sports.io/football/leagues/40.png' },
+  { code: 'KL', name: 'K리그', nameEN: 'K League', logo: 'https://media.api-sports.io/football/leagues/292.png' },
+  { code: 'JL', name: 'J리그', nameEN: 'J.League', logo: 'https://media.api-sports.io/football/leagues/98.png' },
 ]
 
 
@@ -186,7 +188,7 @@ export default function HighlightsPage() {
                   {language === 'ko' ? '경기 하이라이트' : 'Match Highlights'}
                 </h1>
                 <p className="text-gray-400 text-xs md:text-sm">
-                  {language === 'ko' ? '유럽 주요 리그의 최신 하이라이트 영상' : 'Latest highlights from major European leagues'}
+                  {language === 'ko' ? '주요 리그의 최신 하이라이트 영상' : 'Latest highlights from major leagues'}
                 </p>
               </div>
               

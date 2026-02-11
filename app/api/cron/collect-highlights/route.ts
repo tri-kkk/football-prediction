@@ -61,6 +61,20 @@ const LEAGUE_MAP: Record<string, { id: string; name: string; nameKR: string; log
     nameKR: '챔피언십',
     logo: 'https://media.api-sports.io/football/leagues/40.png'
   },
+  // 🆕 K리그 (1부+2부 병합)
+  'KL': { 
+    id: 'south-korea-k-league', 
+    name: 'K League', 
+    nameKR: 'K리그',
+    logo: 'https://media.api-sports.io/football/leagues/292.png'
+  },
+  // 🆕 J리그 (1부+2부 병합)
+  'JL': { 
+    id: 'japan-j-league', 
+    name: 'J.League', 
+    nameKR: 'J리그',
+    logo: 'https://media.api-sports.io/football/leagues/98.png'
+  },
 }
 
 async function fetchLeagueVideos(code: string, info: typeof LEAGUE_MAP[string]) {
