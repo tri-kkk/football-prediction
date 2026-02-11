@@ -2505,47 +2505,47 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               <AdBanner slot="desktop_banner" />
             </div>
 
-        {/* 🔥 모바일 트렌드 PICK CTA 배너 */}
+        {/* 🔥 트렌드 PICK CTA 배너 (모바일 + PC 통합) */}
         <Link 
           href={session ? "/premium" : "/login?callbackUrl=/premium"}
-          className="lg:hidden block mb-3 active:scale-[0.98] transition-transform"
+          className="block mb-3 active:scale-[0.99] transition-transform"
         >
           <div className="relative rounded-2xl overflow-hidden" style={{background: 'linear-gradient(135deg, #0c1222 0%, #162033 40%, #1a2740 100%)'}}>
-            <div className="absolute -top-6 -right-6 w-28 h-28 bg-orange-500/20 rounded-full blur-2xl" />
+            <div className="absolute -top-6 -right-6 w-28 h-28 lg:w-40 lg:h-40 bg-orange-500/20 rounded-full blur-2xl" />
             
             <div className="relative flex items-center">
               {/* 좌측: 텍스트 */}
-              <div className="flex-1 px-4 py-3.5">
+              <div className="flex-1 px-4 py-3.5 lg:px-6 lg:py-4">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-white font-black text-[18px] leading-none tracking-tight">TREND PICK</span>
+                  <span className="text-white font-black text-[18px] lg:text-[22px] leading-none tracking-tight">TREND PICK</span>
                   <div className="flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/25 rounded px-1.5 py-[2px]">
                     <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
-                    <span className="text-emerald-400 text-[8px] font-bold tracking-wider">LIVE</span>
+                    <span className="text-emerald-400 text-[8px] lg:text-[9px] font-bold tracking-wider">LIVE</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 mb-3">
-                  <span className="text-white font-extrabold text-[13px] leading-none">10,000+</span>
-                  <span className="text-gray-400 text-[11px] leading-none">{currentLanguage === 'ko' ? '경기 빅데이터 AI 분석' : 'Matches AI Big Data Analysis'}</span>
+                  <span className="text-white font-extrabold text-[13px] lg:text-[15px] leading-none">10,000+</span>
+                  <span className="text-gray-400 text-[11px] lg:text-[13px] leading-none">{currentLanguage === 'ko' ? '경기 빅데이터 AI 분석' : 'Matches AI Big Data Analysis'}</span>
                 </div>
-                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg px-3.5 py-1.5 shadow-lg shadow-orange-500/25">
-                  <span className="text-white font-bold text-[11px]">{currentLanguage === 'ko' ? '오늘의 PICK 확인' : "Today's PICK"}</span>
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg px-3.5 py-1.5 lg:px-5 lg:py-2 shadow-lg shadow-orange-500/25">
+                  <span className="text-white font-bold text-[11px] lg:text-[13px]">{currentLanguage === 'ko' ? '오늘의 PICK 확인' : "Today's PICK"}</span>
+                  <svg className="w-3 h-3 lg:w-4 lg:h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                 </div>
               </div>
 
               {/* 우측: 블러된 픽 카드 */}
               {!isPremium && (
-                <div className="w-[110px] relative flex flex-col justify-center gap-1 pr-3 py-3">
+                <div className="w-[110px] lg:w-[220px] relative flex flex-col lg:flex-row justify-center gap-1 lg:gap-2 pr-3 lg:pr-5 py-3">
                   <div className="absolute inset-0 z-10 backdrop-blur-[2px]" />
                   {(premiumPreview.length > 0 ? premiumPreview.slice(0, 3) : [{home_team:'???', away_team:'???'},{home_team:'???', away_team:'???'},{home_team:'???', away_team:'???'}]).map((pick, idx) => (
-                    <div key={idx} className="bg-white/[0.07] border border-white/[0.08] rounded px-1.5 py-1">
-                      <div className="text-white/40 text-[8px] font-medium truncate">{pick.home_team}</div>
-                      <div className="text-white/40 text-[8px] font-medium truncate">{pick.away_team}</div>
+                    <div key={idx} className="flex-1 min-w-0 bg-white/[0.07] border border-white/[0.08] rounded px-1.5 py-1 lg:px-2.5 lg:py-2">
+                      <div className="text-white/40 text-[8px] lg:text-[10px] font-medium truncate">{pick.home_team}</div>
+                      <div className="text-white/40 text-[8px] lg:text-[10px] font-medium truncate">{pick.away_team}</div>
                     </div>
                   ))}
                   <div className="absolute inset-0 z-20 flex items-center justify-center">
-                    <div className="bg-black/50 backdrop-blur-sm rounded-full w-7 h-7 flex items-center justify-center border border-orange-500/30">
-                      <svg className="w-3 h-3 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full w-7 h-7 lg:w-9 lg:h-9 flex items-center justify-center border border-orange-500/30">
+                      <svg className="w-3 h-3 lg:w-4 lg:h-4 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                     </div>
                   </div>
                 </div>
@@ -2554,55 +2554,6 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
           </div>
         </Link>
 
-        {/* 💎 프리미엄 픽 미리보기 (데스크톱 전용) */}
-        {!isPremium && (
-          <Link 
-            href={session ? "/premium" : "/login?callbackUrl=/premium"}
-            className="hidden lg:block mb-3 active:scale-[0.98] transition-transform"
-          >
-            <div className="relative bg-gradient-to-r from-yellow-500/5 to-orange-500/5 border border-yellow-500/20 rounded-xl overflow-hidden">
-              {/* 블러 오버레이 - 컴팩트 */}
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">💎</span>
-                  <div>
-                    <div className="text-white font-bold text-sm">{t('header.trendSoccerPicks')}</div>
-                    <div className="text-gray-400 text-[11px]">
-                      {premiumPreview.length > 0 
-                        ? t('premium.matchesToday', { count: premiumPreview.length })
-                        : t('premium.description')
-                      }
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg px-3 py-1.5 ml-1">
-                    <span className="text-white font-bold text-[11px]">{t('common.checkNow')} →</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* 블러된 미리보기 카드 - 가로 한줄 컴팩트 */}
-              <div className="flex gap-1.5 p-2.5 overflow-hidden">
-                {premiumPreview.length > 0 ? (
-                  premiumPreview.slice(0, 4).map((pick, idx) => (
-                    <div key={idx} className="flex-1 min-w-0 bg-black/30 rounded-lg px-2 py-1.5 border border-yellow-500/10">
-                      <div className="text-white text-[10px] font-medium truncate">{pick.home_team}</div>
-                      <div className="text-gray-600 text-[9px] leading-tight">vs</div>
-                      <div className="text-white text-[10px] font-medium truncate">{pick.away_team}</div>
-                    </div>
-                  ))
-                ) : (
-                  [1, 2, 3, 4].map((_, idx) => (
-                    <div key={idx} className="flex-1 min-w-0 bg-black/30 rounded-lg px-2 py-1.5 border border-yellow-500/10">
-                      <div className="text-white text-[10px] font-medium truncate">Team A</div>
-                      <div className="text-gray-600 text-[9px] leading-tight">vs</div>
-                      <div className="text-white text-[10px] font-medium truncate">Team B</div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </Link>
-        )}
 
         {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
         <div className="mb-4 md:mb-8">
