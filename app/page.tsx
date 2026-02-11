@@ -363,9 +363,9 @@ function formatDate(utcDateString: string, language: string = 'ko'): string {
   const matchDate = new Date(Date.UTC(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate()))
   
   if (matchDate.getTime() === todayDate.getTime()) {
-    return language === 'ko' ? '오늘' : 'Today'
+    return currentLanguage === 'ko' ? '오늘' : 'Today'
   } else if (matchDate.getTime() === tomorrowDate.getTime()) {
-    return language === 'ko' ? '내일' : 'Tomorrow'
+    return currentLanguage === 'ko' ? '내일' : 'Tomorrow'
   } else {
     const year = kstDate.getUTCFullYear()
     const month = String(kstDate.getUTCMonth() + 1).padStart(2, '0')
@@ -2505,108 +2505,103 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               <AdBanner slot="desktop_banner" />
             </div>
 
-        {/* 🔥 모바일 PICK 배너 - 컴팩트 버전 (최상단) */}
-        <a 
+        {/* 🔥 모바일 트렌드 PICK CTA 배너 */}
+        <Link 
           href={session ? "/premium" : "/login?callbackUrl=/premium"}
           className="lg:hidden block mb-3 active:scale-[0.98] transition-transform"
         >
-          <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-xl p-[1.5px] shadow-lg shadow-orange-500/20">
-            <div className="bg-[#0a0a0f] rounded-xl px-4 py-3">
-              <div className="flex items-center justify-between">
-                {/* 왼쪽: 타이틀 + 적중률 */}
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">🔥</span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-white font-bold text-sm">
-                        {t('header.trendPick')}
-                      </span>
-                      <span className="text-[9px] text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded-full animate-pulse font-medium">
-                        ● LIVE
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {accuracyLoading ? (
-                        <span className="inline-block w-12 h-5 bg-yellow-400/20 rounded animate-pulse"></span>
-                      ) : (
-                        <span className="text-yellow-400 font-black text-lg">{avgAccuracy}%</span>
-                      )}
-                      <span className="text-gray-500 text-[10px]">적중률</span>
-                      <span className="text-gray-600">|</span>
-                      <span className="text-white font-bold text-xs">8,200+</span>
-                      <span className="text-gray-500 text-[10px]">경기</span>
-                    </div>
+          <div className="relative rounded-2xl overflow-hidden" style={{background: 'linear-gradient(135deg, #0c1222 0%, #162033 40%, #1a2740 100%)'}}>
+            <div className="absolute -top-6 -right-6 w-28 h-28 bg-orange-500/20 rounded-full blur-2xl" />
+            
+            <div className="relative flex items-center">
+              {/* 좌측: 텍스트 */}
+              <div className="flex-1 px-4 py-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-white font-black text-[18px] leading-none tracking-tight">TREND PICK</span>
+                  <div className="flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/25 rounded px-1.5 py-[2px]">
+                    <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
+                    <span className="text-emerald-400 text-[8px] font-bold tracking-wider">LIVE</span>
                   </div>
                 </div>
-                
-                {/* 오른쪽: CTA */}
-                <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg px-3 py-2">
-                  <span className="text-white font-bold text-xs whitespace-nowrap">
-                    {t('common.viewButton')}
-                  </span>
+                <div className="flex items-center gap-1.5 mb-3">
+                  <span className="text-white font-extrabold text-[13px] leading-none">10,000+</span>
+                  <span className="text-gray-400 text-[11px] leading-none">{currentLanguage === 'ko' ? '경기 빅데이터 AI 분석' : 'Matches AI Big Data Analysis'}</span>
+                </div>
+                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg px-3.5 py-1.5 shadow-lg shadow-orange-500/25">
+                  <span className="text-white font-bold text-[11px]">{currentLanguage === 'ko' ? '오늘의 PICK 확인' : "Today's PICK"}</span>
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                 </div>
               </div>
+
+              {/* 우측: 블러된 픽 카드 */}
+              {!isPremium && (
+                <div className="w-[110px] relative flex flex-col justify-center gap-1 pr-3 py-3">
+                  <div className="absolute inset-0 z-10 backdrop-blur-[2px]" />
+                  {(premiumPreview.length > 0 ? premiumPreview.slice(0, 3) : [{home_team:'???', away_team:'???'},{home_team:'???', away_team:'???'},{home_team:'???', away_team:'???'}]).map((pick, idx) => (
+                    <div key={idx} className="bg-white/[0.07] border border-white/[0.08] rounded px-1.5 py-1">
+                      <div className="text-white/40 text-[8px] font-medium truncate">{pick.home_team}</div>
+                      <div className="text-white/40 text-[8px] font-medium truncate">{pick.away_team}</div>
+                    </div>
+                  ))}
+                  <div className="absolute inset-0 z-20 flex items-center justify-center">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full w-7 h-7 flex items-center justify-center border border-orange-500/30">
+                      <svg className="w-3 h-3 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </a>
+        </Link>
 
-        {/* 💎 프리미엄 픽 미리보기 (비프리미엄용) */}
+        {/* 💎 프리미엄 픽 미리보기 (데스크톱 전용) */}
         {!isPremium && (
-          <div className="my-5 relative">
-            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4 md:p-5">
-              {/* 블러 오버레이 */}
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
-                <div className="text-center py-8 px-4">
-                  <div className="text-3xl mb-2">💎</div>
-                  <div className="text-white font-bold text-lg mb-1">
-                    {t('header.trendSoccerPicks')}
+          <Link 
+            href={session ? "/premium" : "/login?callbackUrl=/premium"}
+            className="hidden lg:block mb-3 active:scale-[0.98] transition-transform"
+          >
+            <div className="relative bg-gradient-to-r from-yellow-500/5 to-orange-500/5 border border-yellow-500/20 rounded-xl overflow-hidden">
+              {/* 블러 오버레이 - 컴팩트 */}
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">💎</span>
+                  <div>
+                    <div className="text-white font-bold text-sm">{t('header.trendSoccerPicks')}</div>
+                    <div className="text-gray-400 text-[11px]">
+                      {premiumPreview.length > 0 
+                        ? t('premium.matchesToday', { count: premiumPreview.length })
+                        : t('premium.description')
+                      }
+                    </div>
                   </div>
-                  <div className="text-gray-300 text-sm mb-3">
-                    {premiumPreview.length > 0 
-                      ? t('premium.matchesToday', { count: premiumPreview.length })
-                      : t('premium.description')
-                    }
+                  <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg px-3 py-1.5 ml-1">
+                    <span className="text-white font-bold text-[11px]">{t('common.checkNow')} →</span>
                   </div>
-                  <Link 
-                    href={session ? "/premium" : "/login?callbackUrl=/premium"}
-                    className="inline-block px-5 py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-lg font-bold text-sm transition-all"
-                  >
-                    {t('common.checkNow')}
-                  </Link>
                 </div>
               </div>
               
-              {/* 블러된 미리보기 카드 */}
-              <div className="flex gap-2 overflow-hidden">
+              {/* 블러된 미리보기 카드 - 가로 한줄 컴팩트 */}
+              <div className="flex gap-1.5 p-2.5 overflow-hidden">
                 {premiumPreview.length > 0 ? (
-                  premiumPreview.map((pick, idx) => (
-                    <div key={idx} className="flex-1 min-w-0 bg-black/40 rounded-lg p-2 border border-yellow-500/20">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] text-gray-500">{pick.league_code}</span>
-                        <span className="text-[10px] text-yellow-400">💎</span>
-                      </div>
-                      <div className="text-white text-xs font-medium truncate">{pick.home_team}</div>
-                      <div className="text-gray-500 text-[10px] my-0.5">vs</div>
-                      <div className="text-white text-xs font-medium truncate">{pick.away_team}</div>
+                  premiumPreview.slice(0, 4).map((pick, idx) => (
+                    <div key={idx} className="flex-1 min-w-0 bg-black/30 rounded-lg px-2 py-1.5 border border-yellow-500/10">
+                      <div className="text-white text-[10px] font-medium truncate">{pick.home_team}</div>
+                      <div className="text-gray-600 text-[9px] leading-tight">vs</div>
+                      <div className="text-white text-[10px] font-medium truncate">{pick.away_team}</div>
                     </div>
                   ))
                 ) : (
-                  // 픽이 없을 때 플레이스홀더
-                  [1, 2, 3].map((_, idx) => (
-                    <div key={idx} className="flex-1 min-w-0 bg-black/40 rounded-lg p-2 border border-yellow-500/20">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] text-gray-500">???</span>
-                        <span className="text-[10px] text-yellow-400">💎</span>
-                      </div>
-                      <div className="text-white text-xs font-medium truncate">Team A</div>
-                      <div className="text-gray-500 text-[10px] my-0.5">vs</div>
-                      <div className="text-white text-xs font-medium truncate">Team B</div>
+                  [1, 2, 3, 4].map((_, idx) => (
+                    <div key={idx} className="flex-1 min-w-0 bg-black/30 rounded-lg px-2 py-1.5 border border-yellow-500/10">
+                      <div className="text-white text-[10px] font-medium truncate">Team A</div>
+                      <div className="text-gray-600 text-[9px] leading-tight">vs</div>
+                      <div className="text-white text-[10px] font-medium truncate">Team B</div>
                     </div>
                   ))
                 )}
               </div>
             </div>
-          </div>
+          </Link>
         )}
 
         {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
