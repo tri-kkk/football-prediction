@@ -736,7 +736,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
       // 각 티어별 오픈 시간
       const premiumOpenHours = 24
       const freeOpenHours = 12
-      const guestOpenHours = 3
+      const guestOpenHours = 1
       
       // 현재 유저의 오픈 기준 시간
       const userOpenHours = isPremiumUser ? premiumOpenHours : (isFreeUser ? freeOpenHours : guestOpenHours)
