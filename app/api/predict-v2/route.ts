@@ -316,30 +316,57 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   const awayStats = await getAggregatedStats(awayTeamId, awayTeam, season)
   
   if (!homeStats || !awayStats) {
-    throw new Error(`Stats not found: ${!homeStats ? homeTeam : awayTeam}`)
+    // ✅ fallback: DB에 통계가 없는 팀은 기본값으로 예측 진행
+    console.warn(`⚠️ Stats not found, using fallback: ${!homeStats ? homeTeam : ''} ${!awayStats ? awayTeam : ''}`)
   }
+  
+  const fallbackStats: AggregatedStats = {
+    team_name: '',
+    team_id: 0,
+    seasons_count: 0,
+    total_played: 10,
+    home_goals_for: 13,
+    home_goals_against: 10,
+    away_goals_for: 8,
+    away_goals_against: 12,
+    home_first_goal_games: 4,
+    home_first_goal_wins: 3,
+    home_concede_first_games: 3,
+    home_concede_first_wins: 1,
+    away_first_goal_games: 3,
+    away_first_goal_wins: 2,
+    away_concede_first_games: 4,
+    away_concede_first_wins: 1,
+    form_home_5: 1.5,
+    form_away_5: 1.3,
+    is_promoted: false,
+    promotion_factor: 1.0,
+  }
+  
+  const safeHomeStats = homeStats || { ...fallbackStats, team_name: homeTeam, team_id: homeTeamId || 0 }
+  const safeAwayStats = awayStats || { ...fallbackStats, team_name: awayTeam, team_id: awayTeamId || 0 }
   
   // ============================================
   // 2단계: P/A 비율 계산
   // ============================================
   
   // 홈팀 P/A (홈 경기 기준)
-  const homePA_all = calcPA(homeStats.home_goals_for, homeStats.home_goals_against)
-  const homePA_five = (homeStats.form_home_5 ?? 1.5) / 1.5  // 폼 기반 추정
-  const homePA_firstGoal = homeStats.home_first_goal_games > 0
+  const homePA_all = calcPA(safeHomeStats.home_goals_for, safeHomeStats.home_goals_against)
+  const homePA_five = (safeHomeStats.form_home_5 ?? 1.5) / 1.5  // 폼 기반 추정
+  const homePA_firstGoal = safeHomeStats.home_first_goal_games > 0
     ? calcPA(
-        homeStats.home_first_goal_wins, 
-        homeStats.home_first_goal_games - homeStats.home_first_goal_wins
+        safeHomeStats.home_first_goal_wins, 
+        safeHomeStats.home_first_goal_games - safeHomeStats.home_first_goal_wins
       )
     : 1.0
   
   // 원정팀 P/A (원정 경기 기준)
-  const awayPA_all = calcPA(awayStats.away_goals_for, awayStats.away_goals_against)
-  const awayPA_five = (awayStats.form_away_5 ?? 1.5) / 1.5
-  const awayPA_firstGoal = awayStats.away_first_goal_games > 0
+  const awayPA_all = calcPA(safeAwayStats.away_goals_for, safeAwayStats.away_goals_against)
+  const awayPA_five = (safeAwayStats.form_away_5 ?? 1.5) / 1.5
+  const awayPA_firstGoal = safeAwayStats.away_first_goal_games > 0
     ? calcPA(
-        awayStats.away_first_goal_wins,
-        awayStats.away_first_goal_games - awayStats.away_first_goal_wins
+        safeAwayStats.away_first_goal_wins,
+        safeAwayStats.away_first_goal_games - safeAwayStats.away_first_goal_wins
       )
     : 1.0
   
@@ -347,8 +374,8 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   // 3단계: Method 1 - P/A 직접 비교 + 폼 보정
   // ============================================
   
-  const homeFormBonus = homeStats.form_home_5 ? (homeStats.form_home_5 - 1.5) * 0.1 : 0
-  const awayFormBonus = awayStats.form_away_5 ? (awayStats.form_away_5 - 1.5) * 0.1 : 0
+  const homeFormBonus = safeHomeStats.form_home_5 ? (safeHomeStats.form_home_5 - 1.5) * 0.1 : 0
+  const awayFormBonus = safeAwayStats.form_away_5 ? (safeAwayStats.form_away_5 - 1.5) * 0.1 : 0
   
   const homeScore_m1 = (homePA_all * 0.4 + homePA_five * 0.3 + homePA_firstGoal * 0.3) + homeFormBonus + 0.05
   const awayScore_m1 = (awayPA_all * 0.4 + awayPA_five * 0.3 + awayPA_firstGoal * 0.3) + awayFormBonus
@@ -383,10 +410,10 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   // 5단계: Method 3 - 선제골 시나리오
   // ============================================
   
-  const homeFirstGoalWinRate = calcWinRate(homeStats.home_first_goal_wins, homeStats.home_first_goal_games)
-  const awayFirstGoalWinRate = calcWinRate(awayStats.away_first_goal_wins, awayStats.away_first_goal_games)
-  const homeComebackRate = calcWinRate(homeStats.home_concede_first_wins, homeStats.home_concede_first_games)
-  const awayComebackRate = calcWinRate(awayStats.away_concede_first_wins, awayStats.away_concede_first_games)
+  const homeFirstGoalWinRate = calcWinRate(safeHomeStats.home_first_goal_wins, safeHomeStats.home_first_goal_games)
+  const awayFirstGoalWinRate = calcWinRate(safeAwayStats.away_first_goal_wins, safeAwayStats.away_first_goal_games)
+  const homeComebackRate = calcWinRate(safeHomeStats.home_concede_first_wins, safeHomeStats.home_concede_first_games)
+  const awayComebackRate = calcWinRate(safeAwayStats.away_concede_first_wins, safeAwayStats.away_concede_first_games)
   
   // 선제골 확률 추정
   const homeFirstProb = 0.55  // 홈팀 선제골 기본 확률
@@ -421,11 +448,11 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   let avgLose = (method1_lose + method2_lose + method3_lose) / 3
   
   // 승격팀 보정
-  if (homeStats.is_promoted) {
-    avgWin *= homeStats.promotion_factor || 0.85
+  if (safeHomeStats.is_promoted) {
+    avgWin *= safeHomeStats.promotion_factor || 0.85
   }
-  if (awayStats.is_promoted) {
-    avgLose *= awayStats.promotion_factor || 0.85
+  if (safeAwayStats.is_promoted) {
+    avgLose *= safeAwayStats.promotion_factor || 0.85
   }
   
   const avgTotal = avgWin + avgDraw + avgLose
@@ -474,8 +501,8 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   // 8단계: 파워 점수 계산
   // ============================================
   
-  const homeFormScore = (homeStats.form_home_5 ?? 1.5) * 10
-  const awayFormScore = (awayStats.form_away_5 ?? 1.5) * 10
+  const homeFormScore = (safeHomeStats.form_home_5 ?? 1.5) * 10
+  const awayFormScore = (safeAwayStats.form_away_5 ?? 1.5) * 10
   
   const homePower = Math.round(
     (homePA_all * 15) + 
@@ -502,8 +529,8 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
     { home: finalWin, draw: finalDraw, away: finalLose },
     { homePower, awayPower },
     patternStats,
-    homeStats,
-    awayStats,
+    safeHomeStats,
+    safeAwayStats,
     { homeFirstGoalWinRate, awayFirstGoalWinRate, homeComebackRate, awayComebackRate }
   )
   
@@ -523,24 +550,24 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
     recommendation,
     debug: {
       homeStats: {
-        played: homeStats.total_played,
-        seasons: homeStats.seasons_count,
-        homeFirstGoalGames: homeStats.home_first_goal_games,
+        played: safeHomeStats.total_played,
+        seasons: safeHomeStats.seasons_count,
+        homeFirstGoalGames: safeHomeStats.home_first_goal_games,
         homeFirstGoalWinRate,
         homeComebackRate,
-        form: homeStats.form_home_5,
+        form: safeHomeStats.form_home_5,
         formBonus: homeFormBonus.toFixed(3),
-        isPromoted: homeStats.is_promoted,
+        isPromoted: safeHomeStats.is_promoted,
       },
       awayStats: {
-        played: awayStats.total_played,
-        seasons: awayStats.seasons_count,
-        awayFirstGoalGames: awayStats.away_first_goal_games,
+        played: safeAwayStats.total_played,
+        seasons: safeAwayStats.seasons_count,
+        awayFirstGoalGames: safeAwayStats.away_first_goal_games,
         awayFirstGoalWinRate,
         awayComebackRate,
-        form: awayStats.form_away_5,
+        form: safeAwayStats.form_away_5,
         formBonus: awayFormBonus.toFixed(3),
-        isPromoted: awayStats.is_promoted,
+        isPromoted: safeAwayStats.is_promoted,
       },
     },
   }
