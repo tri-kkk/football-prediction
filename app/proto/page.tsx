@@ -1047,8 +1047,9 @@ export default function ProtoPage() {
                             away: '핸디패' 
                           }
                         }
-                      case '언더오버':
-                        return { home: `O ${match.totalValue || ''}`, draw: null, away: `U ${match.totalValue || ''}` }
+               
+                        case '언더오버':
+                        return { home: `U ${match.totalValue || ''}`, draw: null, away: `O ${match.totalValue || ''}` }
                       case '홀짝':
                       case 'SUM':
                         return { home: '홀', draw: null, away: '짝' }
@@ -1069,8 +1070,8 @@ export default function ProtoPage() {
                   
                   const getPrediction = (type: string, btn: 'home' | 'draw' | 'away') => {
                     if (type === '언더오버') {
-                      return btn === 'home' ? 'over' : 'under'
-                    }
+  return btn === 'home' ? 'under' : 'over'
+}
                     if (type === '홀짝' || type === 'SUM') {
                       return btn === 'home' ? 'odd' : 'even'
                     }
