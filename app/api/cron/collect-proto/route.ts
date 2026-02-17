@@ -239,16 +239,19 @@ function parseDateString(dateStr: string, round: string): string {
 // 패턴: round 18 = seq 30391, round 19 = seq 30392
 // 즉, seq = 30373 + round
 // ============================================================
-const SEQ_BASE = 30373  // master_seq = SEQ_BASE + round_number
+const SEQ_BASE = 30373  // master_seq = SEQ_BASE + round_number (fallback용)
 
 function calculateMasterSeq(round: number): string {
   return String(SEQ_BASE + round)
 }
 
-// DB에서 가장 최근 회차 조회하여 다음 회차 결정
-async function getActiveRound(): Promise<number> {
+function calculateMasterSeqNum(round: number): number {
+  return SEQ_BASE + round
+}
+
+// 🔥 특정 회차의 seq를 Wisetoto 메인 페이지에서 찾기
+async function findSeqForRound(targetRound: number): Promise<string | null> {
   try {
-    // 1차: Wisetoto 메인 페이지에서 현재 활성 회차 가져오기
     const mainRes = await fetch('https://www.wisetoto.com/index.htm?tab_type=proto&game_type=pt&game_category=pt1', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -258,29 +261,76 @@ async function getActiveRound(): Promise<number> {
     })
     const mainHtml = await mainRes.text()
     
-    // get_gameinfo_body('proto','pt1','2026','19','','','30392','','game_no_asc')
-    const jsMatch = mainHtml.match(/get_gameinfo_body\('proto','pt1','\d{4}','(\d+)'/)
+    // 모든 회차+seq 쌍 추출
+    const allMatches = [...mainHtml.matchAll(/get_gameinfo_body\(\s*'proto'\s*,\s*'pt1'\s*,\s*\d{4}\s*,\s*'(\d+)'\s*,\s*'[^']*'\s*,\s*'[^']*'\s*,\s*'(\d+)'/g)]
+    
+    for (const m of allMatches) {
+      if (parseInt(m[1]) === targetRound) {
+        console.log(`📋 ${targetRound}회차 seq 발견: ${m[2]}`)
+        return m[2]
+      }
+    }
+    
+    console.log(`⚠️ ${targetRound}회차 seq를 메인 페이지에서 찾지 못함, fallback 사용`)
+    return null
+  } catch {
+    return null
+  }
+}
+
+// DB에서 가장 최근 회차 조회하여 다음 회차 결정
+// 🔥 수정: 회차 + master_seq를 동시에 반환
+async function getActiveRound(): Promise<{ round: number; seq: string }> {
+  try {
+    // 1차: Wisetoto 메인 페이지에서 현재 활성 회차 + seq 가져오기
+    const mainRes = await fetch('https://www.wisetoto.com/index.htm?tab_type=proto&game_type=pt&game_category=pt1', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'ko-KR,ko;q=0.9',
+      },
+    })
+    const mainHtml = await mainRes.text()
+    
+    // 🔥 핵심: 회차 + seq 동시 추출
+    // 패턴: get_gameinfo_body('proto', 'pt1', 2026, '21', '', '', '30421', '', '')
+    const jsMatch = mainHtml.match(/get_gameinfo_body\(\s*'proto'\s*,\s*'pt1'\s*,\s*\d{4}\s*,\s*'(\d+)'\s*,\s*'[^']*'\s*,\s*'[^']*'\s*,\s*'(\d+)'/)
     if (jsMatch) {
       const activeRound = parseInt(jsMatch[1])
-      console.log(`📋 메인 페이지에서 활성 회차 감지: ${activeRound}`)
-      return activeRound
+      const activeSeq = jsMatch[2]
+      console.log(`📋 메인 페이지에서 활성 회차 감지: ${activeRound}회차, seq: ${activeSeq}`)
+      return { round: activeRound, seq: activeSeq }
     }
     
-    // 2차: game_round 파라미터에서 추출
-    const roundMatch = mainHtml.match(/game_round[=:][\s'"]*(\d+)/)
-    if (roundMatch) {
-      const activeRound = parseInt(roundMatch[1])
-      console.log(`📋 파라미터에서 활성 회차 감지: ${activeRound}`)
-      return activeRound
+    // 2차: 모든 get_gameinfo_body 호출에서 회차+seq 쌍 추출
+    const allMatches = [...mainHtml.matchAll(/get_gameinfo_body\(\s*'proto'\s*,\s*'pt1'\s*,\s*\d{4}\s*,\s*'(\d+)'\s*,\s*'[^']*'\s*,\s*'[^']*'\s*,\s*'(\d+)'/g)]
+    if (allMatches.length > 0) {
+      // 가장 높은 회차 선택
+      const sorted = allMatches
+        .map(m => ({ round: parseInt(m[1]), seq: m[2] }))
+        .sort((a, b) => b.round - a.round)
+      
+      console.log(`📋 메인 페이지에서 ${allMatches.length}개 회차 발견, 최신: ${sorted[0].round}회차 (seq: ${sorted[0].seq})`)
+      return sorted[0]
     }
     
-    // 3차: "발매기간" 날짜로 판단 (높은 회차부터 탐색)
+    // 3차: 구형 패턴 시도
+    const legacyMatch = mainHtml.match(/game_round[=:][\s'"]*(\d+)/)
+    if (legacyMatch) {
+      const activeRound = parseInt(legacyMatch[1])
+      console.log(`📋 파라미터에서 활성 회차 감지: ${activeRound} (seq는 계산)`)
+      return { round: activeRound, seq: calculateMasterSeq(activeRound) }
+    }
+    
+    // 4차: 발매기간 날짜로 판단
     console.log('⚠️ 메인 페이지 파싱 실패, 발매기간 체크로 대체')
-    return await findActiveRoundByDate()
+    const fallbackRound = await findActiveRoundByDate()
+    return { round: fallbackRound, seq: calculateMasterSeq(fallbackRound) }
     
   } catch (err) {
     console.error('⚠️ 메인 페이지 접근 실패:', err)
-    return await findActiveRoundByDate()
+    const fallbackRound = await findActiveRoundByDate()
+    return { round: fallbackRound, seq: calculateMasterSeq(fallbackRound) }
   }
 }
 
@@ -457,41 +507,55 @@ export async function GET(request: Request) {
     let round = searchParams.get('round')
     let masterSeq = searchParams.get('seq')
     
-    // 회차 미지정시 → DB에서 최신 회차 조회 후 현재+다음 회차 수집
+    // 회차 미지정시 → 메인 페이지에서 현재 회차+seq 감지 후 수집
     if (!round) {
-      const latestRound = await getActiveRound()
+      const active = await getActiveRound()
       // 이전 회차(결과 업데이트) + 현재 회차(배당률 수집)
-      const rounds = [latestRound - 1, latestRound]
+      // 🔥 이전 회차의 seq도 메인 페이지에서 찾아야 하므로, 전체 회차 목록 활용
+      const rounds = [
+        { round: active.round - 1, seq: String(parseInt(active.seq) - (parseInt(active.seq) - calculateMasterSeqNum(active.round - 1))) },
+        { round: active.round, seq: active.seq }
+      ]
       
       let totalMatches = 0
       const allResults: any[] = []
       
       for (const r of rounds) {
         try {
-          const seq = calculateMasterSeq(r)
-          const html = await fetchWisetotoGameList(String(r), seq)
-          const matches = parseWisetotoHtml(html, String(r))
+          // 🔥 이전 회차는 메인 페이지에서 seq를 못 찾을 수 있으므로 fallback
+          let seqToUse = r.seq
+          
+          // 이전 회차의 seq를 메인 페이지에서 찾아보기
+          if (r.round !== active.round) {
+            const prevSeq = await findSeqForRound(r.round)
+            if (prevSeq) seqToUse = prevSeq
+          }
+          
+          const html = await fetchWisetotoGameList(String(r.round), seqToUse)
+          const matches = parseWisetotoHtml(html, String(r.round))
           
           if (matches.length > 0) {
             const dbResults = await saveMatchesToDB(matches)
             totalMatches += matches.length
             allResults.push({
-              round: r,
-              seq,
+              round: r.round,
+              seq: seqToUse,
               matches: matches.length,
               dbResults,
             })
-            console.log(`✅ ${r}회차 ${matches.length}경기 수집`)
+            console.log(`✅ ${r.round}회차 ${matches.length}경기 수집 (seq: ${seqToUse})`)
+          } else {
+            console.log(`⚠️ ${r.round}회차 수집 결과 없음 (seq: ${seqToUse})`)
           }
         } catch (err: any) {
-          console.log(`⚠️ ${r}회차 수집 실패: ${err.message}`)
+          console.log(`⚠️ ${r.round}회차 수집 실패: ${err.message}`)
         }
       }
       
       return NextResponse.json({
         success: totalMatches > 0,
         message: `${totalMatches}경기 수집 완료`,
-        data: { detectedActiveRound: latestRound, collectRounds: [latestRound - 1, latestRound], results: allResults, totalMatches },
+        data: { detectedActiveRound: active.round, detectedSeq: active.seq, collectRounds: rounds, results: allResults, totalMatches },
       })
     }
     
