@@ -1151,68 +1151,110 @@ export default function ProtoPage() {
                       {/* 팀 & 배당률 */}
                       <div className="p-2.5">
                         <div className="flex items-center justify-center gap-2 mb-2">
-                          <span className={`text-sm font-medium truncate max-w-[38%] ${
-                            isFinished && ['home', 'over', 'odd'].includes(match.resultCode || '') ? 'text-blue-400' :
-                            ['home', 'over', 'odd'].includes(selection?.prediction || '') ? 'text-emerald-400' : 
-                            isDisabled ? 'text-gray-500' : 'text-white'
-                          }`}>
-                            {match.homeTeam}
-                          </span>
-                          <span className="text-gray-600 text-xs">vs</span>
-                          <span className={`text-sm font-medium truncate max-w-[38%] ${
-                            isFinished && ['away', 'under', 'even'].includes(match.resultCode || '') ? 'text-red-400' :
-                            ['away', 'under', 'even'].includes(selection?.prediction || '') ? 'text-emerald-400' : 
-                            isDisabled ? 'text-gray-500' : 'text-white'
-                          }`}>
-                            {match.awayTeam}
-                          </span>
+                          {(() => {
+                            // 팀명 색상도 matchType에 따라 결과 매핑
+                            const leftResults = match.matchType === '언더오버' ? ['under'] :
+                                                match.matchType === 'SUM' || match.matchType === '홀짝' ? ['odd'] :
+                                                ['home']
+                            const rightResults = match.matchType === '언더오버' ? ['over'] :
+                                                 match.matchType === 'SUM' || match.matchType === '홀짝' ? ['even'] :
+                                                 ['away']
+                            const leftPredictions = match.matchType === '언더오버' ? ['under'] :
+                                                   match.matchType === 'SUM' || match.matchType === '홀짝' ? ['odd'] :
+                                                   ['home']
+                            const rightPredictions = match.matchType === '언더오버' ? ['over'] :
+                                                    match.matchType === 'SUM' || match.matchType === '홀짝' ? ['even'] :
+                                                    ['away']
+                            return (
+                              <>
+                                <span className={`text-sm font-medium truncate max-w-[38%] ${
+                                  isFinished && leftResults.includes(match.resultCode || '') ? 'text-blue-400' :
+                                  leftPredictions.includes(selection?.prediction || '') ? 'text-emerald-400' : 
+                                  isDisabled ? 'text-gray-500' : 'text-white'
+                                }`}>
+                                  {match.homeTeam}
+                                </span>
+                                <span className="text-gray-600 text-xs">vs</span>
+                                <span className={`text-sm font-medium truncate max-w-[38%] ${
+                                  isFinished && rightResults.includes(match.resultCode || '') ? 'text-red-400' :
+                                  rightPredictions.includes(selection?.prediction || '') ? 'text-emerald-400' : 
+                                  isDisabled ? 'text-gray-500' : 'text-white'
+                                }`}>
+                                  {match.awayTeam}
+                                </span>
+                              </>
+                            )
+                          })()}
                         </div>
 
                         {is2Way(match.matchType) ? (
                           <div className="grid grid-cols-2 gap-1.5">
-                            <button
-                              onClick={() => !isDisabled && match.homeOdds && toggleSelection(match, getPrediction(match.matchType, 'home') as any)}
-                              disabled={!match.homeOdds || isDisabled}
-                              className={`py-2 rounded-lg text-center transition-all ${
-                                isFinished && ['home', 'over', 'odd'].includes(match.resultCode || '')
-                                  ? 'bg-blue-500/30 text-blue-300 border border-blue-500/50'
-                                  : isDisabled
-                                    ? 'bg-gray-800/30 text-gray-500 cursor-not-allowed'
-                                    : ['home', 'over', 'odd'].includes(selection?.prediction || '')
-                                      ? 'bg-emerald-600 text-white'
-                                      : match.homeOdds
-                                        ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                        : 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
-                              }`}
-                            >
-                              <p className="text-[10px] text-gray-400">{labels.home}</p>
-                              <p className="font-bold text-base">
-                                {match.homeOdds?.toFixed(2) || '-'}
-                                {isFinished && ['home', 'over', 'odd'].includes(match.resultCode || '') && ' ✓'}
-                              </p>
-                            </button>
+                            {/* 왼쪽 버튼: 승/언더/홀 */}
+                            {(() => {
+                              // 🔥 U/O: 왼쪽=언더(under), 오른쪽=오버(over)
+                              // SUM/홀짝: 왼쪽=홀(odd), 오른쪽=짝(even)
+                              // 핸디캡: 왼쪽=홈(home), 오른쪽=원정(away)
+                              const leftResults = match.matchType === '언더오버' ? ['under'] :
+                                                  match.matchType === 'SUM' || match.matchType === '홀짝' ? ['odd'] :
+                                                  ['home']
+                              const rightResults = match.matchType === '언더오버' ? ['over'] :
+                                                   match.matchType === 'SUM' || match.matchType === '홀짝' ? ['even'] :
+                                                   ['away']
+                              const leftPredictions = match.matchType === '언더오버' ? ['under'] :
+                                                     match.matchType === 'SUM' || match.matchType === '홀짝' ? ['odd'] :
+                                                     ['home']
+                              const rightPredictions = match.matchType === '언더오버' ? ['over'] :
+                                                      match.matchType === 'SUM' || match.matchType === '홀짝' ? ['even'] :
+                                                      ['away']
+                              
+                              return (
+                                <>
+                                  <button
+                                    onClick={() => !isDisabled && match.homeOdds && toggleSelection(match, getPrediction(match.matchType, 'home') as any)}
+                                    disabled={!match.homeOdds || isDisabled}
+                                    className={`py-2 rounded-lg text-center transition-all ${
+                                      isFinished && leftResults.includes(match.resultCode || '')
+                                        ? 'bg-blue-500/30 text-blue-300 border border-blue-500/50'
+                                        : isDisabled
+                                          ? 'bg-gray-800/30 text-gray-500 cursor-not-allowed'
+                                          : leftPredictions.includes(selection?.prediction || '')
+                                            ? 'bg-emerald-600 text-white'
+                                            : match.homeOdds
+                                              ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
+                                              : 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    <p className="text-[10px] text-gray-400">{labels.home}</p>
+                                    <p className="font-bold text-base">
+                                      {match.homeOdds?.toFixed(2) || '-'}
+                                      {isFinished && leftResults.includes(match.resultCode || '') && ' ✓'}
+                                    </p>
+                                  </button>
 
-                            <button
-                              onClick={() => !isDisabled && match.awayOdds && toggleSelection(match, getPrediction(match.matchType, 'away') as any)}
-                              disabled={!match.awayOdds || isDisabled}
-                              className={`py-2 rounded-lg text-center transition-all ${
-                                isFinished && ['away', 'under', 'even'].includes(match.resultCode || '')
-                                  ? 'bg-red-500/30 text-red-300 border border-red-500/50'
-                                  : isDisabled
-                                    ? 'bg-gray-800/30 text-gray-500 cursor-not-allowed'
-                                    : ['away', 'under', 'even'].includes(selection?.prediction || '')
-                                      ? 'bg-emerald-600 text-white'
-                                      : match.awayOdds
-                                        ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                        : 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
-                              }`}
-                            >
-                              <p className="text-[10px] text-gray-400">{labels.away}</p>
-                              <p className="font-bold text-base">
-                                {match.awayOdds?.toFixed(2) || '-'}
-                                {isFinished && ['away', 'under', 'even'].includes(match.resultCode || '') && ' ✓'}
-                              </p>
-                            </button>
+                                  <button
+                                    onClick={() => !isDisabled && match.awayOdds && toggleSelection(match, getPrediction(match.matchType, 'away') as any)}
+                                    disabled={!match.awayOdds || isDisabled}
+                                    className={`py-2 rounded-lg text-center transition-all ${
+                                      isFinished && rightResults.includes(match.resultCode || '')
+                                        ? 'bg-red-500/30 text-red-300 border border-red-500/50'
+                                        : isDisabled
+                                          ? 'bg-gray-800/30 text-gray-500 cursor-not-allowed'
+                                          : rightPredictions.includes(selection?.prediction || '')
+                                            ? 'bg-emerald-600 text-white'
+                                            : match.awayOdds
+                                              ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
+                                              : 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    <p className="text-[10px] text-gray-400">{labels.away}</p>
+                                    <p className="font-bold text-base">
+                                      {match.awayOdds?.toFixed(2) || '-'}
+                                      {isFinished && rightResults.includes(match.resultCode || '') && ' ✓'}
+                                    </p>
+                                  </button>
+                                </>
+                              )
+                            })()}
                           </div>
                         ) : (
                           <div className="grid grid-cols-3 gap-1.5">
