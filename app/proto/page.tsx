@@ -953,7 +953,7 @@ export default function ProtoPage() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main ref={mainContentRef} className="max-w-4xl mx-auto px-3 pb-24 pt-[146px] md:pt-[155px]">
+      <main ref={mainContentRef} className={`max-w-4xl mx-auto px-3 pb-24 ${activeTab === 'calculator' ? 'pt-[146px] md:pt-[155px]' : 'pt-[146px] md:pt-[155px]'}`}>
         {/* 계산기 탭 */}
         {activeTab === 'calculator' && (
         <>
@@ -1338,69 +1338,62 @@ export default function ProtoPage() {
 
         {/* 기록 탭 */}
         {activeTab === 'history' && (
-          <div className="mt-1">
-            {/* ✅ 필터 + 카운트 */}
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex gap-2 overflow-x-auto">
-                <button
-                  onClick={() => {
-                    setHistoryFilter('all')
-                    setHistoryPage(1)
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
-                    historyFilter === 'all'
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-700 text-gray-300'
-                  }`}
-                >
-                  전체 ({historyCounts.all})
-                </button>
-                <button
-                  onClick={() => {
-                    setHistoryFilter('pending')
-                    setHistoryPage(1)
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
-                    historyFilter === 'pending'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-700 text-gray-300'
-                  }`}
-                >
-                  대기 ({historyCounts.pending})
-                </button>
-                <button
-                  onClick={() => {
-                    setHistoryFilter('won')
-                    setHistoryPage(1)
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
-                    historyFilter === 'won'
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-700 text-gray-300'
-                  }`}
-                >
-                  적중 ({historyCounts.won})
-                </button>
-                <button
-                  onClick={() => {
-                    setHistoryFilter('lost')
-                    setHistoryPage(1)
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
-                    historyFilter === 'lost'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-gray-700 text-gray-300'
-                  }`}
-                >
-                  미적중 ({historyCounts.lost})
-                </button>
+          <div className="mt-0">
+            {/* ✅ 요약 카드 - 컴팩트 한 줄 */}
+            {savedSlips.length > 0 && (
+              <div className="mb-2 grid grid-cols-4 gap-1">
+                <div className="bg-gray-800/60 rounded-lg py-1.5 px-1 text-center">
+                  <p className="text-base font-bold text-white leading-tight">{historyCounts.all}</p>
+                  <p className="text-[9px] text-gray-500">전체</p>
+                </div>
+                <div className="bg-gray-800/60 rounded-lg py-1.5 px-1 text-center">
+                  <p className="text-base font-bold text-blue-400 leading-tight">{historyCounts.pending}</p>
+                  <p className="text-[9px] text-gray-500">대기</p>
+                </div>
+                <div className="bg-gray-800/60 rounded-lg py-1.5 px-1 text-center">
+                  <p className="text-base font-bold text-green-400 leading-tight">{historyCounts.won}</p>
+                  <p className="text-[9px] text-gray-500">적중</p>
+                </div>
+                <div className="bg-gray-800/60 rounded-lg py-1.5 px-1 text-center">
+                  <p className="text-base font-bold text-red-400 leading-tight">{historyCounts.lost}</p>
+                  <p className="text-[9px] text-gray-500">미적중</p>
+                </div>
+              </div>
+            )}
+
+            {/* ✅ 필터 + 전체정리 */}
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex gap-1.5 overflow-x-auto">
+                {[
+                  { key: 'all' as const, label: '전체', color: 'emerald' },
+                  { key: 'pending' as const, label: '대기', color: 'blue' },
+                  { key: 'won' as const, label: '적중', color: 'green' },
+                  { key: 'lost' as const, label: '미적중', color: 'red' },
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => {
+                      setHistoryFilter(f.key)
+                      setHistoryPage(1)
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all ${
+                      historyFilter === f.key
+                        ? f.color === 'emerald' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                        : f.color === 'blue' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                        : f.color === 'green' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20'
+                        : 'bg-red-500 text-white shadow-lg shadow-red-500/20'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
 
-              {/* ✅ 삭제 버튼 */}
               {savedSlips.length > 0 && (
                 <button
                   onClick={deleteAllSlips}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg text-xs text-white whitespace-nowrap"
+                  className="px-2.5 py-1 bg-gray-800 hover:bg-red-600/30 border border-gray-700 hover:border-red-500/50 rounded-lg text-[11px] text-gray-400 hover:text-red-400 whitespace-nowrap transition-all"
                   disabled={isLoading}
                 >
                   {isLoading ? '삭제 중...' : '전체 정리'}
@@ -1410,112 +1403,117 @@ export default function ProtoPage() {
 
             {/* ✅ 내역 리스트 */}
             {paginatedHistory.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-1.5">
                 {paginatedHistory.map(slip => {
                   const isExpanded = expandedSlips.has(slip.id)
-                  
+                  const expectedReturn = slip.amount * slip.totalOdds
+                  const profit = slip.status === 'won' ? expectedReturn - slip.amount : slip.status === 'lost' ? -slip.amount : 0
+
                   return (
                     <div
                       key={slip.id}
-                      className={`bg-gray-800/50 rounded-xl border ${
-                        slip.status === 'won'
-                          ? 'border-green-500/50'
-                          : slip.status === 'lost'
-                          ? 'border-red-500/50'
-                          : 'border-gray-700/50'
-                      } overflow-hidden`}
+                      className="rounded-lg overflow-hidden bg-gray-800/40"
                     >
-                      {/* ✅ 헤더 (클릭 시 접기/펼치기) */}
+                      {/* 상태 인디케이터 바 */}
+                      <div className={`h-[2px] ${
+                        slip.status === 'won' ? 'bg-green-500' :
+                        slip.status === 'lost' ? 'bg-red-500' :
+                        'bg-blue-500'
+                      }`} />
+
+                      {/* 헤더 */}
                       <div
                         onClick={() => toggleSlipExpand(slip.id)}
-                        className="p-4 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                        className="px-3 py-2.5 cursor-pointer hover:bg-gray-700/20 transition-colors"
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-300">
+                        {/* 1행: 회차, 상태, 날짜 */}
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-mono px-1.5 py-0.5 bg-gray-700/80 rounded text-gray-300">
                               {slip.round}회
                             </span>
-                            <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                            <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
                               slip.status === 'won'
-                                ? 'bg-green-500/20 text-green-400'
+                                ? 'bg-green-500/15 text-green-400 border border-green-500/30'
                                 : slip.status === 'lost'
-                                ? 'bg-red-500/20 text-red-400'
-                                : 'bg-blue-500/20 text-blue-400'
+                                ? 'bg-red-500/15 text-red-400 border border-red-500/30'
+                                : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                             }`}>
                               {slip.status === 'won' ? '✅ 적중' : slip.status === 'lost' ? '❌ 미적중' : '⏳ 대기'}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">
-                              {new Date(slip.createdAt).toLocaleDateString()}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-gray-500">
+                              {new Date(slip.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                             </span>
-                            <span className="text-gray-400">
-                              {isExpanded ? '🔼' : '🔽'}
-                            </span>
+                            <svg className={`w-3 h-3 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-gray-500">조합:</span>
-                            <span className="ml-2 text-white font-medium">{slip.selections.length}폴더</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">배당:</span>
-                            <span className="ml-2 text-emerald-400 font-bold">{slip.totalOdds.toFixed(2)}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">투자:</span>
-                            <span className="ml-2 text-white">{slip.amount.toLocaleString()}원</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">예상:</span>
-                            <span className={`ml-2 font-medium ${
-                              slip.status === 'won' ? 'text-green-400' : 'text-gray-400'
-                            }`}>
-                              {(slip.amount * slip.totalOdds).toLocaleString()}원
-                            </span>
-                          </div>
+                        {/* 2행: 핵심 수치 - 가로 배열 */}
+                        <div className="flex items-center gap-2 text-[12px]">
+                          <span className="text-white font-semibold">{slip.selections.length}폴더</span>
+                          <span className="text-gray-700">·</span>
+                          <span className="text-emerald-400 font-bold">{slip.totalOdds.toFixed(2)}배</span>
+                          <span className="text-gray-700">·</span>
+                          <span className="text-gray-400">{slip.amount.toLocaleString()}원</span>
+                          <span className="text-gray-600">→</span>
+                          <span className={`font-bold ${
+                            slip.status === 'won' ? 'text-green-400' :
+                            slip.status === 'lost' ? 'text-red-400/50 line-through' :
+                            'text-yellow-400'
+                          }`}>
+                            {expectedReturn.toLocaleString()}원
+                          </span>
+                          {slip.status === 'won' && (
+                            <span className="text-[10px] text-green-500 font-bold">+{(expectedReturn - slip.amount).toLocaleString()}</span>
+                          )}
                         </div>
                       </div>
 
                       {/* ✅ 상세 내역 (펼쳤을 때만) */}
                       {isExpanded && (
-                        <div className="border-t border-gray-700/50 p-4 space-y-2 bg-gray-900/30">
+                        <div className="border-t border-gray-700/30 px-3 py-2 space-y-1 bg-gray-900/40">
                           {slip.selections.map((sel, idx) => (
-                            <div key={idx} className="text-xs bg-gray-800/50 rounded-lg p-2">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-gray-400">{sel.homeTeam} vs {sel.awayTeam}</span>
-                                <span className="text-emerald-400 font-medium">{sel.odds.toFixed(2)}</span>
+                            <div key={idx} className="flex items-center justify-between py-1 px-2 bg-gray-800/40 rounded text-[11px]">
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <span className="text-[9px] text-gray-600 shrink-0">#{idx + 1}</span>
+                                <span className="text-gray-300 truncate">{sel.homeTeam} vs {sel.awayTeam}</span>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-500">{sel.matchType}</span>
-                                <span className="text-white">
+                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                  sel.matchType === '승패' ? 'bg-emerald-500/15 text-emerald-400' :
+                                  sel.matchType === '핸디캡' ? 'bg-purple-500/15 text-purple-400' :
+                                  sel.matchType === '언더오버' ? 'bg-orange-500/15 text-orange-400' :
+                                  'bg-pink-500/15 text-pink-400'
+                                }`}>
                                   {sel.matchType === '승패' && (
                                     sel.prediction === 'home' ? '홈승' : 
-                                    sel.prediction === 'draw' ? '무승부' : '원정승'
+                                    sel.prediction === 'draw' ? '무' : '원정승'
                                   )}
                                   {sel.matchType === '핸디캡' && (
-                                    `${sel.prediction === 'home' ? '홈' : '원정'} (${sel.handicapValue})`
+                                    `${sel.prediction === 'home' ? '홈' : '원정'}(${sel.handicapValue})`
                                   )}
                                   {(sel.matchType === '홀짝' || sel.matchType === 'SUM') && (
                                     sel.prediction === 'odd' ? '홀' : '짝'
                                   )}
                                   {sel.matchType === '언더오버' && (
-                                    `${sel.prediction === 'under' ? '언더' : '오버'} ${sel.totalValue}`
+                                    `${sel.prediction === 'under' ? 'U' : 'O'} ${sel.totalValue}`
                                   )}
                                 </span>
+                                <span className="text-emerald-400 font-mono font-semibold text-[11px]">{sel.odds.toFixed(2)}</span>
                               </div>
                             </div>
                           ))}
 
-                          {/* 삭제 버튼 */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
                               deleteSlip(slip.id)
                             }}
-                            className="w-full mt-2 py-2 bg-red-600/20 hover:bg-red-600/40 rounded-lg text-xs text-red-400 transition-colors"
+                            className="w-full mt-0.5 py-1.5 bg-gray-800/50 hover:bg-red-600/20 rounded text-[10px] text-gray-500 hover:text-red-400 transition-colors"
                           >
                             삭제
                           </button>
@@ -1527,33 +1525,32 @@ export default function ProtoPage() {
 
                 {/* ✅ 페이지네이션 */}
                 {totalHistoryPages > 1 && (
-                  <div className="mt-4 flex items-center justify-between">
+                  <div className="mt-3 flex items-center justify-center gap-3">
                     <button
                       onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
                       disabled={historyPage === 1}
-                      className="px-4 py-2 bg-gray-700 rounded-lg text-sm text-white disabled:opacity-50"
+                      className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs text-white disabled:opacity-30 hover:bg-gray-700 transition-colors"
                     >
-                      이전
+                      ← 이전
                     </button>
-
-                    <span className="text-sm text-gray-400">
+                    <span className="text-xs text-gray-400 font-mono">
                       {historyPage} / {totalHistoryPages}
                     </span>
-
                     <button
                       onClick={() => setHistoryPage(prev => Math.min(totalHistoryPages, prev + 1))}
                       disabled={!hasMoreHistory}
-                      className="px-4 py-2 bg-gray-700 rounded-lg text-sm text-white disabled:opacity-50"
+                      className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs text-white disabled:opacity-30 hover:bg-gray-700 transition-colors"
                     >
-                      다음
+                      다음 →
                     </button>
                   </div>
                 )}
               </div>
             ) : (
               <div className="text-center py-12 text-gray-500">
-                <p className="text-4xl mb-2">📜</p>
-                <p className="text-sm">저장된 내역이 없습니다</p>
+                <p className="text-3xl mb-2">📜</p>
+                <p className="text-sm text-gray-400">저장된 내역이 없습니다</p>
+                <p className="text-[11px] mt-1 text-gray-600">계산기에서 조합을 저장해보세요</p>
               </div>
             )}
           </div>
@@ -1561,111 +1558,169 @@ export default function ProtoPage() {
 
         {/* 통계 탭 */}
         {activeTab === 'stats' && (
-          <div className="mt-1">
-            {slipStats && (slipStats.totalSlips > 0 || (slipStats.totalDeleted && slipStats.totalDeleted > 0)) ? (
+          <div className="mt-0">
+            {slipStats && (slipStats.totalSlips > 0 || (slipStats.totalDeleted ?? 0) > 0) ? (
               <>
-                <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold text-white">누적 통계</h3>
+                {/* ✅ 수익률 히어로 + 지표 통합 카드 */}
+                <div className="bg-gray-800/40 rounded-xl p-3 mb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-bold text-gray-400">누적 통계</h3>
                     {slipStats.lastUpdated && (
-                      <span className="text-[10px] text-gray-500">
-                        {new Date(slipStats.lastUpdated).toLocaleDateString()}
+                      <span className="text-[10px] text-gray-600">
+                        {new Date(slipStats.lastUpdated).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} 기준
                       </span>
                     )}
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gray-900/50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-white">{slipStats.totalSlips}</p>
-                      <p className="text-xs text-gray-500">총 조합</p>
-                      {slipStats.totalDeleted && slipStats.totalDeleted > 0 && (
-                        <p className="text-[10px] text-gray-600 mt-1">
-                          (삭제된 {slipStats.totalDeleted}건 포함)
-                        </p>
+
+                  {/* 수익률 */}
+                  <div className="text-center mb-3">
+                    <p className={`text-3xl font-bold tracking-tight leading-none ${
+                      slipStats.totalReturn >= slipStats.totalInvested ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {slipStats.totalInvested > 0 
+                        ? `${((slipStats.totalReturn - slipStats.totalInvested) / slipStats.totalInvested * 100) >= 0 ? '+' : ''}${((slipStats.totalReturn - slipStats.totalInvested) / slipStats.totalInvested * 100).toFixed(1)}%`
+                        : '0%'
+                      }
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">수익률</p>
+                  </div>
+
+                  {/* 수익률 바 */}
+                  <div className="mb-3">
+                    <div className="h-2 bg-gray-700/80 rounded-full overflow-hidden relative">
+                      <div className="absolute left-1/2 top-0 w-px h-full bg-gray-500/50 z-10" />
+                      {slipStats.totalReturn >= slipStats.totalInvested ? (
+                        <div 
+                          className="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all"
+                          style={{ 
+                            marginLeft: '50%',
+                            width: `${Math.min(50, Math.abs((slipStats.totalReturn - slipStats.totalInvested) / Math.max(1, slipStats.totalInvested)) * 50)}%` 
+                          }}
+                        />
+                      ) : (
+                        <div 
+                          className="h-full bg-gradient-to-l from-red-600 to-red-400 rounded-full transition-all"
+                          style={{ 
+                            marginLeft: `${50 - Math.min(50, Math.abs((slipStats.totalReturn - slipStats.totalInvested) / Math.max(1, slipStats.totalInvested)) * 50)}%`,
+                            width: `${Math.min(50, Math.abs((slipStats.totalReturn - slipStats.totalInvested) / Math.max(1, slipStats.totalInvested)) * 50)}%` 
+                          }}
+                        />
                       )}
                     </div>
-                    <div className="bg-gray-900/50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-emerald-400">{slipStats.hitRate.toFixed(1)}%</p>
-                      <p className="text-xs text-gray-500">적중률</p>
-                    </div>
-                    <div className="bg-gray-900/50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-blue-400">{slipStats.totalInvested.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">총 투자(원)</p>
-                    </div>
-                    <div className="bg-gray-900/50 rounded-lg p-3 text-center">
-                      <p className={`text-2xl font-bold ${slipStats.totalReturn >= slipStats.totalInvested ? 'text-green-400' : 'text-red-400'}`}>
-                        {slipStats.totalReturn.toLocaleString()}
-                      </p>
-                      <p className="text-xs text-gray-500">총 수익(원)</p>
+                    <div className="flex justify-between mt-0.5 text-[9px] text-gray-600">
+                      <span>-100%</span>
+                      <span>0%</span>
+                      <span>+100%</span>
                     </div>
                   </div>
 
-                  <div className="mt-4">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-500">수익률</span>
-                      <span className={`font-bold ${
-                        slipStats.totalReturn >= slipStats.totalInvested ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {slipStats.totalInvested > 0 
-                          ? `${((slipStats.totalReturn - slipStats.totalInvested) / slipStats.totalInvested * 100).toFixed(1)}%`
-                          : '0%'
-                        }
+                  {/* 4개 지표 그리드 - 컴팩트 */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="bg-gray-900/50 rounded-lg py-2 px-2.5">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-[10px] text-gray-500">총 조합</span>
+                        <span className="text-base font-bold text-white leading-none">{slipStats.totalSlips}</span>
+                      </div>
+                      {(slipStats.totalDeleted ?? 0) > 0 && (
+                        <p className="text-[9px] text-gray-600 text-right mt-0.5">삭제 {slipStats.totalDeleted}건 포함</p>
+                      )}
+                    </div>
+                    <div className="bg-gray-900/50 rounded-lg py-2 px-2.5">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-[10px] text-gray-500">적중률</span>
+                        <span className="text-base font-bold text-emerald-400 leading-none">{slipStats.hitRate.toFixed(1)}%</span>
+                      </div>
+                      <p className="text-[9px] text-gray-600 text-right mt-0.5">{slipStats.won}승 {slipStats.lost}패</p>
+                    </div>
+                    <div className="bg-gray-900/50 rounded-lg py-2 px-2.5">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-[10px] text-gray-500">총 투자</span>
+                        <span className="text-sm font-bold text-blue-400 leading-none">{slipStats.totalInvested.toLocaleString()}<span className="text-[9px] text-gray-600 font-normal">원</span></span>
+                      </div>
+                    </div>
+                    <div className="bg-gray-900/50 rounded-lg py-2 px-2.5">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-[10px] text-gray-500">총 수익</span>
+                        <span className={`text-sm font-bold leading-none ${slipStats.totalReturn >= slipStats.totalInvested ? 'text-green-400' : 'text-red-400'}`}>
+                          {slipStats.totalReturn.toLocaleString()}<span className="text-[9px] text-gray-600 font-normal">원</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ✅ 승패 분포 - 컴팩트 */}
+                <div className="bg-gray-800/40 rounded-xl p-3 mb-2">
+                  <h3 className="text-xs font-bold text-gray-400 mb-2">승패 분포</h3>
+                  
+                  <div className="flex items-center gap-0.5 mb-1.5">
+                    {slipStats.won > 0 && (
+                      <div 
+                        className="h-8 bg-gradient-to-r from-green-600 to-green-500 rounded-l-lg flex items-center justify-center text-xs font-bold text-white transition-all"
+                        style={{ width: `${slipStats.won / Math.max(1, slipStats.won + slipStats.lost) * 100}%`, minWidth: '36px' }}
+                      >
+                        {slipStats.won}
+                      </div>
+                    )}
+                    {slipStats.lost > 0 && (
+                      <div 
+                        className="h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-r-lg flex items-center justify-center text-xs font-bold text-white transition-all"
+                        style={{ width: `${slipStats.lost / Math.max(1, slipStats.won + slipStats.lost) * 100}%`, minWidth: '36px' }}
+                      >
+                        {slipStats.lost}
+                      </div>
+                    )}
+                    {slipStats.won === 0 && slipStats.lost === 0 && (
+                      <div className="h-8 bg-gray-700 rounded-lg w-full flex items-center justify-center text-[11px] text-gray-500">
+                        결과 대기 중
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-between text-[11px]">
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-sm bg-green-500" />
+                      <span className="text-gray-400">적중 {slipStats.won}건</span>
+                      <span className="text-green-400 font-semibold">
+                        ({(slipStats.won + slipStats.lost > 0 ? (slipStats.won / (slipStats.won + slipStats.lost) * 100) : 0).toFixed(0)}%)
                       </span>
                     </div>
-                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all ${
-                          slipStats.totalReturn >= slipStats.totalInvested ? 'bg-green-500' : 'bg-red-500'
-                        }`}
-                        style={{ 
-                          width: `${Math.min(100, Math.abs((slipStats.totalReturn / Math.max(1, slipStats.totalInvested)) * 50))}%` 
-                        }}
-                      />
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-sm bg-red-500" />
+                      <span className="text-gray-400">실패 {slipStats.lost}건</span>
+                      <span className="text-red-400 font-semibold">
+                        ({(slipStats.won + slipStats.lost > 0 ? (slipStats.lost / (slipStats.won + slipStats.lost) * 100) : 0).toFixed(0)}%)
+                      </span>
                     </div>
                   </div>
+
+                  {slipStats.pending > 0 && (
+                    <div className="mt-1.5 flex items-center gap-1 text-[11px]">
+                      <span className="w-2 h-2 rounded-sm bg-blue-500" />
+                      <span className="text-gray-400">대기 {slipStats.pending}건</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-3 bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
-                  <h3 className="text-sm font-bold text-white mb-3">승패 분포</h3>
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="h-8 bg-green-500 rounded-l-lg flex items-center justify-center text-xs font-bold text-white"
-                      style={{ width: `${slipStats.won / Math.max(1, slipStats.won + slipStats.lost) * 100}%`, minWidth: slipStats.won > 0 ? '30px' : '0' }}
-                    >
-                      {slipStats.won > 0 && slipStats.won}
-                    </div>
-                    <div 
-                      className="h-8 bg-red-500 rounded-r-lg flex items-center justify-center text-xs font-bold text-white"
-                      style={{ width: `${slipStats.lost / Math.max(1, slipStats.won + slipStats.lost) * 100}%`, minWidth: slipStats.lost > 0 ? '30px' : '0' }}
-                    >
-                      {slipStats.lost > 0 && slipStats.lost}
-                    </div>
-                  </div>
-                  <div className="flex justify-between mt-2 text-xs text-gray-500">
-                    <span>적중 {slipStats.won}건</span>
-                    <span>실패 {slipStats.lost}건</span>
-                  </div>
-                </div>
-
-                {/* ✅ 전체 초기화 버튼 */}
-                <div className="mt-4">
+                {/* ✅ 전체 초기화 */}
+                <div className="mt-3">
                   <button
                     onClick={resetAllData}
-                    className="w-full py-3 bg-red-600/20 hover:bg-red-600/40 border border-red-500/50 rounded-lg text-sm text-red-400 transition-colors"
+                    className="w-full py-2.5 bg-red-600/10 hover:bg-red-600/25 border border-red-500/30 hover:border-red-500/50 rounded-xl text-xs text-red-400/80 hover:text-red-400 transition-all"
                     disabled={isLoading}
                   >
                     {isLoading ? '초기화 중...' : '⚠️ 내역 + 통계 전체 초기화'}
                   </button>
-                  <p className="text-[10px] text-gray-600 text-center mt-2">
-                    ※ 내역만 정리하려면 "내역" 탭에서 "전체 정리" 사용
+                  <p className="text-[9px] text-gray-600 text-center mt-1.5">
+                    ※ 내역만 정리하려면 &quot;기록&quot; 탭에서 &quot;전체 정리&quot; 사용
                   </p>
                 </div>
               </>
             ) : (
               <div className="text-center py-12 text-gray-500">
-                <p className="text-4xl mb-2">📊</p>
-                <p className="text-sm">아직 통계 데이터가 없습니다</p>
-                <p className="text-xs mt-1">조합을 저장하면 통계가 표시됩니다</p>
+                <p className="text-3xl mb-2">📊</p>
+                <p className="text-sm text-gray-400">아직 통계 데이터가 없습니다</p>
+                <p className="text-[11px] mt-1 text-gray-600">조합을 저장하면 통계가 표시됩니다</p>
               </div>
             )}
           </div>
