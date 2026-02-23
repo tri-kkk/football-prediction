@@ -26,13 +26,17 @@ const LEAGUES = {
   asia: [
     { id: 292, code: 'K1', name: 'K League 1' },
     { id: 98, code: 'J1', name: 'J1 League' },
+  ],
+  americas: [
+    { id: 253, code: 'MLS', name: 'Major League Soccer' },
   ]
 }
 
 // 전체 리그 ID 배열
 const ALL_LEAGUE_IDS = [
   ...LEAGUES.europe.map(l => l.id),
-  ...LEAGUES.asia.map(l => l.id)
+  ...LEAGUES.asia.map(l => l.id),
+  ...LEAGUES.americas.map(l => l.id)
 ]
 
 // ============================================
