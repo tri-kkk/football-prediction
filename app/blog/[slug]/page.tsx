@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useSession } from 'next-auth/react'
 import AdSenseAd from '../../components/AdSenseAd'
@@ -351,6 +352,7 @@ export default function BlogPostPage() {
               return (
                 <>
                   <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => (
                         <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">
@@ -440,6 +442,7 @@ export default function BlogPostPage() {
                   )}
                   
                   <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => (
                         <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">
@@ -527,6 +530,7 @@ export default function BlogPostPage() {
             // 섹션이 1개면 그냥 출력
             return (
               <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
                 components={{
                   h1: ({ children }) => (
                     <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">

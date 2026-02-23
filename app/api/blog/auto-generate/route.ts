@@ -528,11 +528,12 @@ function generateContentKo(
       c += `**최근 맞대결**\n\n`
       h2h.recentMatches.slice(0, 3).forEach((m: any) => {
         const icon = m.result === 'W' ? '🔵' : m.result === 'L' ? '🔴' : '⚪'
-        c += `${icon} **${m.homeScore} - ${m.awayScore}**\n\n`
+        const date = m.date ? ` (${m.date.slice(0, 10)})` : ''
+        const hName = getTeamNameKo(m.homeTeam || match.home_team)
+        const aName = getTeamNameKo(m.awayTeam || match.away_team)
+        c += `${icon} ${hName} **${m.homeScore} - ${m.awayScore}** ${aName}${date}\n\n`
       })
     }
-    
-    if (h2h.insights?.length > 0) {
       c += `> 💡 ${h2h.insights[0]}\n\n`
     }
   }
@@ -721,7 +722,10 @@ function generateContentEn(
       c += `**Recent Meetings**\n\n`
       h2h.recentMatches.slice(0, 3).forEach((m: any) => {
         const icon = m.result === 'W' ? '🔵' : m.result === 'L' ? '🔴' : '⚪'
-        c += `${icon} **${m.homeScore} - ${m.awayScore}**\n\n`
+        const date = m.date ? ` (${m.date.slice(0, 10)})` : ''
+        const hName = m.homeTeam || match.home_team
+        const aName = m.awayTeam || match.away_team
+        c += `${icon} ${hName} **${m.homeScore} - ${m.awayScore}** ${aName}${date}\n\n`
       })
     }
     if (h2h.insights?.length > 0) c += `> 💡 ${h2h.insights[0]}\n\n`
