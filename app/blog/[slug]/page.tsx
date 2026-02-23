@@ -340,277 +340,172 @@ export default function BlogPostPage() {
         <div className="prose prose-invert prose-lg max-w-none">
           {(() => {
             const content = getContent()
-            // 본문을 문단 기준으로 나누기 (## 헤딩 또는 빈줄 2개)
+            // 본문을 ## 섹션 기준으로 분리
             const sections = content.split(/\n(?=##\s)/)
             
-            // 2개 이상 섹션이 있으면 중간에 광고 삽입
-            if (sections.length >= 2) {
-              const midPoint = Math.floor(sections.length / 2)
-              const firstHalf = sections.slice(0, midPoint).join('\n')
-              const secondHalf = sections.slice(midPoint).join('\n')
-              
-              return (
-                <>
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({ children }) => (
-                        <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">
-                          {children}
-                        </h1>
-                      ),
-                      h2: ({ children }) => (
-                        <h2 className="text-2xl font-bold mt-8 mb-4 text-white">
-                          {children}
-                        </h2>
-                      ),
-                      h3: ({ children }) => (
-                        <h3 className="text-xl font-bold mt-6 mb-3 text-white">
-                          {children}
-                        </h3>
-                      ),
-                      p: ({ children }) => (
-                        <p className="text-gray-300 leading-relaxed mb-4">
-                          {children}
-                        </p>
-                      ),
-                      ul: ({ children }) => (
-                        <ul className="list-disc list-inside text-gray-300 mb-4 space-y-2">
-                          {children}
-                        </ul>
-                      ),
-                      ol: ({ children }) => (
-                        <ol className="list-decimal list-inside text-gray-300 mb-4 space-y-2">
-                          {children}
-                        </ol>
-                      ),
-                      blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-[#A3FF4C] pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">
-                          {children}
-                        </blockquote>
-                      ),
-                      code: ({ children }) => (
-                        <code className="bg-gray-900 text-[#A3FF4C] px-2 py-1 rounded text-sm">
-                          {children}
-                        </code>
-                      ),
-                      pre: ({ children }) => (
-                        <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto my-4 border border-gray-800">
-                          {children}
-                        </pre>
-                      ),
-                      table: ({ children }) => (
-                        <div className="overflow-x-auto my-6">
-                          <table className="w-full border-collapse">
-                            {children}
-                          </table>
-                        </div>
-                      ),
-                      th: ({ children }) => (
-                        <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left font-bold">
-                          {children}
-                        </th>
-                      ),
-                      td: ({ children }) => (
-                        <td className="border border-gray-700 px-4 py-2">
-                          {children}
-                        </td>
-                      ),
-                      a: ({ children, href }) => (
-                        <a 
-                          href={href} 
-                          className="text-[#A3FF4C] hover:text-[#8FE040] underline"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {children}
-                        </a>
-                      ),
-                      hr: () => (
-                        <hr className="my-8 border-gray-800" />
-                      )
-                    }}
-                  >
-                    {firstHalf}
-                  </ReactMarkdown>
-                  
-                  {/* 📢 인아티클 광고 - 본문 중간 (💎 프리미엄 제외) */}
-                  {!isPremium && (
-                    <div className="my-8">
-                      <AdSenseAd slot="in_article" darkMode={true} />
-                    </div>
-                  )}
-                  
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({ children }) => (
-                        <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">
-                          {children}
-                        </h1>
-                      ),
-                      h2: ({ children }) => (
-                        <h2 className="text-2xl font-bold mt-8 mb-4 text-white">
-                          {children}
-                        </h2>
-                      ),
-                      h3: ({ children }) => (
-                        <h3 className="text-xl font-bold mt-6 mb-3 text-white">
-                          {children}
-                        </h3>
-                      ),
-                      p: ({ children }) => (
-                        <p className="text-gray-300 leading-relaxed mb-4">
-                          {children}
-                        </p>
-                      ),
-                      ul: ({ children }) => (
-                        <ul className="list-disc list-inside text-gray-300 mb-4 space-y-2">
-                          {children}
-                        </ul>
-                      ),
-                      ol: ({ children }) => (
-                        <ol className="list-decimal list-inside text-gray-300 mb-4 space-y-2">
-                          {children}
-                        </ol>
-                      ),
-                      blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-[#A3FF4C] pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">
-                          {children}
-                        </blockquote>
-                      ),
-                      code: ({ children }) => (
-                        <code className="bg-gray-900 text-[#A3FF4C] px-2 py-1 rounded text-sm">
-                          {children}
-                        </code>
-                      ),
-                      pre: ({ children }) => (
-                        <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto my-4 border border-gray-800">
-                          {children}
-                        </pre>
-                      ),
-                      table: ({ children }) => (
-                        <div className="overflow-x-auto my-6">
-                          <table className="w-full border-collapse">
-                            {children}
-                          </table>
-                        </div>
-                      ),
-                      th: ({ children }) => (
-                        <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left font-bold">
-                          {children}
-                        </th>
-                      ),
-                      td: ({ children }) => (
-                        <td className="border border-gray-700 px-4 py-2">
-                          {children}
-                        </td>
-                      ),
-                      a: ({ children, href }) => (
-                        <a 
-                          href={href} 
-                          className="text-[#A3FF4C] hover:text-[#8FE040] underline"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {children}
-                        </a>
-                      ),
-                      hr: () => (
-                        <hr className="my-8 border-gray-800" />
-                      )
-                    }}
-                  >
-                    {secondHalf}
-                  </ReactMarkdown>
-                </>
-              )
-            }
+            // 블러 대상 섹션 키워드 (한글 + 영어)
+            const BLUR_KEYWORDS = [
+              '전술 포인트', 'Tactical Points',
+              '승부처', 'Key Factors',
+              'TrendSoccer 예측', 'TrendSoccer Prediction',
+            ]
             
-            // 섹션이 1개면 그냥 출력
+            const isBlurSection = (section: string): boolean => {
+              const firstLine = section.split('\n')[0] || ''
+              return BLUR_KEYWORDS.some(kw => firstLine.includes(kw))
+            }
+
+            // 공통 마크다운 컴포넌트
+            const mdComponents = {
+              h1: ({ children }: any) => (
+                <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">{children}</h1>
+              ),
+              h2: ({ children }: any) => (
+                <h2 className="text-2xl font-bold mt-8 mb-4 text-white">{children}</h2>
+              ),
+              h3: ({ children }: any) => (
+                <h3 className="text-xl font-bold mt-6 mb-3 text-white">{children}</h3>
+              ),
+              p: ({ children }: any) => (
+                <p className="text-gray-300 leading-relaxed mb-4">{children}</p>
+              ),
+              ul: ({ children }: any) => (
+                <ul className="list-disc list-inside text-gray-300 mb-4 space-y-2">{children}</ul>
+              ),
+              ol: ({ children }: any) => (
+                <ol className="list-decimal list-inside text-gray-300 mb-4 space-y-2">{children}</ol>
+              ),
+              blockquote: ({ children }: any) => (
+                <blockquote className="border-l-4 border-[#A3FF4C] pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">{children}</blockquote>
+              ),
+              code: ({ children }: any) => (
+                <code className="bg-gray-900 text-[#A3FF4C] px-2 py-1 rounded text-sm">{children}</code>
+              ),
+              pre: ({ children }: any) => (
+                <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto my-4 border border-gray-800">{children}</pre>
+              ),
+              table: ({ children }: any) => (
+                <div className="overflow-x-auto my-6"><table className="w-full border-collapse">{children}</table></div>
+              ),
+              th: ({ children }: any) => (
+                <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left font-bold">{children}</th>
+              ),
+              td: ({ children }: any) => (
+                <td className="border border-gray-700 px-4 py-2">{children}</td>
+              ),
+              a: ({ children, href }: any) => (
+                <a href={href} className="text-[#A3FF4C] hover:text-[#8FE040] underline" target="_blank" rel="noopener noreferrer">{children}</a>
+              ),
+              hr: () => <hr className="my-8 border-gray-800" />,
+            }
+
+            // 블러 대상 섹션과 일반 섹션 분리
+            const freeSections: string[] = []
+            const premiumSections: string[] = []
+            
+            sections.forEach((section) => {
+              if (isBlurSection(section)) {
+                premiumSections.push(section)
+              } else {
+                freeSections.push(section)
+              }
+            })
+
+            // 광고 삽입 위치 (무료 섹션 중간)
+            const midPoint = Math.floor(freeSections.length / 2)
+            
             return (
-              <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                components={{
-                  h1: ({ children }) => (
-                    <h1 className="text-3xl font-bold mt-8 mb-4 text-white border-b border-gray-800 pb-3">
-                      {children}
-                    </h1>
-                  ),
-                  h2: ({ children }) => (
-                    <h2 className="text-2xl font-bold mt-8 mb-4 text-white">
-                      {children}
-                    </h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3 className="text-xl font-bold mt-6 mb-3 text-white">
-                      {children}
-                    </h3>
-                  ),
-                  p: ({ children }) => (
-                    <p className="text-gray-300 leading-relaxed mb-4">
-                      {children}
-                    </p>
-                  ),
-                  ul: ({ children }) => (
-                    <ul className="list-disc list-inside text-gray-300 mb-4 space-y-2">
-                      {children}
-                    </ul>
-                  ),
-                  ol: ({ children }) => (
-                    <ol className="list-decimal list-inside text-gray-300 mb-4 space-y-2">
-                      {children}
-                    </ol>
-                  ),
-                  blockquote: ({ children }) => (
-                    <blockquote className="border-l-4 border-[#A3FF4C] pl-4 py-2 my-4 bg-gray-900/50 text-gray-400 italic">
-                      {children}
-                    </blockquote>
-                  ),
-                  code: ({ children }) => (
-                    <code className="bg-gray-900 text-[#A3FF4C] px-2 py-1 rounded text-sm">
-                      {children}
-                    </code>
-                  ),
-                  pre: ({ children }) => (
-                    <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto my-4 border border-gray-800">
-                      {children}
-                    </pre>
-                  ),
-                  table: ({ children }) => (
-                    <div className="overflow-x-auto my-6">
-                      <table className="w-full border-collapse">
-                        {children}
-                      </table>
+              <>
+                {/* ✅ 무료 섹션들 (광고 포함) */}
+                {freeSections.map((section, idx) => (
+                  <div key={`free-${idx}`}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                      {section}
+                    </ReactMarkdown>
+                    
+                    {/* 📢 중간 광고 */}
+                    {idx === midPoint - 1 && !isPremium && (
+                      <div className="my-8">
+                        <AdSenseAd slot="in_article" darkMode={true} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {/* 🔒 프리미엄 섹션들 */}
+                {premiumSections.length > 0 && (
+                  isPremium ? (
+                    // 프리미엄 유저: 전체 표시
+                    <>
+                      {premiumSections.map((section, idx) => (
+                        <ReactMarkdown key={`prem-${idx}`} remarkPlugins={[remarkGfm]} components={mdComponents}>
+                          {section}
+                        </ReactMarkdown>
+                      ))}
+                    </>
+                  ) : (
+                    // 비프리미엄: 블러 + CTA 1개
+                    <div className="relative mt-8">
+                      {/* 블러 영역 - 제목들만 살짝 보여주기 */}
+                      <div className="blur-[6px] opacity-30 pointer-events-none select-none max-h-[300px] overflow-hidden" aria-hidden="true">
+                        {premiumSections.map((section, idx) => (
+                          <ReactMarkdown key={`blur-${idx}`} remarkPlugins={[remarkGfm]} components={mdComponents}>
+                            {section}
+                          </ReactMarkdown>
+                        ))}
+                      </div>
+                      
+                      {/* 그라데이션 페이드아웃 */}
+                      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0f0f0f] to-transparent" />
+                      
+                      {/* CTA 카드 (1개만) */}
+                      <div className="relative -mt-16 flex justify-center pb-4">
+                        <div className="bg-gray-900/95 border border-gray-700 rounded-xl px-8 py-8 text-center max-w-lg mx-4 shadow-2xl backdrop-blur-sm">
+                          <div className="text-4xl mb-3">🔒</div>
+                          <p className="text-white font-bold text-xl mb-2">
+                            {currentLanguage === 'ko' ? '프리미엄 전용 분석' : 'Premium Analysis'}
+                          </p>
+                          <p className="text-gray-400 text-sm mb-2">
+                            {currentLanguage === 'ko' 
+                              ? '전술 분석 · 승부처 · 상세 예측 데이터'
+                              : 'Tactical Analysis · Key Factors · Detailed Predictions'}
+                          </p>
+                          <p className="text-gray-500 text-xs mb-5">
+                            {currentLanguage === 'ko'
+                              ? '프리미엄 구독으로 모든 분석 콘텐츠를 잠금 해제하세요'
+                              : 'Unlock all analysis content with a premium subscription'}
+                          </p>
+                          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                            {!session ? (
+                              <>
+                                <Link
+                                  href="/login"
+                                  className="px-6 py-3 bg-[#A3FF4C] text-black font-bold rounded-lg hover:bg-[#8FE040] transition-colors text-sm no-underline"
+                                >
+                                  {currentLanguage === 'ko' ? '무료 가입하기' : 'Sign Up Free'}
+                                </Link>
+                                <Link
+                                  href="/premium/pricing"
+                                  className="px-6 py-3 bg-transparent border border-gray-600 text-gray-300 font-medium rounded-lg hover:border-[#A3FF4C] hover:text-white transition-colors text-sm no-underline"
+                                >
+                                  {currentLanguage === 'ko' ? '요금제 보기' : 'View Plans'}
+                                </Link>
+                              </>
+                            ) : (
+                              <Link
+                                href="/premium/pricing"
+                                className="px-8 py-3 bg-[#A3FF4C] text-black font-bold rounded-lg hover:bg-[#8FE040] transition-colors text-sm no-underline"
+                              >
+                                {currentLanguage === 'ko' ? '프리미엄 구독하기' : 'Go Premium'}
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  ),
-                  th: ({ children }) => (
-                    <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left font-bold">
-                      {children}
-                    </th>
-                  ),
-                  td: ({ children }) => (
-                    <td className="border border-gray-700 px-4 py-2">
-                      {children}
-                    </td>
-                  ),
-                  a: ({ children, href }) => (
-                    <a 
-                      href={href} 
-                      className="text-[#A3FF4C] hover:text-[#8FE040] underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {children}
-                    </a>
-                  ),
-                  hr: () => (
-                    <hr className="my-8 border-gray-800" />
                   )
-                }}
-              >
-                {content}
-              </ReactMarkdown>
+                )}
+              </>
             )
           })()}
         </div>
