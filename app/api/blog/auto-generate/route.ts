@@ -37,10 +37,25 @@ const LEAGUE_INFO: Record<string, {
   'KL2': { nameKo: 'K리그2', nameEn: 'K League 2', tagKo: 'K리그', tagEn: 'KLeague', apiLeagueId: 293, leagueLogo: 'https://media.api-sports.io/football/leagues/293.png' },
   'J1':  { nameKo: 'J리그', nameEn: 'J1 League', tagKo: 'J리그', tagEn: 'JLeague', apiLeagueId: 98, leagueLogo: 'https://media.api-sports.io/football/leagues/98.png' },
   'J2':  { nameKo: 'J2리그', nameEn: 'J2 League', tagKo: 'J리그', tagEn: 'JLeague', apiLeagueId: 99, leagueLogo: 'https://media.api-sports.io/football/leagues/99.png' },
+  'MLS': { nameKo: 'MLS', nameEn: 'Major League Soccer', tagKo: 'MLS', tagEn: 'MLS', apiLeagueId: 253, leagueLogo: 'https://media.api-sports.io/football/leagues/253.png' },
 }
 
 // 지원 리그 코드 Set (빠른 조회)
 const SUPPORTED_LEAGUES = new Set(Object.keys(LEAGUE_INFO))
+
+// 리그별 시즌 결정 (cron과 동일 로직)
+function getSeasonForLeague(leagueCode: string): string {
+  const currentYear = new Date().getFullYear()
+  const currentMonth = new Date().getMonth() + 1
+  
+  if (['KL1', 'KL2', 'J1', 'J2', 'MLS'].includes(leagueCode)) {
+    // 아시아/북미 리그: 단일 연도 시즌
+    return String(currentYear)
+  } else {
+    // 유럽 리그: 8월 이후면 현재 연도
+    return String(currentMonth >= 8 ? currentYear : currentYear - 1)
+  }
+}
 
 // ============================================
 // 한글 팀명 매핑
@@ -309,7 +324,7 @@ async function fetchPrediction(match: any): Promise<any> {
         awayTeamId: match.away_team_id,
         leagueId,
         leagueCode: match.league_code,
-        season: '2025',
+        season: getSeasonForLeague(match.league_code),
       }),
     })
     if (!response.ok) return null

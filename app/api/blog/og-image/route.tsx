@@ -100,6 +100,13 @@ const LEAGUE_THEMES: Record<string, LeagueTheme> = {
     topBarText: '#ffffff', bgBase: '#0c0c28',
     labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
   },
+  'Major League Soccer': {
+    primary: '#0b2137', accent: '#c3032a',
+    gradientLeft: 'rgba(11,33,55,0.85)', gradientRight: 'rgba(195,3,42,0.5)',
+    topBarBg: 'linear-gradient(90deg, #0b2137, #1a3a5c)',
+    topBarText: '#ffffff', bgBase: '#060f1a',
+    labelBg: 'rgba(195,3,42,0.12)', labelBorder: 'rgba(195,3,42,0.35)',
+  },
 }
 
 const DEFAULT_THEME: LeagueTheme = {
