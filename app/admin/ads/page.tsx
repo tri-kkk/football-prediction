@@ -1099,8 +1099,8 @@ export default function AdminDashboard() {
     }
     
     // text
-    let text = `📅 ${date} 경기 예측\n`
-    text += `총 ${matches.length}경기\n`
+    let text = `📅 ${date} Match Predictions / 경기 예측\n`
+    text += `Total ${matches.length} matches / 총 ${matches.length}경기\n`
     text += '─'.repeat(50) + '\n\n'
     
     matches.forEach((match, idx) => {
@@ -1109,7 +1109,7 @@ export default function AdminDashboard() {
       text += '\n' + '─'.repeat(50) + '\n\n'
     })
     
-    text += '※ TrendSoccer 프리미엄 분석'
+    text += '※ TrendSoccer Premium Analysis'
     return text
   }
   
@@ -1198,28 +1198,72 @@ export default function AdminDashboard() {
     // ========== 🆕 text format - 간결한 형식 ==========
     const gradeEmoji = p.grade === 'PICK' ? '🔥' : p.grade === 'GOOD' ? '✅' : '⚪'
     
-    let text = `${match.homeTeamKo} vs ${match.awayTeamKo}\n`
+    // 영문 예측 결과
+    const resultEn = p.result === 'HOME' ? 'Home Win' : p.result === 'AWAY' ? 'Away Win' : p.result === 'DRAW' ? 'Draw' : '-'
+    
+    // 리그명 영문 매핑
+    const leagueNameEnMap: Record<string, string> = {
+      '프리미어리그': 'Premier League',
+      'EPL': 'Premier League',
+      '라리가': 'La Liga',
+      '분데스리가': 'Bundesliga',
+      '세리에A': 'Serie A',
+      '세리에': 'Serie A',
+      '리그1': 'Ligue 1',
+      '리그앙': 'Ligue 1',
+      '프리그1': 'Ligue 1',
+      '챔피언스리그': 'Champions League',
+      'UCL': 'Champions League',
+      '유로파리그': 'Europa League',
+      'UEL': 'Europa League',
+      '컨퍼런스리그': 'Conference League',
+      '에레디비시': 'Eredivisie',
+      '에레디비': 'Eredivisie',
+      '프리메이라리가': 'Primeira Liga',
+      '챔피언십': 'Championship',
+      'EFL': 'Championship',
+      'FA컵': 'FA Cup',
+      '코파델레이': 'Copa del Rey',
+      'DFB포칼': 'DFB Pokal',
+      '코파이탈리아': 'Coppa Italia',
+      '쿠프드프랑스': 'Coupe de France',
+    }
+    const leagueEn = leagueNameEnMap[match.leagueName] || match.leagueName
+    
+    // 🇰🇷 한글 버전
+    let text = `🇰🇷 한글\n`
+    text += `${match.homeTeamKo} vs ${match.awayTeamKo}\n`
     text += `⏰ ${dateStr} | ${match.time} | ${match.leagueName}\n`
     text += `${gradeEmoji} ${p.grade || 'PASS'} | ${p.resultKo || '-'} ${winProb || 0}%\n`
-    
-    // 분석 근거 (선제골 승률 + 파워 차이만)
     text += `📊 분석 근거\n`
     text += ` 선제골 승률: ${formatPercent(ts.home?.firstGoalWinRate)}% vs ${formatPercent(ts.away?.firstGoalWinRate)}%\n`
     text += ` 파워 차이: ${power.diff || 0}점\n`
-    
-    // 파워 지수
     text += `⚡ 파워 지수\n`
     text += ` ${match.homeTeamKo} : ${power.home || 0}\n`
     text += ` ${match.awayTeamKo} : ${power.away || 0}\n`
-    
-    // 최종 확률 (팀명 사용)
     text += `📈 최종 예측 확률\n`
     text += ` ${match.homeTeamKo} ${prob.home || 0}% | 무 ${prob.draw || 0}% | ${match.awayTeamKo} ${prob.away || 0}%\n`
-    
-    // 패턴 (있을 경우만)
     if (pattern.totalMatches > 0) {
       text += `🎯 패턴 ${pattern.code}\n`
       text += ` 역대 : 홈 ${formatPercent(pattern.homeWinRate)}% / 무 ${formatPercent(pattern.drawRate)}% / 원정 ${formatPercent(pattern.awayWinRate)}%\n`
+    }
+    
+    // 🇬🇧 영문 버전
+    text += `\n🇬🇧 English\n`
+    text += `${match.homeTeam || match.homeTeamKo} vs ${match.awayTeam || match.awayTeamKo}\n`
+    text += `⏰ ${dateStr} | ${match.time} | ${leagueEn}\n`
+    text += `${gradeEmoji} ${p.grade || 'PASS'} | ${resultEn} ${winProb || 0}%\n`
+    text += `📊 Analysis\n`
+    text += ` First Goal Win Rate: ${formatPercent(ts.home?.firstGoalWinRate)}% vs ${formatPercent(ts.away?.firstGoalWinRate)}%\n`
+    text += ` Power Gap: ${power.diff || 0}pts\n`
+    text += `⚡ Power Index\n`
+    text += ` ${match.homeTeam || match.homeTeamKo} : ${power.home || 0}\n`
+    text += ` ${match.awayTeam || match.awayTeamKo} : ${power.away || 0}\n`
+    text += `📈 Final Prediction\n`
+    text += ` ${match.homeTeam || match.homeTeamKo} ${prob.home || 0}% | Draw ${prob.draw || 0}% | ${match.awayTeam || match.awayTeamKo} ${prob.away || 0}%\n`
+    if (pattern.totalMatches > 0) {
+      text += `🎯 Pattern ${pattern.code}\n`
+      text += ` Historical: Home ${formatPercent(pattern.homeWinRate)}% / Draw ${formatPercent(pattern.drawRate)}% / Away ${formatPercent(pattern.awayWinRate)}%\n`
     }
     
     return text
