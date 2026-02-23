@@ -10,7 +10,7 @@ const supabase = createClient(
 // ScoreBat API 토큰
 const SCOREBAT_API_TOKEN = 'MjU4NjkzXzE3Njk3Mzk4OTZfMWVhN2ZlMGE0Y2Q3ZDY0MDYyOWM3N2NkM2M1M2E3OGViYjEzODdmOA=='
 
-// 리그 매핑 (8개)
+// 리그 매핑 (10개)
 const LEAGUE_MAP: Record<string, { id: string; name: string; nameKR: string; logo: string }> = {
   'PL': { 
     id: 'england-premier-league', 
@@ -48,7 +48,6 @@ const LEAGUE_MAP: Record<string, { id: string; name: string; nameKR: string; log
     nameKR: '챔피언스리그',
     logo: 'https://media.api-sports.io/football/leagues/2.png'
   },
-  // 🆕 추가 2개
   'DED': { 
     id: 'netherlands-eredivisie', 
     name: 'Eredivisie', 
@@ -61,14 +60,12 @@ const LEAGUE_MAP: Record<string, { id: string; name: string; nameKR: string; log
     nameKR: '챔피언십',
     logo: 'https://media.api-sports.io/football/leagues/40.png'
   },
-  // 🆕 K리그 (1부+2부 병합)
   'KL': { 
     id: 'korea-republic-kleague-1', 
     name: 'K League', 
     nameKR: 'K리그',
     logo: 'https://media.api-sports.io/football/leagues/292.png'
   },
-  // 🆕 J리그 (1부+2부 병합)
   'JL': { 
     id: 'japan-jleague', 
     name: 'J.League', 
@@ -90,11 +87,17 @@ async function fetchLeagueVideos(code: string, info: typeof LEAGUE_MAP[string]) 
     })
     
     if (!response.ok) {
-      console.error(`[Cron] ${code} error:`, response.status)
+      console.error(`[Highlights] ${code}: HTTP ${response.status}`)
       return []
     }
     
     const data = await response.json()
+    
+    // 에러 응답 체크
+    if (data?.error) {
+      console.error(`[Highlights] ${code}: API error -`, data.error.text || data.error)
+      return []
+    }
     
     let videos: any[] = []
     if (Array.isArray(data)) {
@@ -118,7 +121,7 @@ async function fetchLeagueVideos(code: string, info: typeof LEAGUE_MAP[string]) 
     }))
     
   } catch (error) {
-    console.error(`[Cron] ${code} fetch error:`, error)
+    console.error(`[Highlights] ${code}: fetch error -`, error)
     return []
   }
 }
@@ -127,35 +130,52 @@ export async function GET(request: Request) {
   const startTime = Date.now()
   
   try {
-    console.log('[Cron] Starting highlights collection...')
+    console.log('[Highlights] 수집 시작...')
+    
+    // 🔥 최적화 1: 병렬 fetch (3개씩 동시 호출, ScoreBat 부하 방지)
+    const entries = Object.entries(LEAGUE_MAP)
+    const allVideos: any[] = []
+    const leagueResults: Record<string, number> = {}
+    
+    const PARALLEL_SIZE = 3
+    for (let i = 0; i < entries.length; i += PARALLEL_SIZE) {
+      const batch = entries.slice(i, i + PARALLEL_SIZE)
+      const results = await Promise.all(
+        batch.map(([code, info]) => fetchLeagueVideos(code, info))
+      )
+      
+      results.forEach((videos, idx) => {
+        const code = batch[idx][0]
+        leagueResults[code] = videos.length
+        allVideos.push(...videos)
+      })
+    }
+    
+    console.log(`[Highlights] 총 ${allVideos.length}개 영상 (${Object.entries(leagueResults).map(([k,v]) => `${k}:${v}`).join(', ')})`)
     
     let totalInserted = 0
     let totalSkipped = 0
     
-    // 각 리그별로 순차 처리 (API 부하 분산)
-    for (const [code, info] of Object.entries(LEAGUE_MAP)) {
-      const videos = await fetchLeagueVideos(code, info)
-      console.log(`[Cron] ${code}: ${videos.length} videos fetched`)
-      
-      for (const video of videos) {
-        // upsert (있으면 업데이트, 없으면 삽입)
+    if (allVideos.length > 0) {
+      // 🔥 최적화 2: 배치 upsert (50건씩)
+      const BATCH_SIZE = 50
+      for (let i = 0; i < allVideos.length; i += BATCH_SIZE) {
+        const batch = allVideos.slice(i, i + BATCH_SIZE)
+        
         const { error } = await supabase
           .from('highlights')
-          .upsert(video, { 
+          .upsert(batch, { 
             onConflict: 'id',
             ignoreDuplicates: false 
           })
         
         if (error) {
-          console.error(`[Cron] Insert error:`, error.message)
-          totalSkipped++
+          console.error(`[Highlights] 배치 upsert 오류:`, error.message)
+          totalSkipped += batch.length
         } else {
-          totalInserted++
+          totalInserted += batch.length
         }
       }
-      
-      // 리그 간 1초 딜레이 (API 부하 분산)
-      await new Promise(resolve => setTimeout(resolve, 1000))
     }
     
     // 7일 지난 영상 삭제
@@ -165,23 +185,25 @@ export async function GET(request: Request) {
       .lt('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
     
     if (deleteError) {
-      console.error('[Cron] Cleanup error:', deleteError)
+      console.error('[Highlights] 정리 오류:', deleteError)
     }
     
     const duration = Date.now() - startTime
     
-    console.log(`[Cron] Done! Inserted: ${totalInserted}, Skipped: ${totalSkipped}, Duration: ${duration}ms`)
+    console.log(`[Highlights] 완료! 저장: ${totalInserted}, 스킵: ${totalSkipped}, ${duration}ms`)
     
     return NextResponse.json({
       success: true,
       inserted: totalInserted,
       skipped: totalSkipped,
+      fetched: allVideos.length,
+      leagues: leagueResults,
       duration: `${duration}ms`,
       timestamp: new Date().toISOString()
     })
     
   } catch (error) {
-    console.error('[Cron] Fatal error:', error)
+    console.error('[Highlights] 치명적 오류:', error)
     return NextResponse.json(
       { success: false, error: String(error) },
       { status: 500 }
