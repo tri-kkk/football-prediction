@@ -534,6 +534,8 @@ function generateContentKo(
         c += `${icon} ${hName} **${m.homeScore} - ${m.awayScore}** ${aName}${date}\n\n`
       })
     }
+    
+    if (h2h.insights?.length > 0) {
       c += `> 💡 ${h2h.insights[0]}\n\n`
     }
   }
