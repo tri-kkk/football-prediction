@@ -18,87 +18,87 @@ interface LeagueTheme {
 const LEAGUE_THEMES: Record<string, LeagueTheme> = {
   'Premier League': {
     primary: '#3d195b', accent: '#e90052',
-    gradientLeft: 'rgba(61,25,91,0.5)', gradientRight: 'rgba(233,0,82,0.3)',
-    topBarBg: 'linear-gradient(90deg, #3d195b, #1a0a2e)',
-    topBarText: '#00ff85', bgBase: '#0c0518',
-    labelBg: 'rgba(0,255,133,0.08)', labelBorder: 'rgba(0,255,133,0.2)',
+    gradientLeft: 'rgba(61,25,91,0.85)', gradientRight: 'rgba(233,0,82,0.6)',
+    topBarBg: 'linear-gradient(90deg, #3d195b, #6c1d8e)',
+    topBarText: '#00ff85', bgBase: '#1a0830',
+    labelBg: 'rgba(0,255,133,0.12)', labelBorder: 'rgba(0,255,133,0.35)',
   },
   'La Liga': {
-    primary: '#1a3c6e', accent: '#ff4b44',
-    gradientLeft: 'rgba(26,60,110,0.5)', gradientRight: 'rgba(238,135,7,0.35)',
-    topBarBg: 'linear-gradient(90deg, #1a3c6e, #0e1f3a)',
-    topBarText: '#ee8707', bgBase: '#080d18',
-    labelBg: 'rgba(238,135,7,0.08)', labelBorder: 'rgba(238,135,7,0.2)',
+    primary: '#1a3c6e', accent: '#ee8707',
+    gradientLeft: 'rgba(26,60,110,0.85)', gradientRight: 'rgba(238,135,7,0.65)',
+    topBarBg: 'linear-gradient(90deg, #1a3c6e, #2a5298)',
+    topBarText: '#ee8707', bgBase: '#0e1f3a',
+    labelBg: 'rgba(238,135,7,0.12)', labelBorder: 'rgba(238,135,7,0.35)',
   },
   'Bundesliga': {
-    primary: '#d20515', accent: '#d20515',
-    gradientLeft: 'rgba(210,5,21,0.35)', gradientRight: 'rgba(210,5,21,0.15)',
-    topBarBg: 'linear-gradient(90deg, #1a0508, #0d0d0d)',
-    topBarText: '#d20515', bgBase: '#0a0506',
-    labelBg: 'rgba(210,5,21,0.08)', labelBorder: 'rgba(210,5,21,0.2)',
+    primary: '#d20515', accent: '#ffffff',
+    gradientLeft: 'rgba(210,5,21,0.7)', gradientRight: 'rgba(210,5,21,0.35)',
+    topBarBg: 'linear-gradient(90deg, #d20515, #8b0000)',
+    topBarText: '#ffffff', bgBase: '#1a0508',
+    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
   },
   'Serie A': {
-    primary: '#024494', accent: '#008fd7',
-    gradientLeft: 'rgba(2,68,148,0.4)', gradientRight: 'rgba(0,155,58,0.2)',
-    topBarBg: 'linear-gradient(90deg, #024494, #011d3f)',
-    topBarText: '#4fc3f7', bgBase: '#060d18',
-    labelBg: 'rgba(79,195,247,0.08)', labelBorder: 'rgba(79,195,247,0.2)',
+    primary: '#024494', accent: '#009b3a',
+    gradientLeft: 'rgba(2,68,148,0.8)', gradientRight: 'rgba(0,155,58,0.5)',
+    topBarBg: 'linear-gradient(90deg, #024494, #0366d6)',
+    topBarText: '#4fc3f7', bgBase: '#081830',
+    labelBg: 'rgba(79,195,247,0.12)', labelBorder: 'rgba(79,195,247,0.3)',
   },
   'Ligue 1': {
     primary: '#091c3e', accent: '#c8ff00',
-    gradientLeft: 'rgba(9,28,62,0.6)', gradientRight: 'rgba(200,255,0,0.15)',
-    topBarBg: 'linear-gradient(90deg, #091c3e, #050e1f)',
-    topBarText: '#c8ff00', bgBase: '#050a14',
-    labelBg: 'rgba(200,255,0,0.06)', labelBorder: 'rgba(200,255,0,0.15)',
+    gradientLeft: 'rgba(9,28,62,0.9)', gradientRight: 'rgba(200,255,0,0.35)',
+    topBarBg: 'linear-gradient(90deg, #091c3e, #162d5a)',
+    topBarText: '#c8ff00', bgBase: '#0a1428',
+    labelBg: 'rgba(200,255,0,0.1)', labelBorder: 'rgba(200,255,0,0.25)',
   },
   'Champions League': {
-    primary: '#00003e', accent: '#0053a0',
-    gradientLeft: 'rgba(0,0,62,0.6)', gradientRight: 'rgba(244,195,0,0.25)',
-    topBarBg: 'linear-gradient(90deg, #00003e, #000020)',
-    topBarText: '#f4c300', bgBase: '#000014',
-    labelBg: 'rgba(244,195,0,0.08)', labelBorder: 'rgba(244,195,0,0.2)',
+    primary: '#00003e', accent: '#f4c300',
+    gradientLeft: 'rgba(0,0,80,0.9)', gradientRight: 'rgba(244,195,0,0.5)',
+    topBarBg: 'linear-gradient(90deg, #000050, #1a0a60)',
+    topBarText: '#f4c300', bgBase: '#000028',
+    labelBg: 'rgba(244,195,0,0.12)', labelBorder: 'rgba(244,195,0,0.3)',
   },
   'Europa League': {
-    primary: '#f26522', accent: '#ff8c00',
-    gradientLeft: 'rgba(242,101,34,0.35)', gradientRight: 'rgba(255,140,0,0.2)',
-    topBarBg: 'linear-gradient(90deg, #1a0a04, #0d0d0d)',
-    topBarText: '#f26522', bgBase: '#0d0805',
-    labelBg: 'rgba(242,101,34,0.08)', labelBorder: 'rgba(242,101,34,0.2)',
+    primary: '#f26522', accent: '#000000',
+    gradientLeft: 'rgba(242,101,34,0.75)', gradientRight: 'rgba(255,140,0,0.45)',
+    topBarBg: 'linear-gradient(90deg, #f26522, #d4541a)',
+    topBarText: '#ffffff', bgBase: '#1a0c04',
+    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
   },
   'Eredivisie': {
     primary: '#e4002b', accent: '#ff6b35',
-    gradientLeft: 'rgba(228,0,43,0.3)', gradientRight: 'rgba(255,107,53,0.2)',
-    topBarBg: 'linear-gradient(90deg, #1a0408, #0d0d0d)',
-    topBarText: '#ff6b35', bgBase: '#0a0507',
-    labelBg: 'rgba(255,107,53,0.08)', labelBorder: 'rgba(255,107,53,0.2)',
+    gradientLeft: 'rgba(228,0,43,0.7)', gradientRight: 'rgba(255,107,53,0.45)',
+    topBarBg: 'linear-gradient(90deg, #e4002b, #ff3355)',
+    topBarText: '#ffffff', bgBase: '#1a0508',
+    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
   },
   'K League 1': {
     primary: '#003da5', accent: '#c8102e',
-    gradientLeft: 'rgba(0,61,165,0.4)', gradientRight: 'rgba(200,16,46,0.25)',
-    topBarBg: 'linear-gradient(90deg, #001840, #0d0408)',
-    topBarText: '#5b9cf5', bgBase: '#060a14',
-    labelBg: 'rgba(91,156,245,0.08)', labelBorder: 'rgba(91,156,245,0.2)',
+    gradientLeft: 'rgba(0,61,165,0.8)', gradientRight: 'rgba(200,16,46,0.5)',
+    topBarBg: 'linear-gradient(90deg, #003da5, #0055cc)',
+    topBarText: '#ffffff', bgBase: '#081430',
+    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
   },
   'K League 2': {
-    primary: '#003da5', accent: '#c8102e',
-    gradientLeft: 'rgba(0,61,165,0.4)', gradientRight: 'rgba(200,16,46,0.25)',
-    topBarBg: 'linear-gradient(90deg, #001840, #0d0408)',
-    topBarText: '#5b9cf5', bgBase: '#060a14',
-    labelBg: 'rgba(91,156,245,0.08)', labelBorder: 'rgba(91,156,245,0.2)',
+    primary: '#005a32', accent: '#003da5',
+    gradientLeft: 'rgba(0,90,50,0.8)', gradientRight: 'rgba(0,61,165,0.5)',
+    topBarBg: 'linear-gradient(90deg, #005a32, #007a45)',
+    topBarText: '#ffffff', bgBase: '#041a10',
+    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
   },
   'J1 League': {
-    primary: '#c41230', accent: '#e63946',
-    gradientLeft: 'rgba(196,18,48,0.35)', gradientRight: 'rgba(196,18,48,0.15)',
-    topBarBg: 'linear-gradient(90deg, #1a0508, #0d0d0d)',
-    topBarText: '#e63946', bgBase: '#0a0406',
-    labelBg: 'rgba(230,57,70,0.08)', labelBorder: 'rgba(230,57,70,0.2)',
+    primary: '#c41230', accent: '#1a1a6c',
+    gradientLeft: 'rgba(196,18,48,0.75)', gradientRight: 'rgba(26,26,108,0.5)',
+    topBarBg: 'linear-gradient(90deg, #c41230, #e6334d)',
+    topBarText: '#ffffff', bgBase: '#1a0810',
+    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
   },
   'J2 League': {
-    primary: '#c41230', accent: '#e63946',
-    gradientLeft: 'rgba(196,18,48,0.35)', gradientRight: 'rgba(196,18,48,0.15)',
-    topBarBg: 'linear-gradient(90deg, #1a0508, #0d0d0d)',
-    topBarText: '#e63946', bgBase: '#0a0406',
-    labelBg: 'rgba(230,57,70,0.08)', labelBorder: 'rgba(230,57,70,0.2)',
+    primary: '#1a1a6c', accent: '#c41230',
+    gradientLeft: 'rgba(26,26,108,0.75)', gradientRight: 'rgba(196,18,48,0.4)',
+    topBarBg: 'linear-gradient(90deg, #1a1a6c, #2d2d8a)',
+    topBarText: '#ffffff', bgBase: '#0c0c28',
+    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
   },
 }
 
@@ -149,11 +149,13 @@ export async function GET(request: NextRequest) {
       }}>
 
         {/* ===== 배경 ===== */}
-        <div style={{ position: 'absolute', top: '0', left: '0', bottom: '0', width: '50%', background: `linear-gradient(180deg, ${theme.gradientLeft}, transparent 80%)`, display: 'flex' }} />
-        <div style={{ position: 'absolute', top: '0', right: '0', bottom: '0', width: '50%', background: `linear-gradient(180deg, ${theme.gradientRight}, transparent 80%)`, display: 'flex' }} />
-        <div style={{ position: 'absolute', top: '0', left: '50%', transform: 'translateX(-50%)', width: '1px', height: '100%', background: `linear-gradient(to bottom, ${theme.primary}44, transparent 30%, transparent 70%, ${theme.primary}22)`, display: 'flex' }} />
-        <div style={{ position: 'absolute', top: '68px', left: '0', right: '0', height: '1px', background: `linear-gradient(90deg, transparent, ${theme.primary}33, transparent)`, display: 'flex' }} />
-        <div style={{ position: 'absolute', bottom: '76px', left: '0', right: '0', height: '1px', background: `linear-gradient(90deg, transparent, ${theme.primary}33, transparent)`, display: 'flex' }} />
+        <div style={{ position: 'absolute', top: '0', left: '0', bottom: '0', width: '55%', background: `linear-gradient(160deg, ${theme.gradientLeft}, transparent 75%)`, display: 'flex' }} />
+        <div style={{ position: 'absolute', top: '0', right: '0', bottom: '0', width: '55%', background: `linear-gradient(200deg, ${theme.gradientRight}, transparent 75%)`, display: 'flex' }} />
+        {/* 중앙 빛 효과 */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '600px', height: '400px', background: `radial-gradient(ellipse, ${theme.primary}20, transparent 70%)`, display: 'flex' }} />
+        <div style={{ position: 'absolute', top: '0', left: '50%', transform: 'translateX(-50%)', width: '1px', height: '100%', background: `linear-gradient(to bottom, ${theme.primary}55, transparent 30%, transparent 70%, ${theme.primary}33)`, display: 'flex' }} />
+        <div style={{ position: 'absolute', top: '68px', left: '0', right: '0', height: '1px', background: `linear-gradient(90deg, transparent, ${theme.primary}44, transparent)`, display: 'flex' }} />
+        <div style={{ position: 'absolute', bottom: '76px', left: '0', right: '0', height: '1px', background: `linear-gradient(90deg, transparent, ${theme.primary}44, transparent)`, display: 'flex' }} />
         {/* 코너 장식 */}
         <div style={{ position: 'absolute', top: '12px', left: '12px', width: '36px', height: '36px', borderTop: `2px solid ${theme.primary}44`, borderLeft: `2px solid ${theme.primary}44`, display: 'flex' }} />
         <div style={{ position: 'absolute', top: '12px', right: '12px', width: '36px', height: '36px', borderTop: `2px solid ${theme.primary}44`, borderRight: `2px solid ${theme.primary}44`, display: 'flex' }} />
@@ -225,18 +227,18 @@ export async function GET(request: NextRequest) {
           }}>
             <div style={{
               width: '180px', height: '180px', borderRadius: '28px',
-              background: isHomePick ? `linear-gradient(135deg, ${theme.primary}30, ${theme.primary}10)` : 'rgba(255,255,255,0.02)',
-              border: isHomePick ? `2px solid ${theme.primary}66` : '1px solid rgba(255,255,255,0.05)',
+              background: isHomePick ? `linear-gradient(135deg, ${theme.primary}50, ${theme.primary}20)` : 'rgba(255,255,255,0.04)',
+              border: isHomePick ? `2px solid ${theme.primary}88` : '1px solid rgba(255,255,255,0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: isHomePick ? `0 0 60px ${theme.primary}25` : 'none',
+              boxShadow: isHomePick ? `0 0 80px ${theme.primary}35, inset 0 0 30px ${theme.primary}15` : 'none',
             }}>
               {homeLogo ? <img src={homeLogo} width={130} height={130} /> : <span style={{ fontSize: '72px' }}>⚽</span>}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
               <span style={{
-                color: isHomePick ? theme.topBarText : '#4b5563',
+                color: isHomePick ? theme.topBarText : '#6b7280',
                 fontSize: '52px', fontWeight: 900,
-                textShadow: isHomePick ? `0 0 40px ${theme.primary}40` : 'none',
+                textShadow: isHomePick ? `0 0 40px ${theme.primary}60` : 'none',
               }}>
                 {homeProb}%
               </span>
@@ -255,14 +257,14 @@ export async function GET(request: NextRequest) {
           }}>
             <div style={{
               width: '76px', height: '76px', borderRadius: '50%',
-              background: `${theme.primary}15`, border: `1px solid ${theme.primary}30`,
+              background: `${theme.primary}25`, border: `1px solid ${theme.primary}50`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <span style={{ color: theme.topBarText, fontSize: '26px', fontWeight: 900, letterSpacing: '2px', opacity: 0.5 }}>
+              <span style={{ color: theme.topBarText, fontSize: '26px', fontWeight: 900, letterSpacing: '2px', opacity: 0.7 }}>
                 VS
               </span>
             </div>
-            <span style={{ color: '#374151', fontSize: '15px', fontWeight: 600 }}>
+            <span style={{ color: '#6b7280', fontSize: '15px', fontWeight: 600 }}>
               {drawProb}%
             </span>
           </div>
@@ -274,18 +276,18 @@ export async function GET(request: NextRequest) {
           }}>
             <div style={{
               width: '180px', height: '180px', borderRadius: '28px',
-              background: isAwayPick ? `linear-gradient(135deg, ${theme.accent}30, ${theme.accent}10)` : 'rgba(255,255,255,0.02)',
-              border: isAwayPick ? `2px solid ${theme.accent}66` : '1px solid rgba(255,255,255,0.05)',
+              background: isAwayPick ? `linear-gradient(135deg, ${theme.accent}50, ${theme.accent}20)` : 'rgba(255,255,255,0.04)',
+              border: isAwayPick ? `2px solid ${theme.accent}88` : '1px solid rgba(255,255,255,0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: isAwayPick ? `0 0 60px ${theme.accent}25` : 'none',
+              boxShadow: isAwayPick ? `0 0 80px ${theme.accent}35, inset 0 0 30px ${theme.accent}15` : 'none',
             }}>
               {awayLogo ? <img src={awayLogo} width={130} height={130} /> : <span style={{ fontSize: '72px' }}>⚽</span>}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
               <span style={{
-                color: isAwayPick ? theme.topBarText : '#4b5563',
+                color: isAwayPick ? theme.topBarText : '#6b7280',
                 fontSize: '52px', fontWeight: 900,
-                textShadow: isAwayPick ? `0 0 40px ${theme.accent}40` : 'none',
+                textShadow: isAwayPick ? `0 0 40px ${theme.accent}60` : 'none',
               }}>
                 {awayProb}%
               </span>
