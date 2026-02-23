@@ -265,13 +265,15 @@ export default function BlogPostPage() {
     <div className="min-h-screen bg-[#0f0f0f] text-white">
       {/* 커버 이미지 */}
       {post.cover_image && (
-        <div className="relative h-[400px] bg-gray-900 overflow-hidden">
-          <img 
-            src={post.cover_image} 
-            alt={getTitle()}
-            className="w-full h-full object-cover opacity-60"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/50 to-transparent"></div>
+        <div className="relative w-full max-w-5xl mx-auto overflow-hidden bg-gray-900">
+          <div className="relative w-full" style={{ paddingBottom: '52.5%' }}>
+            <img 
+              src={post.cover_image} 
+              alt={getTitle()}
+              className="absolute inset-0 w-full h-full object-contain"
+            />
+          </div>
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0f0f0f] to-transparent"></div>
         </div>
       )}
 
