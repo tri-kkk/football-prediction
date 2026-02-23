@@ -494,6 +494,7 @@ const leagueIdMap: Record<string, number> = {
   'KL2': 293,
   'J1': 98,
   'J2': 99,
+  'MLS': 253,
 }
 
 // ============================================
@@ -1930,6 +1931,7 @@ export default function PremiumPredictPage() {
     { code: 'SA', name: 'SERIE A', nameKo: '세리에A', logo: 'https://media.api-sports.io/football/leagues/135.png', flag: 'https://media.api-sports.io/flags/it.svg' },
     { code: 'FL1', name: 'LIGUE 1', nameKo: '리그1', logo: 'https://media.api-sports.io/football/leagues/61.png', flag: 'https://media.api-sports.io/flags/fr.svg' },
     { code: 'DED', name: 'EREDIVISIE', nameKo: '에레디비시', logo: 'https://media.api-sports.io/football/leagues/88.png', flag: 'https://media.api-sports.io/flags/nl.svg' },
+    { code: 'MLS', name: 'MLS', nameKo: 'MLS', logo: 'https://media.api-sports.io/football/leagues/253.png', flag: 'https://media.api-sports.io/flags/us.svg' },
     { code: 'KL', name: 'K LEAGUE', nameKo: 'K리그', logo: 'https://media.api-sports.io/football/leagues/292.png', flag: 'https://media.api-sports.io/flags/kr.svg' },
     { code: 'J', name: 'J1/2', nameKo: 'J리그', logo: 'https://media.api-sports.io/football/leagues/98.png', flag: 'https://media.api-sports.io/flags/jp.svg' },
   ]
@@ -2104,7 +2106,7 @@ export default function PremiumPredictPage() {
     setLoading(true)
     try {
       // 여러 리그 조회해서 합치기
-      const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'KL1', 'KL2', 'J1', 'J2']
+      const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'MLS', 'KL1', 'KL2', 'J1', 'J2']
       let allMatches: any[] = []
       
       for (const league of leagueCodes) {
@@ -2158,7 +2160,7 @@ export default function PremiumPredictPage() {
       // ✅ 서버에서 계산된 리그별 적중률 사용
       if (data.leagueAccuracy) {
         // 🎯 주요 6개 리그만 표시
-        const MAIN_LEAGUES = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'KL1', 'J1']
+        const MAIN_LEAGUES = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'MLS', 'KL1', 'J1']
         
         const accuracyData = Object.entries(data.leagueAccuracy)
           .filter(([league_code, stats]: [string, any]) => 
