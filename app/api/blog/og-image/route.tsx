@@ -234,20 +234,6 @@ export async function GET(request: NextRequest) {
             }}>
               {homeLogo ? <img src={homeLogo} width={130} height={130} /> : <span style={{ fontSize: '72px' }}>⚽</span>}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-              <span style={{
-                color: isHomePick ? theme.topBarText : '#6b7280',
-                fontSize: '52px', fontWeight: 900,
-                textShadow: isHomePick ? `0 0 40px ${theme.primary}60` : 'none',
-              }}>
-                {homeProb}%
-              </span>
-              {isHomePick && (
-                <span style={{ color: theme.topBarText, fontSize: '12px', fontWeight: 700, letterSpacing: '4px', opacity: 0.6 }}>
-                  PREDICTED
-                </span>
-              )}
-            </div>
           </div>
 
           {/* VS */}
@@ -264,9 +250,6 @@ export async function GET(request: NextRequest) {
                 VS
               </span>
             </div>
-            <span style={{ color: '#6b7280', fontSize: '15px', fontWeight: 600 }}>
-              {drawProb}%
-            </span>
           </div>
 
           {/* 원정팀 */}
@@ -283,61 +266,19 @@ export async function GET(request: NextRequest) {
             }}>
               {awayLogo ? <img src={awayLogo} width={130} height={130} /> : <span style={{ fontSize: '72px' }}>⚽</span>}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-              <span style={{
-                color: isAwayPick ? theme.topBarText : '#6b7280',
-                fontSize: '52px', fontWeight: 900,
-                textShadow: isAwayPick ? `0 0 40px ${theme.accent}60` : 'none',
-              }}>
-                {awayProb}%
-              </span>
-              {isAwayPick && (
-                <span style={{ color: theme.topBarText, fontSize: '12px', fontWeight: 700, letterSpacing: '4px', opacity: 0.6 }}>
-                  PREDICTED
-                </span>
-              )}
-            </div>
           </div>
         </div>
 
-        {/* ===== 하단 바 ===== */}
+        {/* ===== 하단: 로고만 ===== */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 48px',
-          background: `linear-gradient(90deg, ${theme.bgBase}, ${theme.primary}08, ${theme.bgBase})`,
-          borderTop: `1px solid ${theme.primary}22`,
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          padding: '12px 48px',
         }}>
-          {/* AI PREDICTION + 바 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span style={{ color: '#475569', fontSize: '13px', fontWeight: 700, letterSpacing: '2px' }}>
-              AI PREDICTION
-            </span>
-            <div style={{
-              display: 'flex', width: '180px', height: '6px',
-              borderRadius: '3px', overflow: 'hidden',
-            }}>
-              <div style={{ width: `${homeProb}%`, background: theme.primary, display: 'flex' }} />
-              <div style={{ width: `${drawProb}%`, background: '#374151', display: 'flex' }} />
-              <div style={{ width: `${awayProb}%`, background: theme.accent, display: 'flex' }} />
-            </div>
-          </div>
-
-          {/* 등급 뱃지 */}
-          <div style={{
-            display: 'flex', background: gs.bg,
-            padding: '8px 24px', borderRadius: '8px', boxShadow: gs.shadow,
-          }}>
-            <span style={{ color: '#ffffff', fontSize: '18px', fontWeight: 800, letterSpacing: '2px' }}>
-              {gs.label}
-            </span>
-          </div>
-
-          {/* 로고 (하단 바에도 작게) */}
           <img
             src={siteLogoUrl}
-            width={120}
-            height={30}
-            style={{ opacity: 0.4 }}
+            width={130}
+            height={32}
+            style={{ opacity: 0.5 }}
           />
         </div>
       </div>
