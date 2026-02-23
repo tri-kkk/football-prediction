@@ -398,6 +398,7 @@ function getPickEn(pick: string): string {
 function generateProbBar(label: string, pct: number): string {
   const filled = Math.round(pct / 6.25)
   const empty = 16 - filled
+  if (label === '') return `${'█'.repeat(filled)}${'░'.repeat(empty)} **${pct}%**`
   return `${label} ${'█'.repeat(filled)}${'░'.repeat(empty)} ${pct}%`
 }
 
@@ -446,43 +447,50 @@ function generateContentKo(
   if (homeStats?.recentForm) {
     const f5 = homeStats.recentForm.last5?.results || []
     const l10 = homeStats.recentForm.last10
-    c += `**${homeKo}**: ${formatFormEmoji(f5)} (${formatFormText(f5)})\n\n`
+    c += `### ${homeKo}\n\n`
+    c += `${formatFormEmoji(f5)} **${formatFormText(f5)}**\n\n`
     if (l10) {
-      c += `최근 10경기에서 **${l10.wins}승 ${l10.draws}무 ${l10.losses}패**를 기록 중이며, `
-      c += `득실은 **${l10.goalsFor}골 ${l10.goalsAgainst}실점**이다. `
+      c += `| 항목 | 수치 |\n|:---|:---|\n`
+      c += `| 최근 10경기 | **${l10.wins}승 ${l10.draws}무 ${l10.losses}패** |\n`
+      c += `| 득점 / 실점 | **${l10.goalsFor}골** / **${l10.goalsAgainst}실점** |\n`
+      const streak = homeStats.recentForm.currentStreak
+      if (streak && streak.count >= 2) {
+        c += `| 연속 | ${streak.type === 'W' ? `🔥 **${streak.count}연승**` : streak.type === 'L' ? `⚠️ **${streak.count}연패**` : `**${streak.count}연속 무승부**`} |\n`
+      }
+      c += '\n'
     }
-    const streak = homeStats.recentForm.currentStreak
-    if (streak && streak.count >= 2) {
-      if (streak.type === 'W') c += `현재 **${streak.count}연승** 행진 중으로 분위기가 좋다. `
-      else if (streak.type === 'L') c += `현재 **${streak.count}연패** 중으로 분위기가 좋지 않다. `
-    }
-    c += '\n\n'
   }
   
   if (awayStats?.recentForm) {
     const f5 = awayStats.recentForm.last5?.results || []
     const l10 = awayStats.recentForm.last10
-    c += `**${awayKo}**: ${formatFormEmoji(f5)} (${formatFormText(f5)})\n\n`
+    c += `### ${awayKo}\n\n`
+    c += `${formatFormEmoji(f5)} **${formatFormText(f5)}**\n\n`
     if (l10) {
-      c += `최근 10경기 성적은 **${l10.wins}승 ${l10.draws}무 ${l10.losses}패**, `
-      c += `득실 **${l10.goalsFor}:${l10.goalsAgainst}**이다. `
+      c += `| 항목 | 수치 |\n|:---|:---|\n`
+      c += `| 최근 10경기 | **${l10.wins}승 ${l10.draws}무 ${l10.losses}패** |\n`
+      c += `| 득점 / 실점 | **${l10.goalsFor}골** / **${l10.goalsAgainst}실점** |\n`
+      const streak = awayStats.recentForm.currentStreak
+      if (streak && streak.count >= 2) {
+        c += `| 연속 | ${streak.type === 'W' ? `🔥 **${streak.count}연승**` : streak.type === 'L' ? `⚠️ **${streak.count}연패**` : `**${streak.count}연속 무승부**`} |\n`
+      }
+      c += '\n'
     }
-    const streak = awayStats.recentForm.currentStreak
-    if (streak && streak.count >= 2) {
-      if (streak.type === 'W') c += `**${streak.count}연승**을 달리고 있어 상승세가 뚜렷하다. `
-      else if (streak.type === 'L') c += `**${streak.count}연패**로 부진에 빠져 있다. `
-    }
-    c += '\n\n'
   }
   
   // ===== 🏆 시즌 성적 =====
   const homeRel = homeStats?.homeStats
   const awayRel = awayStats?.awayStats
   
-  if (homeRel || awayRel) {
+  if (homeRel && awayRel) {
     c += `## 🏆 ${leagueInfo.nameKo} 시즌 성적\n\n`
-    if (homeRel) c += `**${homeKo} (홈)**: ${homeRel.wins}승 ${homeRel.draws}무 ${homeRel.losses}패 (승률 ${homeRel.winRate}%)\n\n`
-    if (awayRel) c += `**${awayKo} (원정)**: ${awayRel.wins}승 ${awayRel.draws}무 ${awayRel.losses}패 (승률 ${awayRel.winRate}%)\n\n`
+    c += `| | ${homeKo} (홈) | ${awayKo} (원정) |\n|:---|:---:|:---:|\n`
+    c += `| 승-무-패 | **${homeRel.wins}-${homeRel.draws}-${homeRel.losses}** | **${awayRel.wins}-${awayRel.draws}-${awayRel.losses}** |\n`
+    c += `| 승률 | **${homeRel.winRate}%** | **${awayRel.winRate}%** |\n\n`
+  } else if (homeRel || awayRel) {
+    c += `## 🏆 ${leagueInfo.nameKo} 시즌 성적\n\n`
+    if (homeRel) c += `**${homeKo} (홈)**: ${homeRel.wins}승 ${homeRel.draws}무 ${homeRel.losses}패 (승률 **${homeRel.winRate}%**)\n\n`
+    if (awayRel) c += `**${awayKo} (원정)**: ${awayRel.wins}승 ${awayRel.draws}무 ${awayRel.losses}패 (승률 **${awayRel.winRate}%**)\n\n`
   }
   
   // ===== 📈 핵심 스탯 비교 =====
@@ -497,34 +505,35 @@ function generateContentKo(
     const aGF = (aL10.reduce((s: number, m: any) => s + m.goalsFor, 0) / aL10.length).toFixed(1)
     const aGA = (aL10.reduce((s: number, m: any) => s + m.goalsAgainst, 0) / aL10.length).toFixed(1)
     
-    c += `**공격력 (최근 10경기 평균)**\n`
-    c += `- 경기당 득점: ${homeKo} **${hGF}골** vs ${awayKo} **${aGF}골**\n`
-    c += `- 경기당 실점: ${homeKo} **${hGA}골** vs ${awayKo} **${aGA}골**\n\n`
+    c += `> 최근 10경기 평균 기준\n\n`
+    c += `| 지표 | ${homeKo} | ${awayKo} |\n|:---|:---:|:---:|\n`
+    c += `| ⚽ 경기당 득점 | **${hGF}** | **${aGF}** |\n`
+    c += `| 🛡️ 경기당 실점 | **${hGA}** | **${aGA}** |\n`
     
     if (homeStats.markets && awayStats.markets) {
-      c += `**베팅 지표 (최근 10경기)**\n`
-      c += `- 오버 2.5: ${homeKo} **${homeStats.markets.over25Rate}%** vs ${awayKo} **${awayStats.markets.over25Rate}%**\n`
-      c += `- BTTS: ${homeKo} **${homeStats.markets.bttsRate}%** vs ${awayKo} **${awayStats.markets.bttsRate}%**\n`
-      c += `- 클린시트: ${homeKo} **${homeStats.markets.cleanSheetRate}%** vs ${awayKo} **${awayStats.markets.cleanSheetRate}%**\n\n`
+      c += `| 📊 오버 2.5 | **${homeStats.markets.over25Rate}%** | **${awayStats.markets.over25Rate}%** |\n`
+      c += `| 🎯 양팀득점(BTTS) | **${homeStats.markets.bttsRate}%** | **${awayStats.markets.bttsRate}%** |\n`
+      c += `| 🧤 클린시트 | **${homeStats.markets.cleanSheetRate}%** | **${awayStats.markets.cleanSheetRate}%** |\n`
     }
+    c += '\n'
   }
   
   // ===== ⚔️ 상대 전적 =====
   if (h2h?.overall) {
     c += `## ⚔️ 상대 전적\n\n`
-    c += `통산 **${h2h.overall.totalMatches}경기**: ${homeKo} **${h2h.overall.homeWins}승** / 무 **${h2h.overall.draws}** / ${awayKo} **${h2h.overall.awayWins}승**\n\n`
+    c += `| ${homeKo} 승 | 무승부 | ${awayKo} 승 | 총 경기 |\n|:---:|:---:|:---:|:---:|\n`
+    c += `| **${h2h.overall.homeWins}** | **${h2h.overall.draws}** | **${h2h.overall.awayWins}** | ${h2h.overall.totalMatches} |\n\n`
     
     if (h2h.recentMatches?.length > 0) {
-      c += `**최근 맞대결**\n`
+      c += `**최근 맞대결**\n\n`
       h2h.recentMatches.slice(0, 3).forEach((m: any) => {
         const icon = m.result === 'W' ? '🔵' : m.result === 'L' ? '🔴' : '⚪'
-        c += `- ${icon} ${m.homeScore}-${m.awayScore}\n`
+        c += `${icon} **${m.homeScore} - ${m.awayScore}**\n\n`
       })
-      c += '\n'
     }
     
     if (h2h.insights?.length > 0) {
-      c += `**인사이트**: ${h2h.insights[0]}\n\n`
+      c += `> 💡 ${h2h.insights[0]}\n\n`
     }
   }
   
@@ -574,20 +583,20 @@ function generateContentKo(
   
   // ===== 📈 TrendSoccer 예측 =====
   c += `## 📈 TrendSoccer 예측\n\n`
-  c += '```\n'
-  c += generateProbBar(homeKo.padEnd(10, '　'), homePct) + '\n'
-  c += generateProbBar('무승부'.padEnd(10, '　'), drawPct) + '\n'
-  c += generateProbBar(awayKo.padEnd(10, '　'), awayPct) + '\n'
-  c += '```\n\n'
+  c += `| | 확률 |\n|:---|:---|\n`
+  c += `| ${homeKo} | ${generateProbBar('', homePct)} |\n`
+  c += `| 무승부 | ${generateProbBar('', drawPct)} |\n`
+  c += `| ${awayKo} | ${generateProbBar('', awayPct)} |\n\n`
   
-  c += `- **예측**: ${getPickKo(prediction.recommendation.pick)}\n`
-  c += `- **등급**: ${getGradeKo(prediction.recommendation.grade)}\n`
-  c += `- **배당**: ${match.home_odds} / ${match.draw_odds} / ${match.away_odds}\n`
+  c += `| 항목 | 분석 |\n|:---|:---|\n`
+  c += `| 🎯 예측 | **${getPickKo(prediction.recommendation.pick)}** |\n`
+  c += `| ⭐ 등급 | **${getGradeKo(prediction.recommendation.grade)}** |\n`
+  c += `| 💰 배당 | ${match.home_odds} / ${match.draw_odds} / ${match.away_odds} |\n`
   if (prediction.homePower && prediction.awayPower) {
-    c += `- **파워 지수**: ${homeKo} ${prediction.homePower} vs ${awayKo} ${prediction.awayPower}\n`
+    c += `| ⚡ 파워 지수 | ${homeKo} **${prediction.homePower}** vs ${awayKo} **${prediction.awayPower}** |\n`
   }
   if (prediction.patternStats) {
-    c += `- **패턴 분석**: ${prediction.pattern} (${prediction.patternStats.totalMatches}경기 기반)\n`
+    c += `| 📊 패턴 | ${prediction.pattern} (${prediction.patternStats.totalMatches}경기 기반) |\n`
   }
   c += '\n'
   
@@ -636,41 +645,48 @@ function generateContentEn(
   if (homeStats?.recentForm) {
     const f5 = homeStats.recentForm.last5?.results || []
     const l10 = homeStats.recentForm.last10
-    c += `**${home}**: ${formatFormEmoji(f5)} (${formatFormTextEn(f5)})\n\n`
+    c += `### ${home}\n\n`
+    c += `${formatFormEmoji(f5)} **${formatFormTextEn(f5)}**\n\n`
     if (l10) {
-      c += `Over their last 10, ${home} have **${l10.wins}W ${l10.draws}D ${l10.losses}L** `
-      c += `(${l10.goalsFor} scored, ${l10.goalsAgainst} conceded). `
+      c += `| Stat | Value |\n|:---|:---|\n`
+      c += `| Last 10 | **${l10.wins}W ${l10.draws}D ${l10.losses}L** |\n`
+      c += `| Goals / Conceded | **${l10.goalsFor}** / **${l10.goalsAgainst}** |\n`
+      const streak = homeStats.recentForm.currentStreak
+      if (streak && streak.count >= 2) {
+        c += `| Streak | ${streak.type === 'W' ? `🔥 **${streak.count}-game win streak**` : streak.type === 'L' ? `⚠️ **${streak.count}-game losing run**` : `**${streak.count} draws**`} |\n`
+      }
+      c += '\n'
     }
-    const streak = homeStats.recentForm.currentStreak
-    if (streak && streak.count >= 2) {
-      if (streak.type === 'W') c += `Currently on a **${streak.count}-game winning streak**. `
-      else if (streak.type === 'L') c += `On a **${streak.count}-game losing run**. `
-    }
-    c += '\n\n'
   }
   if (awayStats?.recentForm) {
     const f5 = awayStats.recentForm.last5?.results || []
     const l10 = awayStats.recentForm.last10
-    c += `**${away}**: ${formatFormEmoji(f5)} (${formatFormTextEn(f5)})\n\n`
+    c += `### ${away}\n\n`
+    c += `${formatFormEmoji(f5)} **${formatFormTextEn(f5)}**\n\n`
     if (l10) {
-      c += `${away}'s last 10: **${l10.wins}W ${l10.draws}D ${l10.losses}L** `
-      c += `(${l10.goalsFor} GF, ${l10.goalsAgainst} GA). `
+      c += `| Stat | Value |\n|:---|:---|\n`
+      c += `| Last 10 | **${l10.wins}W ${l10.draws}D ${l10.losses}L** |\n`
+      c += `| Goals / Conceded | **${l10.goalsFor}** / **${l10.goalsAgainst}** |\n`
+      const streak = awayStats.recentForm.currentStreak
+      if (streak && streak.count >= 2) {
+        c += `| Streak | ${streak.type === 'W' ? `🔥 **${streak.count}-game win streak**` : streak.type === 'L' ? `⚠️ **${streak.count}-game losing run**` : `**${streak.count} draws**`} |\n`
+      }
+      c += '\n'
     }
-    const streak = awayStats.recentForm.currentStreak
-    if (streak && streak.count >= 2) {
-      if (streak.type === 'W') c += `**${streak.count}-match winning streak**. `
-      else if (streak.type === 'L') c += `**${streak.count}-game losing streak**. `
-    }
-    c += '\n\n'
   }
   
   // Season Record
-  const homeRel = homeStats?.homeStats
-  const awayRel = awayStats?.awayStats
-  if (homeRel || awayRel) {
+  const homeRelEn = homeStats?.homeStats
+  const awayRelEn = awayStats?.awayStats
+  if (homeRelEn && awayRelEn) {
     c += `## 🏆 ${leagueInfo.nameEn} Season Record\n\n`
-    if (homeRel) c += `**${home} (Home)**: ${homeRel.wins}W ${homeRel.draws}D ${homeRel.losses}L (${homeRel.winRate}% win rate)\n\n`
-    if (awayRel) c += `**${away} (Away)**: ${awayRel.wins}W ${awayRel.draws}D ${awayRel.losses}L (${awayRel.winRate}% win rate)\n\n`
+    c += `| | ${home} (Home) | ${away} (Away) |\n|:---|:---:|:---:|\n`
+    c += `| W-D-L | **${homeRelEn.wins}-${homeRelEn.draws}-${homeRelEn.losses}** | **${awayRelEn.wins}-${awayRelEn.draws}-${awayRelEn.losses}** |\n`
+    c += `| Win Rate | **${homeRelEn.winRate}%** | **${awayRelEn.winRate}%** |\n\n`
+  } else if (homeRelEn || awayRelEn) {
+    c += `## 🏆 ${leagueInfo.nameEn} Season Record\n\n`
+    if (homeRelEn) c += `**${home} (Home)**: ${homeRelEn.wins}W ${homeRelEn.draws}D ${homeRelEn.losses}L (**${homeRelEn.winRate}%** win rate)\n\n`
+    if (awayRelEn) c += `**${away} (Away)**: ${awayRelEn.wins}W ${awayRelEn.draws}D ${awayRelEn.losses}L (**${awayRelEn.winRate}%** win rate)\n\n`
   }
   
   // Key Stats
@@ -683,31 +699,32 @@ function generateContentEn(
     const aGF = (aL10.reduce((s: number, m: any) => s + m.goalsFor, 0) / aL10.length).toFixed(1)
     const aGA = (aL10.reduce((s: number, m: any) => s + m.goalsAgainst, 0) / aL10.length).toFixed(1)
     
-    c += `**Goals (Last 10)**\n`
-    c += `- Goals per game: ${home} **${hGF}** vs ${away} **${aGF}**\n`
-    c += `- Conceded: ${home} **${hGA}** vs ${away} **${aGA}**\n\n`
+    c += `> Based on last 10 matches\n\n`
+    c += `| Metric | ${home} | ${away} |\n|:---|:---:|:---:|\n`
+    c += `| ⚽ Goals/Game | **${hGF}** | **${aGF}** |\n`
+    c += `| 🛡️ Conceded/Game | **${hGA}** | **${aGA}** |\n`
     
     if (homeStats.markets && awayStats.markets) {
-      c += `**Market Stats (Last 10)**\n`
-      c += `- Over 2.5: ${home} **${homeStats.markets.over25Rate}%** vs ${away} **${awayStats.markets.over25Rate}%**\n`
-      c += `- BTTS: ${home} **${homeStats.markets.bttsRate}%** vs ${away} **${awayStats.markets.bttsRate}%**\n`
-      c += `- Clean Sheet: ${home} **${homeStats.markets.cleanSheetRate}%** vs ${away} **${awayStats.markets.cleanSheetRate}%**\n\n`
+      c += `| 📊 Over 2.5 | **${homeStats.markets.over25Rate}%** | **${awayStats.markets.over25Rate}%** |\n`
+      c += `| 🎯 BTTS | **${homeStats.markets.bttsRate}%** | **${awayStats.markets.bttsRate}%** |\n`
+      c += `| 🧤 Clean Sheet | **${homeStats.markets.cleanSheetRate}%** | **${awayStats.markets.cleanSheetRate}%** |\n`
     }
+    c += '\n'
   }
   
   // H2H
   if (h2h?.overall) {
     c += `## ⚔️ Head-to-Head\n\n`
-    c += `From **${h2h.overall.totalMatches} meetings**: ${home} **${h2h.overall.homeWins}W** / **${h2h.overall.draws}D** / ${away} **${h2h.overall.awayWins}W**\n\n`
+    c += `| ${home} Wins | Draws | ${away} Wins | Total |\n|:---:|:---:|:---:|:---:|\n`
+    c += `| **${h2h.overall.homeWins}** | **${h2h.overall.draws}** | **${h2h.overall.awayWins}** | ${h2h.overall.totalMatches} |\n\n`
     if (h2h.recentMatches?.length > 0) {
-      c += `**Recent**\n`
+      c += `**Recent Meetings**\n\n`
       h2h.recentMatches.slice(0, 3).forEach((m: any) => {
         const icon = m.result === 'W' ? '🔵' : m.result === 'L' ? '🔴' : '⚪'
-        c += `- ${icon} ${m.homeScore}-${m.awayScore}\n`
+        c += `${icon} **${m.homeScore} - ${m.awayScore}**\n\n`
       })
-      c += '\n'
     }
-    if (h2h.insights?.length > 0) c += `**Insight**: ${h2h.insights[0]}\n\n`
+    if (h2h.insights?.length > 0) c += `> 💡 ${h2h.insights[0]}\n\n`
   }
   
   // Tactical (AI or template)
@@ -735,16 +752,21 @@ function generateContentEn(
   
   // Prediction
   c += `## 📈 TrendSoccer Prediction\n\n`
-  c += '```\n'
-  c += generateProbBar(home.substring(0, 15).padEnd(15, ' '), homePct) + '\n'
-  c += generateProbBar('Draw'.padEnd(15, ' '), drawPct) + '\n'
-  c += generateProbBar(away.substring(0, 15).padEnd(15, ' '), awayPct) + '\n'
-  c += '```\n\n'
-  c += `- **Prediction**: ${getPickEn(prediction.recommendation.pick)}\n`
-  c += `- **Grade**: ${prediction.recommendation.grade}\n`
-  c += `- **Odds**: ${match.home_odds} / ${match.draw_odds} / ${match.away_odds}\n`
-  if (prediction.homePower && prediction.awayPower) c += `- **Power Index**: ${home} ${prediction.homePower} vs ${away} ${prediction.awayPower}\n`
-  if (prediction.patternStats) c += `- **Pattern**: ${prediction.pattern} (${prediction.patternStats.totalMatches} matches)\n`
+  c += `| | Probability |\n|:---|:---|\n`
+  c += `| ${home} | ${generateProbBar('', homePct)} |\n`
+  c += `| Draw | ${generateProbBar('', drawPct)} |\n`
+  c += `| ${away} | ${generateProbBar('', awayPct)} |\n\n`
+  
+  c += `| Detail | Analysis |\n|:---|:---|\n`
+  c += `| 🎯 Prediction | **${getPickEn(prediction.recommendation.pick)}** |\n`
+  c += `| ⭐ Grade | **${prediction.recommendation.grade}** |\n`
+  c += `| 💰 Odds | ${match.home_odds} / ${match.draw_odds} / ${match.away_odds} |\n`
+  if (prediction.homePower && prediction.awayPower) {
+    c += `| ⚡ Power Index | ${home} **${prediction.homePower}** vs ${away} **${prediction.awayPower}** |\n`
+  }
+  if (prediction.patternStats) {
+    c += `| 📊 Pattern | ${prediction.pattern} (${prediction.patternStats.totalMatches} matches) |\n`
+  }
   c += '\n'
   
   return c
