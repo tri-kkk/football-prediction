@@ -7,7 +7,7 @@
 //
 // Wisetoto 내부 API를 직접 호출하여 HTML 파싱 → DB 저장
 
-export const maxDuration = 150
+export const maxDuration = 300
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -419,72 +419,72 @@ async function fetchWisetotoGameList(round: string, masterSeq: string): Promise<
 }
 
 // ============================================================
-// DB 저장 (upsert)
+// DB 저장 (배치 upsert - 50건씩 묶어서 저장)
 // ============================================================
 async function saveMatchesToDB(matches: ProtoMatch[]) {
   const results = { inserted: 0, updated: 0, errors: 0 }
   
-  for (const match of matches) {
-    try {
-      // handicap_value 파싱: "H -4.5" → -4.5, "H +7.5" → 7.5, "U 160.5" → null
-      let handicapNumeric: number | null = null
-      let totalLine: number | null = null
-      let handicapLine: string | null = null
-      
-      if (match.handicap_value) {
-        if (match.game_type === '핸디캡') {
-          // "H -4.5" or "H +7.5"
-          handicapLine = match.handicap_value
-          const numMatch = match.handicap_value.match(/[+-]?\d+\.?\d*/)
-          if (numMatch) handicapNumeric = parseFloat(numMatch[0])
-        } else if (match.game_type === '언더오버' || match.game_type === 'SUM') {
-          // "U 160.5"
-          const numMatch = match.handicap_value.match(/\d+\.?\d*/)
-          if (numMatch && parseFloat(numMatch[0]) > 0) totalLine = parseFloat(numMatch[0])
-        }
+  // 매치 데이터를 DB 형식으로 변환
+  const rows = matches.map(match => {
+    let handicapNumeric: number | null = null
+    let totalLine: number | null = null
+    let handicapLine: string | null = null
+    
+    if (match.handicap_value) {
+      if (match.game_type === '핸디캡') {
+        handicapLine = match.handicap_value
+        const numMatch = match.handicap_value.match(/[+-]?\d+\.?\d*/)
+        if (numMatch) handicapNumeric = parseFloat(numMatch[0])
+      } else if (match.game_type === '언더오버' || match.game_type === 'SUM') {
+        const numMatch = match.handicap_value.match(/\d+\.?\d*/)
+        if (numMatch && parseFloat(numMatch[0]) > 0) totalLine = parseFloat(numMatch[0])
       }
-      
-      // upsert: round + match_seq 기준
+    }
+    
+    return {
+      round: match.round,
+      match_seq: match.match_number,
+      game_date: match.date_time,
+      league_name: match.league,
+      match_type: match.game_type,
+      handicap_line: handicapLine,
+      handicap_value: handicapNumeric,
+      total_line: totalLine,
+      home_team: match.home_team,
+      away_team: match.away_team,
+      home_odds: match.odds_home,
+      draw_odds: match.odds_draw,
+      away_odds: match.odds_away,
+      result_code: match.result_code,
+      home_score: match.home_score,
+      away_score: match.away_score,
+      status: match.status,
+      korean_time: match.date_time.includes('T') 
+        ? match.date_time.split('T')[1]?.substring(0, 5) 
+        : null,
+      updated_at: new Date().toISOString(),
+    }
+  })
+  
+  // 🔥 50건씩 배치 upsert (500경기 → 10번 DB 호출)
+  const BATCH_SIZE = 50
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE)
+    
+    try {
       const { error } = await supabase
         .from('proto_matches')
-        .upsert(
-          {
-            round: match.round,
-            match_seq: match.match_number,
-            game_date: match.date_time,
-            league_name: match.league,
-            match_type: match.game_type,
-            handicap_line: handicapLine,
-            handicap_value: handicapNumeric,
-            total_line: totalLine,
-            home_team: match.home_team,
-            away_team: match.away_team,
-            home_odds: match.odds_home,
-            draw_odds: match.odds_draw,
-            away_odds: match.odds_away,
-            result_code: match.result_code,
-            home_score: match.home_score,
-            away_score: match.away_score,
-            status: match.status,
-            korean_time: match.date_time.includes('T') 
-              ? match.date_time.split('T')[1]?.substring(0, 5) 
-              : null,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: 'round,match_seq',
-          }
-        )
+        .upsert(batch, { onConflict: 'round,match_seq' })
       
       if (error) {
-        console.error(`❌ DB error for match ${match.match_number}:`, error.message)
-        results.errors++
+        console.error(`❌ 배치 upsert 실패 (${i}~${i + batch.length}):`, error.message)
+        results.errors += batch.length
       } else {
-        results.inserted++
+        results.inserted += batch.length
       }
-    } catch (err) {
-      console.error(`❌ Error saving match ${match.match_number}:`, err)
-      results.errors++
+    } catch (err: any) {
+      console.error(`❌ 배치 저장 오류 (${i}~${i + batch.length}):`, err.message)
+      results.errors += batch.length
     }
   }
   
