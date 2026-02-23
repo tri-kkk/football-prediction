@@ -7,7 +7,7 @@
 //
 // Wisetoto 내부 API를 직접 호출하여 HTML 파싱 → DB 저장
 
-export const maxDuration = 90
+export const maxDuration = 150
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
