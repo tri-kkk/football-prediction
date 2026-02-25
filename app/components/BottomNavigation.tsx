@@ -76,13 +76,6 @@ export default function MobileBottomNav() {
       labelEn: 'Results',
       hidden: false
     },
-    {
-      href: '/baseball/standings',
-      icon: '/dashboard.svg',
-      labelKo: '순위표',
-      labelEn: 'Standings',
-      hidden: false
-    },
   ]
 
   // 스포츠에 맞는 메뉴 선택

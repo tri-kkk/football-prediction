@@ -79,12 +79,7 @@ const baseballMenuItems: MenuItem[] = [
     href: '/baseball/results', 
     icon: 'play'
   },
-  { 
-    labelKo: '순위표',
-    labelEn: 'Standings',
-    href: '/baseball/standings', 
-    icon: '/dashboard.svg'
-  },
+  
 ]
 
 export default function Navigation() {

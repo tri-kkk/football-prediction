@@ -31,8 +31,9 @@ const LEAGUE_INFO: Record<string, {
   'SA':  { nameKo: '세리에A', nameEn: 'Serie A', tagKo: '세리에A', tagEn: 'SerieA', apiLeagueId: 135, leagueLogo: 'https://media.api-sports.io/football/leagues/135.png' },
   'FL1': { nameKo: '리그1', nameEn: 'Ligue 1', tagKo: '리그1', tagEn: 'Ligue1', apiLeagueId: 61, leagueLogo: 'https://media.api-sports.io/football/leagues/61.png' },
   'DED': { nameKo: '에레디비시', nameEn: 'Eredivisie', tagKo: '에레디비시', tagEn: 'Eredivisie', apiLeagueId: 88, leagueLogo: 'https://media.api-sports.io/football/leagues/88.png' },
-  'CL':  { nameKo: '챔피언스리그', nameEn: 'Champions League', tagKo: '챔피언스리그', tagEn: 'ChampionsLeague', apiLeagueId: 2, leagueLogo: 'https://media.api-sports.io/football/leagues/2.png' },
-  'EL':  { nameKo: '유로파리그', nameEn: 'Europa League', tagKo: '유로파리그', tagEn: 'EuropaLeague', apiLeagueId: 3, leagueLogo: 'https://media.api-sports.io/football/leagues/3.png' },
+  // CL, EL 제외 - 정규리그만
+  // 'CL':  { nameKo: '챔피언스리그', nameEn: 'Champions League', ... },
+  // 'EL':  { nameKo: '유로파리그', nameEn: 'Europa League', ... },
   'KL1': { nameKo: 'K리그1', nameEn: 'K League 1', tagKo: 'K리그', tagEn: 'KLeague', apiLeagueId: 292, leagueLogo: 'https://media.api-sports.io/football/leagues/292.png' },
   'KL2': { nameKo: 'K리그2', nameEn: 'K League 2', tagKo: 'K리그', tagEn: 'KLeague', apiLeagueId: 293, leagueLogo: 'https://media.api-sports.io/football/leagues/293.png' },
   'J1':  { nameKo: 'J리그', nameEn: 'J1 League', tagKo: 'J리그', tagEn: 'JLeague', apiLeagueId: 98, leagueLogo: 'https://media.api-sports.io/football/leagues/98.png' },
@@ -162,8 +163,8 @@ async function generateAISections(
 ): Promise<AISections | null> {
   if (!ANTHROPIC_API_KEY) return null
   try {
-    const d = new Date(match.commence_time)
-    const dateStr = `${d.getMonth()+1}월 ${d.getDate()}일 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+    const dKST = new Date(new Date(match.commence_time).getTime() + 9 * 60 * 60 * 1000)
+    const dateStr = `${dKST.getUTCMonth()+1}월 ${dKST.getUTCDate()}일 ${String(dKST.getUTCHours()).padStart(2,'0')}:${String(dKST.getUTCMinutes()).padStart(2,'0')}`
     const pickKo = pred.recommendation.pick === 'HOME' ? '홈승' : pred.recommendation.pick === 'AWAY' ? '원정승' : '무승부'
     const maxP = Math.max(Math.round(pred.finalProb.home*100), Math.round(pred.finalProb.draw*100), Math.round(pred.finalProb.away*100))
     const pDiff = Math.abs((pred.homePower||0) - (pred.awayPower||0))
@@ -372,11 +373,13 @@ async function fetchH2H(match: any): Promise<any> {
 // 유틸 함수들
 // ============================================
 
-function generateSlug(homeTeam: string, awayTeam: string, leagueCode: string): string {
+function generateSlug(homeTeam: string, awayTeam: string, leagueCode: string, commenceTime?: string): string {
   const home = homeTeam.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
   const away = awayTeam.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
   const league = (LEAGUE_INFO[leagueCode]?.nameEn || leagueCode).toLowerCase().replace(/[^a-z0-9]+/g, '-')
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  // 경기 시간 기준 날짜 (중복 방지)
+  const dateSource = commenceTime ? new Date(commenceTime) : new Date()
+  const date = dateSource.toISOString().slice(0, 10).replace(/-/g, '')
   return `${home}-vs-${away}-${league}-preview-${date}`
 }
 
@@ -428,9 +431,10 @@ function generateContentKo(
 ): string {
   const homeKo = getTeamNameKo(match.home_team)
   const awayKo = getTeamNameKo(match.away_team)
-  const matchDate = new Date(match.commence_time)
-  const dateStr = `${matchDate.getMonth() + 1}월 ${matchDate.getDate()}일`
-  const timeStr = `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}`
+  // KST = UTC + 9
+  const matchDateKST = new Date(new Date(match.commence_time).getTime() + 9 * 60 * 60 * 1000)
+  const dateStr = `${matchDateKST.getUTCMonth() + 1}월 ${matchDateKST.getUTCDate()}일`
+  const timeStr = `${matchDateKST.getUTCHours().toString().padStart(2, '0')}:${matchDateKST.getUTCMinutes().toString().padStart(2, '0')}`
   
   const homePct = Math.round(prediction.finalProb.home * 100)
   const drawPct = Math.round(prediction.finalProb.draw * 100)
@@ -632,8 +636,9 @@ function generateContentEn(
 ): string {
   const home = match.home_team
   const away = match.away_team
-  const matchDate = new Date(match.commence_time)
-  const dateStr = matchDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+  const matchDateUTC = new Date(match.commence_time)
+  const dateStr = matchDateUTC.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })
+  const timeStrUTC = `${matchDateUTC.getUTCHours().toString().padStart(2, '0')}:${matchDateUTC.getUTCMinutes().toString().padStart(2, '0')} UTC`
   
   const homePct = Math.round(prediction.finalProb.home * 100)
   const drawPct = Math.round(prediction.finalProb.draw * 100)
@@ -645,7 +650,7 @@ function generateContentEn(
   if (ai?.introEn) {
     c += ai.introEn + '\n\n'
   } else {
-    c += `${home} host ${away} in ${leagueInfo.nameEn} action on ${dateStr}. `
+    c += `${home} host ${away} in ${leagueInfo.nameEn} action on ${dateStr} at ${timeStrUTC}. `
     c += `TrendSoccer's AI model predicts **${getPickEn(prediction.recommendation.pick)}** as the most likely outcome `
     c += `with a **${Math.max(homePct, drawPct, awayPct)}%** probability. `
     if (prediction.homePower && prediction.awayPower) {
@@ -855,7 +860,7 @@ export async function GET(request: NextRequest) {
     
     for (const match of supportedMatches) {
       const leagueInfo = LEAGUE_INFO[match.league_code]
-      const slug = generateSlug(match.home_team, match.away_team, match.league_code)
+      const slug = generateSlug(match.home_team, match.away_team, match.league_code, match.commence_time)
       
       if (existingSlugs.has(slug)) { skipped++; continue }
       
@@ -1007,7 +1012,7 @@ export async function POST(request: NextRequest) {
     
     const homeKo = getTeamNameKo(match.home_team)
     const awayKo = getTeamNameKo(match.away_team)
-    const slug = generateSlug(match.home_team, match.away_team, match.league_code)
+    const slug = generateSlug(match.home_team, match.away_team, match.league_code, match.commence_time)
     
     let ai: AISections | null = null
     try { ai = await generateAISections(match, prediction, homeStats, awayStats, h2h, leagueInfo, homeKo, awayKo) } catch (e) {}

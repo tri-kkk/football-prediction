@@ -6,11 +6,10 @@ export const runtime = 'edge'
 interface LeagueTheme {
   primary: string
   accent: string
-  gradientLeft: string
-  gradientRight: string
-  topBarBg: string
-  topBarText: string
-  bgBase: string
+  bg: string
+  glow1: string
+  glow2: string
+  textColor: string
   labelBg: string
   labelBorder: string
 }
@@ -18,109 +17,103 @@ interface LeagueTheme {
 const LEAGUE_THEMES: Record<string, LeagueTheme> = {
   'Premier League': {
     primary: '#3d195b', accent: '#e90052',
-    gradientLeft: 'rgba(61,25,91,0.85)', gradientRight: 'rgba(233,0,82,0.6)',
-    topBarBg: 'linear-gradient(90deg, #3d195b, #6c1d8e)',
-    topBarText: '#00ff85', bgBase: '#1a0830',
-    labelBg: 'rgba(0,255,133,0.12)', labelBorder: 'rgba(0,255,133,0.35)',
+    bg: 'linear-gradient(135deg, #380e5c 0%, #2a0845 30%, #1a0530 50%, #4a0028 70%, #6b0035 100%)',
+    glow1: 'rgba(61,25,91,0.7)', glow2: 'rgba(233,0,82,0.5)',
+    textColor: '#00ff85',
+    labelBg: 'rgba(0,255,133,0.12)', labelBorder: 'rgba(0,255,133,0.3)',
   },
   'La Liga': {
     primary: '#1a3c6e', accent: '#ee8707',
-    gradientLeft: 'rgba(26,60,110,0.85)', gradientRight: 'rgba(238,135,7,0.65)',
-    topBarBg: 'linear-gradient(90deg, #1a3c6e, #2a5298)',
-    topBarText: '#ee8707', bgBase: '#0e1f3a',
-    labelBg: 'rgba(238,135,7,0.12)', labelBorder: 'rgba(238,135,7,0.35)',
+    bg: 'linear-gradient(135deg, #0d2240 0%, #132d52 30%, #1a3a68 50%, #2a4a7a 70%, #1a3058 100%)',
+    glow1: 'rgba(26,60,110,0.7)', glow2: 'rgba(238,135,7,0.4)',
+    textColor: '#ee8707',
+    labelBg: 'rgba(238,135,7,0.12)', labelBorder: 'rgba(238,135,7,0.3)',
   },
   'Bundesliga': {
     primary: '#d20515', accent: '#ffffff',
-    gradientLeft: 'rgba(210,5,21,0.7)', gradientRight: 'rgba(210,5,21,0.35)',
-    topBarBg: 'linear-gradient(90deg, #d20515, #8b0000)',
-    topBarText: '#ffffff', bgBase: '#1a0508',
-    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
+    bg: 'linear-gradient(135deg, #3a0508 0%, #5a0a10 30%, #7a1018 50%, #5a0a10 70%, #2a0305 100%)',
+    glow1: 'rgba(210,5,21,0.6)', glow2: 'rgba(210,5,21,0.3)',
+    textColor: '#ffffff',
+    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.2)',
   },
   'Serie A': {
     primary: '#024494', accent: '#009b3a',
-    gradientLeft: 'rgba(2,68,148,0.8)', gradientRight: 'rgba(0,155,58,0.5)',
-    topBarBg: 'linear-gradient(90deg, #024494, #0366d6)',
-    topBarText: '#4fc3f7', bgBase: '#081830',
-    labelBg: 'rgba(79,195,247,0.12)', labelBorder: 'rgba(79,195,247,0.3)',
+    bg: 'linear-gradient(135deg, #051530 0%, #082040 30%, #0a2a50 50%, #052838 70%, #041828 100%)',
+    glow1: 'rgba(2,68,148,0.6)', glow2: 'rgba(0,155,58,0.3)',
+    textColor: '#4fc3f7',
+    labelBg: 'rgba(79,195,247,0.12)', labelBorder: 'rgba(79,195,247,0.25)',
   },
   'Ligue 1': {
     primary: '#091c3e', accent: '#c8ff00',
-    gradientLeft: 'rgba(9,28,62,0.9)', gradientRight: 'rgba(200,255,0,0.35)',
-    topBarBg: 'linear-gradient(90deg, #091c3e, #162d5a)',
-    topBarText: '#c8ff00', bgBase: '#0a1428',
-    labelBg: 'rgba(200,255,0,0.1)', labelBorder: 'rgba(200,255,0,0.25)',
+    bg: 'linear-gradient(135deg, #060e1e 0%, #0a1830 30%, #0e2040 50%, #0a1830 70%, #060e1e 100%)',
+    glow1: 'rgba(9,28,62,0.8)', glow2: 'rgba(200,255,0,0.2)',
+    textColor: '#c8ff00',
+    labelBg: 'rgba(200,255,0,0.08)', labelBorder: 'rgba(200,255,0,0.2)',
   },
   'Champions League': {
     primary: '#00003e', accent: '#f4c300',
-    gradientLeft: 'rgba(0,0,80,0.9)', gradientRight: 'rgba(244,195,0,0.5)',
-    topBarBg: 'linear-gradient(90deg, #000050, #1a0a60)',
-    topBarText: '#f4c300', bgBase: '#000028',
-    labelBg: 'rgba(244,195,0,0.12)', labelBorder: 'rgba(244,195,0,0.3)',
+    bg: 'linear-gradient(135deg, #000020 0%, #000838 30%, #001050 50%, #000838 70%, #000020 100%)',
+    glow1: 'rgba(0,0,80,0.7)', glow2: 'rgba(244,195,0,0.25)',
+    textColor: '#f4c300',
+    labelBg: 'rgba(244,195,0,0.1)', labelBorder: 'rgba(244,195,0,0.25)',
   },
   'Europa League': {
     primary: '#f26522', accent: '#000000',
-    gradientLeft: 'rgba(242,101,34,0.75)', gradientRight: 'rgba(255,140,0,0.45)',
-    topBarBg: 'linear-gradient(90deg, #f26522, #d4541a)',
-    topBarText: '#ffffff', bgBase: '#1a0c04',
-    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
+    bg: 'linear-gradient(135deg, #1a0800 0%, #2a1005 30%, #3a180a 50%, #2a1005 70%, #1a0800 100%)',
+    glow1: 'rgba(242,101,34,0.5)', glow2: 'rgba(255,140,0,0.3)',
+    textColor: '#ffffff',
+    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
   },
   'Eredivisie': {
     primary: '#e4002b', accent: '#ff6b35',
-    gradientLeft: 'rgba(228,0,43,0.7)', gradientRight: 'rgba(255,107,53,0.45)',
-    topBarBg: 'linear-gradient(90deg, #e4002b, #ff3355)',
-    topBarText: '#ffffff', bgBase: '#1a0508',
-    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
+    bg: 'linear-gradient(135deg, #2a0508 0%, #3a0a10 30%, #4a1018 50%, #3a0a10 70%, #2a0508 100%)',
+    glow1: 'rgba(228,0,43,0.5)', glow2: 'rgba(255,107,53,0.3)',
+    textColor: '#ffffff',
+    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
   },
   'K League 1': {
     primary: '#003da5', accent: '#c8102e',
-    gradientLeft: 'rgba(0,61,165,0.8)', gradientRight: 'rgba(200,16,46,0.5)',
-    topBarBg: 'linear-gradient(90deg, #003da5, #0055cc)',
-    topBarText: '#ffffff', bgBase: '#081430',
-    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
+    bg: 'linear-gradient(135deg, #041028 0%, #081a3a 30%, #0c2450 50%, #0a1a38 70%, #061028 100%)',
+    glow1: 'rgba(0,61,165,0.5)', glow2: 'rgba(200,16,46,0.3)',
+    textColor: '#ffffff',
+    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
   },
   'K League 2': {
     primary: '#005a32', accent: '#003da5',
-    gradientLeft: 'rgba(0,90,50,0.8)', gradientRight: 'rgba(0,61,165,0.5)',
-    topBarBg: 'linear-gradient(90deg, #005a32, #007a45)',
-    topBarText: '#ffffff', bgBase: '#041a10',
-    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
+    bg: 'linear-gradient(135deg, #041a10 0%, #062a18 30%, #083a22 50%, #062a18 70%, #041a10 100%)',
+    glow1: 'rgba(0,90,50,0.5)', glow2: 'rgba(0,61,165,0.3)',
+    textColor: '#ffffff',
+    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
   },
   'J1 League': {
     primary: '#c41230', accent: '#1a1a6c',
-    gradientLeft: 'rgba(196,18,48,0.75)', gradientRight: 'rgba(26,26,108,0.5)',
-    topBarBg: 'linear-gradient(90deg, #c41230, #e6334d)',
-    topBarText: '#ffffff', bgBase: '#1a0810',
-    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
+    bg: 'linear-gradient(135deg, #1a0810 0%, #2a1018 30%, #3a1822 50%, #2a1018 70%, #1a0810 100%)',
+    glow1: 'rgba(196,18,48,0.5)', glow2: 'rgba(26,26,108,0.3)',
+    textColor: '#ffffff',
+    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
   },
   'J2 League': {
     primary: '#1a1a6c', accent: '#c41230',
-    gradientLeft: 'rgba(26,26,108,0.75)', gradientRight: 'rgba(196,18,48,0.4)',
-    topBarBg: 'linear-gradient(90deg, #1a1a6c, #2d2d8a)',
-    topBarText: '#ffffff', bgBase: '#0c0c28',
-    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.25)',
+    bg: 'linear-gradient(135deg, #0c0c28 0%, #141440 30%, #1c1c58 50%, #141440 70%, #0c0c28 100%)',
+    glow1: 'rgba(26,26,108,0.5)', glow2: 'rgba(196,18,48,0.3)',
+    textColor: '#ffffff',
+    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
   },
   'Major League Soccer': {
     primary: '#0b2137', accent: '#c3032a',
-    gradientLeft: 'rgba(11,33,55,0.85)', gradientRight: 'rgba(195,3,42,0.5)',
-    topBarBg: 'linear-gradient(90deg, #0b2137, #1a3a5c)',
-    topBarText: '#ffffff', bgBase: '#060f1a',
-    labelBg: 'rgba(195,3,42,0.12)', labelBorder: 'rgba(195,3,42,0.35)',
+    bg: 'linear-gradient(135deg, #060f1a 0%, #0c1a2e 30%, #122540 50%, #0c1a2e 70%, #060f1a 100%)',
+    glow1: 'rgba(11,33,55,0.6)', glow2: 'rgba(195,3,42,0.3)',
+    textColor: '#ffffff',
+    labelBg: 'rgba(195,3,42,0.12)', labelBorder: 'rgba(195,3,42,0.25)',
   },
 }
 
 const DEFAULT_THEME: LeagueTheme = {
   primary: '#2563eb', accent: '#3b82f6',
-  gradientLeft: 'rgba(37,99,235,0.3)', gradientRight: 'rgba(239,68,68,0.2)',
-  topBarBg: 'linear-gradient(90deg, #0f172a, #0a0a1a)',
-  topBarText: '#60a5fa', bgBase: '#0a0e1a',
+  bg: 'linear-gradient(135deg, #0a0e1a 0%, #101828 50%, #0a0e1a 100%)',
+  glow1: 'rgba(37,99,235,0.3)', glow2: 'rgba(239,68,68,0.2)',
+  textColor: '#60a5fa',
   labelBg: 'rgba(96,165,250,0.08)', labelBorder: 'rgba(96,165,250,0.2)',
-}
-
-const GRADE_STYLES: Record<string, { bg: string; shadow: string; label: string }> = {
-  'PICK': { bg: 'linear-gradient(135deg, #dc2626, #ef4444)', shadow: '0 4px 24px rgba(220,38,38,0.5)', label: '🔥 PICK' },
-  'GOOD': { bg: 'linear-gradient(135deg, #059669, #10b981)', shadow: '0 4px 24px rgba(16,185,129,0.4)', label: '👍 GOOD' },
-  'PASS': { bg: 'linear-gradient(135deg, #4b5563, #6b7280)', shadow: '0 4px 24px rgba(75,85,99,0.3)', label: '⛔ PASS' },
 }
 
 export async function GET(request: NextRequest) {
@@ -131,18 +124,8 @@ export async function GET(request: NextRequest) {
   const awayLogo = searchParams.get('awaylogo') || ''
   const league = searchParams.get('league') || ''
   const leagueLogo = searchParams.get('leaguelogo') || ''
-  const pick = searchParams.get('pick') || 'HOME'
-  const grade = searchParams.get('grade') || 'GOOD'
-  const homeProb = parseInt(searchParams.get('homeprob') || '50')
-  const drawProb = parseInt(searchParams.get('drawprob') || '25')
-  const awayProb = parseInt(searchParams.get('awayprob') || '25')
 
   const theme = LEAGUE_THEMES[league] || DEFAULT_THEME
-  const gs = GRADE_STYLES[grade] || GRADE_STYLES['GOOD']
-  const isHomePick = pick === 'HOME'
-  const isAwayPick = pick === 'AWAY'
-
-  // 로고 URL (로컬/프로덕션 자동 대응)
   const siteLogoUrl = `${origin}/logo.svg`
 
   return new ImageResponse(
@@ -150,148 +133,142 @@ export async function GET(request: NextRequest) {
       <div style={{
         width: '1200px', height: '630px',
         display: 'flex', flexDirection: 'column',
-        background: theme.bgBase,
+        background: theme.bg,
         fontFamily: 'sans-serif',
         position: 'relative', overflow: 'hidden',
       }}>
 
-        {/* ===== 배경 ===== */}
-        <div style={{ position: 'absolute', top: '0', left: '0', bottom: '0', width: '55%', background: `linear-gradient(160deg, ${theme.gradientLeft}, transparent 75%)`, display: 'flex' }} />
-        <div style={{ position: 'absolute', top: '0', right: '0', bottom: '0', width: '55%', background: `linear-gradient(200deg, ${theme.gradientRight}, transparent 75%)`, display: 'flex' }} />
-        {/* 중앙 빛 효과 */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '600px', height: '400px', background: `radial-gradient(ellipse, ${theme.primary}20, transparent 70%)`, display: 'flex' }} />
-        <div style={{ position: 'absolute', top: '0', left: '50%', transform: 'translateX(-50%)', width: '1px', height: '100%', background: `linear-gradient(to bottom, ${theme.primary}55, transparent 30%, transparent 70%, ${theme.primary}33)`, display: 'flex' }} />
-        <div style={{ position: 'absolute', top: '68px', left: '0', right: '0', height: '1px', background: `linear-gradient(90deg, transparent, ${theme.primary}44, transparent)`, display: 'flex' }} />
-        <div style={{ position: 'absolute', bottom: '76px', left: '0', right: '0', height: '1px', background: `linear-gradient(90deg, transparent, ${theme.primary}44, transparent)`, display: 'flex' }} />
-        {/* 코너 장식 */}
-        <div style={{ position: 'absolute', top: '12px', left: '12px', width: '36px', height: '36px', borderTop: `2px solid ${theme.primary}44`, borderLeft: `2px solid ${theme.primary}44`, display: 'flex' }} />
-        <div style={{ position: 'absolute', top: '12px', right: '12px', width: '36px', height: '36px', borderTop: `2px solid ${theme.primary}44`, borderRight: `2px solid ${theme.primary}44`, display: 'flex' }} />
-        <div style={{ position: 'absolute', bottom: '12px', left: '12px', width: '36px', height: '36px', borderBottom: `2px solid ${theme.primary}44`, borderLeft: `2px solid ${theme.primary}44`, display: 'flex' }} />
-        <div style={{ position: 'absolute', bottom: '12px', right: '12px', width: '36px', height: '36px', borderBottom: `2px solid ${theme.primary}44`, borderRight: `2px solid ${theme.primary}44`, display: 'flex' }} />
-
-        {/* ===== 워터마크 로고 (우측 하단) ===== */}
-        <img
-          src={siteLogoUrl}
-          width={160}
-          height={40}
-          style={{
-            position: 'absolute',
-            bottom: '90px',
-            right: '40px',
-            opacity: 0.15,
-          }}
-        />
-
-        {/* ===== 상단 바 ===== */}
+        {/* ===== 배경 글로우 ===== */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '18px 48px',
-          background: theme.topBarBg,
-          borderBottom: `1px solid ${theme.primary}33`,
+          position: 'absolute', top: '0', left: '0', width: '55%', height: '100%',
+          background: `radial-gradient(ellipse at 25% 50%, ${theme.glow1}, transparent 70%)`,
+          display: 'flex',
+        }} />
+        <div style={{
+          position: 'absolute', top: '0', right: '0', width: '55%', height: '100%',
+          background: `radial-gradient(ellipse at 75% 50%, ${theme.glow2}, transparent 70%)`,
+          display: 'flex',
+        }} />
+
+        {/* ===== 상단 MATCH PREVIEW ===== */}
+        <div style={{
+          position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)',
+          display: 'flex',
+          background: theme.labelBg, border: `1px solid ${theme.labelBorder}`,
+          borderRadius: '6px', padding: '5px 18px',
+          zIndex: 10,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {leagueLogo && (
-              <div style={{
-                width: '38px', height: '38px', borderRadius: '8px',
-                background: 'rgba(255,255,255,0.9)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '4px',
-              }}>
-                <img src={leagueLogo} width={28} height={28} style={{ borderRadius: '4px' }} />
-              </div>
-            )}
-            <span style={{
-              color: theme.topBarText, fontSize: '22px', fontWeight: 800,
-              letterSpacing: '2px', textTransform: 'uppercase' as const,
-            }}>
-              {league}
-            </span>
-          </div>
-          <div style={{
-            display: 'flex',
-            background: theme.labelBg, border: `1px solid ${theme.labelBorder}`,
-            borderRadius: '6px', padding: '5px 18px',
+          <span style={{
+            color: theme.textColor, fontSize: '13px', fontWeight: 700,
+            letterSpacing: '3px',
           }}>
-            <span style={{
-              color: theme.topBarText, fontSize: '14px', fontWeight: 700,
-              letterSpacing: '3px', opacity: 0.8,
-            }}>
-              MATCH PREVIEW
-            </span>
-          </div>
+            MATCH PREVIEW
+          </span>
         </div>
 
-        {/* ===== 중앙: 로고 + 확률 ===== */}
+        {/* ===== 메인: 홈로고 | 리그 | 원정로고 ===== */}
         <div style={{
           display: 'flex', flex: 1,
           alignItems: 'center', justifyContent: 'center',
-          padding: '0 80px',
+          position: 'relative',
         }}>
-          {/* 홈팀 */}
+
+          {/* 홈팀 로고 — 거대 */}
           <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', width: '340px', gap: '20px',
+            position: 'absolute',
+            left: '-30px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '520px', height: '480px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <div style={{
-              width: '180px', height: '180px', borderRadius: '28px',
-              background: isHomePick ? `linear-gradient(135deg, ${theme.primary}50, ${theme.primary}20)` : 'rgba(255,255,255,0.04)',
-              border: isHomePick ? `2px solid ${theme.primary}88` : '1px solid rgba(255,255,255,0.08)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: isHomePick ? `0 0 80px ${theme.primary}35, inset 0 0 30px ${theme.primary}15` : 'none',
-            }}>
-              {homeLogo ? <img src={homeLogo} width={130} height={130} /> : <span style={{ fontSize: '72px' }}>⚽</span>}
-            </div>
+            {homeLogo ? (
+              <img
+                src={homeLogo}
+                width={420}
+                height={420}
+                style={{
+                  objectFit: 'contain' as const,
+                  filter: 'drop-shadow(0 0 50px rgba(0,0,0,0.5))',
+                  opacity: 0.92,
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: '200px' }}>⚽</span>
+            )}
           </div>
 
-          {/* VS */}
+          {/* 가운데: 리그 엠블럼 */}
           <div style={{
             display: 'flex', flexDirection: 'column',
-            alignItems: 'center', width: '120px', gap: '10px',
+            alignItems: 'center', justifyContent: 'center',
+            gap: '14px',
+            zIndex: 10,
           }}>
-            <div style={{
-              width: '76px', height: '76px', borderRadius: '50%',
-              background: `${theme.primary}25`, border: `1px solid ${theme.primary}50`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            <span style={{
+              color: theme.textColor, fontSize: '16px', fontWeight: 800,
+              letterSpacing: '3px', textTransform: 'uppercase' as const,
+              textShadow: '0 2px 10px rgba(0,0,0,0.7)',
+              textAlign: 'center',
             }}>
-              <span style={{ color: theme.topBarText, fontSize: '26px', fontWeight: 900, letterSpacing: '2px', opacity: 0.7 }}>
-                VS
-              </span>
-            </div>
+              {league}
+            </span>
+
+            {leagueLogo && (
+              <div style={{
+                width: '120px', height: '120px', borderRadius: '50%',
+                background: 'rgba(255,255,255,0.95)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 4px 40px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.15), 0 0 60px ${theme.primary}30`,
+              }}>
+                <img src={leagueLogo} width={78} height={78} style={{ objectFit: 'contain' as const }} />
+              </div>
+            )}
           </div>
 
-          {/* 원정팀 */}
+          {/* 원정팀 로고 — 거대 */}
           <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', width: '340px', gap: '20px',
+            position: 'absolute',
+            right: '-30px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '520px', height: '480px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <div style={{
-              width: '180px', height: '180px', borderRadius: '28px',
-              background: isAwayPick ? `linear-gradient(135deg, ${theme.accent}50, ${theme.accent}20)` : 'rgba(255,255,255,0.04)',
-              border: isAwayPick ? `2px solid ${theme.accent}88` : '1px solid rgba(255,255,255,0.08)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: isAwayPick ? `0 0 80px ${theme.accent}35, inset 0 0 30px ${theme.accent}15` : 'none',
-            }}>
-              {awayLogo ? <img src={awayLogo} width={130} height={130} /> : <span style={{ fontSize: '72px' }}>⚽</span>}
-            </div>
+            {awayLogo ? (
+              <img
+                src={awayLogo}
+                width={420}
+                height={420}
+                style={{
+                  objectFit: 'contain' as const,
+                  filter: 'drop-shadow(0 0 50px rgba(0,0,0,0.5))',
+                  opacity: 0.92,
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: '200px' }}>⚽</span>
+            )}
           </div>
         </div>
 
-        {/* ===== 하단: 로고만 ===== */}
+        {/* ===== 하단: TrendSoccer 로고 ===== */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          padding: '12px 48px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 0 16px 0',
+          position: 'relative', zIndex: 10,
         }}>
           <img
             src={siteLogoUrl}
             width={130}
             height={32}
-            style={{ opacity: 0.5 }}
+            style={{ opacity: 0.35 }}
           />
         </div>
       </div>
     ),
-    { 
-      width: 1200, 
+    {
+      width: 1200,
       height: 630,
       headers: {
         'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
