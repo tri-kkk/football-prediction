@@ -27,6 +27,7 @@ async function getCountryFromIP(ip: string): Promise<{ country: string; countryC
     })
     const data = await res.json()
     
+    
     if (data.country) {
       return { country: data.country, countryCode: data.countryCode }
     }

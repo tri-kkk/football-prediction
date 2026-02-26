@@ -30,6 +30,7 @@ export default function AuthButton() {
     await signOut({ callbackUrl: '/' })
   }
 
+
   // 로딩 중
   if (status === 'loading') {
     return (

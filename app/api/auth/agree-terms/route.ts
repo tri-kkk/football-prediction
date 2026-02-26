@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+
     const { email, termsAgreed, privacyAgreed, marketingAgreed } = body
 
     console.log('📥 요청 데이터:', { email, termsAgreed, privacyAgreed, marketingAgreed })

@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
+
     // DB에서 terms_agreed 상태 확인
     const { data, error } = await supabase
       .from('users')

@@ -25,6 +25,7 @@ export default function TermsPage() {
   const daysLeft = Math.ceil((PROMO_END.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   const isPromoPeriod = daysLeft > 0
 
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       console.log('🔐 로그인 필요')

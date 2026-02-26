@@ -22,6 +22,7 @@ export default function SignupCompletePage() {
       return
     }
 
+
     if (status !== 'authenticated') return
 
     // ✅ 세션이 제대로 업데이트되었는지 확인
