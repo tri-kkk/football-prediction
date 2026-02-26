@@ -30,7 +30,6 @@ export default function AuthButton() {
     await signOut({ callbackUrl: '/' })
   }
 
-
   // 로딩 중
   if (status === 'loading') {
     return (
@@ -193,7 +192,12 @@ export default function AuthButton() {
   )
 }
 
-// 구독 관리 모달
+/**
+ * ✅ 수정된 구독 관리 모달
+ * - API에서 구독 정보 조회 ✅
+ * - 구독기간 정확히 표시 ✅
+ * - 에러 처리 개선 ✅
+ */
 function SubscriptionModal({ 
   onClose, 
   userEmail,
@@ -212,54 +216,126 @@ function SubscriptionModal({
     status: string
     startedAt: string | null
     expiresAt: string | null
+    tier?: string
+    daysRemaining?: number | null
   } | null>(null)
   const [loadingData, setLoadingData] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // 구독 정보 로드
+  // ✅ 구독 정보 로드 (개선됨)
   useEffect(() => {
     const fetchSubscription = async () => {
       try {
-        const response = await fetch(`/api/subscription?email=${encodeURIComponent(userEmail)}`)
+        setLoadingData(true)
+        setError(null)
+        
+        console.log('🔍 구독 정보 조회:', userEmail)
+        
+        // ✅ API 호출
+        const response = await fetch(
+          `/api/subscription?email=${encodeURIComponent(userEmail)}`
+        )
+        
+        const data = await response.json()
+        
         if (response.ok) {
-          const data = await response.json()
+          console.log('✅ 구독 정보 조회 성공:', data)
           setSubscription(data)
         } else {
-          // API가 없으면 세션 정보로 대체
-          setSubscription({
-            plan: 'Premium',
-            status: 'active',
-            startedAt: null,
-            expiresAt: premiumExpiresAt || null
-          })
+          console.error('❌ API 응답 실패:', data)
+          throw new Error(data.error || 'Failed to fetch subscription')
         }
-      } catch {
+        
+      } catch (err) {
+        console.error('⚠️ 구독 조회 에러:', err)
+        
+        // ❌ Fallback: 세션 정보 사용
+        const daysRemaining = premiumExpiresAt 
+          ? calculateDaysRemaining(premiumExpiresAt) 
+          : null
+          
         setSubscription({
           plan: 'Premium',
           status: 'active',
           startedAt: null,
-          expiresAt: premiumExpiresAt || null
+          expiresAt: premiumExpiresAt || null,
+          tier: 'premium',
+          daysRemaining
         })
+        
+        setError(language === 'ko' 
+          ? '구독 정보를 불러올 수 없습니다' 
+          : 'Failed to load subscription info')
       } finally {
         setLoadingData(false)
       }
     }
+    
     fetchSubscription()
-  }, [userEmail, premiumExpiresAt])
+  }, [userEmail, premiumExpiresAt, language])
 
+  // ✅ 날짜 포맷팅
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return language === 'ko' ? '정보 없음' : 'N/A'
-    return new Date(dateString).toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-US')
+    
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return language === 'ko' ? '정보 없음' : 'N/A'
+      
+      const options: Intl.DateTimeFormatOptions = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'Asia/Seoul'
+      }
+      return date.toLocaleDateString(
+        language === 'ko' ? 'ko-KR' : 'en-US',
+        options
+      )
+    } catch {
+      return language === 'ko' ? '정보 없음' : 'N/A'
+    }
   }
 
-  const daysRemaining = subscription?.expiresAt
-    ? Math.ceil((new Date(subscription.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : null
-
+  // ✅ 플랜 표시
   const getPlanDisplay = (): string => {
-    return language === 'ko' ? '프리미엄' : 'Premium'
+    if (!subscription) return '-'
+    
+    const planType = subscription.plan.toLowerCase().includes('yearly') 
+      ? 'yearly' 
+      : 'monthly'
+    
+    if (language === 'ko') {
+      return planType === 'yearly' ? '연간 이용권' : '월간 이용권'
+    } else {
+      return planType === 'yearly' ? 'Yearly Plan' : 'Monthly Plan'
+    }
   }
 
-  const { startedAt, expiresAt } = subscription || {}
+  // ✅ 남은 일수 계산
+  const calculateDaysRemaining = (expiresAt: string | null): number | null => {
+    if (!expiresAt) return null
+    
+    try {
+      const expireDate = new Date(expiresAt)
+      const today = new Date()
+      
+      today.setHours(0, 0, 0, 0)
+      expireDate.setHours(0, 0, 0, 0)
+      
+      const diffTime = expireDate.getTime() - today.getTime()
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      
+      return diffDays
+    } catch {
+      return null
+    }
+  }
+
+  const daysRemaining = subscription?.daysRemaining 
+    ?? calculateDaysRemaining(subscription?.expiresAt || null)
+  const startedAt = subscription?.startedAt || null
+  const expiresAt = subscription?.expiresAt || null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -270,10 +346,10 @@ function SubscriptionModal({
       />
       
       {/* 모달 */}
-      <div className="relative bg-[#1a1a1a] border border-gray-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+      <div className="relative bg-[#1a1a1a] border border-gray-700 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[80vh] overflow-y-auto">
         {loadingData ? (
-          <div className="text-center py-8">
-            <div className="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          // 로딩 상태
+          <div className="flex items-center justify-center py-8">
             <div className="text-gray-400 text-sm">{language === 'ko' ? '로딩 중...' : 'Loading...'}</div>
           </div>
         ) : (
@@ -291,6 +367,13 @@ function SubscriptionModal({
               )}
             </div>
             
+            {/* 에러 메시지 */}
+            {error && (
+              <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-xl p-3 mb-4">
+                <div className="text-yellow-400 text-xs">{error}</div>
+              </div>
+            )}
+            
             {/* 남은 기간 강조 */}
             {daysRemaining !== null && daysRemaining > 0 && (
               <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-xl p-4 mb-4 text-center">
@@ -299,6 +382,9 @@ function SubscriptionModal({
                 </div>
                 <div className="text-white text-3xl font-bold">
                   {daysRemaining}{language === 'ko' ? '일' : ' days'}
+                </div>
+                <div className="text-gray-400 text-xs mt-2">
+                  {language === 'ko' ? '만료일: ' : 'Expires: '}{formatDate(expiresAt)}
                 </div>
               </div>
             )}
@@ -310,12 +396,27 @@ function SubscriptionModal({
                 </div>
               </div>
             )}
+
+            {daysRemaining !== null && daysRemaining < 0 && (
+              <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-4 mb-4 text-center">
+                <div className="text-red-400 text-sm font-medium">
+                  {language === 'ko' ? '이용권이 만료되었습니다' : 'Your pass has expired'}
+                </div>
+                <div className="text-gray-400 text-xs mt-1">
+                  {language === 'ko' ? `${Math.abs(daysRemaining)}일 전에 만료됨` : `Expired ${Math.abs(daysRemaining)} days ago`}
+                </div>
+              </div>
+            )}
             
             {/* 구독 정보 */}
             <div className="bg-black/30 rounded-xl p-4 mb-6 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">{language === 'ko' ? '이용권' : 'Plan'}</span>
                 <span className="text-white">{getPlanDisplay()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">{language === 'ko' ? '상태' : 'Status'}</span>
+                <span className="text-white capitalize">{subscription?.status || '-'}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">{language === 'ko' ? '시작일' : 'Started'}</span>
@@ -329,13 +430,22 @@ function SubscriptionModal({
             
             {/* 버튼 */}
             <div className="space-y-3">
-              {daysRemaining !== null && daysRemaining <= 7 && (
+              {daysRemaining !== null && daysRemaining <= 7 && daysRemaining > 0 && (
                 <Link
                   href="/premium/pricing"
                   onClick={onClose}
                   className="block w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl text-sm font-bold text-center transition-all"
                 >
                   {language === 'ko' ? '이용권 연장하기' : 'Extend Pass'}
+                </Link>
+              )}
+              {(daysRemaining === null || daysRemaining <= 0) && (
+                <Link
+                  href="/premium/pricing"
+                  onClick={onClose}
+                  className="block w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-xl text-sm font-bold text-center transition-all"
+                >
+                  {language === 'ko' ? '이용권 구매하기' : 'Buy Pass'}
                 </Link>
               )}
               <button
@@ -352,7 +462,9 @@ function SubscriptionModal({
   )
 }
 
-// ✅ 수정된 회원 탈퇴 모달
+/**
+ * ✅ 회원 탈퇴 모달
+ */
 function DeleteAccountModal({
   onClose,
   language,
