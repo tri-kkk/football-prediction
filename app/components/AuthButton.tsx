@@ -174,6 +174,7 @@ export default function AuthButton() {
           <DeleteAccountModal
             onClose={() => setShowDeleteModal(false)}
             language={language}
+            userEmail={userEmail}
           />
         )}
       </>
@@ -182,10 +183,10 @@ export default function AuthButton() {
 
   // 비로그인 상태 - 모바일 최적화
   return (
- <Link
-    href="/login"
-    className="flex items-center justify-center px-2.5 md:px-4 py-1 md:py-1.5 text-xs md:text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium whitespace-nowrap"
-  >
+    <Link
+      href="/login"
+      className="flex items-center justify-center px-2.5 md:px-4 py-1 md:py-1.5 text-xs md:text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium whitespace-nowrap"
+    >
       {language === 'ko' ? '로그인' : 'Login'}
     </Link>
   )
@@ -217,56 +218,47 @@ function SubscriptionModal({
   useEffect(() => {
     const fetchSubscription = async () => {
       try {
-        const response = await fetch('/api/subscription')
+        const response = await fetch(`/api/subscription?email=${encodeURIComponent(userEmail)}`)
         if (response.ok) {
           const data = await response.json()
-          if (data.subscription) {
-            setSubscription(data.subscription)
-          }
+          setSubscription(data)
+        } else {
+          // API가 없으면 세션 정보로 대체
+          setSubscription({
+            plan: 'Premium',
+            status: 'active',
+            startedAt: null,
+            expiresAt: premiumExpiresAt || null
+          })
         }
-      } catch (error) {
-        console.error('Failed to fetch subscription:', error)
+      } catch {
+        setSubscription({
+          plan: 'Premium',
+          status: 'active',
+          startedAt: null,
+          expiresAt: premiumExpiresAt || null
+        })
+      } finally {
+        setLoadingData(false)
       }
-      setLoadingData(false)
     }
     fetchSubscription()
-  }, [])
+  }, [userEmail, premiumExpiresAt])
 
-  // 날짜 포맷
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return '-'
-    const date = new Date(dateStr)
-    return date.toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return language === 'ko' ? '정보 없음' : 'N/A'
+    return new Date(dateString).toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-US')
   }
 
-  // 남은 일수 계산
-  const getDaysRemaining = () => {
-    const expiresAt = subscription?.expiresAt || premiumExpiresAt
-    if (!expiresAt) return null
-    
-    const now = new Date()
-    const expiry = new Date(expiresAt)
-    const diff = expiry.getTime() - now.getTime()
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
-    return Math.max(0, days)
-  }
+  const daysRemaining = subscription?.expiresAt
+    ? Math.ceil((new Date(subscription.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : null
 
-  const daysRemaining = getDaysRemaining()
-
-  // 플랜 표시
-  const getPlanDisplay = () => {
-    if (promoCode) return `프로모션 (${promoCode})`
-    if (subscription?.plan === 'yearly') return language === 'ko' ? '연간 구독' : 'Yearly'
-    if (subscription?.plan === 'monthly') return language === 'ko' ? '월간 구독' : 'Monthly'
+  const getPlanDisplay = (): string => {
     return language === 'ko' ? '프리미엄' : 'Premium'
   }
 
-  const expiresAt = subscription?.expiresAt || premiumExpiresAt
-  const startedAt = subscription?.startedAt
+  const { startedAt, expiresAt } = subscription || {}
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -359,13 +351,15 @@ function SubscriptionModal({
   )
 }
 
-// 회원 탈퇴 모달
+// ✅ 수정된 회원 탈퇴 모달
 function DeleteAccountModal({
   onClose,
-  language
+  language,
+  userEmail
 }: {
   onClose: () => void
   language: 'ko' | 'en'
+  userEmail: string
 }) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [confirmText, setConfirmText] = useState('')
@@ -379,23 +373,36 @@ function DeleteAccountModal({
     setIsDeleting(true)
     
     try {
+      console.log('🔍 탈퇴 시작:', userEmail)
+      
+      // ✅ 이메일과 함께 요청
       const response = await fetch('/api/user/delete', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: userEmail }),
       })
+      
+      const data = await response.json()
+      
+      console.log('📊 응답:', data)
       
       if (response.ok) {
         // 성공 - 로그아웃 처리
         alert(language === 'ko' 
           ? '회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.' 
           : 'Account deleted. Thank you for using our service.')
-        window.location.href = '/api/auth/signout?callbackUrl=/'
+        
+        // NextAuth signOut 사용
+        await signOut({ redirect: true, callbackUrl: '/' })
       } else {
-        const data = await response.json()
+        console.error('❌ Delete failed:', data)
         alert(data.error || (language === 'ko' ? '탈퇴 처리 중 오류가 발생했습니다.' : 'Error deleting account.'))
         setIsDeleting(false)
       }
     } catch (error) {
-      console.error('Delete error:', error)
+      console.error('❌ Delete error:', error)
       alert(language === 'ko' ? '서버 오류가 발생했습니다.' : 'Server error.')
       setIsDeleting(false)
     }

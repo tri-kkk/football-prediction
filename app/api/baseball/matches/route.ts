@@ -13,10 +13,13 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   
   // 파라미터
+  const matchId = searchParams.get('id')               // 단일 경기 조회
   const league = searchParams.get('league') || 'ALL'  // KBO, NPB, MLB, CPBL, ALL
   const status = searchParams.get('status') || 'all'   // scheduled, finished, all
   const limit = parseInt(searchParams.get('limit') || '50')
   const date = searchParams.get('date') || ''          // YYYY-MM-DD
+
+  console.log('📊 Baseball Matches API:', { matchId, league, status, limit, date })
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -30,49 +33,65 @@ export async function GET(request: NextRequest) {
         league,
         league_name,
         match_date,
-        match_time,
         match_timestamp,
         home_team,
         home_team_ko,
+        home_team_id,
         home_team_logo,
         away_team,
         away_team_ko,
+        away_team_id,
         away_team_logo,
         home_score,
         away_score,
         status,
-        innings_score
+        inning,
+        is_spring_training
       `)
 
-    // 리그 필터
-    if (league !== 'ALL') {
-      query = query.eq('league', league)
-    }
+    // ID로 단일 경기 조회 (최우선)
+    if (matchId) {
+      query = query.eq('api_match_id', matchId).limit(1)
+    } else {
+      // 리그 필터
+      if (league !== 'ALL') {
+        query = query.eq('league', league)
+      }
 
-    // 상태 필터
-    if (status === 'scheduled') {
-      query = query.in('status', ['NS', 'SCHEDULED', 'TBD'])
-    } else if (status === 'finished') {
-      query = query.eq('status', 'FT')
-    }
+      // 상태 필터
+      const today = new Date().toISOString().split('T')[0]
+      
+      if (status === 'scheduled') {
+        // 예정 경기: status가 NS/SCHEDULED/TBD인 모든 경기 (날짜 무관)
+        query = query.in('status', ['NS', 'SCHEDULED', 'TBD'])
+      } else if (status === 'finished') {
+        // 종료 경기: status가 FT (Final)
+        query = query.eq('status', 'FT')
+      }
 
-    // 날짜 필터
-    if (date) {
-      query = query.eq('match_date', date)
-    }
+      // 날짜 필터
+      if (date) {
+        query = query.eq('match_date', date)
+      }
 
-    // 정렬 및 제한
-    query = query
-      .order('match_date', { ascending: false })
-      .order('match_time', { ascending: true })
-      .limit(limit)
+      // 정렬 및 제한
+      query = query
+        .order('match_date', { ascending: status === 'finished' ? false : true })
+        .limit(limit)
+    }
 
     const { data: matches, error } = await query
 
     if (error) {
       console.error('❌ 경기 조회 오류:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ 
+        success: false,
+        error: error.message,
+        matches: []
+      }, { status: 500 })
     }
+
+    console.log(`✅ Found ${matches?.length || 0} matches`)
 
     // 오즈 데이터 조인
     const matchIds = matches?.map(m => m.api_match_id) || []
@@ -85,6 +104,7 @@ export async function GET(request: NextRequest) {
         .in('api_match_id', matchIds)
       
       odds = oddsData || []
+      console.log(`💰 Found ${odds.length} odds records`)
     }
 
     // 오즈 매핑
@@ -99,21 +119,22 @@ export async function GET(request: NextRequest) {
         league: match.league,
         leagueName: match.league_name,
         date: match.match_date,
-        time: match.match_time,
-        timestamp: match.match_timestamp,
+        timestamp: match.match_timestamp || match.match_date,  // UTC timestamp
         
         homeTeam: match.home_team,
-        homeTeamKo: match.home_team_ko,
+        homeTeamKo: match.home_team_ko || match.home_team,
+        homeTeamId: match.home_team_id,  // ✨ 추가!
         homeLogo: match.home_team_logo,
         homeScore: match.home_score,
         
         awayTeam: match.away_team,
-        awayTeamKo: match.away_team_ko,
+        awayTeamKo: match.away_team_ko || match.away_team,
+        awayTeamId: match.away_team_id,  // ✨ 추가!
         awayLogo: match.away_team_logo,
         awayScore: match.away_score,
         
-        status: match.status,
-        innings: match.innings_score,
+        status: match.status || 'NS',
+        innings: match.inning,  // ✨ 이닝 데이터 추가!
         
         // 오즈 정보
         odds: matchOdds ? {
@@ -139,7 +160,8 @@ export async function GET(request: NextRequest) {
     console.error('❌ API 오류:', error)
     return NextResponse.json({ 
       success: false, 
-      error: error.message 
+      error: error.message,
+      matches: []
     }, { status: 500 })
   }
 }

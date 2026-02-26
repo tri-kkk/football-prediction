@@ -10,15 +10,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// 🎉 프로모션 기간 설정 (2026년 2월 28일까지 연장)
 const PROMO_END_DATE = new Date('2026-03-01T00:00:00+09:00')
 
-// 이메일 해시 생성
 function hashEmail(email: string): string {
   return crypto.createHash('sha256').update(email.toLowerCase()).digest('hex')
 }
 
-// 🌍 IP로 국가 정보 가져오기
 async function getCountryFromIP(ip: string): Promise<{ country: string; countryCode: string }> {
   if (ip === 'unknown' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip === '::1') {
     return { country: 'Local', countryCode: 'LO' }
@@ -63,7 +60,7 @@ const handler = NextAuth({
         
         const now = new Date().toISOString()
         
-        // ✅ 1. 기존 users 테이블에서 확인 (이미 가입 완료된 회원)
+        // ✅ 1. users 테이블에서 확인
         const { data: existingUser } = await supabase
           .from('users')
           .select('id, name, terms_agreed_at')
@@ -71,13 +68,11 @@ const handler = NextAuth({
           .single()
 
         if (existingUser) {
-          // ✅ 기존 회원: 로그인 시간 업데이트
           const updateData: any = { 
             last_login_at: now,
             last_login_ip: ip
           }
 
-          // 🔑 이름이 비어있으면 업데이트 (네이버 이름없음 해결)
           if (!existingUser.name) {
             const userName = user.name 
               || (profile as any)?.response?.name 
@@ -86,7 +81,6 @@ const handler = NextAuth({
               || null
             if (userName) {
               updateData.name = userName
-              console.log(`🔄 Updating empty name for ${user.email} → "${userName}"`)
             }
           }
 
@@ -99,7 +93,7 @@ const handler = NextAuth({
           return true
         }
 
-        // ✅ 2. pending_users에서 확인 (약관 동의 대기 중)
+        // ✅ 2. pending_users에서 확인
         const { data: pendingUser } = await supabase
           .from('pending_users')
           .select('id')
@@ -107,12 +101,11 @@ const handler = NextAuth({
           .single()
 
         if (pendingUser) {
-          // 이미 pending 상태 → 업데이트만
           await supabase
             .from('pending_users')
             .update({ 
               updated_at: now,
-              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 연장
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
             })
             .eq('email', user.email)
           
@@ -120,13 +113,10 @@ const handler = NextAuth({
           return true
         }
 
-        // ✅ 3. 완전히 신규 사용자 → pending_users에 저장
+        // ✅ 3. 신규 사용자
         const { country, countryCode } = await getCountryFromIP(ip)
-        
-        // 프로모션 기간 체크
         const isPromoPeriod = new Date() < PROMO_END_DATE
         
-        // 재가입 체크 (프로모션 악용 방지)
         const emailHash = hashEmail(user.email)
         const { data: deletedUser } = await supabase
           .from('deleted_users')
@@ -137,8 +127,6 @@ const handler = NextAuth({
         const hadPromo = deletedUser?.promo_code ? true : false
         const canGetPromo = isPromoPeriod && !hadPromo
         
-        // ⚠️ 핵심 변경: users가 아닌 pending_users에 저장!
-        // 🔑 네이버 이름 추출 (네이버는 profile.response 안에 있음)
         const userName = user.name 
           || (profile as any)?.response?.name 
           || (profile as any)?.response?.nickname
@@ -155,78 +143,107 @@ const handler = NextAuth({
           signup_country: country,
           signup_country_code: countryCode,
           pending_promo: canGetPromo ? 'LAUNCH_2026' : null,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7일 후 만료
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         })
         
-        console.log(`🆕 New pending user: ${user.email} from ${country} (${countryCode}), IP: ${ip}`)
+        console.log(`🆕 New pending user: ${user.email}`)
         return true
 
       } catch (error) {
         console.error('SignIn error:', error)
-        // 에러가 나도 로그인은 허용 (약관 페이지에서 처리)
         return true
       }
     },
 
     async session({ session }) {
-      if (session.user?.email) {
-        // ✅ 1. 먼저 users 테이블에서 확인
+      if (!session.user?.email) {
+        return session
+      }
+
+      try {
+        // ✅ users 테이블 확인
         const { data: userData } = await supabase
           .from('users')
-          .select('id, tier, name, premium_expires_at, promo_code, terms_agreed_at, privacy_agreed_at')
-          .eq('email', session.user.email)
+          .select('id, tier, name, premium_expires_at, promo_code, terms_agreed_at')
+          .eq('email', session.user.email.toLowerCase())
           .single()
 
-        if (userData) {
-          // ✅ 정식 회원
+        if (userData && userData.terms_agreed_at) {
+          console.log('✅ User in users table')
           session.user.id = userData.id
           session.user.termsAgreed = true
           session.user.pendingPromo = null
-          // 🔑 DB의 이름으로 세션 업데이트
+          session.user.tier = userData.tier || 'free'
+          
           if (userData.name) {
             session.user.name = userData.name
           }
           
-          // 프리미엄 만료 체크
-          let currentTier = userData.tier
           if (userData.tier === 'premium' && userData.premium_expires_at) {
             const expiresAt = new Date(userData.premium_expires_at)
             if (new Date() > expiresAt) {
-              currentTier = 'free'
               await supabase
                 .from('users')
                 .update({ tier: 'free' })
                 .eq('email', session.user.email)
-              console.log(`⏰ Premium expired for ${session.user.email}`)
+              session.user.tier = 'free'
             }
           }
           
-          session.user.tier = currentTier
-          session.user.premium_expires_at = userData.premium_expires_at
-          session.user.promo_code = userData.promo_code
-          
-        } else {
-          // ✅ 2. pending_users에서 확인
-          const { data: pendingData } = await supabase
-            .from('pending_users')
-            .select('id, pending_promo')
-            .eq('email', session.user.email)
-            .single()
-
-          if (pendingData) {
-            // 약관 동의 대기 중
-            session.user.id = pendingData.id
-            session.user.termsAgreed = false  // 핵심: 아직 미동의
-            session.user.pendingPromo = pendingData.pending_promo
-            session.user.tier = 'guest'  // 아직 정식 회원 아님
-          } else {
-            // 어디에도 없음 (비정상 상태)
-            session.user.termsAgreed = false
-            session.user.tier = 'guest'
-          }
+          return session
         }
+
+        // ✅ pending_users 확인
+        const { data: pendingData } = await supabase
+          .from('pending_users')
+          .select('id, pending_promo')
+          .eq('email', session.user.email.toLowerCase())
+          .single()
+
+        if (pendingData) {
+          console.log('⏳ User in pending_users')
+          session.user.id = pendingData.id
+          session.user.termsAgreed = false
+          session.user.pendingPromo = pendingData.pending_promo
+          session.user.tier = 'guest'
+          return session
+        }
+
+        console.log('⚠️ User not found')
+        session.user.termsAgreed = false
+        session.user.tier = 'guest'
+
+      } catch (error) {
+        console.error('Session error:', error)
+        session.user.termsAgreed = false
+        session.user.tier = 'guest'
       }
+
       return session
+    },
+
+    // ✅ redirect 콜백 - /signup-complete 제외
+    async redirect({ url, baseUrl }) {
+      console.log('🔀 Redirect checking:', url)
+
+      // ✅ /signup-complete는 그대로 반환 (리다이렉트하지 않음)
+      if (url.includes('/signup-complete')) {
+        console.log('⏭️ Skipping redirect for /signup-complete')
+        return url
+      }
+
+      // 상대경로면 그대로
+      if (url.startsWith('/')) {
+        return url
+      }
+      
+      // 같은 도메인이면 그대로
+      if (new URL(url).origin === baseUrl) {
+        return url
+      }
+      
+      // 그 외에는 홈으로
+      return baseUrl
     },
   },
   pages: {

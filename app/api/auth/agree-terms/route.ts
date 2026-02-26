@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -7,55 +6,77 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// 🎉 프로모션 기간 설정 (2026년 2월 28일까지 연장)
 const PROMO_END_DATE = new Date('2026-03-01T00:00:00+09:00')
 
 export async function POST(request: NextRequest) {
+  let body: any = {}
+  
   try {
-    // ✅ 1. 세션 확인
-    const session = await getServerSession()
-    
-    if (!session?.user?.email) {
+    console.log('🔍 약관 동의 API 시작')
+
+    // ✅ 요청 본문을 한 번만 읽기
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error('❌ JSON 파싱 실패:', parseError)
       return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
+        { error: 'Invalid request body' },
+        { status: 400 }
       )
     }
 
-    const email = session.user.email
+    const { email, termsAgreed, privacyAgreed, marketingAgreed } = body
 
-    // ✅ 2. 요청 body 파싱
-    const body = await request.json()
-    const { termsAgreed, privacyAgreed, marketingAgreed } = body
+    console.log('📥 요청 데이터:', { email, termsAgreed, privacyAgreed, marketingAgreed })
 
-    // ✅ 3. 필수 약관 동의 확인
+    if (!email) {
+      console.error('❌ 이메일 없음')
+      return NextResponse.json(
+        { error: '이메일이 필요합니다.' },
+        { status: 400 }
+      )
+    }
+
     if (!termsAgreed || !privacyAgreed) {
+      console.error('❌ 필수 약관 미동의')
       return NextResponse.json(
         { error: '필수 약관에 동의해주세요.' },
         { status: 400 }
       )
     }
 
-    // ✅ 4. 이미 users에 있는지 확인 (중복 방지)
-    const { data: existingUser } = await supabase
+    const emailLower = email.toLowerCase()
+
+    // ✅ users 테이블 확인
+    console.log('🔍 users 테이블 확인:', emailLower)
+    const { data: existingUser, error: existingError } = await supabase
       .from('users')
       .select('id, terms_agreed_at')
-      .eq('email', email)
+      .eq('email', emailLower)
       .single()
 
+    if (existingError && existingError.code !== 'PGRST116') {
+      console.error('❌ users 조회 실패:', existingError)
+      return NextResponse.json(
+        { error: 'DB 조회 오류' },
+        { status: 500 }
+      )
+    }
+
     if (existingUser) {
-      // 이미 가입 완료된 회원
+      console.log('✅ 기존 users 찾음')
+      
       if (existingUser.terms_agreed_at) {
+        console.log('✅ 이미 약관 동의함')
         return NextResponse.json({
           success: true,
-          message: '이미 약관에 동의하셨습니다.',
           alreadyAgreed: true
         })
       }
       
-      // users에는 있지만 약관 미동의 (예전 데이터)
+      // 약관 미동의 상태 → 업데이트
       const now = new Date().toISOString()
-      await supabase
+      const { error: updateError } = await supabase
         .from('users')
         .update({
           terms_agreed_at: now,
@@ -63,35 +84,54 @@ export async function POST(request: NextRequest) {
           marketing_agreed: marketingAgreed || false,
           marketing_agreed_at: marketingAgreed ? now : null,
         })
-        .eq('email', email)
+        .eq('email', emailLower)
 
+      if (updateError) {
+        console.error('❌ users 업데이트 실패:', updateError)
+        return NextResponse.json(
+          { error: 'Update failed' },
+          { status: 500 }
+        )
+      }
+
+      console.log('✅ users 약관 동의 업데이트 완료')
       return NextResponse.json({
         success: true,
         message: '약관 동의가 완료되었습니다.'
       })
     }
 
-    // ✅ 5. pending_users에서 데이터 가져오기
+    // ✅ pending_users 확인
+    console.log('🔍 pending_users 확인:', emailLower)
     const { data: pendingUser, error: pendingError } = await supabase
       .from('pending_users')
       .select('*')
-      .eq('email', email)
+      .eq('email', emailLower)
       .single()
 
-    if (pendingError || !pendingUser) {
-      console.error('Pending user not found:', email)
+    if (pendingError && pendingError.code !== 'PGRST116') {
+      console.error('❌ pending_users 조회 실패:', pendingError)
       return NextResponse.json(
-        { error: '사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.' },
+        { error: 'DB 조회 오류' },
+        { status: 500 }
+      )
+    }
+
+    if (!pendingUser) {
+      console.error('❌ pending_users에서 찾을 수 없음')
+      return NextResponse.json(
+        { error: '사용자 정보를 찾을 수 없습니다.' },
         { status: 404 }
       )
     }
 
-    // ✅ 6. 프로모션 처리
+    console.log('✅ pending_users 찾음')
+
+    // ✅ 프로모션 처리
     const now = new Date()
     const isPromoPeriod = now < PROMO_END_DATE
     const promoCode = pendingUser.pending_promo && isPromoPeriod ? pendingUser.pending_promo : null
     
-    // 프리미엄 만료일 계산 (프로모션 적용 시 2026년 2월 28일까지)
     let tier = 'free'
     let premiumExpiresAt = null
     let promoAppliedAt = null
@@ -100,13 +140,15 @@ export async function POST(request: NextRequest) {
       tier = 'premium'
       premiumExpiresAt = PROMO_END_DATE.toISOString()
       promoAppliedAt = now.toISOString()
+      console.log('🎉 프로모션 적용')
     }
 
-    // ✅ 7. users 테이블에 INSERT
+    // ✅ users 테이블에 INSERT
+    console.log('📝 users 테이블에 데이터 삽입')
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
-        email: pendingUser.email,
+        email: emailLower,
         name: pendingUser.name,
         avatar_url: pendingUser.avatar_url,
         provider: pendingUser.provider,
@@ -115,57 +157,62 @@ export async function POST(request: NextRequest) {
         signup_country: pendingUser.signup_country,
         signup_country_code: pendingUser.signup_country_code,
         
-        // ✅ 약관 동의 정보
+        // 약관 동의
         terms_agreed_at: now.toISOString(),
         privacy_agreed_at: now.toISOString(),
         marketing_agreed: marketingAgreed || false,
         marketing_agreed_at: marketingAgreed ? now.toISOString() : null,
         
-        // ✅ 티어 & 프로모션
+        // 티어 & 프로모션
         tier: tier,
         promo_code: promoCode,
         promo_applied_at: promoAppliedAt,
         premium_expires_at: premiumExpiresAt,
         
-        // ✅ 기타
-        created_at: pendingUser.created_at,  // 최초 가입 시도 시간 유지
+        // 기타
+        created_at: pendingUser.created_at || now.toISOString(),
         last_login_at: now.toISOString(),
       })
       .select('id, tier, promo_code')
       .single()
 
     if (insertError) {
-      console.error('User insert error:', insertError)
+      console.error('❌ users 삽입 실패:', insertError)
       return NextResponse.json(
-        { error: '회원 가입 처리 중 오류가 발생했습니다.' },
+        { error: 'Insert failed' },
         { status: 500 }
       )
     }
 
-    // ✅ 8. pending_users에서 삭제
-    await supabase
+    console.log('✅ users 삽입 완료:', newUser.id)
+
+    // ✅ pending_users 삭제
+    console.log('🗑️ pending_users 삭제')
+    const { error: deleteError } = await supabase
       .from('pending_users')
       .delete()
-      .eq('email', email)
+      .eq('email', emailLower)
 
-    console.log(`✅ User registered: ${email}, tier: ${tier}, promo: ${promoCode}`)
+    if (deleteError) {
+      console.warn('⚠️ pending_users 삭제 실패 (무시)')
+    }
 
-    // ✅ 9. 성공 응답
+    console.log(`✅ 약관 동의 완료`)
+
     return NextResponse.json({
       success: true,
       message: promoCode 
-        ? '🎉 회원가입 완료! 프로모션이 적용되었습니다.'
+        ? '🎉 프로모션이 적용되었습니다.'
         : '회원가입이 완료되었습니다.',
-      user: {
-        id: newUser.id,
-        tier: newUser.tier,
-        promo_code: newUser.promo_code,
-        premium_expires_at: premiumExpiresAt
-      }
     })
 
   } catch (error) {
-    console.error('Agree terms error:', error)
+    console.error('❌ API 에러:', error)
+    
+    if (error instanceof Error) {
+      console.error('에러:', error.message)
+    }
+
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
@@ -173,62 +220,50 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET: 현재 약관 동의 상태 확인
+// ✅ GET: 약관 동의 상태 확인
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    
-    if (!session?.user?.email) {
+    const searchParams = request.nextUrl.searchParams
+    const email = searchParams.get('email')
+
+    if (!email) {
       return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
+        { error: '이메일이 필요합니다.' },
+        { status: 400 }
       )
     }
 
-    const email = session.user.email
+    const emailLower = email.toLowerCase()
 
-    // users 테이블 확인
+    // 1️⃣ users 테이블 확인
     const { data: userData } = await supabase
       .from('users')
-      .select('terms_agreed_at, privacy_agreed_at, marketing_agreed')
-      .eq('email', email)
+      .select('id, terms_agreed_at')
+      .eq('email', emailLower)
       .single()
 
     if (userData && userData.terms_agreed_at) {
-      return NextResponse.json({
-        agreed: true,
-        terms_agreed_at: userData.terms_agreed_at,
-        privacy_agreed_at: userData.privacy_agreed_at,
-        marketing_agreed: userData.marketing_agreed
-      })
+      return NextResponse.json({ termsAgreed: true, agreed: true })
     }
 
-    // pending_users 확인
+    // 2️⃣ pending_users 확인
     const { data: pendingData } = await supabase
       .from('pending_users')
-      .select('pending_promo, expires_at')
-      .eq('email', email)
+      .select('id')
+      .eq('email', emailLower)
       .single()
 
     if (pendingData) {
-      return NextResponse.json({
-        agreed: false,
-        pending: true,
-        pending_promo: pendingData.pending_promo,
-        expires_at: pendingData.expires_at
-      })
+      return NextResponse.json({ termsAgreed: false, pending: true })
     }
 
-    return NextResponse.json({
-      agreed: false,
-      pending: false
-    })
+    return NextResponse.json({ termsAgreed: false, pending: false })
 
   } catch (error) {
-    console.error('Get terms status error:', error)
+    console.error('❌ GET 에러:', error)
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
+      { termsAgreed: false },
+      { status: 200 }
     )
   }
 }

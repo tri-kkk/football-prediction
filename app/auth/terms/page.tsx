@@ -8,7 +8,7 @@ import Link from 'next/link'
 
 export default function TermsPage() {
   const { language } = useLanguage()
-  const { data: session, status, update } = useSession()
+  const { data: session, status } = useSession()  // ✅ update 제거!
   const router = useRouter()
   
   const [termsAgreed, setTermsAgreed] = useState(false)
@@ -18,25 +18,48 @@ export default function TermsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pendingPromo, setPendingPromo] = useState<string | null>(null)
+  const [isReady, setIsReady] = useState(false)
 
-  // 🎉 프로모션 기간 체크
-  const PROMO_END = new Date('2026-02-01T00:00:00+09:00')
+  const PROMO_END = new Date('2026-03-01T00:00:00+09:00')
   const now = new Date()
   const daysLeft = Math.ceil((PROMO_END.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   const isPromoPeriod = daysLeft > 0
 
-  // 이미 약관 동의한 경우 리다이렉트
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.termsAgreed) {
-      router.push('/')
+    if (status === 'unauthenticated') {
+      console.log('🔐 로그인 필요')
+      router.push('/login')
+      return
     }
-    // 프로모션 정보 저장
-    if (session?.user?.pendingPromo) {
-      setPendingPromo(session.user.pendingPromo)
-    }
-  }, [session, status, router])
 
-  // 전체 동의 처리
+    if (status === 'loading') {
+      return
+    }
+
+    if (status === 'authenticated' && session?.user?.email) {
+      const termsAgreed = (session?.user as any)?.termsAgreed
+      const pendingPromo = (session?.user as any)?.pendingPromo
+
+      console.log('🔍 약관 페이지 진입, termsAgreed:', termsAgreed)
+
+      if (termsAgreed === true) {
+        console.log('✅ 기존 회원 - 홈으로')
+        router.replace('/')
+        return
+      }
+
+      if (termsAgreed === false) {
+        console.log('⏳ 신규 회원 - 약관 페이지')
+        setPendingPromo(pendingPromo)
+        setIsReady(true)
+        return
+      }
+
+      console.log('⚠️ 불명확한 상태')
+      setIsReady(true)
+    }
+  }, [status, session?.user, router])
+
   useEffect(() => {
     if (allAgreed) {
       setTermsAgreed(true)
@@ -45,20 +68,18 @@ export default function TermsPage() {
     }
   }, [allAgreed])
 
-  // 개별 체크박스 변경 시 전체 동의 상태 업데이트
   useEffect(() => {
     setAllAgreed(termsAgreed && privacyAgreed && marketingAgreed)
   }, [termsAgreed, privacyAgreed, marketingAgreed])
 
   const handleAllAgree = () => {
-    const newState = !allAgreed
-    setAllAgreed(newState)
-    setTermsAgreed(newState)
-    setPrivacyAgreed(newState)
-    setMarketingAgreed(newState)
+    setAllAgreed(!allAgreed)
   }
 
+  // ✅ 최종: update() 없이 바로 이동
   const handleSubmit = async () => {
+    console.log('동의 버튼 클릭:', { termsAgreed, privacyAgreed })
+
     if (!termsAgreed || !privacyAgreed) {
       setError(language === 'ko' ? '필수 약관에 동의해주세요.' : 'Please agree to required terms.')
       return
@@ -68,13 +89,20 @@ export default function TermsPage() {
     setError(null)
 
     try {
-      // ✅ 핵심: 약관 동의 API 호출
+      const email = session?.user?.email
+      if (!email) {
+        throw new Error('User email not found')
+      }
+
+      console.log('📝 약관 동의 제출:', email)
+
       const response = await fetch('/api/auth/agree-terms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          email: email,
           termsAgreed: true,
           privacyAgreed: true,
           marketingAgreed: marketingAgreed,
@@ -83,28 +111,24 @@ export default function TermsPage() {
 
       const data = await response.json()
 
+      console.log('✅ 약관 동의 완료:', data)
+
       if (!response.ok) {
         throw new Error(data.error || '약관 동의 처리 중 오류가 발생했습니다.')
       }
 
-      console.log('✅ Terms agreed:', data)
-
-      // ✅ 세션 업데이트 (termsAgreed를 true로)
-      await update()
-
-      // ✅ 성공 시 메인 페이지로 이동
-      router.push('/')
+      // ✅ update() 없이 바로 이동
+      console.log('🎯 /signup-complete로 이동')
+      window.location.replace('/signup-complete')
       
     } catch (err) {
-      console.error('Terms agreement error:', err)
+      console.error('❌ 오류:', err)
       setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
-    } finally {
       setIsSubmitting(false)
     }
   }
 
-  // 로딩 중
-  if (status === 'loading') {
+  if (status === 'loading' || !isReady) {
     return (
       <div className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
@@ -112,33 +136,28 @@ export default function TermsPage() {
     )
   }
 
-  // 로그인 안 된 경우
   if (status === 'unauthenticated') {
-    router.push('/login')
     return null
   }
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-center justify-center px-4 py-10 overflow-auto">
-      {/* 그라데이션 배경 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-green-500/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full relative z-10" style={{ maxWidth: '480px' }}>
-        {/* 로고 */}
         <div className="text-center mb-6">
           <Link href="/" className="inline-block">
             <img 
               src="/logo.svg" 
-              alt="트랜드사커" 
+              alt="트렌드사커" 
               className="h-10 w-auto mx-auto"
             />
           </Link>
         </div>
 
-        {/* 타이틀 */}
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-white mb-2">
             {language === 'ko' ? '약관 동의' : 'Terms Agreement'}
@@ -150,7 +169,6 @@ export default function TermsPage() {
           </p>
         </div>
 
-        {/* 🎉 프로모션 배너 */}
         {isPromoPeriod && pendingPromo === 'LAUNCH_2026' && (
           <div className="bg-gradient-to-r from-[#1a2a1a] to-[#1a1a2a] border border-green-500/30 rounded-2xl p-4 mb-6">
             <div className="text-center">
@@ -164,19 +182,17 @@ export default function TermsPage() {
               </p>
               <p className="text-gray-400 text-xs mt-1">
                 {language === 'ko' 
-                  ? `~2026.01.31까지 (D-${daysLeft})`
-                  : `Until 2026.01.31 (D-${daysLeft})`}
+                  ? `~2026.03.01까지 (D-${daysLeft})`
+                  : `Until 2026.03.01 (D-${daysLeft})`}
               </p>
             </div>
           </div>
         )}
 
-        {/* 약관 동의 카드 */}
         <div className="bg-gradient-to-b from-[#1a1a1a] to-[#141414] rounded-3xl p-6 shadow-2xl border border-gray-800/50">
           
-          {/* 전체 동의 */}
           <div 
-            onClick={handleAllAgree}
+            onClick={() => setAllAgreed(!allAgreed)}
             className="flex items-center gap-3 p-4 bg-[#111] rounded-xl cursor-pointer hover:bg-[#1a1a1a] transition-colors mb-4"
           >
             <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
@@ -197,9 +213,7 @@ export default function TermsPage() {
 
           <div className="border-t border-gray-800 my-4" />
 
-          {/* 개별 약관 */}
           <div className="space-y-3">
-            {/* 이용약관 (필수) */}
             <div 
               onClick={() => setTermsAgreed(!termsAgreed)}
               className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[#111] transition-colors"
@@ -230,7 +244,6 @@ export default function TermsPage() {
               </Link>
             </div>
 
-            {/* 개인정보처리방침 (필수) */}
             <div 
               onClick={() => setPrivacyAgreed(!privacyAgreed)}
               className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[#111] transition-colors"
@@ -261,7 +274,6 @@ export default function TermsPage() {
               </Link>
             </div>
 
-            {/* 마케팅 수신 (선택) */}
             <div 
               onClick={() => setMarketingAgreed(!marketingAgreed)}
               className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[#111] transition-colors"
@@ -286,14 +298,12 @@ export default function TermsPage() {
             </div>
           </div>
 
-          {/* 에러 메시지 */}
           {error && (
             <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <p className="text-red-400 text-sm text-center">{error}</p>
             </div>
           )}
 
-          {/* 동의 버튼 */}
           <button
             onClick={handleSubmit}
             disabled={!termsAgreed || !privacyAgreed || isSubmitting}
@@ -314,7 +324,6 @@ export default function TermsPage() {
           </button>
         </div>
 
-        {/* 취소 링크 */}
         <div className="text-center mt-6">
           <Link href="/" className="text-gray-600 hover:text-gray-400 text-sm transition-colors">
             ← {language === 'ko' ? '홈으로' : 'Home'}

@@ -6,7 +6,7 @@ node_modules/
 .vercel
 *.tsbuildinfo
 
-# Baseball (개발 중)
+# Baseball (개발 �?
 /app/baseball/
 /app/api/baseball/
 
@@ -19,3 +19,6 @@ node_modules/
 app/api/cron/collect-toto/
 app/api/toto/
 app/toto/
+
+app/api/baseball/
+lib/baseball_teams.ts
