@@ -621,7 +621,7 @@ function generateSlug(homeTeam: string, awayTeam: string, leagueCode: string, co
 }
 
 function formatFormEmoji(results: string[]): string {
-  return results.map(r => r === 'W' ? '✅' : r === 'D' ? '🟡' : '❌').join('')
+  return results.map(r => r === 'W' ? 'W' : r === 'D' ? 'D' : 'L').join(' ')
 }
 
 function formatFormText(results: string[]): string {
@@ -639,7 +639,7 @@ function formatFormTextEn(results: string[]): string {
 }
 
 function getGradeKo(grade: string): string {
-  return grade === 'PICK' ? '🔥 강추' : grade === 'GOOD' ? '👍 추천' : '⛔ 비추'
+  return grade === 'PICK' ? 'PICK (강추)' : grade === 'GOOD' ? 'GOOD (추천)' : 'PASS (비추)'
 }
 
 function getPickKo(pick: string): string {
@@ -698,7 +698,7 @@ function generateContentKo(
   }
   
   // ===== 📊 양팀 최근 폼 =====
-  c += `## 📊 양팀 최근 폼\n\n`
+  c += `## 양팀 최근 폼\n\n`
   
   if (homeStats?.recentForm) {
     const f5 = homeStats.recentForm.last5?.results || []
@@ -711,7 +711,7 @@ function generateContentKo(
       c += `| 득점 / 실점 | **${l10.goalsFor}골** / **${l10.goalsAgainst}실점** |\n`
       const streak = homeStats.recentForm.currentStreak
       if (streak && streak.count >= 2) {
-        c += `| 연속 | ${streak.type === 'W' ? `🔥 **${streak.count}연승**` : streak.type === 'L' ? `⚠️ **${streak.count}연패**` : `**${streak.count}연속 무승부**`} |\n`
+        c += `| 연속 | ${streak.type === 'W' ? `**${streak.count}연승**` : streak.type === 'L' ? `**${streak.count}연패**` : `**${streak.count}연속 무승부**`} |\n`
       }
       c += '\n'
     }
@@ -728,7 +728,7 @@ function generateContentKo(
       c += `| 득점 / 실점 | **${l10.goalsFor}골** / **${l10.goalsAgainst}실점** |\n`
       const streak = awayStats.recentForm.currentStreak
       if (streak && streak.count >= 2) {
-        c += `| 연속 | ${streak.type === 'W' ? `🔥 **${streak.count}연승**` : streak.type === 'L' ? `⚠️ **${streak.count}연패**` : `**${streak.count}연속 무승부**`} |\n`
+        c += `| 연속 | ${streak.type === 'W' ? `**${streak.count}연승**` : streak.type === 'L' ? `**${streak.count}연패**` : `**${streak.count}연속 무승부**`} |\n`
       }
       c += '\n'
     }
@@ -743,19 +743,19 @@ function generateContentKo(
   const awayRelOk = awayRel && !(awayRel.wins === 0 && awayRel.losses >= 10)
   
   if (homeRelOk && awayRelOk) {
-    c += `## 🏆 ${leagueInfo.nameKo} 시즌 성적\n\n`
+    c += `## ${leagueInfo.nameKo} 시즌 성적\n\n`
     c += `| | ${homeKo} (홈) | ${awayKo} (원정) |\n|:---|:---:|:---:|\n`
     c += `| 승-무-패 | **${homeRel.wins}-${homeRel.draws}-${homeRel.losses}** | **${awayRel.wins}-${awayRel.draws}-${awayRel.losses}** |\n`
     c += `| 승률 | **${homeRel.winRate}%** | **${awayRel.winRate}%** |\n\n`
   } else if (homeRelOk || awayRelOk) {
-    c += `## 🏆 ${leagueInfo.nameKo} 시즌 성적\n\n`
+    c += `## ${leagueInfo.nameKo} 시즌 성적\n\n`
     if (homeRelOk) c += `**${homeKo} (홈)**: ${homeRel.wins}승 ${homeRel.draws}무 ${homeRel.losses}패 (승률 **${homeRel.winRate}%**)\n\n`
     if (awayRelOk) c += `**${awayKo} (원정)**: ${awayRel.wins}승 ${awayRel.draws}무 ${awayRel.losses}패 (승률 **${awayRel.winRate}%**)\n\n`
   }
   
   // ===== 📈 핵심 스탯 비교 =====
   if (homeStats?.recentMatches?.length > 0 && awayStats?.recentMatches?.length > 0) {
-    c += `## 📈 핵심 스탯 비교\n\n`
+    c += `## 핵심 스탯 비교\n\n`
     
     const hL10 = homeStats.recentMatches.slice(0, 10)
     const aL10 = awayStats.recentMatches.slice(0, 10)
@@ -767,27 +767,27 @@ function generateContentKo(
     
     c += `> 최근 10경기 평균 기준\n\n`
     c += `| 지표 | ${homeKo} | ${awayKo} |\n|:---|:---:|:---:|\n`
-    c += `| ⚽ 경기당 득점 | **${hGF}** | **${aGF}** |\n`
-    c += `| 🛡️ 경기당 실점 | **${hGA}** | **${aGA}** |\n`
+    c += `| 경기당 득점 | **${hGF}** | **${aGF}** |\n`
+    c += `| 경기당 실점 | **${hGA}** | **${aGA}** |\n`
     
     if (homeStats.markets && awayStats.markets) {
-      c += `| 📊 오버 2.5 | **${homeStats.markets.over25Rate}%** | **${awayStats.markets.over25Rate}%** |\n`
-      c += `| 🎯 양팀득점(BTTS) | **${homeStats.markets.bttsRate}%** | **${awayStats.markets.bttsRate}%** |\n`
-      c += `| 🧤 클린시트 | **${homeStats.markets.cleanSheetRate}%** | **${awayStats.markets.cleanSheetRate}%** |\n`
+      c += `| 오버 2.5 | **${homeStats.markets.over25Rate}%** | **${awayStats.markets.over25Rate}%** |\n`
+      c += `| 양팀득점(BTTS) | **${homeStats.markets.bttsRate}%** | **${awayStats.markets.bttsRate}%** |\n`
+      c += `| 클린시트 | **${homeStats.markets.cleanSheetRate}%** | **${awayStats.markets.cleanSheetRate}%** |\n`
     }
     c += '\n'
   }
   
   // ===== ⚔️ 상대 전적 =====
   if (h2h?.overall) {
-    c += `## ⚔️ 상대 전적\n\n`
+    c += `## 상대 전적\n\n`
     c += `| ${homeKo} 승 | 무승부 | ${awayKo} 승 | 총 경기 |\n|:---:|:---:|:---:|:---:|\n`
     c += `| **${h2h.overall.homeWins}** | **${h2h.overall.draws}** | **${h2h.overall.awayWins}** | ${h2h.overall.totalMatches} |\n\n`
     
     if (h2h.recentMatches?.length > 0) {
       c += `**최근 맞대결**\n\n`
       h2h.recentMatches.slice(0, 3).forEach((m: any) => {
-        const icon = m.result === 'W' ? '🔵' : m.result === 'L' ? '🔴' : '⚪'
+        const icon = m.result === 'W' ? '승' : m.result === 'L' ? '패' : '무'
         const date = m.date ? ` (${m.date.slice(0, 10)})` : ''
         const hName = getTeamNameKo(m.homeTeam || match.home_team)
         const aName = getTeamNameKo(m.awayTeam || match.away_team)
@@ -796,20 +796,20 @@ function generateContentKo(
     }
     
     if (h2h.insights?.length > 0) {
-      c += `> 💡 ${h2h.insights[0]}\n\n`
+      c += `> ${h2h.insights[0]}\n\n`
     }
   }
   
   // ===== 🎯 전술 포인트 (AI 또는 템플릿) =====
   if (ai?.tacticalKo) {
-    c += `## 🎯 전술 포인트\n\n`
+    c += `## 전술 포인트\n\n`
     c += ai.tacticalKo + '\n\n'
   } else {
     const hasStrengths = homeStats?.strengths?.length > 0 || awayStats?.strengths?.length > 0
     const hasWeaknesses = homeStats?.weaknesses?.length > 0 || awayStats?.weaknesses?.length > 0
   
     if (hasStrengths || hasWeaknesses) {
-      c += `## 🎯 전술 포인트\n\n`
+      c += `## 전술 포인트\n\n`
       if (homeStats?.strengths?.length > 0) {
         c += `### ${homeKo}의 강점\n`
         homeStats.strengths.slice(0, 3).forEach((s: string) => { c += `- ${s}\n` })
@@ -835,31 +835,31 @@ function generateContentKo(
   
   // ===== 💡 승부처 (AI 또는 템플릿) =====
   if (ai?.keyFactorsKo) {
-    c += `## 💡 승부처\n\n`
+    c += `## 승부처\n\n`
     c += ai.keyFactorsKo + '\n\n'
   } else if (prediction.recommendation.reasons?.length > 0) {
-    c += `## 💡 승부처\n\n`
+    c += `## 승부처\n\n`
     prediction.recommendation.reasons.slice(0, 3).forEach((reason: string, i: number) => {
       c += `**${i + 1}. ${translateReason(reason)}**\n\n`
     })
   }
   
   // ===== 📈 TrendSoccer 예측 =====
-  c += `## 📈 TrendSoccer 예측\n\n`
+  c += `## TrendSoccer 예측\n\n`
   c += `| | 확률 |\n|:---|:---|\n`
   c += `| ${homeKo} | ${generateProbBar('', homePct)} |\n`
   c += `| 무승부 | ${generateProbBar('', drawPct)} |\n`
   c += `| ${awayKo} | ${generateProbBar('', awayPct)} |\n\n`
   
   c += `| 항목 | 분석 |\n|:---|:---|\n`
-  c += `| 🎯 예측 | **${getPickKo(prediction.recommendation.pick)}** |\n`
-  c += `| ⭐ 등급 | **${getGradeKo(prediction.recommendation.grade)}** |\n`
-  c += `| 💰 배당 | ${match.home_odds} / ${match.draw_odds} / ${match.away_odds} |\n`
+  c += `| 예측 | **${getPickKo(prediction.recommendation.pick)}** |\n`
+  c += `| 등급 | **${getGradeKo(prediction.recommendation.grade)}** |\n`
+  c += `| 배당 | ${match.home_odds} / ${match.draw_odds} / ${match.away_odds} |\n`
   if (prediction.homePower && prediction.awayPower) {
-    c += `| ⚡ 파워 지수 | ${homeKo} **${prediction.homePower}** vs ${awayKo} **${prediction.awayPower}** |\n`
+    c += `| 파워 지수 | ${homeKo} **${prediction.homePower}** vs ${awayKo} **${prediction.awayPower}** |\n`
   }
   if (prediction.patternStats) {
-    c += `| 📊 패턴 | ${prediction.pattern} (${prediction.patternStats.totalMatches}경기 기반) |\n`
+    c += `| 패턴 | ${prediction.pattern} (${prediction.patternStats.totalMatches}경기 기반) |\n`
   }
   c += '\n'
   
@@ -905,7 +905,7 @@ function generateContentEn(
   }
   
   // Recent Form
-  c += `## 📊 Recent Form\n\n`
+  c += `## Recent Form\n\n`
   if (homeStats?.recentForm) {
     const f5 = homeStats.recentForm.last5?.results || []
     const l10 = homeStats.recentForm.last10
@@ -917,7 +917,7 @@ function generateContentEn(
       c += `| Goals / Conceded | **${l10.goalsFor}** / **${l10.goalsAgainst}** |\n`
       const streak = homeStats.recentForm.currentStreak
       if (streak && streak.count >= 2) {
-        c += `| Streak | ${streak.type === 'W' ? `🔥 **${streak.count}-game win streak**` : streak.type === 'L' ? `⚠️ **${streak.count}-game losing run**` : `**${streak.count} draws**`} |\n`
+        c += `| Streak | ${streak.type === 'W' ? `**${streak.count}-game win streak**` : streak.type === 'L' ? `**${streak.count}-game losing run**` : `**${streak.count} draws**`} |\n`
       }
       c += '\n'
     }
@@ -933,7 +933,7 @@ function generateContentEn(
       c += `| Goals / Conceded | **${l10.goalsFor}** / **${l10.goalsAgainst}** |\n`
       const streak = awayStats.recentForm.currentStreak
       if (streak && streak.count >= 2) {
-        c += `| Streak | ${streak.type === 'W' ? `🔥 **${streak.count}-game win streak**` : streak.type === 'L' ? `⚠️ **${streak.count}-game losing run**` : `**${streak.count} draws**`} |\n`
+        c += `| Streak | ${streak.type === 'W' ? `**${streak.count}-game win streak**` : streak.type === 'L' ? `**${streak.count}-game losing run**` : `**${streak.count} draws**`} |\n`
       }
       c += '\n'
     }
@@ -945,19 +945,19 @@ function generateContentEn(
   const homeRelEnOk = homeRelEn && !(homeRelEn.wins === 0 && homeRelEn.losses >= 10)
   const awayRelEnOk = awayRelEn && !(awayRelEn.wins === 0 && awayRelEn.losses >= 10)
   if (homeRelEnOk && awayRelEnOk) {
-    c += `## 🏆 ${leagueInfo.nameEn} Season Record\n\n`
+    c += `## ${leagueInfo.nameEn} Season Record\n\n`
     c += `| | ${home} (Home) | ${away} (Away) |\n|:---|:---:|:---:|\n`
     c += `| W-D-L | **${homeRelEn.wins}-${homeRelEn.draws}-${homeRelEn.losses}** | **${awayRelEn.wins}-${awayRelEn.draws}-${awayRelEn.losses}** |\n`
     c += `| Win Rate | **${homeRelEn.winRate}%** | **${awayRelEn.winRate}%** |\n\n`
   } else if (homeRelEnOk || awayRelEnOk) {
-    c += `## 🏆 ${leagueInfo.nameEn} Season Record\n\n`
+    c += `## ${leagueInfo.nameEn} Season Record\n\n`
     if (homeRelEnOk) c += `**${home} (Home)**: ${homeRelEn.wins}W ${homeRelEn.draws}D ${homeRelEn.losses}L (**${homeRelEn.winRate}%** win rate)\n\n`
     if (awayRelEnOk) c += `**${away} (Away)**: ${awayRelEn.wins}W ${awayRelEn.draws}D ${awayRelEn.losses}L (**${awayRelEn.winRate}%** win rate)\n\n`
   }
   
   // Key Stats
   if (homeStats?.recentMatches?.length > 0 && awayStats?.recentMatches?.length > 0) {
-    c += `## 📈 Key Stats\n\n`
+    c += `## Key Stats\n\n`
     const hL10 = homeStats.recentMatches.slice(0, 10)
     const aL10 = awayStats.recentMatches.slice(0, 10)
     const hGF = (hL10.reduce((s: number, m: any) => s + m.goalsFor, 0) / hL10.length).toFixed(1)
@@ -967,41 +967,41 @@ function generateContentEn(
     
     c += `> Based on last 10 matches\n\n`
     c += `| Metric | ${home} | ${away} |\n|:---|:---:|:---:|\n`
-    c += `| ⚽ Goals/Game | **${hGF}** | **${aGF}** |\n`
-    c += `| 🛡️ Conceded/Game | **${hGA}** | **${aGA}** |\n`
+    c += `| Goals/Game | **${hGF}** | **${aGF}** |\n`
+    c += `| Conceded/Game | **${hGA}** | **${aGA}** |\n`
     
     if (homeStats.markets && awayStats.markets) {
-      c += `| 📊 Over 2.5 | **${homeStats.markets.over25Rate}%** | **${awayStats.markets.over25Rate}%** |\n`
-      c += `| 🎯 BTTS | **${homeStats.markets.bttsRate}%** | **${awayStats.markets.bttsRate}%** |\n`
-      c += `| 🧤 Clean Sheet | **${homeStats.markets.cleanSheetRate}%** | **${awayStats.markets.cleanSheetRate}%** |\n`
+      c += `| Over 2.5 | **${homeStats.markets.over25Rate}%** | **${awayStats.markets.over25Rate}%** |\n`
+      c += `| BTTS | **${homeStats.markets.bttsRate}%** | **${awayStats.markets.bttsRate}%** |\n`
+      c += `| Clean Sheet | **${homeStats.markets.cleanSheetRate}%** | **${awayStats.markets.cleanSheetRate}%** |\n`
     }
     c += '\n'
   }
   
   // H2H
   if (h2h?.overall) {
-    c += `## ⚔️ Head-to-Head\n\n`
+    c += `## Head-to-Head\n\n`
     c += `| ${home} Wins | Draws | ${away} Wins | Total |\n|:---:|:---:|:---:|:---:|\n`
     c += `| **${h2h.overall.homeWins}** | **${h2h.overall.draws}** | **${h2h.overall.awayWins}** | ${h2h.overall.totalMatches} |\n\n`
     if (h2h.recentMatches?.length > 0) {
       c += `**Recent Meetings**\n\n`
       h2h.recentMatches.slice(0, 3).forEach((m: any) => {
-        const icon = m.result === 'W' ? '🔵' : m.result === 'L' ? '🔴' : '⚪'
+        const icon = m.result === 'W' ? '승' : m.result === 'L' ? '패' : '무'
         const date = m.date ? ` (${m.date.slice(0, 10)})` : ''
         const hName = m.homeTeam || match.home_team
         const aName = m.awayTeam || match.away_team
         c += `${icon} ${hName} **${m.homeScore} - ${m.awayScore}** ${aName}${date}\n\n`
       })
     }
-    if (h2h.insights?.length > 0) c += `> 💡 ${h2h.insights[0]}\n\n`
+    if (h2h.insights?.length > 0) c += `> ${h2h.insights[0]}\n\n`
   }
   
   // Tactical (AI or template)
   if (ai?.tacticalEn) {
-    c += `## 🎯 Tactical Points\n\n`
+    c += `## Tactical Points\n\n`
     c += ai.tacticalEn + '\n\n'
   } else if (homeStats?.strengths?.length > 0 || awayStats?.strengths?.length > 0) {
-    c += `## 🎯 Tactical Points\n\n`
+    c += `## Tactical Points\n\n`
     if (homeStats?.strengths?.length > 0) { c += `### ${home} Strengths\n`; homeStats.strengths.slice(0, 3).forEach((s: string) => { c += `- ${s}\n` }); c += '\n' }
     if (homeStats?.weaknesses?.length > 0) { c += `### ${home} Weaknesses\n`; homeStats.weaknesses.slice(0, 2).forEach((w: string) => { c += `- ${w}\n` }); c += '\n' }
     if (awayStats?.strengths?.length > 0) { c += `### ${away} Strengths\n`; awayStats.strengths.slice(0, 3).forEach((s: string) => { c += `- ${s}\n` }); c += '\n' }
@@ -1010,31 +1010,31 @@ function generateContentEn(
   
   // Key Factors (AI or template)
   if (ai?.keyFactorsEn) {
-    c += `## 💡 Key Factors\n\n`
+    c += `## Key Factors\n\n`
     c += ai.keyFactorsEn + '\n\n'
   } else if (prediction.recommendation.reasons?.length > 0) {
-    c += `## 💡 Key Factors\n\n`
+    c += `## Key Factors\n\n`
     prediction.recommendation.reasons.slice(0, 3).forEach((reason: string, i: number) => {
       c += `**${i + 1}. ${reason}**\n\n`
     })
   }
   
   // Prediction
-  c += `## 📈 TrendSoccer Prediction\n\n`
+  c += `## TrendSoccer Prediction\n\n`
   c += `| | Probability |\n|:---|:---|\n`
   c += `| ${home} | ${generateProbBar('', homePct)} |\n`
   c += `| Draw | ${generateProbBar('', drawPct)} |\n`
   c += `| ${away} | ${generateProbBar('', awayPct)} |\n\n`
   
   c += `| Detail | Analysis |\n|:---|:---|\n`
-  c += `| 🎯 Prediction | **${getPickEn(prediction.recommendation.pick)}** |\n`
-  c += `| ⭐ Grade | **${prediction.recommendation.grade}** |\n`
-  c += `| 💰 Odds | ${match.home_odds} / ${match.draw_odds} / ${match.away_odds} |\n`
+  c += `| Prediction | **${getPickEn(prediction.recommendation.pick)}** |\n`
+  c += `| Grade | **${prediction.recommendation.grade}** |\n`
+  c += `| Odds | ${match.home_odds} / ${match.draw_odds} / ${match.away_odds} |\n`
   if (prediction.homePower && prediction.awayPower) {
-    c += `| ⚡ Power Index | ${home} **${prediction.homePower}** vs ${away} **${prediction.awayPower}** |\n`
+    c += `| Power Index | ${home} **${prediction.homePower}** vs ${away} **${prediction.awayPower}** |\n`
   }
   if (prediction.patternStats) {
-    c += `| 📊 Pattern | ${prediction.pattern} (${prediction.patternStats.totalMatches} matches) |\n`
+    c += `| Pattern | ${prediction.pattern} (${prediction.patternStats.totalMatches} matches) |\n`
   }
   c += '\n'
   
