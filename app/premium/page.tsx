@@ -1934,7 +1934,7 @@ export default function PremiumPredictPage() {
     // ❌ MLS 임시 제거 - 데이터 문제로 인해 비활성화 (20250301)
     // { code: 'MLS', name: 'MLS', nameKo: 'MLS', logo: 'https://media.api-sports.io/football/leagues/253.png', flag: 'https://media.api-sports.io/flags/us.svg' },
     { code: 'KL', name: 'K LEAGUE', nameKo: 'K리그', logo: 'https://media.api-sports.io/football/leagues/292.png', flag: 'https://media.api-sports.io/flags/kr.svg' },
-    { code: 'J', name: 'J1/2', nameKo: ''J리그', logo: 'https://media.api-sports.io/football/leagues/98.png', flag: 'https://media.api-sports.io/flags/jp.svg' },
+    { code: 'J', name: 'J1/2', nameKo: 'J리그', logo: 'https://media.api-sports.io/football/leagues/98.png', flag: 'https://media.api-sports.io/flags/jp.svg' },
   ]
   
   // 예정 경기 로드
