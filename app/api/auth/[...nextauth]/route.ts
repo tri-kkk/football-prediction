@@ -63,7 +63,7 @@ function safeStringify(value: any): string | null {
   
   // 그 외에는 toString() 사용
   try {
-    return String(value)
+    return Object.prototype.toString.call(value)
   } catch {
     return null
   }
@@ -215,14 +215,14 @@ const handler = NextAuth({
           session.user.id = userData.id
           session.user.termsAgreed = true
           session.user.pendingPromo = null
-          session.user.tier = userData.tier || 'free'
+          ;(session.user as any).tier = userData.tier || 'free'
           
           if (userData.name) {
             session.user.name = userData.name
           }
 
           // ✅ promo_code 할당 (안전)
-          (session.user as any).promo_code = userData.promo_code || null
+          ;(session.user as any).promo_code = userData.promo_code || null
           
           console.log('💎 [SESSION] Assigned promo_code:', userData.promo_code)
 
@@ -250,7 +250,7 @@ const handler = NextAuth({
                 const expiresAtStr = safeStringify(subscription.expires_at)
                 
                 if (expiresAtStr) {
-                  (session.user as any).premium_expires_at = expiresAtStr
+                  ;(session.user as any).premium_expires_at = expiresAtStr
                   console.log('✅ [SESSION] Assigned premium_expires_at:', expiresAtStr)
                   
                   // 만료 여부 확인
@@ -262,8 +262,8 @@ const handler = NextAuth({
                       console.log('⏰ [SESSION] Premium expired, downgrading to free')
                       
                       // ✅ tier를 'free'로 변경
-                      session.user.tier = 'free'
-                      (session.user as any).premium_expires_at = null
+                      ;(session.user as any).tier = 'free'
+                      ;(session.user as any).premium_expires_at = null
                       
                       // ✅ DB에도 업데이트 (비동기)
                       supabase
@@ -284,18 +284,17 @@ const handler = NextAuth({
                       console.log(`✅ [SESSION] Premium active: ${daysRemaining}일 남음`)
                     }
                   } catch (dateError) {
-                    // console.error 제거 (NextAuth 호환성)
-                    (session.user as any).premium_expires_at = expiresAtStr
+                    // 에러 처리
+                    ;(session.user as any).premium_expires_at = expiresAtStr
                   }
                 } else {
-                  // console.warn 제거 (NextAuth 호환성)
-                  (session.user as any).premium_expires_at = null
+                  ;(session.user as any).premium_expires_at = null
                 }
               } else {
-                // ✅ 구독이 없으면 (새로 추가된 부분)
+                // ✅ 구독이 없으면
                 console.log('⚠️ [SESSION] Premium user with no active subscription - downgrading to free')
-                session.user.tier = 'free'
-                (session.user as any).premium_expires_at = null
+                ;(session.user as any).tier = 'free'
+                ;(session.user as any).premium_expires_at = null
                 
                 // ✅ DB에도 업데이트 (비동기)
                 supabase
@@ -313,16 +312,15 @@ const handler = NextAuth({
                   })
               }
             } catch (subException) {
-              // console.error 제거 (NextAuth 호환성)
-              (session.user as any).premium_expires_at = null
+              ;(session.user as any).premium_expires_at = null
             }
           } else {
             // 무료 사용자
-            (session.user as any).premium_expires_at = null
+            ;(session.user as any).premium_expires_at = null
             console.log('🆓 [SESSION] Free user - premium_expires_at set to null')
           }
           
-          console.log('🔍 [SESSION] Returning session with tier:', session.user.tier)
+          console.log('🔍 [SESSION] Returning session with tier:', (session.user as any).tier)
           return session
         }
 
@@ -343,27 +341,27 @@ const handler = NextAuth({
           session.user.id = pendingData.id
           session.user.termsAgreed = false
           session.user.pendingPromo = pendingData.pending_promo
-          // ✅ 문자열로 명시적 설정 (함수 아님)
-          session.user.tier = 'guest'
-          (session.user as any).premium_expires_at = null
-          (session.user as any).promo_code = null
+          // ✅ 타입 캐스팅 사용
+          ;(session.user as any).tier = 'free'
+          ;(session.user as any).premium_expires_at = null
+          ;(session.user as any).promo_code = null
           return session
         }
 
         console.log('⚠️ User not found')
         session.user.termsAgreed = false
-        // ✅ 문자열로 명시적 설정 (함수 아님)
-        session.user.tier = 'guest'
-        (session.user as any).premium_expires_at = null
-        (session.user as any).promo_code = null
+        // ✅ 타입 캐스팅 사용
+        ;(session.user as any).tier = 'free'
+        ;(session.user as any).premium_expires_at = null
+        ;(session.user as any).promo_code = null
 
       } catch (error) {
-        // console.error 제거 (NextAuth 호환성)
+        console.log('⚠️ [SESSION] Session error:', error)
         session.user.termsAgreed = false
-        // ✅ 문자열로 명시적 설정 (함수 아님)
-        session.user.tier = 'guest'
-        (session.user as any).premium_expires_at = null
-        (session.user as any).promo_code = null
+        // ✅ 타입 캐스팅 사용
+        ;(session.user as any).tier = 'free'
+        ;(session.user as any).premium_expires_at = null
+        ;(session.user as any).promo_code = null
       }
 
       console.log('🔍 [SESSION] RETURNING SESSION:', {
