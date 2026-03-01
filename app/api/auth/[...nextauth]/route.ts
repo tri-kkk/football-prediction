@@ -292,8 +292,25 @@ const handler = NextAuth({
                   (session.user as any).premium_expires_at = null
                 }
               } else {
-                // console.warn 제거 (NextAuth 호환성)
+                // ✅ 구독이 없으면 (새로 추가된 부분)
+                console.log('⚠️ [SESSION] Premium user with no active subscription - downgrading to free')
+                session.user.tier = 'free'
                 (session.user as any).premium_expires_at = null
+                
+                // ✅ DB에도 업데이트 (비동기)
+                supabase
+                  .from('users')
+                  .update({ 
+                    tier: 'free',
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', userData.id)
+                  .then(() => {
+                    console.log('✅ [SESSION] Premium user with no subscription downgraded to free in DB')
+                  })
+                  .catch((error) => {
+                    console.log('⚠️ [SESSION] Failed to downgrade premium without subscription:', error)
+                  })
               }
             } catch (subException) {
               // console.error 제거 (NextAuth 호환성)
