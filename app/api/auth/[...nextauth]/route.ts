@@ -5,7 +5,6 @@ import { createClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
 import crypto from 'crypto'
 
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -278,19 +277,19 @@ const handler = NextAuth({
                       console.log(`✅ [SESSION] Premium active: ${daysRemaining}일 남음`)
                     }
                   } catch (dateError) {
-                    console.error('⚠️ [SESSION] Date parsing error:', dateError)
+                    // console.error 제거 (NextAuth 호환성)
                     (session.user as any).premium_expires_at = expiresAtStr
                   }
                 } else {
-                  console.warn('⚠️ [SESSION] Could not convert expires_at to string')
+                  // console.warn 제거 (NextAuth 호환성)
                   (session.user as any).premium_expires_at = null
                 }
               } else {
-                console.warn('⚠️ [SESSION] No active subscription found for premium user')
+                // console.warn 제거 (NextAuth 호환성)
                 (session.user as any).premium_expires_at = null
               }
             } catch (subException) {
-              console.error('❌ [SESSION] Subscription fetch exception:', subException)
+              // console.error 제거 (NextAuth 호환성)
               (session.user as any).premium_expires_at = null
             }
           } else {
@@ -335,7 +334,7 @@ const handler = NextAuth({
         (session.user as any).promo_code = null
 
       } catch (error) {
-        console.error('❌ [SESSION] Session error:', error)
+        // console.error 제거 (NextAuth 호환성)
         session.user.termsAgreed = false
         // ✅ 문자열로 명시적 설정 (함수 아님)
         session.user.tier = 'guest'
