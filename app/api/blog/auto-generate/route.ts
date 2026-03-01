@@ -465,6 +465,46 @@ function hasEnoughData(homeStats: any, awayStats: any): boolean {
   return true
 }
 
+// 예측 데이터 유효성 검증
+function isPredictionValid(prediction: any): boolean {
+  if (!prediction?.finalProb) return false
+  
+  const { home, draw, away } = prediction.finalProb
+  
+  // 확률이 전부 0이면 깨진 데이터
+  if (home === 0 && draw === 0 && away === 0) {
+    console.log('⚠️ Prediction invalid: all probabilities are 0')
+    return false
+  }
+  
+  // 확률 합이 비정상 (0.5 미만이면 깨짐)
+  const total = home + draw + away
+  if (total < 0.5) {
+    console.log(`⚠️ Prediction invalid: prob total = ${total}`)
+    return false
+  }
+  
+  return true
+}
+
+// 시즌 성적 이상치 감지 (승률 0%인데 패배 10+)
+function isSeasonStatsAbnormal(homeStats: any, awayStats: any): boolean {
+  const hS = homeStats?.homeStats
+  const aS = awayStats?.awayStats
+  
+  // 홈 18연패, 원정 21연패 같은 비정상 데이터
+  if (hS && hS.wins === 0 && hS.losses >= 10) {
+    console.log(`⚠️ Abnormal home stats: 0W ${hS.losses}L — likely data error`)
+    return true
+  }
+  if (aS && aS.wins === 0 && aS.losses >= 10) {
+    console.log(`⚠️ Abnormal away stats: 0W ${aS.losses}L — likely data error`)
+    return true
+  }
+  
+  return false
+}
+
 // ============================================
 // 썸네일 URL 생성 (OG 이미지용)
 // ============================================
@@ -680,15 +720,19 @@ function generateContentKo(
   const homeRel = homeStats?.homeStats
   const awayRel = awayStats?.awayStats
   
-  if (homeRel && awayRel) {
+  // 이상치 필터: 0승 10패+ 같은 비정상 데이터는 표시 안 함
+  const homeRelOk = homeRel && !(homeRel.wins === 0 && homeRel.losses >= 10)
+  const awayRelOk = awayRel && !(awayRel.wins === 0 && awayRel.losses >= 10)
+  
+  if (homeRelOk && awayRelOk) {
     c += `## 🏆 ${leagueInfo.nameKo} 시즌 성적\n\n`
     c += `| | ${homeKo} (홈) | ${awayKo} (원정) |\n|:---|:---:|:---:|\n`
     c += `| 승-무-패 | **${homeRel.wins}-${homeRel.draws}-${homeRel.losses}** | **${awayRel.wins}-${awayRel.draws}-${awayRel.losses}** |\n`
     c += `| 승률 | **${homeRel.winRate}%** | **${awayRel.winRate}%** |\n\n`
-  } else if (homeRel || awayRel) {
+  } else if (homeRelOk || awayRelOk) {
     c += `## 🏆 ${leagueInfo.nameKo} 시즌 성적\n\n`
-    if (homeRel) c += `**${homeKo} (홈)**: ${homeRel.wins}승 ${homeRel.draws}무 ${homeRel.losses}패 (승률 **${homeRel.winRate}%**)\n\n`
-    if (awayRel) c += `**${awayKo} (원정)**: ${awayRel.wins}승 ${awayRel.draws}무 ${awayRel.losses}패 (승률 **${awayRel.winRate}%**)\n\n`
+    if (homeRelOk) c += `**${homeKo} (홈)**: ${homeRel.wins}승 ${homeRel.draws}무 ${homeRel.losses}패 (승률 **${homeRel.winRate}%**)\n\n`
+    if (awayRelOk) c += `**${awayKo} (원정)**: ${awayRel.wins}승 ${awayRel.draws}무 ${awayRel.losses}패 (승률 **${awayRel.winRate}%**)\n\n`
   }
   
   // ===== 📈 핵심 스탯 비교 =====
@@ -880,15 +924,17 @@ function generateContentEn(
   // Season Record
   const homeRelEn = homeStats?.homeStats
   const awayRelEn = awayStats?.awayStats
-  if (homeRelEn && awayRelEn) {
+  const homeRelEnOk = homeRelEn && !(homeRelEn.wins === 0 && homeRelEn.losses >= 10)
+  const awayRelEnOk = awayRelEn && !(awayRelEn.wins === 0 && awayRelEn.losses >= 10)
+  if (homeRelEnOk && awayRelEnOk) {
     c += `## 🏆 ${leagueInfo.nameEn} Season Record\n\n`
     c += `| | ${home} (Home) | ${away} (Away) |\n|:---|:---:|:---:|\n`
     c += `| W-D-L | **${homeRelEn.wins}-${homeRelEn.draws}-${homeRelEn.losses}** | **${awayRelEn.wins}-${awayRelEn.draws}-${awayRelEn.losses}** |\n`
     c += `| Win Rate | **${homeRelEn.winRate}%** | **${awayRelEn.winRate}%** |\n\n`
-  } else if (homeRelEn || awayRelEn) {
+  } else if (homeRelEnOk || awayRelEnOk) {
     c += `## 🏆 ${leagueInfo.nameEn} Season Record\n\n`
-    if (homeRelEn) c += `**${home} (Home)**: ${homeRelEn.wins}W ${homeRelEn.draws}D ${homeRelEn.losses}L (**${homeRelEn.winRate}%** win rate)\n\n`
-    if (awayRelEn) c += `**${away} (Away)**: ${awayRelEn.wins}W ${awayRelEn.draws}D ${awayRelEn.losses}L (**${awayRelEn.winRate}%** win rate)\n\n`
+    if (homeRelEnOk) c += `**${home} (Home)**: ${homeRelEn.wins}W ${homeRelEn.draws}D ${homeRelEn.losses}L (**${homeRelEn.winRate}%** win rate)\n\n`
+    if (awayRelEnOk) c += `**${away} (Away)**: ${awayRelEn.wins}W ${awayRelEn.draws}D ${awayRelEn.losses}L (**${awayRelEn.winRate}%** win rate)\n\n`
   }
   
   // Key Stats
@@ -1048,6 +1094,13 @@ export async function GET(request: NextRequest) {
         const prediction = await fetchPrediction(match)
         if (!prediction) { failed++; continue }
         
+        // 1.5. 예측 유효성 검증 (확률 0% 등)
+        if (!isPredictionValid(prediction)) {
+          console.log(`⏭️ Invalid prediction: ${match.home_team} vs ${match.away_team}`)
+          failed++
+          continue
+        }
+        
         // 2. 팀 스탯 + H2H
         const [homeStats, awayStats, h2h] = await Promise.all([
           fetchTeamStats(match.home_team, match.league_code),
@@ -1058,6 +1111,13 @@ export async function GET(request: NextRequest) {
         // 3. 데이터 충분성 검증
         if (!hasEnoughData(homeStats, awayStats)) {
           console.log(`⏭️ Insufficient data: ${match.home_team} vs ${match.away_team} (${match.league_code})`)
+          noData++
+          continue
+        }
+        
+        // 3.5. 시즌 성적 이상치 감지 (0승 18패 같은 비정상)
+        if (isSeasonStatsAbnormal(homeStats, awayStats)) {
+          console.log(`⏭️ Abnormal season stats: ${match.home_team} vs ${match.away_team} — skipping`)
           noData++
           continue
         }
@@ -1185,6 +1245,10 @@ export async function POST(request: NextRequest) {
     const prediction = await fetchPrediction(match)
     if (!prediction) return NextResponse.json({ error: 'Prediction failed' }, { status: 500 })
     
+    if (!isPredictionValid(prediction)) {
+      return NextResponse.json({ error: 'Prediction data invalid (all probabilities 0%)' }, { status: 422 })
+    }
+    
     const [homeStats, awayStats, h2h] = await Promise.all([
       fetchTeamStats(match.home_team, match.league_code),
       fetchTeamStats(match.away_team, match.league_code),
@@ -1193,6 +1257,10 @@ export async function POST(request: NextRequest) {
     
     if (!hasEnoughData(homeStats, awayStats)) {
       return NextResponse.json({ error: 'Insufficient team data for blog generation' }, { status: 422 })
+    }
+    
+    if (isSeasonStatsAbnormal(homeStats, awayStats)) {
+      return NextResponse.json({ error: 'Abnormal season stats detected (likely data error)' }, { status: 422 })
     }
     
     const homeKo = getTeamNameKo(match.home_team)
