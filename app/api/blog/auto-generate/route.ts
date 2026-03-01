@@ -446,16 +446,24 @@ function translateReason(reason: string): string {
 // ============================================
 // 데이터 충분성 검증
 // ============================================
-function hasEnoughData(homeStats: any, awayStats: any): boolean {
-  // 최소 조건: 양팀 모두 최근 폼 데이터가 있어야 함
+function hasEnoughData(homeStats: any, awayStats: any, leagueCode?: string): boolean {
+  // 개막전/시즌 초반 리그는 완화된 검증
+  const isSeasonStart = isLeagueInSeasonStart(leagueCode || '')
+  
   const homeForm = homeStats?.recentForm?.last5?.results
   const awayForm = awayStats?.recentForm?.last5?.results
   
-  // 최근 5경기 결과가 최소 3개 이상 있어야 함
+  if (isSeasonStart) {
+    // 개막전: 최근 폼 데이터 1개라도 있으면 OK (지난 시즌 데이터)
+    if (!homeForm || homeForm.length < 1) return false
+    if (!awayForm || awayForm.length < 1) return false
+    return true
+  }
+  
+  // 일반: 최근 5경기 결과가 최소 3개 이상 있어야 함
   if (!homeForm || homeForm.length < 3) return false
   if (!awayForm || awayForm.length < 3) return false
   
-  // 최근 10경기 데이터 확인
   const homeLast10 = homeStats?.recentForm?.last10
   const awayLast10 = awayStats?.recentForm?.last10
   
@@ -463,6 +471,16 @@ function hasEnoughData(homeStats: any, awayStats: any): boolean {
   if (!awayLast10 || (awayLast10.wins + awayLast10.draws + awayLast10.losses) === 0) return false
   
   return true
+}
+
+// 시즌 개막기 판별
+function isLeagueInSeasonStart(leagueCode: string): boolean {
+  const month = new Date().getMonth() + 1
+  // K리그/J리그/MLS: 2~4월이 개막기
+  if (['KL1', 'KL2', 'J1', 'J2', 'MLS'].includes(leagueCode) && month >= 2 && month <= 4) return true
+  // 유럽: 8~9월이 개막기
+  if (['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED'].includes(leagueCode) && month >= 8 && month <= 9) return true
+  return false
 }
 
 // 예측 데이터 유효성 검증
@@ -1109,7 +1127,7 @@ export async function GET(request: NextRequest) {
         ])
         
         // 3. 데이터 충분성 검증
-        if (!hasEnoughData(homeStats, awayStats)) {
+        if (!hasEnoughData(homeStats, awayStats, match.league_code)) {
           console.log(`⏭️ Insufficient data: ${match.home_team} vs ${match.away_team} (${match.league_code})`)
           noData++
           continue
@@ -1255,7 +1273,7 @@ export async function POST(request: NextRequest) {
       fetchH2H(match),
     ])
     
-    if (!hasEnoughData(homeStats, awayStats)) {
+    if (!hasEnoughData(homeStats, awayStats, match.league_code)) {
       return NextResponse.json({ error: 'Insufficient team data for blog generation' }, { status: 422 })
     }
     
