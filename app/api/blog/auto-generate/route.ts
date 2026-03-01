@@ -59,6 +59,161 @@ function getSeasonForLeague(leagueCode: string): string {
 }
 
 // ============================================
+// 시즌 상황 감지 + 제목 다양화
+// ============================================
+interface SeasonContext {
+  phaseKo: string
+  phaseEn: string
+  isOpening: boolean
+  cautionNote: string  // AI에게 전달할 주의사항
+}
+
+function detectSeasonContext(leagueCode: string, homeStats: any, awayStats: any): SeasonContext {
+  const now = new Date()
+  const month = now.getMonth() + 1
+  
+  // 홈/원정 성적으로 이번 시즌 경기 수 추정
+  const homeGames = homeStats?.homeStats 
+    ? (homeStats.homeStats.wins + homeStats.homeStats.draws + homeStats.homeStats.losses) 
+    : 0
+  const awayGames = awayStats?.awayStats
+    ? (awayStats.awayStats.wins + awayStats.awayStats.draws + awayStats.awayStats.losses)
+    : 0
+  const totalGames = homeGames + awayGames
+  
+  // K리그/J리그/MLS: 2~4월 개막
+  if (['KL1', 'KL2', 'J1', 'J2', 'MLS'].includes(leagueCode)) {
+    if (totalGames <= 2 || (month >= 2 && month <= 3 && totalGames <= 4)) {
+      return {
+        phaseKo: '시즌 개막',
+        phaseEn: 'season opener',
+        isOpening: true,
+        cautionNote: '시즌 개막 초반이므로 "연승", "연패", "최근 폼" 등 지난 시즌 데이터를 이번 시즌 흐름처럼 서술하지 마세요. "새 시즌 첫 경기" 또는 "개막전" 맥락으로 작성하세요. 지난 시즌 성적은 "작시즌"으로 명시하세요.',
+      }
+    }
+    if (totalGames <= 8) {
+      return {
+        phaseKo: '시즌 초반',
+        phaseEn: 'early season',
+        isOpening: false,
+        cautionNote: '시즌 초반이라 데이터가 적습니다. "이번 시즌 초반" 맥락으로, 데이터 해석 시 표본 부족을 인지하세요. 지난 시즌 데이터 참조 시 "작시즌"으로 명시하세요.',
+      }
+    }
+  }
+  
+  // 유럽 리그: 8~9월 개막
+  if (['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED'].includes(leagueCode)) {
+    if (totalGames <= 2 || (month >= 8 && month <= 9 && totalGames <= 4)) {
+      return {
+        phaseKo: '시즌 개막',
+        phaseEn: 'season opener',
+        isOpening: true,
+        cautionNote: '시즌 개막 초반이므로 "연승", "연패" 등을 이번 시즌 흐름처럼 서술하지 마세요. 데이터는 지난 시즌 또는 프리시즌 기반일 수 있습니다.',
+      }
+    }
+    if (totalGames <= 10) {
+      return { phaseKo: '시즌 초반', phaseEn: 'early season', isOpening: false,
+        cautionNote: '시즌 초반입니다. 표본이 적어 통계 해석에 주의하세요.' }
+    }
+    if (month >= 4 || totalGames >= 28) {
+      return { phaseKo: '시즌 후반', phaseEn: 'late season', isOpening: false,
+        cautionNote: '시즌 후반입니다. 순위 경쟁, 잔류 싸움, 우승 경쟁 등 맥락을 반영하세요.' }
+    }
+  }
+  
+  return { phaseKo: '시즌 중반', phaseEn: 'mid-season', isOpening: false, cautionNote: '' }
+}
+
+// 제목 패턴 다양화
+function generateTitleKr(homeKo: string, awayKo: string, leagueInfo: any, seasonCtx: SeasonContext, homeStats: any, awayStats: any): string {
+  const patterns = [
+    () => `${homeKo} vs ${awayKo} 프리뷰: ${leagueInfo.nameKo} 경기 분석`,
+    () => `${leagueInfo.nameKo} ${homeKo} vs ${awayKo} 분석 리포트`,
+    () => `${homeKo} vs ${awayKo}, ${leagueInfo.nameKo} 관전 포인트는?`,
+    () => `${leagueInfo.nameKo} 프리뷰: ${homeKo} vs ${awayKo} 전력 비교`,
+    () => `${homeKo} vs ${awayKo} 맞대결, 데이터로 본 승부 전망`,
+    () => `${homeKo} vs ${awayKo} | ${leagueInfo.nameKo} 매치 분석`,
+  ]
+  
+  // 시즌 개막 전용
+  if (seasonCtx.isOpening) {
+    patterns.push(
+      () => `${leagueInfo.nameKo} 개막! ${homeKo} vs ${awayKo} 시즌 첫 분석`,
+      () => `새 시즌 ${homeKo} vs ${awayKo}, ${leagueInfo.nameKo} 개막전 프리뷰`,
+    )
+  }
+  
+  // 연승/연패 맥락 (개막 아닐 때만)
+  if (!seasonCtx.isOpening) {
+    const hStreak = homeStats?.recentForm?.currentStreak
+    const aStreak = awayStats?.recentForm?.currentStreak
+    if (hStreak?.count >= 3 && hStreak.type === 'W') {
+      patterns.push(() => `${hStreak.count}연승 ${homeKo}, ${awayKo} 상대로 질주 계속될까`)
+    }
+    if (aStreak?.count >= 3 && aStreak.type === 'W') {
+      patterns.push(() => `${aStreak.count}연승 ${awayKo}, ${homeKo} 원정서도 통할까`)
+    }
+    if (hStreak?.count >= 3 && hStreak.type === 'L') {
+      patterns.push(() => `${hStreak.count}연패 ${homeKo}, ${awayKo}전에서 반등 가능할까`)
+    }
+  }
+  
+  // 해시 기반 일관된 랜덤 선택 (같은 경기면 같은 제목)
+  const hash = (homeKo + awayKo).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return patterns[hash % patterns.length]()
+}
+
+function generateTitleEn(home: string, away: string, leagueInfo: any, seasonCtx: SeasonContext, homeStats: any, awayStats: any): string {
+  const patterns = [
+    () => `${home} vs ${away} Preview: ${leagueInfo.nameEn} Match Analysis`,
+    () => `${leagueInfo.nameEn}: ${home} vs ${away} Data-Driven Preview`,
+    () => `${home} vs ${away} | ${leagueInfo.nameEn} Tactical Breakdown`,
+    () => `${home} vs ${away}: Key Stats & Match Preview`,
+    () => `${leagueInfo.nameEn} Preview: ${home} vs ${away} Form Guide`,
+    () => `${home} vs ${away} — What the Data Says | ${leagueInfo.nameEn}`,
+  ]
+  
+  if (seasonCtx.isOpening) {
+    patterns.push(
+      () => `${leagueInfo.nameEn} Season Opener: ${home} vs ${away} Preview`,
+      () => `New Season ${home} vs ${away}: ${leagueInfo.nameEn} Opening Analysis`,
+    )
+  }
+  
+  const hash = (home + away).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return patterns[hash % patterns.length]()
+}
+
+// 예측 없는 excerpt (프리미엄 보호)
+function generateExcerptKr(homeKo: string, awayKo: string, leagueInfo: any, seasonCtx: SeasonContext): string {
+  const patterns = [
+    `${homeKo}와 ${awayKo}의 ${leagueInfo.nameKo} 경기를 데이터로 분석합니다. 양팀 폼, 전력 비교, 핵심 관전 포인트까지.`,
+    `${leagueInfo.nameKo} ${homeKo} vs ${awayKo}, 숫자로 보는 양팀 전력 분석과 핵심 맞대결 포인트.`,
+    `${homeKo} vs ${awayKo} ${leagueInfo.nameKo} 프리뷰. 최근 성적, 상대 전적, 전술 분석을 한눈에.`,
+    `${homeKo}과 ${awayKo}의 전력을 데이터 기반으로 비교 분석합니다. ${leagueInfo.nameKo} 매치 프리뷰.`,
+  ]
+  if (seasonCtx.isOpening) {
+    patterns.push(`${leagueInfo.nameKo} 새 시즌 ${homeKo} vs ${awayKo}! 개막전 양팀 전력을 데이터로 분석합니다.`)
+  }
+  const hash = (homeKo + awayKo).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return patterns[hash % patterns.length]
+}
+
+function generateExcerptEn(home: string, away: string, leagueInfo: any, seasonCtx: SeasonContext): string {
+  const patterns = [
+    `In-depth ${leagueInfo.nameEn} analysis of ${home} vs ${away}. Recent form, key stats, tactical breakdown and more.`,
+    `${home} vs ${away} ${leagueInfo.nameEn} preview. Data-driven analysis covering form, head-to-head, and key match factors.`,
+    `Comprehensive ${leagueInfo.nameEn} match preview: ${home} vs ${away}. Stats, form guide, and tactical insights.`,
+    `Breaking down ${home} vs ${away} with data. ${leagueInfo.nameEn} form analysis, stats comparison, and key battles.`,
+  ]
+  if (seasonCtx.isOpening) {
+    patterns.push(`${leagueInfo.nameEn} new season kicks off! ${home} vs ${away} season opener preview and analysis.`)
+  }
+  const hash = (home + away).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return patterns[hash % patterns.length]
+}
+
+// ============================================
 // 한글 팀명 매핑
 // ============================================
 const TEAM_NAME_KO: Record<string, string> = {
@@ -175,22 +330,26 @@ async function generateAISections(
     const hM = hS?.recentMatches?.slice(0,10) || [], aM = aS?.recentMatches?.slice(0,10) || []
     const h2hSum = h2h?.overall ? `통산 ${h2h.overall.totalMatches}경기: ${hKo} ${h2h.overall.homeWins}승 / 무 ${h2h.overall.draws} / ${aKo} ${h2h.overall.awayWins}승` : '상대전적 없음'
 
-    const prompt = `당신은 축구 분석 블로그 전문 작가입니다. 아래 데이터를 바탕으로 3개 섹션을 한글과 영어로 작성하세요.
+    // 시즌 상황 감지
+    const seasonCtx = detectSeasonContext(match.league_code, hS, aS)
+    const seasonNote = seasonCtx.cautionNote ? `\n\n## ⚠️ 시즌 상황 (반드시 준수)\n- 현재: **${seasonCtx.phaseKo}** (${seasonCtx.phaseEn})\n- ${seasonCtx.cautionNote}` : ''
+
+    const prompt = `당신은 축구 데이터 분석 전문가입니다. 아래 통계를 기반으로 **객관적이고 데이터 중심적인** 분석을 작성하세요.
 
 ## 경기 정보
 - ${hKo}(${match.home_team}) vs ${aKo}(${match.away_team})
 - ${li.nameKo} (${li.nameEn}), ${dateStr} (한국시간)
-- AI 예측: ${pickKo} (${maxP}%), 등급: ${pred.recommendation.grade}
+- 예측: ${pickKo} (${maxP}%), 등급: ${pred.recommendation.grade}
 - 배당: ${match.home_odds} / ${match.draw_odds} / ${match.away_odds}
 - 파워지수: ${hKo} ${pred.homePower||'?'} vs ${aKo} ${pred.awayPower||'?'} (차이: ${pDiff}점)
 
-## 양팀 현황
-- ${hKo} 최근: ${fm(hS)} ${sk(hS)?'('+sk(hS)+')':''}
-- ${aKo} 최근: ${fm(aS)} ${sk(aS)?'('+sk(aS)+')':''}
-- ${hKo} 홈: ${hR ? `${hR.wins}승 ${hR.draws}무 ${hR.losses}패 (${hR.winRate}%)` : '?'}
-- ${aKo} 원정: ${aR ? `${aR.wins}승 ${aR.draws}무 ${aR.losses}패 (${aR.winRate}%)` : '?'}
-- 평균득점: ${hKo} ${avg(hM,'goalsFor')} vs ${aKo} ${avg(aM,'goalsFor')}
-- 평균실점: ${hKo} ${avg(hM,'goalsAgainst')} vs ${aKo} ${avg(aM,'goalsAgainst')}
+## 데이터
+- ${hKo} 최근 5경기: ${fm(hS)} ${sk(hS)?'('+sk(hS)+')':''}
+- ${aKo} 최근 5경기: ${fm(aS)} ${sk(aS)?'('+sk(aS)+')':''}
+- ${hKo} 홈: ${hR ? `${hR.wins}승 ${hR.draws}무 ${hR.losses}패 (${hR.winRate}%)` : '데이터 없음'}
+- ${aKo} 원정: ${aR ? `${aR.wins}승 ${aR.draws}무 ${aR.losses}패 (${aR.winRate}%)` : '데이터 없음'}
+- 경기당 득점: ${hKo} ${avg(hM,'goalsFor')}골 vs ${aKo} ${avg(aM,'goalsFor')}골
+- 경기당 실점: ${hKo} ${avg(hM,'goalsAgainst')}골 vs ${aKo} ${avg(aM,'goalsAgainst')}골
 
 ## 강점/약점
 ${hKo} 강점: ${(hS?.strengths||[]).slice(0,3).join(', ')||'없음'}
@@ -198,21 +357,41 @@ ${hKo} 약점: ${(hS?.weaknesses||[]).slice(0,2).join(', ')||'없음'}
 ${aKo} 강점: ${(aS?.strengths||[]).slice(0,3).join(', ')||'없음'}
 ${aKo} 약점: ${(aS?.weaknesses||[]).slice(0,2).join(', ')||'없음'}
 
-## 예측 근거
+## 분석 근거
 ${(pred.recommendation.reasons||[]).slice(0,4).join('\n')}
 
 ## 상대전적
-${h2hSum}
+${h2hSum}${seasonNote}
 
 ---
-## 작성 규칙
-1. **인트로**: 3-4문장. 경기의 흥미 포인트와 관전 포인트. "~예정되어 있다" 금지. 구어체 혼용(~거든요, ~인데요). 경기 날짜/시간 자연스럽게 포함.
-2. **전술 포인트**: 양팀 강점/약점 기반 전술 맞대결 4-6문장. 단순 나열 금지, 경기 맥락에서 해석.
-3. **승부처**: 예측 근거 기반 3포인트, 각 2-3문장. 데이터를 자연스러운 분석으로.
-4. 금지: "살펴보겠습니다", "주목할 만합니다", "분석해보겠습니다", "~할 것으로 보입니다"
-5. 한글/영어 독립 작성 (번역X)
+## 핵심 작성 규칙
 
-## 출력 형식 (정확히 이 태그)
+### 문체: 스포츠 데이터 애널리스트
+- **객관적 서술**: "~를 기록했다", "~로 나타난다", "~수치를 보이고 있다"
+- **데이터 인용**: 반드시 구체적 수치를 근거로 제시 (예: "최근 10경기 평균 1.5골")
+- **단정 금지**: "~할 것이다" 대신 "~가능성이 높다" 또는 "데이터상 ~로 나타난다"
+- 한글은 간결한 구어체 적절히 혼용 (~인데, ~거든요) 하되 분석 톤 유지
+
+### 절대 금지
+- "살펴보겠습니다", "주목할 만합니다", "분석해보겠습니다"
+- "~할 것으로 보입니다", "~할 것으로 예상됩니다"
+- 데이터에 없는 내용 창작 (선수 이름, 부상 정보, 이적 등)
+- **예측 결과(승/무/패, 확률%) 언급 금지** — 인트로와 전술에서 결과를 암시하지 마세요
+
+### 데이터 정합성 (매우 중요)
+- 제공된 데이터만 사용하세요. 없는 수치를 만들지 마세요.
+- "데이터 없음"인 항목은 언급하지 마세요.
+- 연승/연패는 데이터에 명시된 경우에만 사용하세요.
+${seasonCtx.cautionNote ? `- **${seasonCtx.cautionNote}**` : ''}
+
+### 섹션별 요구
+1. **인트로 (3-4문장)**: 경기 날짜/시간 포함, 양팀 현재 상황과 이번 경기의 관전 포인트. 예측 결과를 직접 언급하지 말 것.
+2. **전술 포인트 (4-6문장)**: 양팀 강점/약점 데이터 기반 전술 맞대결 분석. 수치 근거 필수.
+3. **승부처 (3개, 각 2-3문장)**: 분석 근거 데이터 기반, **1. 제목** 형식. 구체적 수치 포함.
+
+한글/영어 각각 독립 작성 (번역하지 말 것)
+
+## 출력 형식
 <intro_ko>(한글 인트로)</intro_ko>
 <intro_en>(영어 인트로)</intro_en>
 <tactical_ko>(한글 전술 분석)</tactical_ko>
@@ -886,10 +1065,11 @@ export async function GET(request: NextRequest) {
         // 4. AI 섹션 생성 (실패 시 null → 기존 템플릿)
         const homeKo = getTeamNameKo(match.home_team)
         const awayKo = getTeamNameKo(match.away_team)
+        const seasonCtx = detectSeasonContext(match.league_code, homeStats, awayStats)
         let ai: AISections | null = null
         try {
           ai = await generateAISections(match, prediction, homeStats, awayStats, h2h, leagueInfo, homeKo, awayKo)
-          if (ai) console.log(`🤖 AI: ${match.home_team} vs ${match.away_team}`)
+          if (ai) console.log(`🤖 AI: ${match.home_team} vs ${match.away_team} [${seasonCtx.phaseKo}]`)
         } catch (e) {
           console.log(`⚠️ AI fallback: ${match.home_team} vs ${match.away_team}`)
         }
@@ -908,15 +1088,20 @@ export async function GET(request: NextRequest) {
           Math.round(prediction.finalProb.away * 100),
         )
         
-        // 6. DB INSERT
+        // 6. DB INSERT — 제목 다양화, excerpt에 예측 노출 안 함
+        const titleKr = generateTitleKr(homeKo, awayKo, leagueInfo, seasonCtx, homeStats, awayStats)
+        const titleEn = generateTitleEn(match.home_team, match.away_team, leagueInfo, seasonCtx, homeStats, awayStats)
+        const excerptKr = generateExcerptKr(homeKo, awayKo, leagueInfo, seasonCtx)
+        const excerptEn = generateExcerptEn(match.home_team, match.away_team, leagueInfo, seasonCtx)
+        
         const { error: insertError } = await supabase
           .from('blog_posts')
           .insert({
             slug,
-            title: `${match.home_team} vs ${match.away_team}: ${leagueInfo.nameEn} Match Preview & Prediction`,
-            title_kr: `${homeKo} vs ${awayKo}: ${leagueInfo.nameKo} 매치 프리뷰 및 예측`,
-            excerpt: `${homeKo}와 ${awayKo}의 ${leagueInfo.nameKo} 대결 분석. AI 예측: ${getPickKo(prediction.recommendation.pick)} (${maxProb}%)`,
-            excerpt_en: `${match.home_team} vs ${match.away_team} ${leagueInfo.nameEn} analysis. AI Prediction: ${getPickEn(prediction.recommendation.pick)} (${maxProb}%)`,
+            title: titleEn,
+            title_kr: titleKr,
+            excerpt: excerptKr,
+            excerpt_en: excerptEn,
             content: contentKo,
             content_en: contentEn,
             category: 'preview',
@@ -1017,24 +1202,25 @@ export async function POST(request: NextRequest) {
     let ai: AISections | null = null
     try { ai = await generateAISections(match, prediction, homeStats, awayStats, h2h, leagueInfo, homeKo, awayKo) } catch (e) {}
     
+    const seasonCtx = detectSeasonContext(match.league_code, homeStats, awayStats)
     const contentKo = generateContentKo(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai)
     const contentEn = generateContentEn(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai)
     const thumbnailUrl = generateThumbnailUrl(match, prediction, leagueInfo)
     const tags = generateTags(match, leagueInfo)
-    const maxProb = Math.max(
-      Math.round(prediction.finalProb.home * 100),
-      Math.round(prediction.finalProb.draw * 100),
-      Math.round(prediction.finalProb.away * 100),
-    )
+    
+    const titleKr = generateTitleKr(homeKo, awayKo, leagueInfo, seasonCtx, homeStats, awayStats)
+    const titleEn = generateTitleEn(match.home_team, match.away_team, leagueInfo, seasonCtx, homeStats, awayStats)
+    const excerptKr = generateExcerptKr(homeKo, awayKo, leagueInfo, seasonCtx)
+    const excerptEn = generateExcerptEn(match.home_team, match.away_team, leagueInfo, seasonCtx)
     
     const { error: upsertError } = await supabase
       .from('blog_posts')
       .upsert({
         slug,
-        title: `${match.home_team} vs ${match.away_team}: ${leagueInfo.nameEn} Match Preview & Prediction`,
-        title_kr: `${homeKo} vs ${awayKo}: ${leagueInfo.nameKo} 매치 프리뷰 및 예측`,
-        excerpt: `${homeKo}와 ${awayKo}의 ${leagueInfo.nameKo} 대결 분석. AI 예측: ${getPickKo(prediction.recommendation.pick)} (${maxProb}%)`,
-        excerpt_en: `${match.home_team} vs ${match.away_team} analysis. AI: ${getPickEn(prediction.recommendation.pick)} (${maxProb}%)`,
+        title: titleEn,
+        title_kr: titleKr,
+        excerpt: excerptKr,
+        excerpt_en: excerptEn,
         content: contentKo,
         content_en: contentEn,
         category: 'preview',
@@ -1053,9 +1239,10 @@ export async function POST(request: NextRequest) {
       slug,
       thumbnail: thumbnailUrl,
       preview: {
-        titleKr: `${homeKo} vs ${awayKo}: ${leagueInfo.nameKo} 매치 프리뷰 및 예측`,
+        titleKr,
+        titleEn,
+        seasonPhase: seasonCtx.phaseKo,
         grade: prediction.recommendation.grade,
-        pick: prediction.recommendation.pick,
         contentLength: { ko: contentKo.length, en: contentEn.length },
       }
     })
