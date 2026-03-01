@@ -261,17 +261,24 @@ const handler = NextAuth({
                     if (now > expiresAt) {
                       console.log('⏰ [SESSION] Premium expired, downgrading to free')
                       
-                      // 사용자 tier 업데이트
-                      await supabase
+                      // ✅ tier를 'free'로 변경
+                      session.user.tier = 'free'
+                      (session.user as any).premium_expires_at = null
+                      
+                      // ✅ DB에도 업데이트 (비동기)
+                      supabase
                         .from('users')
                         .update({ 
                           tier: 'free',
                           updated_at: new Date().toISOString()
                         })
                         .eq('id', userData.id)
-                      
-                      session.user.tier = 'free'
-                      (session.user as any).premium_expires_at = null
+                        .then(() => {
+                          console.log('✅ [SESSION] User tier downgraded to free in DB')
+                        })
+                        .catch((error) => {
+                          console.log('⚠️ [SESSION] Failed to update tier:', error)
+                        })
                     } else {
                       const daysRemaining = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
                       console.log(`✅ [SESSION] Premium active: ${daysRemaining}일 남음`)
