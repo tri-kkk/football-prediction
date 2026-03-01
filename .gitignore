@@ -9,6 +9,7 @@ node_modules/
 # Baseball (개발 �?
 /app/baseball/
 /app/api/baseball/
+/app/api/baseball/**
 
 # Backup files
 *.bak

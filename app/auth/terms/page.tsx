@@ -40,7 +40,11 @@ export default function TermsPage() {
     if (status === 'authenticated' && session?.user?.email) {
       const termsAgreed = (session?.user as any)?.termsAgreed
       const pendingPromo = (session?.user as any)?.pendingPromo
-
+        // ✅ 추가: 전체 session 출력
+      console.log('🔍 전체 session:', session)
+      console.log('🔍 session.user:', session.user)
+      console.log('🔍 termsAgreed:', termsAgreed)
+      console.log('🔍 pendingPromo:', pendingPromo)
       console.log('🔍 약관 페이지 진입, termsAgreed:', termsAgreed)
 
       if (termsAgreed === true) {
