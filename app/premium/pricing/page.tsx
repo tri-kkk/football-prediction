@@ -129,7 +129,7 @@ export default function PricingPage() {
       const form = document.createElement('form')
       form.name = 'payInit'
       form.method = 'post'
-      form.action = 'https://pay.seedpayments.co.kr/payment/v1/request'  // ✅ SeedPay URL
+      form.action = 'https://pay.seedpayments.co.kr/payment/v1/request'
       form.target = 'seedpay_popup'
       form.style.display = 'none'
 
@@ -188,11 +188,25 @@ export default function PricingPage() {
 
       document.body.appendChild(form)
 
-      document.body.appendChild(form)
-
-      // 7. ✅ form.submit() 직접 사용
-      console.log("[Payment] form.submit() 호출...")
+      // 7. ✅ Form 제출
+      console.log('[Payment] form.submit() 호출...')
       form.submit()
+
+    } catch (err) {
+      console.error('[Payment] 에러 발생:', err)
+      setErrorMessage(
+        language === 'ko' 
+          ? `결제 처리 중 오류: ${err instanceof Error ? err.message : '알 수 없음'}`
+          : `Payment error: ${err instanceof Error ? err.message : 'Unknown error'}`
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0f0f0f] text-white">
+      <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
         
         {errorMessage && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
