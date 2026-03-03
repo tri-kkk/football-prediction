@@ -129,7 +129,7 @@ export default function PricingPage() {
       const form = document.createElement('form')
       form.name = 'payInit'
       form.method = 'post'                    // ✅ POST 방식
-      form.action = data.returnUrl                // ✅ SeedPay 결제 요청 URL
+      form.action = ''                        // ✅ 비워야 함! (SendPay가 처리)
       form.target = 'seedpay_popup'           // ✅ 팝업 이름
       form.style.display = 'none'
 
@@ -188,9 +188,9 @@ export default function PricingPage() {
 
       document.body.appendChild(form)
 
-      // 7. Form 제출
-      console.log('[Payment] Form submit() 호출...')
-      form.submit()
+      // 7. ✅ SendPay 함수 호출 (form.submit() 대신!)
+      console.log('[Payment] window.SendPay(form) 호출...')
+      window.SendPay(form)
 
     } catch (err) {
       console.error('[Payment] 에러 발생:', err)
