@@ -189,8 +189,22 @@ export default function PricingPage() {
       document.body.appendChild(form)
 
       // 7. ✅ SendPay 함수 호출 (form.submit() 대신!)
-      console.log('[Payment] window.SendPay(form) 호출...')
-      window.SendPay(form)
+      console.log('[Payment] window.SendPay 존재?', typeof window.SendPay)
+      
+      if (typeof window.SendPay === 'function') {
+        console.log('[Payment] window.SendPay(form) 호출...')
+        try {
+          window.SendPay(form)
+        } catch (sendPayErr) {
+          console.error('[Payment] ❌ SendPay 에러:', sendPayErr)
+          console.log('[Payment] 폴백: form.submit() 사용')
+          form.submit()
+        }
+      } else {
+        console.error('[Payment] ❌ window.SendPay is not a function!')
+        console.log('[Payment] 폴백: form.submit() 사용')
+        form.submit()
+      }
 
     } catch (err) {
       console.error('[Payment] 에러 발생:', err)
