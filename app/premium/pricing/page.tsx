@@ -128,9 +128,9 @@ export default function PricingPage() {
       // 3. Form 생성 (SeedPay 공식 가이드 기준)
       const form = document.createElement('form')
       form.name = 'payInit'
-      form.method = 'post'                    // ✅ POST 방식
-      form.action = ''                        // ✅ 비워야 함! (SendPay가 처리)
-      form.target = 'seedpay_popup'           // ✅ 팝업 이름
+      form.method = 'post'
+      form.action = 'https://pay.seedpayments.co.kr/payment/v1/request'  // ✅ SeedPay URL
+      form.target = 'seedpay_popup'
       form.style.display = 'none'
 
       // 4. Form 필드 추가 (SeedPay 공식 문서 기준)
@@ -188,39 +188,11 @@ export default function PricingPage() {
 
       document.body.appendChild(form)
 
-      // 7. ✅ SendPay 함수 호출 (form.submit() 대신!)
-      console.log('[Payment] window.SendPay 존재?', typeof window.SendPay)
-      
-      if (typeof window.SendPay === 'function') {
-        console.log('[Payment] window.SendPay(form) 호출...')
-        try {
-          window.SendPay(form)
-        } catch (sendPayErr) {
-          console.error('[Payment] ❌ SendPay 에러:', sendPayErr)
-          console.log('[Payment] 폴백: form.submit() 사용')
-          form.submit()
-        }
-      } else {
-        console.error('[Payment] ❌ window.SendPay is not a function!')
-        console.log('[Payment] 폴백: form.submit() 사용')
-        form.submit()
-      }
+      document.body.appendChild(form)
 
-    } catch (err) {
-      console.error('[Payment] 에러 발생:', err)
-      setErrorMessage(
-        language === 'ko' 
-          ? `결제 처리 중 오류: ${err instanceof Error ? err.message : '알 수 없음'}`
-          : `Payment error: ${err instanceof Error ? err.message : 'Unknown error'}`
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white">
-      <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
+      // 7. ✅ form.submit() 직접 사용
+      console.log("[Payment] form.submit() 호출...")
+      form.submit()
         
         {errorMessage && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
