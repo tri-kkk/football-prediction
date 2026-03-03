@@ -75,50 +75,41 @@ export default function PricingPage() {
       const existingForm = document.querySelector('form[name="payInit"]')
       if (existingForm) existingForm.remove()
 
-      // 3. Form 생성
-      const form = document.createElement('form')
-      form.name = 'payInit'
-      form.method = 'post'
-      form.action = 'https://pay.seedpayments.co.kr/payment/v1/view/request'
-      form.target = '_self'
-      form.style.display = 'none'
-
+      // 3. Form 생성 (이제는 Fetch에서 사용)
       // 4. Form 필드 추가
-      const fields: Record<string, string> = {
+      const fields: Record<string, string | number> = {
         method: 'CARD',
-        mid: data.mid,
-        goodsNm: data.goodsNm,
-        ordNo: data.ordNo,
-        goodsAmt: data.goodsAmt,
-        ordNm: data.ordNm,
-        ordTel: data.ordTel,
-        ordEmail: data.ordEmail,
-        connCd: '0001',
+        mId: data.mid,                    // ← mId (소문자 m)
+        amount: parseInt(data.goodsAmt),  // ← amount (숫자)
+        orderId: data.ordNo,              // ← orderId
+        orderName: data.goodsNm,          // ← orderName
         returnUrl: data.returnUrl,
-        ediDate: data.ediDate,
-        hashString: data.hashString,
-        mbsReserved: data.mbsReserved,
-        // === 모든 약관 자동 동의 (SeedPay 팝업에서 처리) ===
+        customerName: data.ordNm,
+        customerEmail: data.ordEmail,
+        customerMobilePhone: data.ordTel,
+        // === 약관 동의 필드 ===
         agreeNormalYn: 'Y',
         agreeCreditYn: 'Y',
         agreePersonalYn: 'Y',
         agreeThirdPartyYn: 'Y',
       }
 
-      // 5. Form에 필드 추가
-      Object.entries(fields).forEach(([name, value]) => {
-        const input = document.createElement('input')
-        input.type = 'hidden'
-        input.name = name
-        input.value = value
-        form.appendChild(input)
+      console.log('[Payment] Fetch 요청:', fields)
+
+      // 5. Fetch로 POST 요청 (JSON 형식)
+      const response = await fetch('https://pay.seedpayments.co.kr/payment/v1/view/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(fields),
       })
 
-      document.body.appendChild(form)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
 
-      // 6. Form 제출
-      console.log('[Payment] form.submit() 호출...')
-      form.submit()
+      console.log('[Payment] SeedPay 응답:', response.status)
 
     } catch (err) {
       console.error('[Payment] 에러:', err)
