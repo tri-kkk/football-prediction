@@ -55,6 +55,8 @@ export default function PricingPage() {
     },
   }
 
+
+
   // ============================================
   // SeedPay 결제 실행
   // ============================================
@@ -107,11 +109,14 @@ export default function PricingPage() {
         amount: parseInt(data.goodsAmt),
         orderId: data.ordNo,
         orderName: data.goodsNm,
-        ordNm: data.ordNm,                // ← 추가! (기존 필드명)
+        ordNm: data.ordNm,
+        goodsNm: data.goodsNm,            // ← 추가!
+        goodsAmt: data.goodsAmt,          // ← 추가!
         returnUrl: data.returnUrl,
-        customerName: data.ordNm,         // ← 새 필드명
+        customerName: data.ordNm,
         customerEmail: data.ordEmail,
         customerMobilePhone: data.ordTel,
+        ediDate: data.ediDate,            // ← 추가!
         // === 약관 동의 필드 ===
         agreeNormalYn: 'Y',
         agreeCreditYn: 'Y',
