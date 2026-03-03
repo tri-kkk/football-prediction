@@ -136,7 +136,7 @@ export default function PricingPage() {
       // 4. Form 필드 추가 (SeedPay 공식 문서 기준)
       const fields: Record<string, string> = {
         // === 필수 필드 ===
-        method: data.method,                  // CARD (필수)
+        payMethod: data.method,                  // CARD (필수)
         mid: data.mid,                        // 상점 아이디 (필수)
         goodsNm: data.goodsNm,                // 상품명 (필수)
         ordNo: data.ordNo,                    // 주문번호 (필수)
