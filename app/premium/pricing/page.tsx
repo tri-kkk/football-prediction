@@ -5,6 +5,12 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '../../contexts/LanguageContext'
 
+declare global {
+  interface Window {
+    SendPay?: (form: HTMLFormElement) => void
+  }
+}
+
 export default function PricingPage() {
   const { language } = useLanguage()
   const { data: session } = useSession()
@@ -12,9 +18,21 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  // ✅ Hydration 문제 해결
+  // ✅ Hydration 문제 해결 + SDK 로드
   useEffect(() => {
     setMounted(true)
+    
+    // SeedPay SDK 로드
+    const script = document.createElement('script')
+    script.src = 'https://js.seedpayments.co.kr/v1/seedpay.js'
+    script.async = true
+    script.onload = () => {
+      console.log('✅ SeedPay SDK 로드 완료')
+    }
+    script.onerror = () => {
+      console.error('❌ SeedPay SDK 로드 실패')
+    }
+    document.head.appendChild(script)
   }, [])
   
   const isPremium = (session?.user as any)?.tier === 'premium'
@@ -75,14 +93,20 @@ export default function PricingPage() {
       const existingForm = document.querySelector('form[name="payInit"]')
       if (existingForm) existingForm.remove()
 
-      // 3. Form 생성 (이제는 Fetch에서 사용)
-      // 4. Form 필드 추가
+      // 3. Form 생성
+      const form = document.createElement('form')
+      form.name = 'payInit'
+      form.method = 'post'
+      form.action = ''  // ← SDK가 처리하므로 비워둠
+      form.style.display = 'none'
+
+      // 4. Form 필드 추가 (공식 가이드 기준)
       const fields: Record<string, string | number> = {
         method: 'CARD',
-        mId: data.mid,                    // ← mId (소문자 m)
-        amount: parseInt(data.goodsAmt),  // ← amount (숫자)
-        orderId: data.ordNo,              // ← orderId
-        orderName: data.goodsNm,          // ← orderName
+        mId: data.mid,
+        amount: parseInt(data.goodsAmt),
+        orderId: data.ordNo,
+        orderName: data.goodsNm,
         returnUrl: data.returnUrl,
         customerName: data.ordNm,
         customerEmail: data.ordEmail,
@@ -94,22 +118,26 @@ export default function PricingPage() {
         agreeThirdPartyYn: 'Y',
       }
 
-      console.log('[Payment] Fetch 요청:', fields)
+      console.log('[Payment] Form 필드:', fields)
 
-      // 5. Fetch로 POST 요청 (JSON 형식)
-      const response = await fetch('https://pay.seedpayments.co.kr/payment/v1/view/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(fields),
+      // 5. Form에 필드 추가
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = String(value)
+        form.appendChild(input)
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
+      document.body.appendChild(form)
 
-      console.log('[Payment] SeedPay 응답:', response.status)
+      // 6. ✅ SDK의 SendPay 함수 호출
+      if (window.SendPay) {
+        console.log('[Payment] SendPay() 호출...')
+        window.SendPay(form)
+      } else {
+        throw new Error('SeedPay SDK가 로드되지 않았습니다.')
+      }
 
     } catch (err) {
       console.error('[Payment] 에러:', err)
