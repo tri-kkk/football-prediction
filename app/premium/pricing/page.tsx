@@ -19,33 +19,41 @@ export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly'>('quarterly')
   const [loading, setLoading] = useState(false)
   const [sdkLoaded, setSdkLoaded] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   
   const isPremium = (session?.user as any)?.tier === 'premium'
 
-// SeedPay SDK 로드
-useEffect(() => {
-  // 1. 콜백 함수 먼저 등록
-  window.pay_result_submit = function() {
-    if (typeof (window as any).payResultSubmit === 'function') {
-      (window as any).payResultSubmit()
+  useEffect(() => {
+    window.pay_result_submit = function() {
+      console.log('[SeedPay] pay_result_submit called')
     }
-  }
-  window.pay_result_close = function() {
-    alert('결제를 취소하였습니다.')
-  }
+    
+    window.pay_result_close = function() {
+      console.log('[SeedPay] pay_result_close called')
+      alert(language === 'ko' ? '결제를 취소하였습니다.' : 'Payment cancelled.')
+    }
 
-  // 2. SDK 로드
-  const script = document.createElement('script')
-  script.src = 'https://pay.seedpayments.co.kr/js/pgAsistant.js'
-  script.onload = () => setSdkLoaded(true)
-  document.head.appendChild(script)
+    const script = document.createElement('script')
+    script.src = 'https://pay.seedpayments.co.kr/js/pgAsistant.js'
+    script.async = true
+    
+    script.onload = () => {
+      console.log('[SeedPay] SDK loaded successfully')
+      setSdkLoaded(true)
+    }
+    
+    script.onerror = () => {
+      console.warn('[SeedPay] SDK failed to load')
+      setSdkLoaded(true)
+    }
+    
+    document.head.appendChild(script)
 
-  return () => {
-    if (script.parentNode) script.parentNode.removeChild(script)
-  }
-}, [])
-  
-  // 프로모션 기간 체크
+    return () => {
+      if (script.parentNode) script.parentNode.removeChild(script)
+    }
+  }, [language])
+
   const PROMO_END = new Date('2026-03-01T00:00:00+09:00')
   const isPromoPeriod = new Date() < PROMO_END
   
@@ -63,56 +71,96 @@ useEffect(() => {
     },
   }
 
+  // ============================================
   // SeedPay 결제 실행
+  // ============================================
   const handlePayment = async () => {
+    setErrorMessage('')
+    
     if (!session?.user?.email) {
       window.location.href = '/login'
       return
     }
+
     if (!sdkLoaded) {
-      alert(language === 'ko' ? '결제 시스템 로딩 중입니다.' : 'Payment system loading...')
+      setErrorMessage(
+        language === 'ko' 
+          ? '결제 시스템이 준비 중입니다. 잠시만 기다려주세요.' 
+          : 'Payment system initializing. Please wait.'
+      )
       return
     }
 
     setLoading(true)
+
     try {
-      // 1. init API 호출
+      console.log('[Payment] 결제 초기화 시작:', { plan: selectedPlan })
+
+      // 1. API 호출
       const res = await fetch('/api/payment/seedpay/init', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: selectedPlan }),
       })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || '결제 초기화 실패')
+      }
+
       const data = await res.json()
 
       if (!data.success) {
-        alert(data.error || '결제 초기화 실패')
-        setLoading(false)
-        return
+        throw new Error(data.error || '결제 초기화 실패')
       }
 
-      // 2. 동적 Form 생성
+      console.log('[Payment] 초기화 성공:', {
+        ordNo: data.ordNo,
+        amount: data.goodsAmt,
+        method: data.method,
+        mid: data.mid.substring(0, 5) + '***',
+      })
+
+      // 2. 기존 Form 제거
       const existingForm = document.querySelector('form[name="payInit"]')
       if (existingForm) existingForm.remove()
 
+      // 3. Form 생성 (SeedPay 공식 가이드 기준)
       const form = document.createElement('form')
       form.name = 'payInit'
-      form.method = 'post'
+      form.method = 'post'                    // ✅ POST 방식
+      form.action = data.action                // ✅ SeedPay 결제 요청 URL
+      form.target = 'seedpay_popup'           // ✅ 팝업 이름
       form.style.display = 'none'
 
+      // 4. Form 필드 추가 (SeedPay 공식 문서 기준)
       const fields: Record<string, string> = {
-        mid: data.mid,
-        method: 'CARD',
-        goodsNm: data.goodsNm,
-        ordNo: data.ordNo,
-        goodsAmt: data.goodsAmt,
-        ordNm: data.userName,
-        ordEmail: data.userEmail,
-        returnUrl: `${window.location.origin}/api/payment/seedpay/callback`,
-        ediDate: data.ediDate,
-        hashString: data.hashString,
-        mbsReserved: JSON.stringify({ email: data.userEmail, plan: data.plan }),
+        // === 필수 필드 ===
+        method: data.method,                  // CARD (필수)
+        mid: data.mid,                        // 상점 아이디 (필수)
+        goodsNm: data.goodsNm,                // 상품명 (필수)
+        ordNo: data.ordNo,                    // 주문번호 (필수)
+        goodsAmt: data.goodsAmt,              // 결제금액 (필수, 숫자)
+        ordNm: data.ordNm,                    // 구매자명 (필수)
+        
+        // === 선택사항 ===
+        ordTel: '0000000000',                 // 구매자 전화 (숫자만)
+        ordEmail: data.ordEmail,              // 구매자 이메일
+        
+        // === 보안 및 결과 ===
+        returnUrl: data.returnUrl,            // 결과 콜백 URL
+        ediDate: data.ediDate,                // 타임스탬프
+        hashString: data.hashString,          // SHA-256 해시
+        
+        // === 예약 필드 ===
+        mbsReserved: data.mbsReserved || JSON.stringify({ 
+          email: data.userEmail, 
+          plan: data.plan,
+          timestamp: new Date().toISOString()
+        }),
       }
 
+      // 5. Form에 필드 추가
       Object.entries(fields).forEach(([name, value]) => {
         const input = document.createElement('input')
         input.type = 'hidden'
@@ -121,14 +169,36 @@ useEffect(() => {
         form.appendChild(input)
       })
 
+      // 6. 최종 확인 로깅
+      console.log('[Payment] ===== Form Ready to Submit =====')
+      console.log('[Payment] form.method:', form.method)
+      console.log('[Payment] form.action:', form.action)
+      console.log('[Payment] form.target:', form.target)
+      console.log('[Payment] form.name:', form.name)
+      console.log('[Payment] Fields count:', Object.keys(fields).length)
+      
+      // 필드 목록
+      form.querySelectorAll('input').forEach((input, idx) => {
+        const value = input.value.length > 50 
+          ? input.value.substring(0, 50) + '...' 
+          : input.value
+        console.log(`  [${idx + 1}] ${input.name}: ${value}`)
+      })
+      console.log('[Payment] ===== Ready to Submit =====\n')
+
       document.body.appendChild(form)
 
-      // 3. SeedPay 결제창 호출
-      window.SendPay(form)
+      // 7. Form 제출
+      console.log('[Payment] Form submit() 호출...')
+      form.submit()
 
     } catch (err) {
-      console.error('Payment error:', err)
-      alert(language === 'ko' ? '결제 처리 중 오류가 발생했습니다.' : 'Payment error occurred.')
+      console.error('[Payment] 에러 발생:', err)
+      setErrorMessage(
+        language === 'ko' 
+          ? `결제 처리 중 오류: ${err instanceof Error ? err.message : '알 수 없음'}`
+          : `Payment error: ${err instanceof Error ? err.message : 'Unknown error'}`
+      )
     } finally {
       setLoading(false)
     }
@@ -138,8 +208,14 @@ useEffect(() => {
     <div className="min-h-screen bg-[#0f0f0f] text-white">
       <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
         
-        {/* 프로모션 배너 - 비로그인 + 프로모션 기간 */}
-        {!session && isPromoPeriod && (
+        {errorMessage && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <div className="font-semibold mb-1">⚠️ {language === 'ko' ? '오류' : 'Error'}</div>
+            <div>{errorMessage}</div>
+          </div>
+        )}
+        
+        {!session && (
           <div className="bg-gradient-to-r from-[#1a2a1a] to-[#1a1a2a] border border-green-500/30 rounded-2xl p-6 mb-8">
             <div className="text-center">
               <div className="inline-block px-3 py-1 bg-green-500/20 rounded-full mb-3">
@@ -166,7 +242,6 @@ useEffect(() => {
           </div>
         )}
         
-        {/* 이미 프리미엄인 경우 */}
         {isPremium ? (
           <div className="text-center py-20">
             <div className="text-5xl mb-4">✅</div>
@@ -182,9 +257,7 @@ useEffect(() => {
           </div>
         ) : (
           <>
-            {/* 헤더 */}
             <div className="text-center mb-8">
-              
               <h1 className="text-3xl md:text-4xl font-bold mt-2 mb-3">
                 <span className="text-white">{language === 'ko' ? '트렌드사커' : 'TrendSoccer'}</span>
                 <br />
@@ -192,12 +265,9 @@ useEffect(() => {
                   {language === 'ko' ? '프리미엄 구독' : 'Premium Picks'}
                 </span>
               </h1>
-              
             </div>
 
-            {/* 가격 카드 2개 */}
             <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-10">
-              {/* 월간 */}
               <div
                 onClick={() => setSelectedPlan('monthly')}
                 className={`p-6 rounded-2xl border-2 text-left transition-all cursor-pointer ${
@@ -222,7 +292,6 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* 3개월 */}
               <div
                 onClick={() => setSelectedPlan('quarterly')}
                 className={`p-6 rounded-2xl border-2 text-left transition-all cursor-pointer relative ${
@@ -257,7 +326,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* CTA 버튼 */}
             <div className="text-center mb-12">
               {!session ? (
                 <Link
@@ -265,8 +333,8 @@ useEffect(() => {
                   className="inline-block w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg transition-all text-center"
                 >
                   {language === 'ko' 
-                    ? isPromoPeriod ? '무료로 시작하기' : '로그인하고 시작하기'
-                    : isPromoPeriod ? 'Start Free' : 'Sign in to Start'}
+                    ? '무료로 시작하기' 
+                    : 'Start Free'}
                 </Link>
               ) : (
                 <button
@@ -279,10 +347,8 @@ useEffect(() => {
                     : (language === 'ko' ? '프리미엄 시작하기' : 'Start Premium')}
                 </button>
               )}
-              
             </div>
 
-            {/* 프리미엄 혜택 */}
             <div className="max-w-2xl mx-auto mb-12">
               <h3 className="text-center text-white font-bold mb-4">
                 {language === 'ko' ? '프리미엄 전용 혜택' : 'Premium Benefits'}
@@ -302,14 +368,14 @@ useEffect(() => {
                     title: language === 'ko' ? '광고 완전 제거' : 'Ad-free Experience',
                     desc: language === 'ko' ? '깔끔한 화면으로 집중' : 'Clean interface, no distractions'
                   },
-                   { 
-    title: language === 'ko' ? '하이라이트 무제한' : 'Unlimited Highlights',
-    desc: language === 'ko' ? '모든 경기 하이라이트 무제한 시청' : 'Watch all match highlights unlimited'
-  },
-  { 
-    title: language === 'ko' ? '프로토 계산기' : 'Proto Calculator',
-    desc: language === 'ko' ? '무제한 저장 및 관리' : 'Unlimited saves & management'
-  },
+                  { 
+                    title: language === 'ko' ? '하이라이트 무제한' : 'Unlimited Highlights',
+                    desc: language === 'ko' ? '모든 경기 하이라이트 무제한 시청' : 'Watch all match highlights unlimited'
+                  },
+                  { 
+                    title: language === 'ko' ? '프로토 계산기' : 'Proto Calculator',
+                    desc: language === 'ko' ? '무제한 저장 및 관리' : 'Unlimited saves & management'
+                  },
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
