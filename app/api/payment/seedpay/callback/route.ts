@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,6 +22,23 @@ export async function POST(request: NextRequest) {
       data[key] = value as string
     })
     console.log('📋 SeedPay 결과:', data)
+
+    // 📊 hashString 검증
+    console.log('📊 hashString 검증 시작')
+    console.log('받은 hashString:', data.hashString)
+    
+    const merchantKey = process.env.SEEDPAY_MERCHANT_KEY!
+    const recalculated = crypto
+      .createHash('sha256')
+      .update(data.mid + data.ediDate + data.goodsAmt + merchantKey)
+      .digest('hex')
+    
+    console.log('재계산 hashString:', recalculated)
+    console.log('hashString 일치 여부:', data.hashString === recalculated)
+    
+    if (data.hashString !== recalculated) {
+      console.error('⚠️ hashString 불일치! 위변조 의심')
+    }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin
 
