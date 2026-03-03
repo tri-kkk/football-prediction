@@ -297,6 +297,170 @@ const TEAM_NAME_KO: Record<string, string> = {
   'Auxerre': '오세르', 'AJ Auxerre': '오세르',
   'Angers': '앙제', 'Angers SCO': '앙제',
   'Saint-Etienne': '생테티엔', 'AS Saint-Etienne': '생테티엔',
+  // Eredivisie
+  'PSV Eindhoven': 'PSV', 'PSV': 'PSV',
+  'Ajax': '아약스', 'AFC Ajax': '아약스',
+  'Feyenoord': '페예노르트',
+  'AZ Alkmaar': 'AZ', 'AZ': 'AZ',
+  'FC Twente': '트벤테', 'Twente': '트벤테',
+  'FC Utrecht': '위트레흐트',
+  'Go Ahead Eagles': '고 어헤드 이글스',
+  'Sparta Rotterdam': '스파르타 로테르담',
+  'SC Heerenveen': '헤이렌베인',
+  'NEC Nijmegen': 'NEC', 'NEC': 'NEC',
+  'Fortuna Sittard': '포르투나 시타르트',
+  'PEC Zwolle': 'PEC 즈볼레',
+  'Heracles Almelo': '헤라클레스',
+  'Willem II': '빌럼 II',
+  'NAC Breda': 'NAC 브레다',
+  'RKC Waalwijk': 'RKC 발베이크',
+  'FC Groningen': '흐로닝언',
+  'Almere City FC': '알머르 시티',
+  // K League 1
+  'Jeonbuk Motors': '전북 현대', 'Jeonbuk Hyundai Motors': '전북 현대',
+  'Ulsan Hyundai': '울산 HD', 'Ulsan HD': '울산 HD', 'Ulsan Hyundai FC': '울산 HD',
+  'FC Seoul': 'FC 서울',
+  'Suwon Samsung Bluewings': '수원 삼성', 'Suwon Bluewings': '수원 삼성',
+  'Pohang Steelers': '포항 스틸러스',
+  'Jeju United FC': '제주 유나이티드', 'Jeju United': '제주 유나이티드',
+  'Incheon United': '인천 유나이티드', 'Incheon United FC': '인천 유나이티드',
+  'Daegu FC': '대구 FC',
+  'Gangwon FC': '강원 FC',
+  'Gwangju FC': '광주 FC',
+  'Daejeon Hana Citizen': '대전 시티즌', 'Daejeon Citizen': '대전 시티즌',
+  'Suwon FC': '수원 FC',
+  'Gimcheon Sangmu': '김천 상무', 'Gimcheon Sangmu FC': '김천 상무',
+  // K League 2
+  'Bucheon FC 1995': '부천 FC', 'Bucheon FC': '부천 FC',
+  'Seoul E-Land': '서울 이랜드', 'Seoul E-Land FC': '서울 이랜드',
+  'Chungnam Asan': '충남 아산', 'Chungnam Asan FC': '충남 아산',
+  'Anyang FC': '안양 FC', 'FC Anyang': '안양 FC',
+  'Gyeongnam FC': '경남 FC',
+  'Jeonnam Dragons': '전남 드래곤즈',
+  'Cheonan City FC': '천안 시티',
+  'Ansan Greeners': '안산 그리너스', 'Ansan Greeners FC': '안산 그리너스',
+  'Cheongju FC': '청주 FC',
+  'Gimpo FC': '김포 FC', 'Gimpo Citizen FC': '김포 FC',
+  // J1 League
+  'Vissel Kobe': '비셀 고베',
+  'Yokohama F. Marinos': '요코하마 F 마리노스', 'Yokohama F Marinos': '요코하마 F 마리노스',
+  'Kawasaki Frontale': '가와사키 프론탈레',
+  'Urawa Red Diamonds': '우라와 레즈', 'Urawa Reds': '우라와 레즈',
+  'Kashima Antlers': '가시마 앤틀러스',
+  'FC Tokyo': 'FC 도쿄',
+  'Nagoya Grampus': '나고야 그램퍼스',
+  'Sanfrecce Hiroshima': '산프레체 히로시마',
+  'Cerezo Osaka': '세레소 오사카',
+  'Gamba Osaka': '감바 오사카',
+  'Consadole Sapporo': '콘사돌레 삿포로', 'Hokkaido Consadole Sapporo': '콘사돌레 삿포로',
+  'Avispa Fukuoka': '아비스파 후쿠오카',
+  'Sagan Tosu': '사간 도스',
+  'Kyoto Sanga': '교토 상가', 'Kyoto Sanga FC': '교토 상가',
+  'Albirex Niigata': '알비렉스 니가타',
+  'Tokyo Verdy': '도쿄 베르디',
+  'Jubilo Iwata': '주빌로 이와타',
+  'Machida Zelvia': '마치다 젤비아', 'FC Machida Zelvia': '마치다 젤비아',
+  'Fagiano Okayama': '파지아노 오카야마',
+  'Mito Hollyhock': '미토 홀리혹',
+  // J2 League
+  'Roasso Kumamoto': '로아소 구마모토',
+  'Oita Trinita': '오이타 트리니타',
+  'Renofa Yamaguchi': '레노파 야마구치',
+  'Gainare Tottori': '가이나레 돗토리',
+  'Tochigi SC': '도치기 SC',
+  'Yokohama FC': '요코하마 FC',
+  'Imabari': '이마바리', 'FC Imabari': '이마바리',
+  'Kochi United': '고치 유나이티드', 'Kochi United SC': '고치 유나이티드',
+  'Nara Club': '나라 클럽',
+  'Iwaki': '이와키', 'Iwaki FC': '이와키',
+  'Fujieda MYFC': '후지에다 MYFC',
+  'Sagamihara': '사가미하라', 'SC Sagamihara': '사가미하라',
+  'Montedio Yamagata': '몬테디오 야마가타',
+  'Kanazawa': '카나자와', 'Zweigen Kanazawa': '카나자와',
+  'Kamatamare Sanuki': '카마타마레 사누키',
+  // MLS
+  'Los Angeles FC': 'LAFC', 'LAFC': 'LAFC',
+  'Inter Miami': '인터 마이애미', 'Inter Miami CF': '인터 마이애미',
+  'Los Angeles Galaxy': 'LA 갤럭시', 'LA Galaxy': 'LA 갤럭시',
+  'Seattle Sounders': '시애틀 사운더스', 'Seattle Sounders FC': '시애틀 사운더스',
+  'Atlanta United FC': '애틀랜타 유나이티드', 'Atlanta United': '애틀랜타 유나이티드',
+  'New York City FC': '뉴욕 시티 FC', 'NYCFC': '뉴욕 시티 FC',
+  'New York Red Bulls': '뉴욕 레드불스',
+  'Philadelphia Union': '필라델피아 유니온',
+  'Columbus Crew': '콜럼버스 크루',
+  'Nashville SC': '내슈빌 SC',
+  'FC Cincinnati': 'FC 신시내티', 'Cincinnati': 'FC 신시내티',
+  'Portland Timbers': '포틀랜드 팀버스',
+  'Real Salt Lake': '레알 솔트레이크',
+  'Houston Dynamo': '휴스턴 다이나모', 'Houston Dynamo FC': '휴스턴 다이나모',
+  'FC Dallas': 'FC 댈러스',
+  'Sporting Kansas City': '스포르팅 KC',
+  'Charlotte FC': '샬럿 FC', 'Charlotte': '샬럿 FC',
+  'Toronto FC': '토론토 FC',
+  'Vancouver Whitecaps': '밴쿠버 화이트캡스', 'Vancouver Whitecaps FC': '밴쿠버 화이트캡스',
+  'San Jose Earthquakes': '산호세 어스퀘이크스',
+  'Minnesota United': '미네소타 유나이티드', 'Minnesota United FC': '미네소타 유나이티드',
+  'Orlando City': '올랜도 시티', 'Orlando City SC': '올랜도 시티',
+  'CF Montreal': 'CF 몬트리올', 'CF Montréal': 'CF 몬트리올',
+  'Chicago Fire': '시카고 파이어', 'Chicago Fire FC': '시카고 파이어',
+  'DC United': 'DC 유나이티드', 'D.C. United': 'DC 유나이티드',
+  'New England Revolution': '뉴잉글랜드 레볼루션',
+  'Austin FC': '오스틴 FC',
+  'St. Louis City SC': '세인트루이스 시티', 'St Louis City SC': '세인트루이스 시티',
+  'Colorado Rapids': '콜로라도 래피즈',
+}
+
+// 영어 강점/약점 → 한글 변환
+const STRENGTH_TRANSLATIONS: Record<string, string> = {
+  'Strong home record': '탄탄한 홈 경기력',
+  'Good attacking form': '좋은 공격 폼',
+  'Solid defense': '견고한 수비',
+  'High scoring rate': '높은 득점력',
+  'Clean sheet ability': '클린시트 능력',
+  'Strong away form': '좋은 원정 경기력',
+  'Good recent form': '양호한 최근 폼',
+  'Consistent results': '안정적인 성적',
+  'Strong goal difference': '우수한 골 차이',
+  'High win rate': '높은 승률',
+  'Dominant possession': '점유율 우위',
+  'Effective counter-attacks': '효과적인 역습',
+  'Set-piece threat': '세트피스 위협',
+  'Strong defensive record': '견고한 수비 기록',
+  'Low goals conceded': '적은 실점',
+  'Poor home record': '부진한 홈 경기력',
+  'Poor away form': '부진한 원정 경기력',
+  'Weak defense': '취약한 수비',
+  'Low scoring rate': '낮은 득점력',
+  'Inconsistent results': '불안정한 성적',
+  'Poor recent form': '부진한 최근 폼',
+  'High goals conceded': '높은 실점률',
+  'Struggling in attack': '공격 부진',
+  'Defensive vulnerabilities': '수비 취약점',
+  'Lack of clean sheets': '클린시트 부족',
+  'Poor goal difference': '저조한 골 차이',
+  'Losing streak': '연패 중',
+  'No wins recently': '최근 승리 없음',
+}
+
+function translateStrength(text: string): string {
+  return STRENGTH_TRANSLATIONS[text] || text
+}
+
+// H2H insight 한글 변환 (팀명 치환 + 패턴 번역)
+function translateH2hInsight(text: string, homeKo: string, awayKo: string, homeEn: string, awayEn: string): string {
+  let result = text
+  // 영어 팀명 → 한글 치환
+  result = result.replace(new RegExp(homeEn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), homeKo)
+  result = result.replace(new RegExp(awayEn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), awayKo)
+  // 주요 패턴 번역
+  result = result.replace(/dominated with/g, '우세:')
+  result = result.replace(/wins? in/g, '승,')
+  result = result.replace(/last/g, '최근')
+  result = result.replace(/meetings?/g, '경기')
+  result = result.replace(/no draws/g, '무승부 없음')
+  result = result.replace(/overall record:/gi, '통산 전적:')
+  result = result.replace(/head-to-head:/gi, '상대 전적:')
+  return result
 }
 
 function getTeamNameKo(name: string): string {
@@ -796,7 +960,7 @@ function generateContentKo(
     }
     
     if (h2h.insights?.length > 0) {
-      c += `> ${h2h.insights[0]}\n\n`
+      c += `> ${translateH2hInsight(h2h.insights[0], homeKo, awayKo, match.home_team, match.away_team)}\n\n`
     }
   }
   
@@ -812,22 +976,22 @@ function generateContentKo(
       c += `## 전술 포인트\n\n`
       if (homeStats?.strengths?.length > 0) {
         c += `### ${homeKo}의 강점\n`
-        homeStats.strengths.slice(0, 3).forEach((s: string) => { c += `- ${s}\n` })
+        homeStats.strengths.slice(0, 3).forEach((s: string) => { c += `- ${translateStrength(s)}\n` })
         c += '\n'
       }
       if (homeStats?.weaknesses?.length > 0) {
         c += `### ${homeKo}의 약점\n`
-        homeStats.weaknesses.slice(0, 2).forEach((w: string) => { c += `- ${w}\n` })
+        homeStats.weaknesses.slice(0, 2).forEach((w: string) => { c += `- ${translateStrength(w)}\n` })
         c += '\n'
       }
       if (awayStats?.strengths?.length > 0) {
         c += `### ${awayKo}의 강점\n`
-        awayStats.strengths.slice(0, 3).forEach((s: string) => { c += `- ${s}\n` })
+        awayStats.strengths.slice(0, 3).forEach((s: string) => { c += `- ${translateStrength(s)}\n` })
         c += '\n'
       }
       if (awayStats?.weaknesses?.length > 0) {
         c += `### ${awayKo}의 약점\n`
-        awayStats.weaknesses.slice(0, 2).forEach((w: string) => { c += `- ${w}\n` })
+        awayStats.weaknesses.slice(0, 2).forEach((w: string) => { c += `- ${translateStrength(w)}\n` })
         c += '\n'
       }
     }
