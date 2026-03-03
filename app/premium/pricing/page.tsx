@@ -11,17 +11,6 @@ export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly'>('quarterly')
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
-  
-  // === 약관 동의 ===
-  const [agree, setAgree] = useState({
-    normal: false,      // 일반 약관
-    credit: false,      // 신용카드 약관
-    personal: false,    // 개인정보 처리
-    thirdParty: false,  // 제3자 제공
-  })
-
-  // 모든 약관 동의 여부
-  const allAgreed = agree.normal && agree.credit && agree.personal && agree.thirdParty
 
   // ✅ Hydration 문제 해결
   useEffect(() => {
@@ -54,11 +43,6 @@ export default function PricingPage() {
   const handlePayment = async () => {
     if (!session?.user?.email) {
       window.location.href = '/login'
-      return
-    }
-
-    if (!allAgreed) {
-      alert(language === 'ko' ? '모든 약관에 동의해주세요.' : 'Please agree to all terms.')
       return
     }
 
@@ -114,11 +98,11 @@ export default function PricingPage() {
         ediDate: data.ediDate,
         hashString: data.hashString,
         mbsReserved: data.mbsReserved,
-        // === 사용자가 동의한 약관만 추가 ===
-        ...(agree.normal && { agreeNormalYn: 'Y' }),
-        ...(agree.credit && { agreeCreditYn: 'Y' }),
-        ...(agree.personal && { agreePersonalYn: 'Y' }),
-        ...(agree.thirdParty && { agreeThirdPartyYn: 'Y' }),
+        // === 모든 약관 자동 동의 (SeedPay 팝업에서 처리) ===
+        agreeNormalYn: 'Y',
+        agreeCreditYn: 'Y',
+        agreePersonalYn: 'Y',
+        agreeThirdPartyYn: 'Y',
       }
 
       // 5. Form에 필드 추가
@@ -278,58 +262,6 @@ export default function PricingPage() {
               </div>
             </div>
 
-            {/* 약관 동의 - 로그인 사용자만 */}
-            {session && (
-              <div className="max-w-2xl mx-auto mb-8">
-                <h3 className="text-white font-bold mb-4">
-                  {language === 'ko' ? '약관 동의' : 'Terms & Conditions'}
-                </h3>
-                <div className="bg-[#1a1a1a] rounded-xl p-6 space-y-3">
-                  {[
-                    {
-                      id: 'normal',
-                      title: language === 'ko' ? '이용약관' : 'Terms of Service',
-                      required: true,
-                    },
-                    {
-                      id: 'credit',
-                      title: language === 'ko' ? '신용카드 이용약관' : 'Credit Card Terms',
-                      required: true,
-                    },
-                    {
-                      id: 'personal',
-                      title: language === 'ko' ? '개인정보 처리방침' : 'Privacy Policy',
-                      required: true,
-                    },
-                    {
-                      id: 'thirdParty',
-                      title: language === 'ko' ? '제3자 정보 제공 동의' : 'Third-party Info Sharing',
-                      required: true,
-                    },
-                  ].map((term) => (
-                    <label key={term.id} className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-[#2a2a2a] transition">
-                      <input
-                        type="checkbox"
-                        checked={agree[term.id as keyof typeof agree]}
-                        onChange={(e) => setAgree({
-                          ...agree,
-                          [term.id]: e.target.checked,
-                        })}
-                        className="w-5 h-5 cursor-pointer"
-                      />
-                      <div className="flex-1">
-                        <span className="text-white">{term.title}</span>
-                        {term.required && <span className="text-red-500 text-xs ml-1">*</span>}
-                      </div>
-                      <span className={agree[term.id as keyof typeof agree] ? 'text-green-400' : 'text-gray-500'}>
-                        {agree[term.id as keyof typeof agree] ? '✔' : '○'}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* CTA 버튼 */}
             <div className="text-center mb-12">
               {!session ? (
@@ -346,9 +278,9 @@ export default function PricingPage() {
                 // 로그인 상태: 결제 실행
                 <button
                   onClick={handlePayment}
-                  disabled={loading || !allAgreed}
+                  disabled={loading}
                   className={`w-full max-w-md py-4 rounded-xl font-bold text-lg transition-all ${
-                    loading || !allAgreed
+                    loading
                       ? 'bg-gray-600 cursor-not-allowed opacity-50'
                       : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white'
                   }`}
