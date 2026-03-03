@@ -103,10 +103,10 @@ export default function PricingPage() {
       // 4. Form 필드 추가 (공식 가이드 기준)
       const fields: Record<string, string | number> = {
         method: 'CARD',
-        mId: data.mid,
+        mid: data.mid,                    // ← mId → mid!
         amount: parseInt(data.goodsAmt),
         orderId: data.ordNo,
-        ordNo: data.ordNo,                // ← 추가! (ordNo)
+        ordNo: data.ordNo,
         orderName: data.goodsNm,
         ordNm: data.ordNm,
         goodsNm: data.goodsNm,
