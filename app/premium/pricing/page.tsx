@@ -107,8 +107,9 @@ export default function PricingPage() {
         amount: parseInt(data.goodsAmt),
         orderId: data.ordNo,
         orderName: data.goodsNm,
+        ordNm: data.ordNm,                // ← 추가! (기존 필드명)
         returnUrl: data.returnUrl,
-        customerName: data.ordNm,
+        customerName: data.ordNm,         // ← 새 필드명
         customerEmail: data.ordEmail,
         customerMobilePhone: data.ordTel,
         // === 약관 동의 필드 ===
