@@ -129,7 +129,7 @@ export default function PricingPage() {
       const form = document.createElement('form')
       form.name = 'payInit'
       form.method = 'post'                    // ✅ POST 방식
-      form.action = ''                // ✅ SeedPay 결제 요청 URL
+      form.action = data.returnUrl                // ✅ SeedPay 결제 요청 URL
       form.target = 'seedpay_popup'           // ✅ 팝업 이름
       form.style.display = 'none'
 
