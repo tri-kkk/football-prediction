@@ -103,7 +103,7 @@ export default function PricingPage() {
       // 4. Form 필드 추가 (공식 가이드 기준)
       const fields: Record<string, string | number> = {
         method: 'CARD',
-        mid: data.mid,                    // ← mId → mid!
+        mid: data.mid,
         amount: parseInt(data.goodsAmt),
         orderId: data.ordNo,
         ordNo: data.ordNo,
@@ -116,11 +116,7 @@ export default function PricingPage() {
         customerEmail: data.ordEmail,
         customerMobilePhone: data.ordTel,
         ediDate: data.ediDate,
-        // === 약관 동의 필드 ===
-        agreeNormalYn: 'Y',
-        agreeCreditYn: 'Y',
-        agreePersonalYn: 'Y',
-        agreeThirdPartyYn: 'Y',
+        // 약관은 SeedPay 팝업에서 자동 처리됨
       }
 
       console.log('[Payment] Form 필드:', fields)
