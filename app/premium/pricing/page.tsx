@@ -5,12 +5,6 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '../../contexts/LanguageContext'
 
-declare global {
-  interface Window {
-    SendPay?: (form: HTMLFormElement) => void
-  }
-}
-
 export default function PricingPage() {
   const { language } = useLanguage()
   const { data: session } = useSession()
@@ -18,21 +12,9 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  // ✅ Hydration 문제 해결 + SDK 로드
+  // ✅ Hydration 문제 해결
   useEffect(() => {
     setMounted(true)
-    
-    // SeedPay SDK 로드
-    const script = document.createElement('script')
-    script.src = 'https://js.seedpayments.co.kr/v1/seedpay.js'
-    script.async = true
-    script.onload = () => {
-      console.log('✅ SeedPay SDK 로드 완료')
-    }
-    script.onerror = () => {
-      console.error('❌ SeedPay SDK 로드 실패')
-    }
-    document.head.appendChild(script)
   }, [])
   
   const isPremium = (session?.user as any)?.tier === 'premium'
@@ -64,92 +46,13 @@ export default function PricingPage() {
       return
     }
 
-    setLoading(true)
-
-    try {
-      console.log('[Payment] 결제 초기화 시작:', { plan: selectedPlan })
-
-      // 1. API 호출
-      const res = await fetch('/api/payment/seedpay/init', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: selectedPlan }),
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || '결제 초기화 실패')
-      }
-
-      const data = await res.json()
-
-      if (!data.success) {
-        throw new Error(data.error || '결제 초기화 실패')
-      }
-
-      console.log('[Payment] 초기화 성공')
-
-      // 2. 기존 Form 제거
-      const existingForm = document.querySelector('form[name="payInit"]')
-      if (existingForm) existingForm.remove()
-
-      // 3. Form 생성
-      const form = document.createElement('form')
-      form.name = 'payInit'
-      form.method = 'post'
-      form.action = ''  // ← SDK가 처리하므로 비워둠
-      form.style.display = 'none'
-
-      // 4. Form 필드 추가 (공식 가이드 기준)
-      const fields: Record<string, string | number> = {
-        method: 'CARD',
-        mid: data.mid,
-        amount: parseInt(data.goodsAmt),
-        orderId: data.ordNo,
-        ordNo: data.ordNo,
-        orderName: data.goodsNm,
-        ordNm: data.ordNm,
-        goodsNm: data.goodsNm,
-        goodsAmt: data.goodsAmt,
-        returnUrl: data.returnUrl,
-        customerName: data.ordNm,
-        customerEmail: data.ordEmail,
-        customerMobilePhone: data.ordTel,
-        ediDate: data.ediDate,
-        // 약관은 SeedPay 팝업에서 자동 처리됨
-      }
-
-      console.log('[Payment] Form 필드:', fields)
-
-      // 5. Form에 필드 추가
-      Object.entries(fields).forEach(([name, value]) => {
-        const input = document.createElement('input')
-        input.type = 'hidden'
-        input.name = name
-        input.value = String(value)
-        form.appendChild(input)
-      })
-
-      document.body.appendChild(form)
-
-      // 6. ✅ SDK의 SendPay 함수 호출
-      if (window.SendPay) {
-        console.log('[Payment] SendPay() 호출...')
-        window.SendPay(form)
-      } else {
-        throw new Error('SeedPay SDK가 로드되지 않았습니다.')
-      }
-
-    } catch (err) {
-      console.error('[Payment] 에러:', err)
-      alert(
-        language === 'ko' 
-          ? `결제 처리 중 오류: ${err instanceof Error ? err.message : '알 수 없음'}`
-          : `Error: ${err instanceof Error ? err.message : 'Unknown'}`
-      )
-      setLoading(false)
-    }
-  }
+    // 🔧 점검 중 처리
+    alert(
+      language === 'ko'
+        ? '현재 결제 시스템 점검 중입니다. 잠시 후 다시 시도해주세요.'
+        : 'Payment system is under maintenance. Please try again later.'
+    )
+    return
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white">
