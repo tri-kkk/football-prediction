@@ -89,8 +89,7 @@ export async function POST(request: NextRequest) {
       ediDate,                                  // 타임스탐프
       hashString,                               // SHA-256 해시
       
-      // === 프론트에서 사용할 필드 ===
-      action: seedpayRequestUrl,                // Form action URL
+      
       
       // === 내부 관리용 ===
       plan,
