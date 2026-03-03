@@ -143,6 +143,7 @@ export default function PricingPage() {
         goodsAmt: data.goodsAmt,              // 결제금액 (필수, 숫자)
         ordNm: data.ordNm,                    // 구매자명 (필수)
         connCd: '0001',
+        quotaMon: '00', 
         // === 선택사항 ===
         ordTel: '0000000000',                 // 구매자 전화 (숫자만)
         ordEmail: data.ordEmail,              // 구매자 이메일
