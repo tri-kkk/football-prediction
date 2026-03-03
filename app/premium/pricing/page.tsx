@@ -129,7 +129,7 @@ export default function PricingPage() {
       const form = document.createElement('form')
       form.name = 'payInit'
       form.method = 'post'
-      form.action = 'https://pay.seedpayments.co.kr/payment/v1/request'
+      form.action = data.returnUrl
       form.target = 'seedpay_popup'
       form.style.display = 'none'
 
