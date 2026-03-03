@@ -17,6 +17,7 @@ interface MenuItem {
 }
 
 // ⚽ 축구 메뉴
+
 const footballMenuItems: MenuItem[] = [
   { 
     labelKo: '트렌드',
@@ -29,7 +30,6 @@ const footballMenuItems: MenuItem[] = [
     labelEn: 'Predict',
     href: '/premium', 
     icon: 'insights',
-    badge: 'BETA',
     hidden: false
   },
   { 

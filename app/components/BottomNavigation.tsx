@@ -13,7 +13,8 @@ export default function MobileBottomNav() {
   // 현재 스포츠 감지
   const isBaseball = pathname.startsWith('/baseball')
 
-  // ⚽ 축구 메뉴
+  // ⚽ 축구 메뉴.
+  
   const footballNavItems = [
     {
       href: '/',
@@ -27,7 +28,6 @@ export default function MobileBottomNav() {
       icon: 'insights',
       labelKo: '예측',
       labelEn: 'Predict',
-      badge: 'BETA',
       hidden: false
     },
     {
