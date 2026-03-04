@@ -91,14 +91,12 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       console.log('⚠️ [Approval] SeedPay가 hashString을 보내지 않음, 직접 계산')
       
       // 🔍 Hash 입력값 상세 로깅
-      // 공식: SHA256(tid + mId + ediDate + amount + orderId + merchantKey)
-      const hashInput = data.tid + mid + ediDate + data.goodsAmt + data.ordNo + merchantKey
+      // 공식: SHA256(mid + ediDate + goodsAmt + merchantKey)
+      const hashInput = mid + ediDate + data.goodsAmt + merchantKey
       console.log('🔐 [Approval] Hash 입력값 상세:', {
-        tid: data.tid,
         mid: mid,
         ediDate: ediDate,
         goodsAmt: data.goodsAmt,
-        ordNo: data.ordNo,
         merchantKeyLength: merchantKey.length,
         merchantKeyFirst20: merchantKey.substring(0, 20),
         totalInputLength: hashInput.length,
@@ -111,17 +109,15 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
         .digest('hex')
       
       console.log('🔐 [Approval] 해시 생성:', {
-        hashInput: `${data.tid} + ${mid} + ${ediDate} + ${data.goodsAmt} + ${data.ordNo} + ***merchantKey***`,
+        hashInput: `${mid} + ${ediDate} + ${data.goodsAmt} + ***merchantKey***`,
         hashString: approvalHash,
       })
       
       // 🔍 Hash 검증용 상세 로깅
       console.log('🔐 [Approval] Hash 검증 정보:', {
-        tid: data.tid,
         mid: mid,
         ediDate: ediDate,
         goodsAmt: data.goodsAmt,
-        ordNo: data.ordNo,
         merchantKeyLength: merchantKey.length,
         merchantKeyFirst20: merchantKey.substring(0, 20),
         merchantKeyLast10: merchantKey.substring(merchantKey.length - 10),
