@@ -66,9 +66,32 @@ export async function POST(request: NextRequest) {
       hashString: hashString.substring(0, 20) + '...',
     })
 
+    // 약관 데이터 (SeedPay에서 null로 오던 약관 4번 추가)
+    const terms = [
+      {
+        termTitle: '전자금융거래 기본약관',
+        termContents: '/html/term/term1.html'
+      },
+      {
+        termTitle: '개인정보의 수집 및 이용안내',
+        termContents: '/html/term/term2.html'
+      },
+      {
+        termTitle: '개인정보제공 및 위탁동의',
+        termContents: '/html/term/term3.html'
+      },
+      {
+        termTitle: '에스크로 서비스 이용약관',
+        termContents: '/html/term/term4.html'
+      }
+    ]
+
     // ✅ SeedPay 표준 결제 가이드 기준으로 반환
     return NextResponse.json({
       success: true,
+      
+      // === 약관 데이터 ===
+      terms,
       
       // === SeedPay 필수 필드 ===
       method: 'CARD',                    // 결제 수단: CARD (필수)
