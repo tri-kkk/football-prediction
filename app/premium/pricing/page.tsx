@@ -238,8 +238,22 @@ export default function PricingPage() {
         form.appendChild(input)
       })
 
-      document.body.appendChild(form)
-      form.submit()
+      // ✅ 팝업 창으로 결제 화면 열기
+      const popup = window.open('', 'SeedPayment', 'width=1000,height=700,left=150,top=100')
+      
+      if (popup) {
+        popup.document.open()
+        popup.document.write(form.outerHTML)
+        popup.document.close()
+        
+        // 폼 서브밋
+        popup.document.querySelector('form')?.submit()
+        
+        console.log('📱 [Payment] 팝업 창에서 결제 화면 오픈')
+      } else {
+        console.error('❌ [Payment] 팝업 창 열기 실패 (팝업 차단됨)')
+        alert(language === 'ko' ? '팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.' : 'Popup blocked. Please allow popups.')
+      }
       
       setLoading(false)
 
