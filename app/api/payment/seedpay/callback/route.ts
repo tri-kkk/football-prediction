@@ -79,10 +79,11 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ 결제 인증 완료, 이제 승인 요청...')
 
-    // ✅ STEP 4-6: 결제 승인 요청 (중요!)
+    // ✅ STEP 4-6: 결제 승인 요청
+    // Hash: tid + mId + ediDate + amount + orderId + merchantKey
     const approvalHash = crypto
       .createHash('sha256')
-      .update(mid + data.ediDate + data.goodsAmt + merchantKey)
+      .update(data.tid + mid + data.ediDate + data.goodsAmt + data.ordNo + merchantKey)
       .digest('hex')
 
     const approvalResponse = await fetch(

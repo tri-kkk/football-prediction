@@ -95,16 +95,15 @@ export async function POST(request: NextRequest) {
       
       // === SeedPay 필수 필드 (v0.9.1 파라미터명) ===
       method: 'CARD',                         // 결제 수단: CARD (필수)
-      mId: mid,                               // 상점 아이디 (필수) - mid → mId
-      orderName: selected.name,               // 상품명 (필수) - goodsNm → orderName
-      orderId: ordNo,                         // 주문번호 (필수, Unique) - ordNo → orderId
-      amount: goodsAmt,                       // 결제금액 (필수, 숫자) - goodsAmt → amount
-      customerName: session.user.name || '구매자',   // 구매자명 (필수) - ordNm → customerName
-      connCd: '0001',                         // PC Web
+      mId: mid,                               // 상점 아이디 (필수)
+      orderName: selected.name,               // 상품명 (필수)
+      orderId: ordNo,                         // 주문번호 (필수, Unique)
+      amount: goodsAmt,                       // 결제금액 (필수)
+      customerName: session.user.name || '구매자',   // 구매자명 (필수)
       
       // === 선택사항 ===
-      customerTel: '0000000000',              // 구매자 전화 - ordTel → customerTel
-      customerEmail: session.user.email,      // 구매자 이메일 - ordEmail → customerEmail
+      customerTel: '0000000000',              // 구매자 전화
+      customerEmail: session.user.email,      // 구매자 이메일
       
       // === 보안 ===
       returnUrl,                              // Callback URL
