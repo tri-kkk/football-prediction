@@ -227,6 +227,7 @@ export default function PricingPage() {
         returnUrl: data.returnUrl,
         ediDate: data.ediDate,
         hashString: data.hashString,
+        ediDate: data.ediDate,  // ← 추가!
       }
 
       // Form에 필드 추가

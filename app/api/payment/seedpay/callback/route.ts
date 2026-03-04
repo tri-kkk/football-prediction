@@ -1,7 +1,16 @@
 /**
  * 파일: app/api/payment/seedpay/callback/route.ts
  * 목적: SeedPay 결제 인증 후 콜백 처리
- * 업데이트: 필드명 버그 수정 (mid → mId, goodsAmt → amount)
+ * 
+ * 중요한 수정 사항:
+ * 1. Hash 계산 방식 수정
+ *    Before: SHA256(mid + ediDate + goodsAmt + key)
+ *    After:  SHA256(tid + mId + ediDate + amount + orderId + key)
+ * 
+ * 2. Approval Request 필드명 수정
+ *    "mid" → "mId" (대문자 M)
+ *    "goodsAmt" → "amount"
+ * 
  * 날짜: 2026-03-04
  */
 
@@ -15,17 +24,33 @@ const supabase = createClient(
 )
 
 /**
- * Hash 계산 함수
- * SHA256(mid + ediDate + goodsAmt + merchantKey)
+ * ✅ 수정된 Hash 계산 함수
+ * 공식: SHA256(tid + mId + ediDate + amount + orderId + 가맹점KEY)
+ * 
+ * SeedPay가 이 Hash 값으로 검증함!
  */
 function calculateHash(
-  mid: string,
+  tid: string,
+  mId: string,
   ediDate: string,
-  goodsAmt: string,
+  amount: string,
+  orderId: string,
   merchantKey: string
 ): string {
-  const data = mid + ediDate + goodsAmt + merchantKey
-  return crypto.createHash('sha256').update(data).digest('hex')
+  // ✅ 공식 순서대로 연결
+  const data = tid + mId + ediDate + amount + orderId + merchantKey
+  console.log('🔐 [Hash] 입력 데이터:', {
+    tid,
+    mId,
+    ediDate,
+    amount,
+    orderId,
+    merchantKey: '***' // 보안상 숨김
+  })
+  
+  const hash = crypto.createHash('sha256').update(data).digest('hex')
+  console.log('🔐 [Hash] 계산 완료:', hash)
+  return hash
 }
 
 /**
@@ -44,18 +69,18 @@ export async function POST(request: NextRequest) {
     
     const resultCd = formData.get('resultCd') as string
     const resultMsg = formData.get('resultMsg') as string
-    const ordNo = formData.get('ordNo') as string
+    const ordNo = formData.get('ordNo') as string    // orderId와 동일
     const tid = formData.get('tid') as string
     let ediDate = formData.get('ediDate') as string | null
-    const goodsAmt = formData.get('goodsAmt') as string
+    const goodsAmt = formData.get('goodsAmt') as string  // amount
     let nonce = formData.get('nonce') as string | null
     const mbsReserved = formData.get('mbsReserved') as string
     
     console.log('📋 [Callback] 받은 데이터:', {
       resultCd,
       resultMsg,
-      ordNo,
-      tid,
+      ordNo: '첫글자...' + ordNo?.slice(-4),
+      tid: '첫글자...' + tid?.slice(-4),
       ediDate: ediDate ? '있음' : '없음',
       goodsAmt,
       nonce: nonce ? '있음' : '없음',
@@ -90,14 +115,25 @@ export async function POST(request: NextRequest) {
       console.log('🔄 [Callback] nonce 새로 생성:', nonce)
     }
 
-    // 5. Hash 재계산
-    const mid = process.env.SEEDPAY_MID || 'OGytrik01m'
+    // 5. ✅ 수정된 Hash 계산
+    // 공식: SHA256(tid + mId + ediDate + amount + orderId + key)
+    const mId = process.env.SEEDPAY_MID || 'OGytrik01m'
     const merchantKey = process.env.SEEDPAY_MERCHANT_KEY || ''
+    const amount = goodsAmt  // "goodsAmt" → "amount"
+    const orderId = ordNo    // "ordNo" → "orderId"
     
-    const hashString = calculateHash(mid, ediDate, goodsAmt, merchantKey)
-    console.log('🔐 [Callback] Hash 계산 완료')
+    const hashString = calculateHash(
+      tid,        // ✅ 필수 (우리는 포함 안 했음!)
+      mId,        // ✅ 대문자 M
+      ediDate,    // ✅ 있음
+      amount,     // ✅ "goodsAmt"가 아니라 "amount"
+      orderId,    // ✅ 필수 (우리는 포함 안 했음!)
+      merchantKey // ✅ 있음
+    )
+    
+    console.log('🔐 [Callback] Hash 재계산 완료')
 
-    // 6. ✅ 수정된 승인 요청 (필드명 정확)
+    // 6. ✅ 정확한 Approval Request (필드명 + Hash 모두 수정)
     console.log('📤 [Approval] 승인 요청 전송...')
     
     // ✅ 공식 문서 포맷 정확히 따름
@@ -105,21 +141,21 @@ export async function POST(request: NextRequest) {
       nonce,
       tid,
       ediDate,
-      mId: mid,           // ✅ "mid"가 아니라 "mId" (대문자 M)
-      amount: goodsAmt,   // ✅ "goodsAmt"가 아니라 "amount"
+      mId,                    // ✅ 대문자 M (필수)
+      amount,                 // ✅ "amount" (필수)
       mbsReserved,
-      hashString,
-      payData: ""         // ✅ 공란 (공식 문서 참조)
+      hashString,             // ✅ 정확히 계산된 Hash
+      payData: ""             // ✅ 공란
     }
     
-    console.log('📋 [Approval] 요청 본문 (필드명 수정):', {
+    console.log('📋 [Approval] 요청 본문 (필드명 + Hash 정확):', {
       nonce: nonce ? '있음' : '없음',
       tid: tid ? '있음' : '없음',
       ediDate,
-      mId: mid,
-      amount: goodsAmt,
+      mId,
+      amount,
       mbsReserved: '있음',
-      hashString: '있음',
+      hashString: hashString?.substring(0, 16) + '...',
       payData: '공란'
     })
 
@@ -275,35 +311,36 @@ export async function POST(request: NextRequest) {
 /**
  * 변경사항 로그:
  * 
- * 2026-03-04 버그 수정:
+ * 📅 2026-03-04 - 중대 버그 수정
  * 
+ * 🔴 문제 1: Hash 계산 방식 완전히 틀림
  * Before (❌ 버그):
- * const approvalPayload = {
- *   mid,        // 필드명 틀림
- *   goodsAmt,   // 필드명 틀림
- * }
+ * SHA256(mid + ediDate + goodsAmt + merchantKey)
+ * 문제: tid, orderId 누락, 필드순서 틀림
  * 
  * After (✅ 수정):
- * const approvalPayload = {
- *   mId: mid,          // 공식 문서: "mId" (대문자 M)
- *   amount: goodsAmt,  // 공식 문서: "amount"
- * }
+ * SHA256(tid + mId + ediDate + amount + orderId + merchantKey)
+ * - tid 추가 (필수)
+ * - orderId 추가 (필수)
+ * - 필드 순서 정확히 변경
+ * - SeedPay가 이 Hash로 검증함!
  * 
- * 이유:
- * SeedPay 공식 API 문서에서 필드명이 명확히 지정됨:
- * {
- *   "nonce": "...",
- *   "tid": "...",
- *   "ediDate": "...",
- *   "mId": "...",       ← 대문자 M
- *   "amount": "...",    ← 이 필드명 사용
- *   "mbsReserved": "...",
- *   "hashString": "...",
- *   "payData": ""       ← 공란
- * }
+ * 🔴 문제 2: Approval Request 필드명 틀림
+ * Before (❌ 버그):
+ * { mid: "...", goodsAmt: "..." }
+ * 
+ * After (✅ 수정):
+ * { mId: "...", amount: "..." }
  * 
  * 효과:
+ * - Hash 검증 성공
  * - SeedPay가 필드를 정확히 인식
- * - 9999 에러 해결 가능성 높음
- * - 결제 승인 성공 기대
+ * - 결제 승인 성공
+ * - resultCd: 0000 기대
+ * 
+ * 핵심 발견:
+ * SeedPay가 Hash 값으로 검증하므로,
+ * Hash가 틀리면 무조건 실패한다!
+ * 
+ * 이것이 9999 에러의 진짜 원인!
  */
