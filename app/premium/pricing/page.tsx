@@ -110,20 +110,6 @@ export default function PricingPage() {
       }
 
       // Form 필드 추가
-      const fields: Record<string, string> = {
-        method: 'CARD',
-        mid: data.mid,
-        goodsNm: data.goodsNm,
-        ordNo: data.ordNo,
-        goodsAmt: data.goodsAmt,
-        ordNm: data.ordNm,
-        ordEmail: data.ordEmail,
-        returnUrl: data.returnUrl,
-        ediDate: data.ediDate,
-        hashString: data.hashString,
-      }
-
-      // Form에 필드 추가
       Object.entries(fields).forEach(([name, value]) => {
         const input = document.createElement('input')
         input.type = 'hidden'
