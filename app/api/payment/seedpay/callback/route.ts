@@ -24,6 +24,8 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       goodsAmt: data.goodsAmt,
       ediDate: data.ediDate || '없음',
       initEdiDate: data.initEdiDate || '없음',
+      returnUrl: data.returnUrl || '없음',
+      mbsReserved: data.mbsReserved ? data.mbsReserved.substring(0, 50) + '...' : '없음',
     })
 
     // 인증 실패 처리
@@ -375,6 +377,13 @@ export async function POST(request: NextRequest) {
   try {
     console.log('📨 [Callback] POST 요청 받음')
     
+    // 🔍 returnUrl과 쿼리 파라미터 로깅
+    console.log('🔍 [Callback] 요청 URL:', request.nextUrl.toString())
+    console.log('🔍 [Callback] 쿼리 파라미터:', {
+      params: request.nextUrl.searchParams.toString(),
+      initEdiDate: request.nextUrl.searchParams.get('initEdiDate'),
+    })
+    
     const formData = await request.formData()
     const data: Record<string, string> = {}
     
@@ -382,10 +391,17 @@ export async function POST(request: NextRequest) {
       data[key] = value as string
     })
     
+    // 🔍 Form data의 returnUrl 확인
+    console.log('🔍 [Callback] Form returnUrl:', data.returnUrl)
+    console.log('🔍 [Callback] Form mbsReserved:', data.mbsReserved ? data.mbsReserved.substring(0, 50) + '...' : '없음')
+    
     // ✅ URL 파라미터에서 initEdiDate 받기
     const initEdiDate = request.nextUrl.searchParams.get('initEdiDate')
     if (initEdiDate) {
       data.initEdiDate = initEdiDate
+      console.log('✅ [Callback] URL에서 initEdiDate 받음:', initEdiDate)
+    } else {
+      console.warn('⚠️ [Callback] URL에서 initEdiDate 없음')
     }
 
     const result = await handleCallback(data)
