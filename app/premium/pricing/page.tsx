@@ -124,6 +124,15 @@ export default function PricingPage() {
 
       document.body.appendChild(form)
 
+      // ✅ 디버깅: Form 데이터 확인
+      console.log('[Payment] Form action:', form.action)
+      console.log('[Payment] Form method:', form.method)
+      console.log('[Payment] Form 모든 입력값:')
+      const inputs = form.querySelectorAll('input')
+      inputs.forEach(input => {
+        console.log(`  ${input.name} = ${input.value}`)
+      })
+
       // Form 제출
       console.log('[Payment] form.submit() 호출...')
       form.submit()
