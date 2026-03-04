@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     })
 
     // 5. 결과 콜백 URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trendsoccer.com'
     const returnUrl = `${baseUrl}/api/payment/seedpay/callback`
 
     console.log('✅ SeedPay 결제 요청 파라미터 생성:', {
