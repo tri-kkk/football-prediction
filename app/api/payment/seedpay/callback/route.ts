@@ -91,13 +91,14 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       console.log('⚠️ [Approval] SeedPay가 hashString을 보내지 않음, 직접 계산')
       
       // 🔍 Hash 입력값 상세 로깅
-      // 공식: SHA256(tid + mId + ediDate + amount + merchantKey)
-      const hashInput = data.tid + mid + ediDate + data.goodsAmt + merchantKey
+      // 공식: SHA256(tid + mId + ediDate + amount + orderId + merchantKey)
+      const hashInput = data.tid + mid + ediDate + data.goodsAmt + data.ordNo + merchantKey
       console.log('🔐 [Approval] Hash 입력값 상세:', {
         tid: data.tid,
         mid: mid,
         ediDate: ediDate,
         goodsAmt: data.goodsAmt,
+        ordNo: data.ordNo,
         merchantKeyLength: merchantKey.length,
         merchantKeyFirst20: merchantKey.substring(0, 20),
         totalInputLength: hashInput.length,
@@ -110,8 +111,22 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
         .digest('hex')
       
       console.log('🔐 [Approval] 해시 생성:', {
-        hashInput: `${data.tid} + ${mid} + ${ediDate} + ${data.goodsAmt} + ***merchantKey***`,
+        hashInput: `${data.tid} + ${mid} + ${ediDate} + ${data.goodsAmt} + ${data.ordNo} + ***merchantKey***`,
         hashString: approvalHash,
+      })
+      
+      // 🔍 Hash 검증용 상세 로깅
+      console.log('🔐 [Approval] Hash 검증 정보:', {
+        tid: data.tid,
+        mid: mid,
+        ediDate: ediDate,
+        goodsAmt: data.goodsAmt,
+        ordNo: data.ordNo,
+        merchantKeyLength: merchantKey.length,
+        merchantKeyFirst20: merchantKey.substring(0, 20),
+        merchantKeyLast10: merchantKey.substring(merchantKey.length - 10),
+        calculatedHash: approvalHash,
+        hashInputLength: hashInput.length,
       })
     } else {
       console.log('🔐 [Approval] 해시 사용 (SeedPay에서 받음):', {
@@ -126,6 +141,19 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       mId: mid.substring(0, 5) + '***',
       amount: data.goodsAmt,
       payData: payData ? '있음' : '없음',
+      hashString: approvalHash.substring(0, 20) + '...',
+    })
+    
+    // 🔍 완전한 Approval Body 로깅
+    console.log('📋 [Approval] 완전한 요청 Body:', {
+      nonce: data.nonce || '없음',
+      tid: data.tid,
+      ediDate: ediDate,
+      mId: mid,
+      amount: data.goodsAmt,
+      hashString: approvalHash,
+      payData: payData || '없음',
+      mbsReserved: data.mbsReserved ? data.mbsReserved.substring(0, 30) + '...' : '',
     })
 
     // ✅ SeedPay 공식 필드명 (승인 요청)
