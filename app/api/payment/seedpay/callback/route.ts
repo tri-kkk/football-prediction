@@ -40,6 +40,23 @@ async function handleCallback(data: Record<string, string>) {
       return { error: '설정 오류', status: 500 }
     }
 
+    // ✅ payData 추출 (필수 필드!)
+    // returnData에는 payData가 없으므로 subData에서 추출
+    let payData = data.payData || ''
+    
+    if (!payData && data.subData) {
+      try {
+        const subData = typeof data.subData === 'string' 
+          ? JSON.parse(data.subData) 
+          : data.subData
+        payData = subData.pgEncData || ''
+        console.log('📦 [Approval] subData에서 payData 추출 완료')
+      } catch (e) {
+        console.error('❌ subData 파싱 실패:', e)
+        payData = ''
+      }
+    }
+
     // ✅ 공식 문서 기준: hashString = SHA256(tid + mId + ediDate + amount + orderId + merchantKey)
     // 근데 orderId가 뭔가? ordNo인 것 같음
     const approvalHash = crypto
@@ -60,7 +77,7 @@ async function handleCallback(data: Record<string, string>) {
       mId: mid,                // ← mid 아니라 mId!
       amount: data.goodsAmt,   // ← goodsAmt 아니라 amount!
       hashString: approvalHash,
-      payData: data.payData || '',
+      payData: payData,        // ← 필수! subData에서 추출한 값
       mbsReserved: data.mbsReserved || '',
     }
 
@@ -69,6 +86,7 @@ async function handleCallback(data: Record<string, string>) {
       tid: '있음',
       mId: mid.substring(0, 5) + '***',
       amount: data.goodsAmt,
+      payData: payData ? '있음' : '없음',
     })
 
     // ✅ Content-Type: application/json (공식 기준)
