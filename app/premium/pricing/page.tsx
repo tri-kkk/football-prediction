@@ -185,6 +185,9 @@ export default function PricingPage() {
         throw new Error(data.error || '결제 초기화 실패')
       }
 
+      // 🔍 Debug: Init API 응답 전체 확인
+      console.log('🔍 [Payment] Init API 응답 전체:', JSON.stringify(data, null, 2))
+
       // ✅ nonce와 ediDate를 sessionStorage에 저장 (Hash 검증용)
       if (data.nonce) {
         sessionStorage.setItem('seedpay_nonce', data.nonce)
@@ -219,49 +222,44 @@ export default function PricingPage() {
       form.action = 'https://pay.seedpayments.co.kr/payment/v1/view/request'
       form.style.display = 'none'
 
-      // ✅ SeedPay에 보낼 필드를 명시적으로 선택 (예상치 못한 필드 추가 방지)
-      const fieldsToInclude = [
-        'method', 'mid', 'goodsNm', 'ordNo', 'goodsAmt',
-        'ordNm', 'ordTel', 'ordEmail', 'nonce', 
-        'returnUrl', 'ediDate', 'hashString', 'terms'
-      ]
+      // Form 필드 추가 (이전 버전과 정확히 동일)
+      const fields: Record<string, string> = {
+        method: 'CARD',
+        mid: data.mid,
+        goodsNm: data.goodsNm,
+        ordNo: data.ordNo,
+        goodsAmt: data.goodsAmt,
+        ordNm: data.ordNm,
+        ordEmail: data.ordEmail,
+        returnUrl: data.returnUrl,
+        ediDate: data.ediDate,
+        hashString: data.hashString,
+        initEdiDate: data.ediDate,  // ✅ 추가!
+        //nonce: data.nonce,  // ✅ 추가!
+      }
 
       // Form에 필드 추가
-      fieldsToInclude.forEach(fieldName => {
-        if (data[fieldName] !== undefined && data[fieldName] !== null) {
-          const input = document.createElement('input')
-          input.type = 'hidden'
-          input.name = fieldName
-          
-          // terms는 배열이므로 JSON.stringify
-          if (fieldName === 'terms' && Array.isArray(data[fieldName])) {
-            input.value = JSON.stringify(data[fieldName])
-          } else {
-            input.value = String(data[fieldName])
-          }
-          
-          form.appendChild(input)
-          console.log(`✅ Form 필드 추가: ${fieldName}`)
-        }
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = value
+        form.appendChild(input)
       })
 
-      // ✅ ediDate와 nonce를 sessionStorage에도 저장 (Hash 검증용)
+      // ✅ sessionStorage 저장
       if (data.ediDate) {
         sessionStorage.setItem('seedpay_ediDate', data.ediDate)
-        console.log('✅ ediDate를 sessionStorage에 저장')
       }
       if (data.nonce) {
         sessionStorage.setItem('seedpay_nonce', data.nonce)
-        console.log('✅ nonce를 sessionStorage에 저장')
       }
 
-      console.log('📋 Form 정보:', {
-        action: form.action,
-        method: form.method,
-        fieldCount: form.children.length,
-      })
+      // 🔍 Form action 확인
+      console.log('🔍 [Payment] Form action:', form.action)
+      console.log('📋 Form 필드 개수:', form.children.length)
 
-      // ✅ 팝업 창으로 결제 화면 열기
+      // ✅ 팝업 창으로 결제 화면 열기 (이전 버전과 동일)
       const popup = window.open('', 'SeedPayment', 'width=1000,height=900,left=50,top=50')
       
       if (popup) {

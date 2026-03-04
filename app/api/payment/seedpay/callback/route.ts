@@ -13,7 +13,7 @@ const PLAN_CONFIG: Record<string, { plan: string; months: number }> = {
   9900: { plan: 'quarterly', months: 3 },
 }
 
-async function handleCallback(data: Record<string, string>) {
+async function handleCallback(data: Record<string, string>, request?: NextRequest) {
   try {
     console.log('📨 [Callback] POST 데이터 수신 완료')
     console.log('📋 [Callback] 받은 데이터:', {
@@ -23,6 +23,7 @@ async function handleCallback(data: Record<string, string>) {
       tid: data.tid || '없음',
       goodsAmt: data.goodsAmt,
       ediDate: data.ediDate || '없음',
+      initEdiDate: data.initEdiDate || '없음',
     })
 
     // 인증 실패 처리
@@ -34,14 +35,16 @@ async function handleCallback(data: Record<string, string>) {
     console.log('✅ [Callback] 인증 성공 (resultCd: 0000), 승인 요청 준비 중...')
 
     // ✅ ediDate 검증 (필수!)
-    let ediDate = data.ediDate
+    // URL 파라미터에서 Init의 ediDate를 받음 (우선)
+    // 없으면 Form data에서 SeedPay의 ediDate를 받음
+    let ediDate = data.initEdiDate || data.ediDate
     
     if (!ediDate) {
       console.error('❌ [Callback] ediDate 없음 - Hash 검증 불가')
       return { error: 'ediDate 누락', status: 400 }
     }
     
-    console.log('✅ [Callback] ediDate 확인:', ediDate)
+    console.log('✅ [Callback] ediDate 확인:', ediDate, '(source:', data.initEdiDate ? 'Init' : 'SeedPay', ')')
 
     // SeedPay 환경변수
     const merchantKey = process.env.SEEDPAY_MERCHANT_KEY
@@ -51,6 +54,17 @@ async function handleCallback(data: Record<string, string>) {
       console.error('❌ SeedPay 환경변수 누락')
       return { error: '설정 오류', status: 500 }
     }
+
+    // 🔍 Merchant Key 검증 로깅
+    console.log('🔐 Merchant Key 검증:', {
+      length: merchantKey.length,
+      first20: merchantKey.substring(0, 20),
+      last20: merchantKey.substring(merchantKey.length - 20),
+      isBase64: /^[A-Za-z0-9+/=]+$/.test(merchantKey),
+      has_equals: merchantKey.includes('='),
+      has_plus: merchantKey.includes('+'),
+      has_slash: merchantKey.includes('/'),
+    })
 
     // ✅ payData 추출 (필수 필드!)
     // returnData에는 payData가 없으므로 subData에서 추출
@@ -69,34 +83,59 @@ async function handleCallback(data: Record<string, string>) {
       }
     }
 
-    // ✅ 공식 문서 기준: hashString = SHA256(tid + mId + ediDate + amount + orderId + merchantKey)
-    // 여기서는 tid + mid + ediDate + goodsAmt + ordNo + merchantKey 사용
-    const approvalHash = crypto
-      .createHash('sha256')
-      .update(data.tid + mid + ediDate + data.goodsAmt + data.ordNo + merchantKey)
-      .digest('hex')
-
-    console.log('🔐 [Approval] 해시 생성:', {
-      hashInput: `${data.tid} + ${mid} + ${ediDate} + ${data.goodsAmt} + ${data.ordNo} + ***key***`,
-      hashString: approvalHash.substring(0, 20) + '...',
-    })
+    // ✅ SeedPay가 hashString을 보내지 않으면 직접 계산
+    let approvalHash = data.hashString
+    
+    if (!approvalHash) {
+      console.log('⚠️ [Approval] SeedPay가 hashString을 보내지 않음, 직접 계산')
+      
+      // 🔍 Hash 입력값 상세 로깅
+      const hashInput = mid + ediDate + data.goodsAmt + merchantKey
+      console.log('🔐 [Approval] Hash 입력값 상세:', {
+        mid: `"${mid}"`,
+        ediDate: `"${ediDate}"`,
+        goodsAmt: `"${data.goodsAmt}"`,
+        merchantKeyLength: merchantKey.length,
+        merchantKeyFirst20: merchantKey.substring(0, 20),
+        totalInputLength: hashInput.length,
+        hashInputPreview: hashInput.substring(0, 50) + '...' + hashInput.substring(hashInput.length - 20),
+      })
+      
+      approvalHash = crypto
+        .createHash('sha256')
+        .update(hashInput)
+        .digest('hex')
+      
+      console.log('🔐 [Approval] 해시 생성:', {
+        hashInput: `${mid} + ${ediDate} + ${data.goodsAmt} + ***merchantKey***`,
+        hashString: approvalHash,
+      })
+    } else {
+      console.log('🔐 [Approval] 해시 사용 (SeedPay에서 받음):', {
+        hashString: approvalHash.substring(0, 20) + '...',
+      })
+    }
 
     console.log('📤 [Approval] 승인 요청 전송 (JSON):', {
       nonce: data.nonce ? '있음' : '없음',
       tid: '있음',
       mId: mid.substring(0, 5) + '***',
       amount: data.goodsAmt,
+      orderId: data.ordNo,
+      orderName: data.goodsNm ? data.goodsNm.substring(0, 10) + '...' : '없음',
       payData: payData ? '있음' : '없음',
     })
 
-    // ✅ Content-Type: application/json (공식 기준)
-    // ✅ 공식 필드명: mId, amount
+    // ✅ SeedPay 정확한 필드명
     const approvalBody = {
       nonce: data.nonce,
       tid: data.tid,
       ediDate: ediDate,
-      mId: mid,                     // ✅ 대문자 M
-      amount: data.goodsAmt,        // ✅ amount (goodsAmt 아님)
+      mId: mid,
+      amount: data.goodsAmt,
+      orderId: data.ordNo,
+      orderName: data.goodsNm,
+      customerName: data.ordNm,
       hashString: approvalHash,
       payData: payData,
       mbsReserved: data.mbsReserved || '',
@@ -331,6 +370,12 @@ export async function POST(request: NextRequest) {
     formData.forEach((value, key) => {
       data[key] = value as string
     })
+    
+    // ✅ URL 파라미터에서 initEdiDate 받기
+    const initEdiDate = request.nextUrl.searchParams.get('initEdiDate')
+    if (initEdiDate) {
+      data.initEdiDate = initEdiDate
+    }
 
     const result = await handleCallback(data)
 

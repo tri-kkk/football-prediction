@@ -66,9 +66,9 @@ export async function POST(request: NextRequest) {
       hashString,
     })
 
-    // 5. 결과 콜백 URL
+    // 5. 결과 콜백 URL (✅ ediDate를 쿼리 파라미터에 포함!)
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trendsoccer.com'
-    const returnUrl = `${baseUrl}/api/payment/seedpay/callback`
+    const returnUrl = `${baseUrl}/api/payment/seedpay/callback?initEdiDate=${ediDate}`
 
     console.log('✅ SeedPay 결제 요청 파라미터 생성:', {
       mid: mid.substring(0, 5) + '***',
