@@ -184,6 +184,12 @@ export default function PricingPage() {
       if (!data.success) {
         throw new Error(data.error || '결제 초기화 실패')
       }
+
+      // ✅ nonce를 sessionStorage에 저장
+      if (data.nonce) {
+        sessionStorage.setItem('seedpay_nonce', data.nonce)
+        console.log('✅ nonce를 sessionStorage에 저장')
+      }
       
       // ✅ null인 약관 4번을 우리 약관으로 채우기
       if (data.data && Array.isArray(data.data)) {

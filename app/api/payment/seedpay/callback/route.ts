@@ -72,12 +72,20 @@ async function handleCallback(data: Record<string, string>) {
     })
 
     // ✅ PHP 샘플과 동일한 필드명으로 수정
+    let nonce = data.nonce
+    
+    // ✅ nonce가 없으면 임시값으로 생성
+    if (!nonce) {
+      console.warn('⚠️ [Approval] nonce가 없음, 임시값 생성')
+      nonce = `temp_${mid}_${data.ediDate}_${Math.random().toString(36).substring(2, 15)}`
+    }
+
     const approvalBody = {
-      nonce: data.nonce,
+      nonce: nonce,
       tid: data.tid,
       ediDate: data.ediDate,
-      mid: mid,                     // ✅ mId 아니라 mid!
-      goodsAmt: data.goodsAmt,      // ✅ amount 아니라 goodsAmt!
+      mid: mid,
+      goodsAmt: data.goodsAmt,
       hashString: approvalHash,
       payData: payData,
       mbsReserved: data.mbsReserved || '',

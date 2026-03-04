@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
     const ordNo = `TS${Date.now()}${Math.floor(Math.random() * 1000)}`
     const goodsAmt = selected.amount.toString()
 
+    // ✅ nonce 생성 (필수!)
+    const nonce = `${mid}${ediDate}${Math.random().toString(36).substring(2, 15)}`
+
     // SHA-256 해시 (mid + ediDate + goodsAmt + key)
     const hashString = crypto
       .createHash('sha256')
@@ -115,6 +118,7 @@ export async function POST(request: NextRequest) {
       ordEmail: session.user.email,           // 구매자 이메일
       
       // === 보안 ===
+      nonce,                                  // ✅ nonce 추가 (필수!)
       returnUrl,                              // Callback URL
       ediDate,                                // 타임스탐프
       hashString,                             // SHA-256 해시
