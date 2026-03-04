@@ -16,6 +16,56 @@ export default function PricingPage() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // ✅ payData2 페이지에서 데이터 추출 및 처리
+  useEffect(() => {
+    // URL이 payData2인지 확인
+    if (window.location.href.includes('payData2')) {
+      console.log('📨 [Payment] payData2 페이지 감지')
+      
+      // URL의 모든 파라미터를 가져오기
+      const params = new URLSearchParams(window.location.search)
+      const data: Record<string, string> = {}
+      params.forEach((value, key) => {
+        data[key] = value
+      })
+
+      console.log('📦 [Payment] 결제 데이터:', {
+        resultCd: data.resultCd,
+        resultMsg: data.resultMsg,
+        ordNo: data.ordNo,
+      })
+
+      // 결제 성공 확인
+      if (data.resultCd === '0000') {
+        console.log('✅ [Payment] 인증 성공, 승인 처리 중...')
+
+        // 우리 Backend에 승인 요청
+        fetch('/api/payment/seedpay/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(data).toString(),
+        })
+          .then(res => {
+            if (res.redirected) {
+              // Callback에서 리다이렉트된 경우
+              window.location.href = res.url
+            }
+            return res.json()
+          })
+          .then(result => {
+            console.log('✅ [Payment] 처리 완료')
+          })
+          .catch(error => {
+            console.error('❌ [Payment] 처리 오류:', error)
+          })
+      } else {
+        console.error('❌ [Payment] 결제 실패:', data.resultMsg)
+      }
+    }
+  }, [])
+  
+  // ✅ Hydration 문제 해결
   
   const isPremium = (session?.user as any)?.tier === 'premium'
   
@@ -49,7 +99,7 @@ export default function PricingPage() {
     setLoading(true)
 
     try {
-      console.log('[Payment] 결제 초기화 시작')
+      console.log('[Payment] 결제 초기화 시작:', { plan: selectedPlan })
 
       // 1. API 호출
       const res = await fetch('/api/payment/seedpay/init', {
@@ -64,6 +114,9 @@ export default function PricingPage() {
       }
 
       const data = await res.json()
+
+      console.log('[Payment] Init API 전체 응답:', data)
+      window.paymentData = data  // ← 이 줄 추가!
 
       if (!data.success) {
         throw new Error(data.error || '결제 초기화 실패')
@@ -82,6 +135,7 @@ export default function PricingPage() {
           }
           return term
         })
+        console.log('[Payment] 약관 데이터 처리 완료:', data.data)
       }
 
       // 2. 기존 Form 제거
@@ -109,7 +163,9 @@ export default function PricingPage() {
         hashString: data.hashString,
       }
 
-      // Form 필드 추가
+      console.log('[Payment] Form 필드:', fields)
+
+      // Form에 필드 추가
       Object.entries(fields).forEach(([name, value]) => {
         const input = document.createElement('input')
         input.type = 'hidden'
@@ -120,13 +176,23 @@ export default function PricingPage() {
 
       document.body.appendChild(form)
 
-      console.log('[Payment] 결제 요청 전송')
+      // ✅ 디버깅: Form 데이터 확인
+      console.log('[Payment] Form action:', form.action)
+      console.log('[Payment] Form method:', form.method)
+      console.log('[Payment] Form 모든 입력값:')
+      const inputs = form.querySelectorAll('input')
+      inputs.forEach(input => {
+        console.log(`  ${input.name} = ${input.value}`)
+      })
+
+      // Form 제출
+      console.log('[Payment] form.submit() 호출...')
       form.submit()
       
       setLoading(false)
 
     } catch (err) {
-      console.error('[Payment] 오류:', err instanceof Error ? err.message : '알 수 없음')
+      console.error('[Payment] 에러:', err)
       alert(
         language === 'ko' 
           ? `결제 처리 중 오류: ${err instanceof Error ? err.message : '알 수 없음'}`
