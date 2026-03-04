@@ -34,17 +34,28 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
 
     console.log('✅ [Callback] 인증 성공 (resultCd: 0000), 승인 요청 준비 중...')
 
+    // ✅ mbsReserved에서 initEdiDate 추출
+    let initEdiDateFromMbs = ''
+    try {
+      const reserved = JSON.parse(data.mbsReserved || '{}')
+      initEdiDateFromMbs = reserved.initEdiDate || ''
+      console.log('📦 [Callback] mbsReserved에서 initEdiDate 추출:', initEdiDateFromMbs)
+    } catch (e) {
+      console.log('⚠️ [Callback] mbsReserved 파싱 실패')
+    }
+
     // ✅ ediDate 검증 (필수!)
-    // URL 파라미터에서 Init의 ediDate를 받음 (우선)
-    // 없으면 Form data에서 SeedPay의 ediDate를 받음
-    let ediDate = data.initEdiDate || data.ediDate
+    // 1. mbsReserved에서 받은 Init의 ediDate (우선)
+    // 2. URL 파라미터의 initEdiDate
+    // 3. Form data의 SeedPay ediDate
+    let ediDate = initEdiDateFromMbs || data.initEdiDate || data.ediDate
     
     if (!ediDate) {
       console.error('❌ [Callback] ediDate 없음 - Hash 검증 불가')
       return { error: 'ediDate 누락', status: 400 }
     }
     
-    console.log('✅ [Callback] ediDate 확인:', ediDate, '(source:', data.initEdiDate ? 'Init' : 'SeedPay', ')')
+    console.log('✅ [Callback] ediDate 확인:', ediDate, '(source:', initEdiDateFromMbs ? 'mbsReserved' : data.initEdiDate ? 'URL' : 'SeedPay', ')')
 
     // SeedPay 환경변수
     const merchantKey = process.env.SEEDPAY_MERCHANT_KEY

@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
         email: session.user.email,
         plan,
         timestamp: new Date().toISOString(),
+        initEdiDate: ediDate,  // ✅ Init의 ediDate 포함!
       }),
     })
 
