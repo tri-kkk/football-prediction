@@ -96,19 +96,18 @@ export default function PricingPage() {
       form.action = 'https://pay.seedpayments.co.kr/payment/v1/view/request'
       form.style.display = 'none'
 
-      // Form 필드 추가 (v0.9.1 파라미터명)
+      // Form 필드 추가 (v0.9.0 구 필드명)
       const fields: Record<string, string> = {
         method: 'CARD',
-        mId: data.mId,                     // mid → mId
-        orderName: data.orderName,         // goodsNm → orderName
-        orderId: data.orderId,             // ordNo → orderId
-        amount: data.amount,               // goodsAmt → amount
-        customerName: data.customerName,   // ordNm → customerName
-        customerEmail: data.customerEmail, // ordEmail → customerEmail
+        mid: data.mId,                    // mId → mid
+        goodsNm: data.orderName,          // orderName → goodsNm
+        ordNo: data.orderId,              // orderId → ordNo
+        goodsAmt: data.amount,
+        ordNm: data.customerName,         // customerName → ordNm
+        ordEmail: data.customerEmail,     // customerEmail → ordEmail
         returnUrl: data.returnUrl,
         ediDate: data.ediDate,
         hashString: data.hashString,
-        appMode: '0',                      // PG 승인 모드
       }
 
       console.log('[Payment] Form 필드:', fields)

@@ -54,6 +54,15 @@ export async function POST(request: NextRequest) {
       .update(mid + ediDate + goodsAmt + merchantKey)
       .digest('hex')
 
+    console.log('🔐 Hash 계산:', {
+      mid,
+      ediDate,
+      goodsAmt,
+      merchantKeyLength: merchantKey?.length || 0,
+      hashInput: mid + ediDate + goodsAmt + '***merchantKey***',
+      hashString,
+    })
+
     // 5. 결과 콜백 URL
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
     const returnUrl = `${baseUrl}/api/payment/seedpay/callback`
@@ -86,24 +95,24 @@ export async function POST(request: NextRequest) {
       }
     ]
 
-    // ✅ SeedPay 표준 결제 가이드 기준으로 반환
+    // ✅ SeedPay 표준 결제 가이드 기준으로 반환 (v0.9.0 구 필드명)
     return NextResponse.json({
       success: true,
       
       // === 약관 데이터 ===
       terms,
       
-      // === SeedPay 필수 필드 (v0.9.1 파라미터명) ===
+      // === SeedPay 필수 필드 (v0.9.0 구 필드명) ===
       method: 'CARD',                         // 결제 수단: CARD (필수)
-      mId: mid,                               // 상점 아이디 (필수)
-      orderName: selected.name,               // 상품명 (필수)
-      orderId: ordNo,                         // 주문번호 (필수, Unique)
-      amount: goodsAmt,                       // 결제금액 (필수)
-      customerName: session.user.name || '구매자',   // 구매자명 (필수)
+      mid,                                    // 상점 아이디 (필수)
+      goodsNm: selected.name,                 // 상품명 (필수)
+      ordNo,                                  // 주문번호 (필수, Unique)
+      goodsAmt,                               // 결제금액 (필수)
+      ordNm: session.user.name || '구매자',   // 구매자명 (필수)
       
       // === 선택사항 ===
-      customerTel: '0000000000',              // 구매자 전화
-      customerEmail: session.user.email,      // 구매자 이메일
+      ordTel: '0000000000',                   // 구매자 전화
+      ordEmail: session.user.email,           // 구매자 이메일
       
       // === 보안 ===
       returnUrl,                              // Callback URL
