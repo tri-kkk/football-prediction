@@ -93,23 +93,23 @@ export async function POST(request: NextRequest) {
       // === 약관 데이터 ===
       terms,
       
-      // === SeedPay 필수 필드 ===
-      method: 'CARD',                    // 결제 수단: CARD (필수)
-      mid,                               // 상점 아이디 (필수)
-      goodsNm: selected.name,            // 상품명 (필수)
-      ordNo,                             // 주문번호 (필수, Unique)
-      goodsAmt,                          // 결제금액 (필수, 숫자)
-      ordNm: session.user.name || '구매자',   // 구매자명 (필수)
-      connCd: '0001',                    // PC Web
+      // === SeedPay 필수 필드 (v0.9.1 파라미터명) ===
+      method: 'CARD',                         // 결제 수단: CARD (필수)
+      mId: mid,                               // 상점 아이디 (필수) - mid → mId
+      orderName: selected.name,               // 상품명 (필수) - goodsNm → orderName
+      orderId: ordNo,                         // 주문번호 (필수, Unique) - ordNo → orderId
+      amount: goodsAmt,                       // 결제금액 (필수, 숫자) - goodsAmt → amount
+      customerName: session.user.name || '구매자',   // 구매자명 (필수) - ordNm → customerName
+      connCd: '0001',                         // PC Web
       
       // === 선택사항 ===
-      ordTel: '0000000000',              // 구매자 전화
-      ordEmail: session.user.email,      // 구매자 이메일
+      customerTel: '0000000000',              // 구매자 전화 - ordTel → customerTel
+      customerEmail: session.user.email,      // 구매자 이메일 - ordEmail → customerEmail
       
       // === 보안 ===
-      returnUrl,                         // Callback URL
-      ediDate,                           // 타임스탐프
-      hashString,                        // SHA-256 해시
+      returnUrl,                              // Callback URL
+      ediDate,                                // 타임스탐프
+      hashString,                             // SHA-256 해시
       
       // === 내부 관리용 ===
       plan,
