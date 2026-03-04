@@ -17,6 +17,62 @@ export default function PricingPage() {
     setMounted(true)
   }, [])
 
+  // ✅ SeedPay postMessage 수신 (payData2에서 보냄)
+  useEffect(() => {
+    const handleSeedPayMessage = (event: MessageEvent) => {
+      console.log('📨 [Payment] SeedPay postMessage 수신')
+      
+      // SeedPay 메시지 형식:
+      // event.data = [
+      //   "SUCCESS",
+      //   { 결제 데이터 },
+      //   "returnUrl",
+      //   "POST",
+      //   "utf-8"
+      // ]
+      
+      if (Array.isArray(event.data) && event.data[0] === 'SUCCESS') {
+        const paymentData = event.data[1]
+        
+        console.log('📦 [Payment] 결제 데이터:', {
+          resultCd: paymentData.resultCd,
+          ordNo: paymentData.ordNo,
+          goodsAmt: paymentData.goodsAmt,
+        })
+        
+        if (paymentData.resultCd === '0000') {
+          console.log('✅ [Payment] 인증 성공, 승인 처리 중...')
+          
+          // Callback으로 POST 전송
+          const form = document.createElement('form')
+          form.method = 'POST'
+          form.action = '/api/payment/seedpay/callback'
+          form.style.display = 'none'
+          
+          Object.entries(paymentData).forEach(([key, value]) => {
+            const input = document.createElement('input')
+            input.type = 'hidden'
+            input.name = key
+            input.value = String(value)
+            form.appendChild(input)
+          })
+          
+          document.body.appendChild(form)
+          console.log('📤 [Payment] Callback으로 데이터 전송')
+          form.submit()
+        } else {
+          console.error('❌ [Payment] 결제 실패:', paymentData.resultMsg)
+          window.location.href = `/premium/pricing/result?status=failed&message=${encodeURIComponent(paymentData.resultMsg || '결제 실패')}`
+        }
+      }
+    }
+    
+    window.addEventListener('message', handleSeedPayMessage)
+    return () => window.removeEventListener('message', handleSeedPayMessage)
+  }, [])
+  
+  // ✅ Hydration 문제 해결
+
   // ✅ payData2 페이지에서 데이터 추출 및 처리
   useEffect(() => {
     // URL이 payData2인지 확인
