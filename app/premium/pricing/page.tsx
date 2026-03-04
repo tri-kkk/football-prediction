@@ -239,17 +239,21 @@ export default function PricingPage() {
       })
 
       // ✅ 팝업 창으로 결제 화면 열기
-      const popup = window.open('', 'SeedPayment', 'width=1000,height=700,left=150,top=100')
+      const popup = window.open('', 'SeedPayment', 'width=1000,height=900,left=50,top=50')
       
       if (popup) {
+        // 팝업에 form 추가
         popup.document.open()
-        popup.document.write(form.outerHTML)
+        popup.document.write('<html><head><meta charset="UTF-8"></head><body></body></html>')
         popup.document.close()
         
-        // 폼 서브밋
-        popup.document.querySelector('form')?.submit()
+        popup.document.body.appendChild(form)
         
-        console.log('📱 [Payment] 팝업 창에서 결제 화면 오픈')
+        // 폼 서브밋
+        setTimeout(() => {
+          popup.document.querySelector('form')?.submit()
+          console.log('📱 [Payment] 팝업 창에서 결제 화면 오픈')
+        }, 100)
       } else {
         console.error('❌ [Payment] 팝업 창 열기 실패 (팝업 차단됨)')
         alert(language === 'ko' ? '팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.' : 'Popup blocked. Please allow popups.')
