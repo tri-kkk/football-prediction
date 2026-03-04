@@ -91,11 +91,13 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       console.log('⚠️ [Approval] SeedPay가 hashString을 보내지 않음, 직접 계산')
       
       // 🔍 Hash 입력값 상세 로깅
-      const hashInput = mid + ediDate + data.goodsAmt + merchantKey
+      // 공식: SHA256(tid + mId + ediDate + amount + merchantKey)
+      const hashInput = data.tid + mid + ediDate + data.goodsAmt + merchantKey
       console.log('🔐 [Approval] Hash 입력값 상세:', {
-        mid: `"${mid}"`,
-        ediDate: `"${ediDate}"`,
-        goodsAmt: `"${data.goodsAmt}"`,
+        tid: data.tid,
+        mid: mid,
+        ediDate: ediDate,
+        goodsAmt: data.goodsAmt,
         merchantKeyLength: merchantKey.length,
         merchantKeyFirst20: merchantKey.substring(0, 20),
         totalInputLength: hashInput.length,
@@ -108,7 +110,7 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
         .digest('hex')
       
       console.log('🔐 [Approval] 해시 생성:', {
-        hashInput: `${mid} + ${ediDate} + ${data.goodsAmt} + ***merchantKey***`,
+        hashInput: `${data.tid} + ${mid} + ${ediDate} + ${data.goodsAmt} + ***merchantKey***`,
         hashString: approvalHash,
       })
     } else {
@@ -119,24 +121,20 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
 
     console.log('📤 [Approval] 승인 요청 전송 (JSON):', {
       nonce: data.nonce ? '있음' : '없음',
-      tid: '있음',
+      tid: data.tid.substring(0, 10) + '***',
+      ediDate: ediDate,
       mId: mid.substring(0, 5) + '***',
       amount: data.goodsAmt,
-      orderId: data.ordNo,
-      orderName: data.goodsNm ? data.goodsNm.substring(0, 10) + '...' : '없음',
       payData: payData ? '있음' : '없음',
     })
 
-    // ✅ SeedPay 정확한 필드명
+    // ✅ SeedPay 공식 필드명 (승인 요청)
     const approvalBody = {
       nonce: data.nonce,
       tid: data.tid,
       ediDate: ediDate,
       mId: mid,
       amount: data.goodsAmt,
-      orderId: data.ordNo,
-      orderName: data.goodsNm,
-      customerName: data.ordNm,
       hashString: approvalHash,
       payData: payData,
       mbsReserved: data.mbsReserved || '',
