@@ -15,11 +15,28 @@ const PLAN_CONFIG: Record<string, { plan: string; months: number }> = {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('📨 [Callback] POST 요청 받음!')
+    console.log('📨 [Callback] URL:', request.url)
+    console.log('📨 [Callback] Method:', request.method)
+    
     const formData = await request.formData()
 
     const data: Record<string, string> = {}
     formData.forEach((value, key) => {
       data[key] = value as string
+    })
+
+    console.log('📨 [Callback] Form Data 수신 완료')
+    console.log('📨 [Callback] Data:', {
+      resultCd: data.resultCd,
+      resultMsg: data.resultMsg,
+      ordNo: data.ordNo,
+      tid: data.tid,
+      goodsAmt: data.goodsAmt,
+      nonce: data.nonce ? '있음' : '없음',
+      payData: data.payData ? '있음' : '없음',
+      method: data.method,
+      mid: data.mid,
     })
 
     console.log('📋 SeedPay 인증 결과:', {
