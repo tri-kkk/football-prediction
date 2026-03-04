@@ -36,12 +36,15 @@ export default function PricingPage() {
         
         console.log('📦 [Payment] 결제 데이터:', {
           resultCd: paymentData.resultCd,
+          resultMsg: paymentData.resultMsg,
           ordNo: paymentData.ordNo,
           goodsAmt: paymentData.goodsAmt,
+          appNo: paymentData.appNo,
         })
         
-        if (paymentData.resultCd === '0000') {
-          console.log('✅ [Payment] 인증 성공, 승인 처리 중...')
+        // ✅ resultCd 조건 수정: 0000(인증) 또는 3001(승인) 모두 성공
+        if (paymentData.resultCd === '0000' || paymentData.resultCd === '3001') {
+          console.log('✅ [Payment] 결제 성공 (resultCd:', paymentData.resultCd, '), Callback으로 데이터 전송...')
           
           // Callback으로 POST 전송
           const form = document.createElement('form')
@@ -58,7 +61,7 @@ export default function PricingPage() {
           })
           
           document.body.appendChild(form)
-          console.log('📤 [Payment] Callback으로 데이터 전송')
+          console.log('📤 [Payment] Form submit 실행')
           form.submit()
         } else {
           console.error('❌ [Payment] 결제 실패:', paymentData.resultMsg)
