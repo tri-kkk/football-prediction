@@ -65,6 +65,9 @@ export default function PricingPage() {
 
       const data = await res.json()
 
+      console.log('[Payment] Init API 전체 응답:', data)
+      window.paymentData = data  // ← 이 줄 추가!
+
       if (!data.success) {
         throw new Error(data.error || '결제 초기화 실패')
       }
@@ -96,15 +99,15 @@ export default function PricingPage() {
       form.action = 'https://pay.seedpayments.co.kr/payment/v1/view/request'
       form.style.display = 'none'
 
-      // Form 필드 추가 (v0.9.0 구 필드명)
+      // Form 필드 추가 (v0.9.0 필드명 - Init API 응답과 일치)
       const fields: Record<string, string> = {
         method: 'CARD',
-        mid: data.mId,                    // mId → mid
-        goodsNm: data.orderName,          // orderName → goodsNm
-        ordNo: data.orderId,              // orderId → ordNo
-        goodsAmt: data.amount,
-        ordNm: data.customerName,         // customerName → ordNm
-        ordEmail: data.customerEmail,     // customerEmail → ordEmail
+        mid: data.mid,                  // ← data.mid
+        goodsNm: data.goodsNm,          // ← data.goodsNm
+        ordNo: data.ordNo,              // ← data.ordNo
+        goodsAmt: data.goodsAmt,        // ← data.goodsAmt
+        ordNm: data.ordNm,              // ← data.ordNm
+        ordEmail: data.ordEmail,        // ← data.ordEmail
         returnUrl: data.returnUrl,
         ediDate: data.ediDate,
         hashString: data.hashString,
