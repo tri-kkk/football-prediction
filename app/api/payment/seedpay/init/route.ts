@@ -54,13 +54,26 @@ export async function POST(request: NextRequest) {
       .update(mid + ediDate + goodsAmt + merchantKey)
       .digest('hex')
 
-    console.log('🔐 [Init] Hash 생성 완료')
+    console.log('🔐 Hash 계산:', {
+      mid,
+      ediDate,
+      goodsAmt,
+      merchantKeyLength: merchantKey?.length || 0,
+      hashInput: mid + ediDate + goodsAmt + '***merchantKey***',
+      hashString,
+    })
 
     // 5. 결과 콜백 URL
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trendsoccer.com'
     const returnUrl = `${baseUrl}/api/payment/seedpay/callback`
 
-    console.log('✅ [Init] 결제 요청 준비 완료')
+    console.log('✅ SeedPay 결제 요청 파라미터 생성:', {
+      mid: mid.substring(0, 5) + '***',
+      ordNo,
+      goodsAmt,
+      ediDate,
+      hashString: hashString.substring(0, 20) + '...',
+    })
 
     // 약관 데이터 (SeedPay에서 null로 오던 약관 4번 추가)
     const terms = [
