@@ -49,7 +49,7 @@ export default function PricingPage() {
     setLoading(true)
 
     try {
-      console.log('[Payment] 결제 초기화 시작:', { plan: selectedPlan })
+      console.log('[Payment] 결제 초기화 시작')
 
       // 1. API 호출
       const res = await fetch('/api/payment/seedpay/init', {
@@ -64,9 +64,6 @@ export default function PricingPage() {
       }
 
       const data = await res.json()
-
-      console.log('[Payment] Init API 전체 응답:', data)
-      window.paymentData = data  // ← 이 줄 추가!
 
       if (!data.success) {
         throw new Error(data.error || '결제 초기화 실패')
@@ -85,7 +82,6 @@ export default function PricingPage() {
           }
           return term
         })
-        console.log('[Payment] 약관 데이터 처리 완료:', data.data)
       }
 
       // 2. 기존 Form 제거
@@ -113,7 +109,19 @@ export default function PricingPage() {
         hashString: data.hashString,
       }
 
-      console.log('[Payment] Form 필드:', fields)
+      // Form 필드 추가
+      const fields: Record<string, string> = {
+        method: 'CARD',
+        mid: data.mid,
+        goodsNm: data.goodsNm,
+        ordNo: data.ordNo,
+        goodsAmt: data.goodsAmt,
+        ordNm: data.ordNm,
+        ordEmail: data.ordEmail,
+        returnUrl: data.returnUrl,
+        ediDate: data.ediDate,
+        hashString: data.hashString,
+      }
 
       // Form에 필드 추가
       Object.entries(fields).forEach(([name, value]) => {
@@ -126,23 +134,13 @@ export default function PricingPage() {
 
       document.body.appendChild(form)
 
-      // ✅ 디버깅: Form 데이터 확인
-      console.log('[Payment] Form action:', form.action)
-      console.log('[Payment] Form method:', form.method)
-      console.log('[Payment] Form 모든 입력값:')
-      const inputs = form.querySelectorAll('input')
-      inputs.forEach(input => {
-        console.log(`  ${input.name} = ${input.value}`)
-      })
-
-      // Form 제출
-      console.log('[Payment] form.submit() 호출...')
+      console.log('[Payment] 결제 요청 전송')
       form.submit()
       
       setLoading(false)
 
     } catch (err) {
-      console.error('[Payment] 에러:', err)
+      console.error('[Payment] 오류:', err instanceof Error ? err.message : '알 수 없음')
       alert(
         language === 'ko' 
           ? `결제 처리 중 오류: ${err instanceof Error ? err.message : '알 수 없음'}`
