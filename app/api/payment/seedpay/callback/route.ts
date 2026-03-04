@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     // ✅ STEP 4-6: 결제 승인 요청 (중요!)
     const approvalHash = crypto
       .createHash('sha256')
-      .update(data.tid + mid + data.ediDate + data.goodsAmt + data.ordNo + merchantKey)
+      .update(mid + data.ediDate + data.goodsAmt + merchantKey)
       .digest('hex')
 
     const approvalResponse = await fetch(
