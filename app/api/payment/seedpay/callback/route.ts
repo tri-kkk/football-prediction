@@ -72,14 +72,14 @@ async function handleCallback(data: Record<string, string>) {
       console.log('⚠️ [Approval] ediDate 없음, 새로 생성:', ediDate)
     }
 
-    // ✅ 공식 문서 기준: hashString = SHA256(tid + mid + ediDate + goodsAmt + ordNo + merchantKey)
+    // ✅ 가이드 기준: hashString = SHA256(mid + ediDate + goodsAmt + 가맹점KEY)
     const approvalHash = crypto
       .createHash('sha256')
-      .update(data.tid + mid + ediDate + data.goodsAmt + data.ordNo + merchantKey)
+      .update(mid + ediDate + data.goodsAmt + merchantKey)
       .digest('hex')
 
     console.log('🔐 [Approval] 해시 생성:', {
-      hashInput: `${data.tid} + ${mid} + ${ediDate} + ${data.goodsAmt} + ${data.ordNo} + ***key***`,
+      hashInput: `${mid} + ${ediDate} + ${data.goodsAmt} + ***key***`,
       hashString: approvalHash.substring(0, 20) + '...',
     })
 
