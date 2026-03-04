@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,6 +84,22 @@ export async function POST(request: NextRequest) {
       hashString: hashString.substring(0, 20) + '...',
     })
 
+    // ✅ Payment Session DB에 저장 (ediDate 유지)
+    console.log('💾 [Init] Payment Session 저장 시작:', ordNo)
+    const { error: sessionError } = await supabase.from('payment_sessions').insert({
+      order_id: ordNo,
+      init_edi_date: ediDate,
+      mid,
+      goods_amt: goodsAmt,
+    })
+
+    if (sessionError) {
+      console.error('⚠️ [Init] Payment Session 저장 실패 (계속 진행):', sessionError.message)
+      // 실패해도 계속 진행
+    } else {
+      console.log('✅ [Init] Payment Session 저장 완료')
+    }
+
     // 약관 데이터 (SeedPay에서 null로 오던 약관 4번 추가)
     const terms = [
       {
@@ -132,7 +154,6 @@ export async function POST(request: NextRequest) {
         email: session.user.email,
         plan,
         timestamp: new Date().toISOString(),
-        initEdiDate: ediDate,  // ✅ Init의 ediDate 포함!
       }),
     })
 

@@ -36,28 +36,36 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
 
     console.log('✅ [Callback] 인증 성공 (resultCd: 0000), 승인 요청 준비 중...')
 
-    // ✅ mbsReserved에서 initEdiDate 추출
-    let initEdiDateFromMbs = ''
-    try {
-      const reserved = JSON.parse(data.mbsReserved || '{}')
-      initEdiDateFromMbs = reserved.initEdiDate || ''
-      console.log('📦 [Callback] mbsReserved에서 initEdiDate 추출:', initEdiDateFromMbs)
-    } catch (e) {
-      console.log('⚠️ [Callback] mbsReserved 파싱 실패')
+    // ✅ DB에서 init_edi_date 조회
+    console.log('🔍 [Callback] DB에서 Payment Session 조회:', data.ordNo)
+    const { data: session, error: sessionError } = await supabase
+      .from('payment_sessions')
+      .select('init_edi_date')
+      .eq('order_id', data.ordNo)
+      .single()
+
+    let initEdiDateFromDb = ''
+    if (sessionError) {
+      console.warn('⚠️ [Callback] Payment Session 조회 실패:', sessionError.message)
+    } else if (session) {
+      initEdiDateFromDb = session.init_edi_date
+      console.log('✅ [Callback] DB에서 initEdiDate 조회:', initEdiDateFromDb)
     }
 
     // ✅ ediDate 검증 (필수!)
-    // 1. mbsReserved에서 받은 Init의 ediDate (우선)
-    // 2. URL 파라미터의 initEdiDate
-    // 3. Form data의 SeedPay ediDate
-    let ediDate = initEdiDateFromMbs || data.initEdiDate || data.ediDate
+    // 1. DB에서 받은 Init의 ediDate (우선) ← 가장 정확함!
+    // 2. mbsReserved에서 받은 Init의 ediDate
+    // 3. URL 파라미터의 initEdiDate
+    // 4. Form data의 SeedPay ediDate
+    let ediDate = initEdiDateFromDb || initEdiDateFromMbs || data.initEdiDate || data.ediDate
     
     if (!ediDate) {
       console.error('❌ [Callback] ediDate 없음 - Hash 검증 불가')
       return { error: 'ediDate 누락', status: 400 }
     }
     
-    console.log('✅ [Callback] ediDate 확인:', ediDate, '(source:', initEdiDateFromMbs ? 'mbsReserved' : data.initEdiDate ? 'URL' : 'SeedPay', ')')
+    const ediSource = initEdiDateFromDb ? 'DB' : initEdiDateFromMbs ? 'mbsReserved' : data.initEdiDate ? 'URL' : 'SeedPay'
+    console.log('✅ [Callback] ediDate 확인:', ediDate, `(source: ${ediSource})`)
 
     // SeedPay 환경변수
     const merchantKey = process.env.SEEDPAY_MERCHANT_KEY
