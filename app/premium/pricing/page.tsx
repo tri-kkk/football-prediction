@@ -46,13 +46,98 @@ export default function PricingPage() {
       return
     }
 
-    // 🔧 점검 중 처리
-    alert(
-      language === 'ko'
-        ? '현재 결제 시스템 점검 중입니다. 잠시 후 다시 시도해주세요.'
-        : 'Payment system is under maintenance. Please try again later.'
-    )
-    return
+    setLoading(true)
+
+    try {
+      console.log('[Payment] 결제 초기화 시작:', { plan: selectedPlan })
+
+      // 1. API 호출
+      const res = await fetch('/api/payment/seedpay/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: selectedPlan }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || '결제 초기화 실패')
+      }
+
+      const data = await res.json()
+
+      if (!data.success) {
+        throw new Error(data.error || '결제 초기화 실패')
+      }
+
+      console.log('[Payment] 초기화 성공')
+      
+      // ✅ null인 약관 4번을 우리 약관으로 채우기
+      if (data.data && Array.isArray(data.data)) {
+        data.data = data.data.map((term, index) => {
+          if (term.termTitle === null || term.termContents === null) {
+            return {
+              termTitle: '에스크로 서비스 이용약관',
+              termContents: '/html/term/term4.html'
+            }
+          }
+          return term
+        })
+        console.log('[Payment] 약관 데이터 처리 완료:', data.data)
+      }
+
+      // 2. 기존 Form 제거
+      const existingForm = document.querySelector('form[name="payInit"]')
+      if (existingForm) existingForm.remove()
+
+      // 3. Form 생성 (같은 페이지에서 처리)
+      const form = document.createElement('form')
+      form.name = 'payInit'
+      form.method = 'post'
+      form.action = 'https://pay.seedpayments.co.kr/payment/v1/view/request'
+      form.style.display = 'none'
+
+      // Form 필드 추가
+      const fields: Record<string, string> = {
+        method: 'CARD',
+        mid: data.mid,
+        goodsNm: data.goodsNm,
+        ordNo: data.ordNo,
+        goodsAmt: data.goodsAmt,
+        ordNm: data.ordNm,
+        ordEmail: data.ordEmail,
+        returnUrl: data.returnUrl,
+        ediDate: data.ediDate,
+        hashString: data.hashString,
+      }
+
+      console.log('[Payment] Form 필드:', fields)
+
+      // Form에 필드 추가
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = value
+        form.appendChild(input)
+      })
+
+      document.body.appendChild(form)
+
+      // Form 제출
+      console.log('[Payment] form.submit() 호출...')
+      form.submit()
+      
+      setLoading(false)
+
+    } catch (err) {
+      console.error('[Payment] 에러:', err)
+      alert(
+        language === 'ko' 
+          ? `결제 처리 중 오류: ${err instanceof Error ? err.message : '알 수 없음'}`
+          : `Error: ${err instanceof Error ? err.message : 'Unknown'}`
+      )
+      setLoading(false)
+    }
   }
 
   return (
