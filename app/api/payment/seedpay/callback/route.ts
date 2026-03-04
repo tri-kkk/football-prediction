@@ -15,21 +15,23 @@ const PLAN_CONFIG: Record<string, { plan: string; months: number }> = {
 
 async function handleCallback(data: Record<string, string>) {
   try {
-    console.log('📨 [Callback] 결제 데이터 수신:', {
+    console.log('📨 [Callback] POST 데이터 수신 완료')
+    console.log('📋 [Callback] 받은 데이터:', {
       resultCd: data.resultCd,
       resultMsg: data.resultMsg,
       ordNo: data.ordNo,
-      tid: data.tid ? '있음' : '없음',
+      tid: data.tid || '없음',
       goodsAmt: data.goodsAmt,
+      nonce: data.nonce || '없음',
     })
 
     // 인증 실패 처리
     if (data.resultCd !== '0000') {
-      console.error('❌ 결제 인증 실패:', data.resultMsg)
+      console.error('❌ [Callback] 결제 인증 실패:', data.resultMsg)
       return { error: data.resultMsg || '결제 실패', status: 400 }
     }
 
-    console.log('✅ 인증 성공, 승인 요청 중...')
+    console.log('✅ [Callback] 인증 성공 (resultCd: 0000), 승인 요청 준비 중...')
 
     // SeedPay 환경변수
     const merchantKey = process.env.SEEDPAY_MERCHANT_KEY
@@ -128,18 +130,29 @@ async function handleCallback(data: Record<string, string>) {
       return { error: approvalData.resultMsg || '승인 실패', status: 400 }
     }
 
-    console.log('✅ 승인 완료!')
+    console.log('✅ [Callback] 승인 완료! (resultCd: 0000)')
 
     // 결제 성공 처리
     const amount = parseInt(data.goodsAmt) || 0
+    console.log('💰 [Callback] 결제 금액:', amount)
+
     const planInfo = PLAN_CONFIG[amount]
 
     if (!planInfo) {
-      console.error('❌ 잘못된 금액:', amount)
+      console.error('❌ [Callback] 잘못된 금액:', amount)
       return { error: '잘못된 결제 금액', status: 400 }
     }
 
+    console.log('✅ [Callback] 플랜 정보 확인:', planInfo)
+
     // DB 저장 - Payments
+    console.log('💾 [DB] payments 테이블에 저장 시작:', {
+      ordNo: data.ordNo,
+      status: 'success',
+      tid: data.tid,
+      appNo: approvalData.appNo,
+    })
+
     const { error: payError } = await supabase.from('payments').upsert({
       order_id: data.ordNo,
       status: 'success',
@@ -157,19 +170,22 @@ async function handleCallback(data: Record<string, string>) {
     }, { onConflict: 'order_id' })
 
     if (payError) {
-      console.error('❌ payments 저장 실패:', payError)
+      console.error('❌ [DB] payments 저장 실패:', payError)
       return { error: 'DB 저장 실패', status: 500 }
     }
 
-    console.log('✅ payments 저장 완료')
+    console.log('✅ [DB] payments 저장 완료')
 
     // 유저 구독 처리
     const userEmail = data.ordEmail
+    console.log('👤 [DB] 구매자 이메일:', userEmail)
+
     if (!userEmail) {
-      console.error('❌ 사용자 이메일 없음')
+      console.error('❌ [DB] 사용자 이메일 없음')
       return { error: '사용자 정보 오류', status: 400 }
     }
 
+    console.log('🔍 [DB] users 테이블에서 유저 검색:', userEmail)
     const { data: user } = await supabase
       .from('users')
       .select('id, tier, premium_expires_at')
@@ -177,9 +193,15 @@ async function handleCallback(data: Record<string, string>) {
       .single()
 
     if (!user) {
-      console.error('❌ 사용자를 찾을 수 없음:', userEmail)
+      console.error('❌ [DB] 사용자를 찾을 수 없음:', userEmail)
       return { error: '사용자 정보 오류', status: 404 }
     }
+
+    console.log('✅ [DB] 유저 정보 조회 완료:', {
+      userId: user.id,
+      tier: user.tier,
+      premiumExpiresAt: user.premium_expires_at,
+    })
 
     const now = new Date()
     let startDate = now
@@ -188,13 +210,21 @@ async function handleCallback(data: Record<string, string>) {
       const currentExpiry = new Date(user.premium_expires_at)
       if (currentExpiry > now) {
         startDate = currentExpiry
+        console.log('ℹ️ [DB] 기존 구독 연장:', startDate)
       }
     }
     
     const expiresAt = new Date(startDate)
     expiresAt.setMonth(expiresAt.getMonth() + planInfo.months)
 
+    console.log('📅 [DB] 구독 유효기간 설정:', {
+      startDate: startDate.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      months: planInfo.months,
+    })
+
     // Subscriptions 추가
+    console.log('💾 [DB] subscriptions 테이블에 저장 시작')
     const { error: subError } = await supabase.from('subscriptions').insert({
       user_id: user.id,
       plan: planInfo.plan,
@@ -207,13 +237,19 @@ async function handleCallback(data: Record<string, string>) {
     })
 
     if (subError) {
-      console.error('❌ subscriptions 저장 실패:', subError)
+      console.error('❌ [DB] subscriptions 저장 실패:', subError)
       return { error: '구독 등록 실패', status: 500 }
     }
 
-    console.log('✅ subscriptions 저장 완료')
+    console.log('✅ [DB] subscriptions 저장 완료')
 
     // Users 업데이트
+    console.log('💾 [DB] users 테이블 업데이트 시작:', {
+      userId: user.id,
+      newTier: 'premium',
+      premiumExpiresAt: expiresAt.toISOString(),
+    })
+
     const { error: userError } = await supabase
       .from('users')
       .update({
@@ -223,11 +259,11 @@ async function handleCallback(data: Record<string, string>) {
       .eq('id', user.id)
 
     if (userError) {
-      console.error('❌ users 업데이트 실패:', userError)
+      console.error('❌ [DB] users 업데이트 실패:', userError)
       return { error: '사용자 업데이트 실패', status: 500 }
     }
 
-    console.log('✅ users 업데이트 완료, 만료:', expiresAt.toISOString())
+    console.log('✅ [DB] users 업데이트 완료, 구독 만료:', expiresAt.toISOString())
 
     return { success: true, ordNo: data.ordNo }
 
