@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
       data[key] = value as string
     })
 
-    console.log('📋 SeedPay 결과:', {
+    console.log('📋 SeedPay 인증 결과:', {
       resultCd: data.resultCd,
       resultMsg: data.resultMsg,
       ordNo: data.ordNo,
@@ -29,10 +30,12 @@ export async function POST(request: NextRequest) {
       goodsAmt: data.goodsAmt,
     })
 
-    // 🔒 1. signData 검증 (위변조 확인)
+    // 🔒 1. signData 검증
     const merchantKey = process.env.SEEDPAY_MERCHANT_KEY
-    if (!merchantKey) {
-      console.error('❌ SEEDPAY_MERCHANT_KEY 환경변수 없음')
+    const mid = process.env.SEEDPAY_MID
+    
+    if (!merchantKey || !mid) {
+      console.error('❌ SeedPay 환경변수 누락')
       return NextResponse.json({ error: '설정 오류' }, { status: 500 })
     }
 
@@ -42,21 +45,18 @@ export async function POST(request: NextRequest) {
       .digest('hex')
 
     if (data.signData !== calculatedSignData) {
-      console.error('❌ signData 검증 실패 (위변조 감지!)')
-      console.error('받은 signData:', data.signData)
-      console.error('계산된 signData:', calculatedSignData)
-      
+      console.error('❌ signData 검증 실패')
       return NextResponse.json({ 
         error: '결제 검증 실패',
         code: 'SIGNATURE_MISMATCH'
       }, { status: 400 })
     }
 
-    console.log('✅ signData 검증 완료 (위변조 없음)')
+    console.log('✅ signData 검증 완료')
 
-    // 2. 결제 실패 처리
+    // 2. 인증 실패 처리
     if (data.resultCd !== '0000') {
-      console.error('❌ 결제 실패:', data.resultMsg)
+      console.error('❌ 결제 인증 실패:', data.resultMsg)
       
       await supabase.from('payments').upsert({
         order_id: data.ordNo,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         tid: data.tid,
         amount: parseInt(data.goodsAmt) || 0,
         payment_method: data.method,
-        raw_response: data,
+        raw_response: JSON.stringify(data),
       }, { onConflict: 'order_id' })
 
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin
@@ -77,11 +77,71 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. 결제 성공 - payments 저장
+    console.log('✅ 결제 인증 완료, 이제 승인 요청...')
+
+    // ✅ STEP 4-6: 결제 승인 요청 (중요!)
+    const approvalHash = crypto
+      .createHash('sha256')
+      .update(data.tid + mid + data.ediDate + data.goodsAmt + data.ordNo + merchantKey)
+      .digest('hex')
+
+    const approvalResponse = await fetch(
+      'https://pay.seedpayments.co.kr/payment/v1/approval',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nonce: data.nonce,
+          tid: data.tid,
+          ediDate: data.ediDate,
+          mId: mid,
+          amount: data.goodsAmt,
+          hashString: approvalHash,
+          payData: data.payData || '',
+          mbsReserved: data.mbsReserved || '',
+        }),
+      }
+    )
+
+    const approvalData = await approvalResponse.json()
+
+    console.log('📋 SeedPay 승인 결과:', {
+      resultCd: approvalData.resultCd,
+      resultMsg: approvalData.resultMsg,
+      appNo: approvalData.appNo,
+    })
+
+    // 승인 실패 처리
+    if (approvalData.resultCd !== '0000') {
+      console.error('❌ 결제 승인 실패:', approvalData.resultMsg)
+      
+      await supabase.from('payments').upsert({
+        order_id: data.ordNo,
+        status: 'failed',
+        result_code: approvalData.resultCd,
+        result_message: approvalData.resultMsg,
+        mid: mid,
+        tid: data.tid,
+        amount: parseInt(data.goodsAmt) || 0,
+        payment_method: data.method,
+        raw_response: JSON.stringify(approvalData),
+      }, { onConflict: 'order_id' })
+
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin
+      return NextResponse.redirect(
+        `${baseUrl}/premium/pricing/result?status=failed&message=${encodeURIComponent(approvalData.resultMsg || '승인실패')}`,
+        { status: 303 }
+      )
+    }
+
+    console.log('✅ 결제 승인 완료!')
+
+    // 3. 결제 성공 처리
     const amount = parseInt(data.goodsAmt) || 0
     const planInfo = PLAN_CONFIG[amount]
 
-    // mbsReserved에서 유저 이메일 추출
     let userEmail = ''
     try {
       const reserved = JSON.parse(data.mbsReserved || '{}')
@@ -104,19 +164,19 @@ export async function POST(request: NextRequest) {
       payment_method: data.method,
       amount,
       tid: data.tid,
-      mid: data.mid,
-      approval_number: data.appNo,
-      result_code: data.resultCd,
-      result_message: data.resultMsg,
+      mid: mid,
+      approval_number: approvalData.appNo,
+      result_code: approvalData.resultCd,
+      result_message: approvalData.resultMsg,
       goods_name: data.goodsNm,
       buyer_name: data.ordNm,
-      raw_response: data,
+      raw_response: JSON.stringify(approvalData),
     }, { onConflict: 'order_id' })
 
     if (payError) console.error('❌ payments 저장 실패:', payError)
     else console.log('✅ payments 저장 완료')
 
-    // 3. 유저 조회 및 구독 처리
+    // 4. 유저 조회 및 구독 처리
     if (userEmail && planInfo) {
       const { data: user } = await supabase
         .from('users')
@@ -128,7 +188,6 @@ export async function POST(request: NextRequest) {
         const now = new Date()
         let startDate = now
         
-        // 기존 프리미엄이면 연장
         if (user.tier === 'premium' && user.premium_expires_at) {
           const currentExpiry = new Date(user.premium_expires_at)
           if (currentExpiry > now) {
@@ -139,7 +198,6 @@ export async function POST(request: NextRequest) {
         const expiresAt = new Date(startDate)
         expiresAt.setMonth(expiresAt.getMonth() + planInfo.months)
 
-        // 4. subscriptions 생성
         const { error: subError } = await supabase.from('subscriptions').insert({
           user_id: user.id,
           plan: planInfo.plan,
@@ -154,7 +212,6 @@ export async function POST(request: NextRequest) {
         if (subError) console.error('❌ subscriptions 저장 실패:', subError)
         else console.log('✅ subscriptions 저장 완료')
 
-        // 5. users tier 업데이트
         const { error: userError } = await supabase
           .from('users')
           .update({
@@ -166,14 +223,13 @@ export async function POST(request: NextRequest) {
         if (userError) console.error('❌ users 업데이트 실패:', userError)
         else console.log('✅ users tier=premium 업데이트 완료, 만료:', expiresAt.toISOString())
 
-        // 6. payments에 user_id 연결
         await supabase.from('payments')
           .update({ user_id: user.id })
           .eq('order_id', data.ordNo)
       }
     }
 
-    // 7. 성공 페이지로 Redirect
+    // 5. 성공 페이지로 리다이렉트
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin
     return NextResponse.redirect(
       `${baseUrl}/premium/pricing/result?status=success&amount=${data.goodsAmt || ''}`,
