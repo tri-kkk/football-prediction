@@ -59,15 +59,27 @@ async function handleCallback(data: Record<string, string>) {
       }
     }
 
-    // ✅ 공식 문서 기준: hashString = SHA256(tid + mId + ediDate + amount + orderId + merchantKey)
-    // 근데 orderId가 뭔가? ordNo인 것 같음
+    // ✅ ediDate가 없으면 새로 생성 (SeedPay returnUrl에서 안 보냄)
+    let ediDate = data.ediDate
+    if (!ediDate) {
+      const now = new Date()
+      ediDate = now.getFullYear().toString() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0') +
+        String(now.getSeconds()).padStart(2, '0')
+      console.log('⚠️ [Approval] ediDate 없음, 새로 생성:', ediDate)
+    }
+
+    // ✅ 공식 문서 기준: hashString = SHA256(tid + mid + ediDate + goodsAmt + ordNo + merchantKey)
     const approvalHash = crypto
       .createHash('sha256')
-      .update(data.tid + mid + data.ediDate + data.goodsAmt + data.ordNo + merchantKey)
+      .update(data.tid + mid + ediDate + data.goodsAmt + data.ordNo + merchantKey)
       .digest('hex')
 
     console.log('🔐 [Approval] 해시 생성:', {
-      hashInput: `${data.tid} + ${mid} + ${data.ediDate} + ${data.goodsAmt} + ${data.ordNo} + ***key***`,
+      hashInput: `${data.tid} + ${mid} + ${ediDate} + ${data.goodsAmt} + ${data.ordNo} + ***key***`,
       hashString: approvalHash.substring(0, 20) + '...',
     })
 
@@ -83,7 +95,7 @@ async function handleCallback(data: Record<string, string>) {
     const approvalBody = {
       nonce: nonce,
       tid: data.tid,
-      ediDate: data.ediDate,
+      ediDate: ediDate,  // ✅ 생성된 ediDate 사용
       mid: mid,
       goodsAmt: data.goodsAmt,
       hashString: approvalHash,
