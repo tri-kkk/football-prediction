@@ -160,12 +160,12 @@ async function handleCallback(data: Record<string, string>) {
       amount,
       tid: data.tid,
       mid: mid,
-      approval_number: approvalData.appNo,
+      approval_number: String(approvalData.appNo),  // ✅ 문자열로 명시 변환
       result_code: approvalData.resultCd,
       result_message: approvalData.resultMsg,
       goods_name: data.goodsNm,
       buyer_name: data.ordNm,
-      user_email: data.ordEmail,
+      buyer_email: data.ordEmail,  // ✅ user_email → buyer_email
       raw_response: JSON.stringify(approvalData),
     }, { onConflict: 'order_id' })
 
