@@ -52,6 +52,17 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       console.log('✅ [Callback] DB에서 initEdiDate 조회:', initEdiDateFromDb)
     }
 
+    // 🔍 DB 조회 검증 (디버깅용)
+    console.log('🔍 [Callback] DB 조회 비교:', {
+      ordNo: data.ordNo,
+      initEdiDateFromDb,
+      seedPayEdiDate: data.ediDate,
+      match: initEdiDateFromDb === data.ediDate ? '✅ 일치 (잘못됨!)' : '❌ 불일치 (정상)',
+      difference: initEdiDateFromDb && data.ediDate 
+        ? `Init: ${initEdiDateFromDb} vs SeedPay: ${data.ediDate}` 
+        : 'N/A',
+    })
+
     // ✅ ediDate 검증 (필수!)
     // 1. DB에서 받은 Init의 ediDate (우선) ← 가장 정확함!
     // 2. mbsReserved에서 받은 Init의 ediDate
