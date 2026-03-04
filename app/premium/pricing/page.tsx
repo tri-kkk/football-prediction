@@ -11,6 +11,7 @@ export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly'>('quarterly')
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [showMaintenance, setShowMaintenance] = useState(false)  // ✅ 유지보수 모달
 
   // ✅ Hydration 문제 해결
   useEffect(() => {
@@ -150,6 +151,12 @@ export default function PricingPage() {
   // SeedPay 결제 실행
   // ============================================
   const handlePayment = async () => {
+    // ✅ 유지보수 모달 표시
+    setShowMaintenance(true)
+  }
+
+  // ✅ 실제 결제 함수 (숨겨진 버튼용)
+  const handleRealPayment = async () => {
     if (!session?.user?.email) {
       window.location.href = '/login'
       return
@@ -263,6 +270,29 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white">
+      {/* ✅ 유지보수 모달 */}
+      {showMaintenance && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-[#1a1a1a] rounded-2xl p-8 max-w-sm mx-4 text-center">
+            <div className="text-4xl mb-4">🔧</div>
+            <h2 className="text-2xl font-bold mb-4">
+              {language === 'ko' ? '서비스 점검 중' : 'Service Under Maintenance'}
+            </h2>
+            <p className="text-gray-400 mb-8">
+              {language === 'ko' 
+                ? '결제 서비스를 점검하고 있습니다.\n잠시 후 다시 시도해주세요.' 
+                : 'We are currently maintaining our payment service.\nPlease try again later.'}
+            </p>
+            <button
+              onClick={() => setShowMaintenance(false)}
+              className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-lg transition-colors"
+            >
+              {language === 'ko' ? '확인' : 'OK'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
         
         {/* 🎉 프로모션 배너 - 비로그인 + 프로모션 기간 */}
@@ -405,20 +435,44 @@ export default function PricingPage() {
                     : isPromoPeriod ? 'Start Free' : 'Sign in to Start'}
                 </Link>
               ) : (
-                // 로그인 상태: 결제 실행
-                <button
-                  onClick={handlePayment}
-                  disabled={loading}
-                  className={`w-full max-w-md py-4 rounded-xl font-bold text-lg transition-all ${
-                    loading
-                      ? 'bg-gray-600 cursor-not-allowed opacity-50'
-                      : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white'
-                  }`}
-                >
-                  {loading 
-                    ? (language === 'ko' ? '처리 중...' : 'Processing...')
-                    : (language === 'ko' ? '프리미엄 시작하기' : 'Start Premium')}
-                </button>
+                <>
+                  {/* 일반 사용자: 결제 버튼 (클릭 시 유지보수 모달) */}
+                  <button
+                    onClick={handlePayment}
+                    disabled={loading}
+                    className={`w-full max-w-md py-4 rounded-xl font-bold text-lg transition-all ${
+                      loading
+                        ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                        : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white'
+                    }`}
+                  >
+                    {loading 
+                      ? (language === 'ko' ? '처리 중...' : 'Processing...')
+                      : (language === 'ko' ? '프리미엄 시작하기' : 'Start Premium')}
+                  </button>
+
+                  {/* 🧪 개발자용: 숨겨진 테스트 버튼 */}
+                  <button
+                    onClick={handleRealPayment}
+                    style={{
+                      position: 'fixed',
+                      bottom: '10px',
+                      right: '10px',
+                      width: '30px',
+                      height: '30px',
+                      opacity: '0.1',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      zIndex: 9999,
+                    }}
+                    title="개발자 테스트 버튼"
+                    className="hover:opacity-30 transition-opacity"
+                  >
+                    🧪
+                  </button>
+                </>
               )}
            
             </div>
