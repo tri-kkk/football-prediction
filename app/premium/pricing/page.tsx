@@ -35,13 +35,7 @@ export default function PricingPage() {
       if (Array.isArray(event.data) && event.data[0] === 'SUCCESS') {
         const paymentData = event.data[1]
         
-        console.log('📦 [Payment] 결제 데이터:', {
-          resultCd: paymentData.resultCd,
-          resultMsg: paymentData.resultMsg,
-          ordNo: paymentData.ordNo,
-          goodsAmt: paymentData.goodsAmt,
-          appNo: paymentData.appNo,
-        })
+        console.log('📦 [Payment] 결제 인증 완료 (resultCd: ' + paymentData.resultCd + ')')
         
         // ✅ resultCd 조건 수정: 0000(인증) 또는 3001(승인) 모두 성공
         if (paymentData.resultCd === '0000' || paymentData.resultCd === '3001') {
@@ -185,8 +179,7 @@ export default function PricingPage() {
         throw new Error(data.error || '결제 초기화 실패')
       }
 
-      // 🔍 Debug: Init API 응답 전체 확인
-      console.log('🔍 [Payment] Init API 응답 전체:', JSON.stringify(data, null, 2))
+      console.log('✅ [Payment] Init API 응답 성공')
 
       // ✅ nonce와 ediDate를 sessionStorage에 저장 (Hash 검증용)
       if (data.nonce) {
