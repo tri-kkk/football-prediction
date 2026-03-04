@@ -71,15 +71,15 @@ async function handleCallback(data: Record<string, string>) {
       hashString: approvalHash.substring(0, 20) + '...',
     })
 
-    // ✅ 공식 문서 기준으로 수정
+    // ✅ PHP 샘플과 동일한 필드명으로 수정
     const approvalBody = {
       nonce: data.nonce,
       tid: data.tid,
       ediDate: data.ediDate,
-      mId: mid,                // ← mid 아니라 mId!
-      amount: data.goodsAmt,   // ← goodsAmt 아니라 amount!
+      mid: mid,                     // ✅ mId 아니라 mid!
+      goodsAmt: data.goodsAmt,      // ✅ amount 아니라 goodsAmt!
       hashString: approvalHash,
-      payData: payData,        // ← 필수! subData에서 추출한 값
+      payData: payData,
       mbsReserved: data.mbsReserved || '',
     }
 
