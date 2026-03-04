@@ -22,7 +22,7 @@ async function handleCallback(data: Record<string, string>) {
       ordNo: data.ordNo,
       tid: data.tid || '없음',
       goodsAmt: data.goodsAmt,
-      nonce: data.nonce || '없음',
+      ediDate: data.ediDate || '없음',
     })
 
     // 인증 실패 처리
@@ -32,6 +32,16 @@ async function handleCallback(data: Record<string, string>) {
     }
 
     console.log('✅ [Callback] 인증 성공 (resultCd: 0000), 승인 요청 준비 중...')
+
+    // ✅ ediDate 검증 (필수!)
+    let ediDate = data.ediDate
+    
+    if (!ediDate) {
+      console.error('❌ [Callback] ediDate 없음 - Hash 검증 불가')
+      return { error: 'ediDate 누락', status: 400 }
+    }
+    
+    console.log('✅ [Callback] ediDate 확인:', ediDate)
 
     // SeedPay 환경변수
     const merchantKey = process.env.SEEDPAY_MERCHANT_KEY
@@ -60,31 +70,19 @@ async function handleCallback(data: Record<string, string>) {
     }
 
     // ✅ 공식 문서 기준: hashString = SHA256(tid + mId + ediDate + amount + orderId + merchantKey)
-    // 근데 orderId가 뭔가? ordNo인 것 같음
+    // 여기서는 tid + mid + ediDate + goodsAmt + ordNo + merchantKey 사용
     const approvalHash = crypto
       .createHash('sha256')
-      .update(data.tid + mid + data.ediDate + data.goodsAmt + data.ordNo + merchantKey)
+      .update(data.tid + mid + ediDate + data.goodsAmt + data.ordNo + merchantKey)
       .digest('hex')
 
     console.log('🔐 [Approval] 해시 생성:', {
-      hashInput: `${data.tid} + ${mid} + ${data.ediDate} + ${data.goodsAmt} + ${data.ordNo} + ***key***`,
+      hashInput: `${data.tid} + ${mid} + ${ediDate} + ${data.goodsAmt} + ${data.ordNo} + ***key***`,
       hashString: approvalHash.substring(0, 20) + '...',
     })
 
-    // ✅ 공식 문서 기준 필드명으로 수정 (mId, amount)
-    const approvalBody = {
-      nonce: data.nonce,
-      tid: data.tid,
-      ediDate: data.ediDate,
-      mId: mid,                     // ✅ 수정: mid → mId (대문자 M)
-      amount: data.goodsAmt,        // ✅ 수정: goodsAmt → amount
-      hashString: approvalHash,
-      payData: payData,
-      mbsReserved: data.mbsReserved || '',
-    }
-
     console.log('📤 [Approval] 승인 요청 전송 (JSON):', {
-      nonce: '있음',
+      nonce: data.nonce ? '있음' : '없음',
       tid: '있음',
       mId: mid.substring(0, 5) + '***',
       amount: data.goodsAmt,
@@ -92,6 +90,18 @@ async function handleCallback(data: Record<string, string>) {
     })
 
     // ✅ Content-Type: application/json (공식 기준)
+    // ✅ 공식 필드명: mId, amount
+    const approvalBody = {
+      nonce: data.nonce,
+      tid: data.tid,
+      ediDate: ediDate,
+      mId: mid,                     // ✅ 대문자 M
+      amount: data.goodsAmt,        // ✅ amount (goodsAmt 아님)
+      hashString: approvalHash,
+      payData: payData,
+      mbsReserved: data.mbsReserved || '',
+    }
+
     const approvalResponse = await fetch(
       'https://pay.seedpayments.co.kr/payment/v1/approval',
       {

@@ -185,10 +185,14 @@ export default function PricingPage() {
         throw new Error(data.error || '결제 초기화 실패')
       }
 
-      // ✅ nonce를 sessionStorage에 저장
+      // ✅ nonce와 ediDate를 sessionStorage에 저장 (Hash 검증용)
       if (data.nonce) {
         sessionStorage.setItem('seedpay_nonce', data.nonce)
         console.log('✅ nonce를 sessionStorage에 저장')
+      }
+      if (data.ediDate) {
+        sessionStorage.setItem('seedpay_ediDate', data.ediDate)
+        console.log('✅ ediDate를 sessionStorage에 저장')
       }
       
       // ✅ null인 약관 4번을 우리 약관으로 채우기
@@ -218,16 +222,16 @@ export default function PricingPage() {
       // Form 필드 추가 (v0.9.0 필드명 - Init API 응답과 일치)
       const fields: Record<string, string> = {
         method: 'CARD',
-        mid: data.mid,                  // ← data.mid
-        goodsNm: data.goodsNm,          // ← data.goodsNm
-        ordNo: data.ordNo,              // ← data.ordNo
-        goodsAmt: data.goodsAmt,        // ← data.goodsAmt
-        ordNm: data.ordNm,              // ← data.ordNm
-        ordEmail: data.ordEmail,        // ← data.ordEmail
+        mid: data.mid,
+        goodsNm: data.goodsNm,
+        ordNo: data.ordNo,
+        goodsAmt: data.goodsAmt,
+        ordNm: data.ordNm,
+        ordEmail: data.ordEmail,
         returnUrl: data.returnUrl,
         ediDate: data.ediDate,
         hashString: data.hashString,
-        ediDate: data.ediDate,  // ← 추가!
+        nonce: data.nonce,
       }
 
       // Form에 필드 추가
