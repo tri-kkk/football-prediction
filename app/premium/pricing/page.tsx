@@ -219,28 +219,46 @@ export default function PricingPage() {
       form.action = 'https://pay.seedpayments.co.kr/payment/v1/view/request'
       form.style.display = 'none'
 
-      // Form 필드 추가 (v0.9.0 필드명 - Init API 응답과 일치)
-      const fields: Record<string, string> = {
-        method: 'CARD',
-        mid: data.mid,
-        goodsNm: data.goodsNm,
-        ordNo: data.ordNo,
-        goodsAmt: data.goodsAmt,
-        ordNm: data.ordNm,
-        ordEmail: data.ordEmail,
-        returnUrl: data.returnUrl,
-        ediDate: data.ediDate,
-        hashString: data.hashString,
-        nonce: data.nonce,
-      }
+      // ✅ SeedPay에 보낼 필드를 명시적으로 선택 (예상치 못한 필드 추가 방지)
+      const fieldsToInclude = [
+        'method', 'mid', 'goodsNm', 'ordNo', 'goodsAmt',
+        'ordNm', 'ordTel', 'ordEmail', 'nonce', 
+        'returnUrl', 'ediDate', 'hashString', 'terms'
+      ]
 
       // Form에 필드 추가
-      Object.entries(fields).forEach(([name, value]) => {
-        const input = document.createElement('input')
-        input.type = 'hidden'
-        input.name = name
-        input.value = value
-        form.appendChild(input)
+      fieldsToInclude.forEach(fieldName => {
+        if (data[fieldName] !== undefined && data[fieldName] !== null) {
+          const input = document.createElement('input')
+          input.type = 'hidden'
+          input.name = fieldName
+          
+          // terms는 배열이므로 JSON.stringify
+          if (fieldName === 'terms' && Array.isArray(data[fieldName])) {
+            input.value = JSON.stringify(data[fieldName])
+          } else {
+            input.value = String(data[fieldName])
+          }
+          
+          form.appendChild(input)
+          console.log(`✅ Form 필드 추가: ${fieldName}`)
+        }
+      })
+
+      // ✅ ediDate와 nonce를 sessionStorage에도 저장 (Hash 검증용)
+      if (data.ediDate) {
+        sessionStorage.setItem('seedpay_ediDate', data.ediDate)
+        console.log('✅ ediDate를 sessionStorage에 저장')
+      }
+      if (data.nonce) {
+        sessionStorage.setItem('seedpay_nonce', data.nonce)
+        console.log('✅ nonce를 sessionStorage에 저장')
+      }
+
+      console.log('📋 Form 정보:', {
+        action: form.action,
+        method: form.method,
+        fieldCount: form.children.length,
       })
 
       // ✅ 팝업 창으로 결제 화면 열기
