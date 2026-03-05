@@ -272,31 +272,19 @@ export default function PricingPage() {
       console.log('🔍 [Payment] Form action:', form.action)
       console.log('📋 Form 필드 개수:', form.children.length)
 
-      // ✅ 팝업 창으로 결제 화면 열기 → SendPay 함수 사용
-      const popup = window.open('', 'SeedPayment', 'width=1000,height=900,left=50,top=50')
-      
-      if (popup) {
-        // 팝업에 form 추가
-        popup.document.open()
-        popup.document.write('<html><head><meta charset="UTF-8"><script src="https://pay.seedpayments.co.kr/js/pgAsistant.js"><\/script></head><body></body></html>')
-        popup.document.close()
-        
-        popup.document.body.appendChild(form)
-        
-        // ✅ SendPay 함수 사용 (직접 submit 대신)
-        setTimeout(() => {
-          if (popup.window.SendPay && typeof popup.window.SendPay === 'function') {
-            console.log('📱 [Payment] SendPay 함수로 결제 창 오픈')
-            popup.window.SendPay(popup.document.querySelector('form') as HTMLFormElement)
-          } else {
-            console.warn('⚠️ [Payment] SendPay 함수 없음, 직접 submit 실행')
-            popup.document.querySelector('form')?.submit()
-          }
-        }, 100)
-      } else {
-        console.error('❌ [Payment] 팝업 창 열기 실패 (팝업 차단됨)')
-        alert(language === 'ko' ? '팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.' : 'Popup blocked. Please allow popups.')
-      }
+      // ✅ 주 창에서 Form 생성 및 SendPay 호출 (팝업 아님)
+      document.body.appendChild(form)
+
+      // ✅ SendPay 함수 사용 (주 창에서)
+      setTimeout(() => {
+        if (window.SendPay && typeof window.SendPay === 'function') {
+          console.log('📱 [Payment] 주 창에서 SendPay 함수로 결제 창 오픈')
+          window.SendPay(form)
+        } else {
+          console.warn('⚠️ [Payment] SendPay 함수 없음, 직접 submit 실행')
+          form.submit()
+        }
+      }, 100)
       
       setLoading(false)
 
