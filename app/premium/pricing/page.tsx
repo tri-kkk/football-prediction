@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '../../contexts/LanguageContext'
 
-// ✅ SeedPay pgAsistant.js 동적 로드
 declare global {
   interface Window {
     SendPay?: (form: HTMLFormElement, mode?: string) => void
@@ -24,49 +23,17 @@ export default function PricingPage() {
     const script = document.createElement('script')
     script.src = 'https://pay.seedpayments.co.kr/js/pgAsistant.js'
     script.async = true
-    script.onload = () => {
-      console.log('✅ [Payment] pgAsistant.js 로드 완료')
-    }
-    script.onerror = () => {
-      console.error('❌ [Payment] pgAsistant.js 로드 실패')
-    }
     document.head.appendChild(script)
-
     setMounted(true)
-
-    return () => {
-      // cleanup 불필요 (스크립트는 재사용)
-    }
   }, [])
 
-  // ✅ SeedPay postMessage 수신 (매우 중요!)
+  // ✅ SeedPay postMessage 수신
   useEffect(() => {
     const handleSeedPayMessage = (event: MessageEvent) => {
-      console.log('📨 [Payment] SeedPay postMessage 수신:', event.data)
-
-      // SeedPay 메시지 형식:
-      // event.data = [
-      //   "SUCCESS",
-      //   { 결제 데이터 },
-      //   "returnUrl",
-      //   "POST",
-      //   "utf-8"
-      // ]
-
       if (Array.isArray(event.data) && event.data[0] === 'SUCCESS') {
         const paymentData = event.data[1]
 
-        console.log('📦 [Payment] 결제 인증 완료:', {
-          resultCd: paymentData.resultCd,
-          resultMsg: paymentData.resultMsg,
-          ordNo: paymentData.ordNo,
-        })
-
-        // ✅ resultCd 확인: 0000 = 인증 성공
         if (paymentData.resultCd === '0000') {
-          console.log('✅ [Payment] 결제 성공, Callback으로 데이터 전송...')
-
-          // ✅ 우리 Callback Route로 POST 전송
           const form = document.createElement('form')
           form.method = 'POST'
           form.action = '/api/payment/seedpay/callback'
@@ -81,10 +48,8 @@ export default function PricingPage() {
           })
 
           document.body.appendChild(form)
-          console.log('📤 [Payment] Callback Form submit 실행')
           form.submit()
         } else {
-          console.error('❌ [Payment] 결제 실패:', paymentData.resultMsg)
           window.location.href = `/premium/pricing/result?status=failed&message=${encodeURIComponent(paymentData.resultMsg || '결제 실패')}`
         }
       }
@@ -94,15 +59,13 @@ export default function PricingPage() {
     return () => window.removeEventListener('message', handleSeedPayMessage)
   }, [])
 
-  // ✅ SeedPay 콜백 함수들 (이름 변경 불가!)
+  // ✅ SeedPay 콜백 함수들
   useEffect(() => {
     (window as any).pay_result_submit = () => {
-      console.log('✅ [Payment] pay_result_submit 호출됨 (SeedPay 콜백)')
-      // SeedPay 콜백 - 위의 postMessage로 처리됨
+      // SeedPay 콜백
     }
 
     (window as any).pay_result_close = () => {
-      console.log('❌ [Payment] pay_result_close 호출됨 (결제 취소)')
       alert(language === 'ko' ? '결제를 취소하였습니다.' : 'Payment cancelled.')
     }
   }, [language])
@@ -127,7 +90,7 @@ export default function PricingPage() {
     },
   }
 
-  // ✅ 실제 결제 함수 (SeedPay 샘플 방식)
+  // ✅ 실제 결제 함수
   const handlePayment = async () => {
     if (!session?.user?.email) {
       window.location.href = '/login'
@@ -135,7 +98,6 @@ export default function PricingPage() {
     }
 
     setLoading(true)
-    console.log('[Payment] 결제 초기화 시작:', { plan: selectedPlan })
 
     try {
       // 1️⃣ Init API 호출
@@ -156,47 +118,34 @@ export default function PricingPage() {
         throw new Error(data.error || '결제 초기화 실패')
       }
 
-      console.log('✅ [Payment] Init API 응답 성공')
-      console.log('✅ ediDate를 sessionStorage에 저장')
       sessionStorage.setItem('initEdiDate', data.formData.ediDate)
 
-      // 2️⃣ Form 생성 (SeedPay 샘플 방식)
+      // 2️⃣ Form 생성
       const form = document.createElement('form')
       form.name = 'payInit'
       form.method = 'POST'
       form.action = ''
 
-      console.log('🔍 [Payment] Form action:', form.action)
-
       // 3️⃣ formData의 모든 필드를 form에 추가
       const formData = data.formData
-      let fieldCount = 0
-
       Object.entries(formData).forEach(([key, value]) => {
         const input = document.createElement('input')
         input.type = 'hidden'
         input.name = key
         input.value = String(value)
         form.appendChild(input)
-        fieldCount++
       })
 
-      console.log('📋 Form 필드 개수:', fieldCount)
-      console.log('📋 returnUrl:', formData.returnUrl)
       document.body.appendChild(form)
 
-      // 4️⃣ SendPay() 호출 (pgAsistant.js)
-      console.log('📱 [Payment] SendPay 함수로 결제 창 오픈')
-
-      // SendPay가 없을 경우 경고
+      // 4️⃣ SendPay() 호출
       if (typeof window.SendPay === 'undefined') {
-        throw new Error('SendPay 함수를 찾을 수 없습니다. pgAsistant.js 로드 확인.')
+        throw new Error('SendPay 함수를 찾을 수 없습니다.')
       }
 
       window.SendPay(form)
 
     } catch (error) {
-      console.error('❌ [Payment] 결제 초기화 오류:', error)
       alert(
         language === 'ko'
           ? `결제 처리 중 오류: ${error instanceof Error ? error.message : '알 수 없음'}`
