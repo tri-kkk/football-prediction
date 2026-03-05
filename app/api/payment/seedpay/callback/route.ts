@@ -36,6 +36,24 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
     // 🔍 전체 Form 데이터 디버깅 로그
     console.log('🔍 [Callback] 전체 Form 데이터 키:', Object.keys(data).sort())
     console.log('🔍 [Callback] Form 데이터 개수:', Object.keys(data).length)
+    
+    // 🔍 구매자 정보 확인
+    console.log('🔍 [Callback] 구매자 정보 확인:', {
+      ordEmail: data.ordEmail || '없음',
+      ordNm: data.ordNm || '없음',
+      fnNm: data.fnNm || '없음',
+      mbsReserved: data.mbsReserved || '없음',
+    })
+    
+    // 🔍 mbsReserved 파싱 시도
+    if (data.mbsReserved) {
+      try {
+        const parsed = JSON.parse(data.mbsReserved)
+        console.log('🔍 [Callback] mbsReserved 파싱 결과:', parsed)
+      } catch (e) {
+        console.log('🔍 [Callback] mbsReserved 파싱 실패:', data.mbsReserved)
+      }
+    }
 
     // 인증 실패 처리
     if (data.resultCd !== '0000') {
@@ -178,12 +196,25 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
     const approvalUrl = data.approvalUrl || 'https://pay.seedpayments.co.kr/payment/v1/approval'
     console.log('📍 [Approval] 승인 요청 URL:', approvalUrl)
 
+    // ✅ URLEncoded 형식으로 변환 (SeedPay 샘플 기준)
+    const approvalBodyUrlencoded = new URLSearchParams()
+    approvalBodyUrlencoded.append('nonce', approvalBody.nonce)
+    approvalBodyUrlencoded.append('tid', approvalBody.tid)
+    approvalBodyUrlencoded.append('mid', approvalBody.mid)
+    approvalBodyUrlencoded.append('goodsAmt', approvalBody.goodsAmt)
+    approvalBodyUrlencoded.append('ediDate', approvalBody.ediDate)
+    approvalBodyUrlencoded.append('mbsReserved', approvalBody.mbsReserved)
+    approvalBodyUrlencoded.append('hashString', approvalBody.hashString)
+    approvalBodyUrlencoded.append('payData', approvalBody.payData)
+
+    console.log('📤 [Approval] URLEncoded Body:', approvalBodyUrlencoded.toString().substring(0, 100) + '...')
+
     const approvalResponse = await fetch(approvalUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',  // ✅ URLEncoded로 변경
       },
-      body: JSON.stringify(approvalBody),
+      body: approvalBodyUrlencoded.toString(),  // ✅ URLEncoded 문자열
     })
 
     const approvalData = await approvalResponse.json()
