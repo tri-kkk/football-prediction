@@ -193,6 +193,30 @@ export default function PricingPage() {
         throw new Error(errorData.error || '결제 초기화 실패')
       }
 
+      // ✅ Content-Type 확인 (HTML vs JSON)
+      const contentType = res.headers.get('content-type')
+      
+      if (contentType?.includes('text/html')) {
+        // ✅ HTML 결제 페이지를 팝업에서 열기
+        console.log('✅ [Payment] HTML 결제 페이지 받음, 팝업 열기')
+        const html = await res.text()
+        
+        // ✅ Blob URL 방식으로 변경
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+        const blobUrl = URL.createObjectURL(blob)
+        
+        const popup = window.open(blobUrl, 'SeedPayment', 'width=800,height=600,top=100,left=100')
+        if (popup) {
+          console.log('✅ [Payment] 팝업 창에 결제 페이지 표시 완료')
+        } else {
+          console.error('❌ [Payment] 팝업 차단됨 - 팝업 차단 설정 확인')
+          throw new Error('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.')
+        }
+        setLoading(false)
+        return
+      }
+
+      // JSON 응답 처리
       const data = await res.json()
 
       if (!data.success) {

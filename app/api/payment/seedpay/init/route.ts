@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
     viewRequestBody.append('ordNm', session.user.name || '구매자')
     viewRequestBody.append('ordEmail', session.user.email)
     viewRequestBody.append('returnUrl', returnUrl)
-    viewRequestBody.append('ediDate', ediDate)
-    viewRequestBody.append('hashString', hashString)
+    //viewRequestBody.append('ediDate', ediDate)
+    //viewRequestBody.append('hashString', hashString)
 
     console.log('📤 [Init] /payment/v1/view/request 호출:', {
       mid,
@@ -101,15 +101,80 @@ export async function POST(request: NextRequest) {
       body: viewRequestBody.toString(),
     })
 
+    console.log('📋 [Init] /payment/v1/view/request 응답 상태:', viewRequestResponse.status)
+
+    const contentType = viewRequestResponse.headers.get('content-type')
+    console.log('📋 [Init] Response Content-Type:', contentType)
+
+    // ✅ Body를 한 번만 읽기 (text로 먼저 읽음)
+    const responseText = await viewRequestResponse.text()
+    console.log('📋 [Init] 응답 내용 길이:', responseText.length)
+    console.log('📋 [Init] 응답 첫 200자:', responseText.substring(0, 200))
+
     if (!viewRequestResponse.ok) {
-      console.error('❌ [Init] /payment/v1/view/request 실패:', viewRequestResponse.status)
+      console.error('❌ [Init] /payment/v1/view/request 실패:', {
+        status: viewRequestResponse.status,
+        responsePreview: responseText.substring(0, 300),
+      })
       return NextResponse.json({ 
         error: 'SeedPay 결제창 요청 실패',
-        status: viewRequestResponse.status
+        status: viewRequestResponse.status,
+        details: responseText.substring(0, 200)
       }, { status: 500 })
     }
 
-    const viewRequestData = await viewRequestResponse.json()
+    // ✅ HTML 결제 페이지면 그대로 반환
+    if (contentType?.includes('text/html')) {
+      console.log('✅ [Init] HTML 결제 페이지 반환중...')
+      
+      // ✅ 상대 경로를 절대 경로로 변환 (Blob URL에서 작동하도록)
+      let html = responseText
+      
+      // /로 시작하는 상대 경로를 SeedPay 절대 경로로 변환
+      html = html.replace(/href="\/([^/])/g, 'href="https://pay.seedpayments.co.kr/$1')
+      html = html.replace(/src="\/([^/])/g, 'src="https://pay.seedpayments.co.kr/$1')
+      
+      console.log('✅ [Init] 상대 경로를 절대 경로로 변환 완료')
+      
+      // ✅ Payment Session DB에 저장 (결제 페이지 표시 전)
+      console.log('💾 [Init] Payment Session 저장 시작:', ordNo)
+      const { error: sessionError } = await supabase.from('payment_sessions').insert({
+        order_id: ordNo,
+        init_edi_date: ediDate,
+        mid,
+        goods_amt: goodsAmt,
+        user_email: session.user.email,
+        user_name: session.user.name || '구매자',
+      })
+
+      if (sessionError) {
+        console.error('⚠️ [Init] Payment Session 저장 실패:', sessionError.message)
+      } else {
+        console.log('✅ [Init] Payment Session 저장 완료')
+      }
+      
+      return new NextResponse(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html;charset=UTF-8' }
+      })
+    }
+
+    // ✅ JSON parse 시도 (만약 JSON이 오는 경우)
+    let viewRequestData
+    try {
+      viewRequestData = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error('❌ [Init] JSON parse 실패:', {
+        contentType,
+        status: viewRequestResponse.status,
+        responsePreview: responseText.substring(0, 300),
+      })
+      return NextResponse.json({ 
+        error: 'SeedPay 응답 처리 실패',
+        contentType,
+        details: responseText.substring(0, 300)
+      }, { status: 500 })
+    }
 
     console.log('✅ [Init] /payment/v1/view/request 응답:', {
       nonce: viewRequestData.nonce ? '있음' : '없음',
@@ -119,20 +184,7 @@ export async function POST(request: NextRequest) {
       signData: viewRequestData.signData ? '있음' : '없음',
     })
 
-    // ✅ 응답값 확인
-    if (!viewRequestData.nonce || !viewRequestData.payData) {
-      console.error('❌ [Init] 필수 응답값 없음:', viewRequestData)
-      return NextResponse.json({ 
-        error: 'SeedPay 응답에 필수 필드가 없습니다',
-        missing: {
-          nonce: !viewRequestData.nonce,
-          payData: !viewRequestData.payData,
-          approvalUrl: !viewRequestData.approvalUrl,
-        }
-      }, { status: 500 })
-    }
-
-    // 6. Payment Session DB에 저장
+    // 6. Payment Session DB에 저장 (JSON 응답인 경우)
     console.log('💾 [Init] Payment Session 저장 시작:', ordNo)
     const { error: sessionError } = await supabase.from('payment_sessions').insert({
       order_id: ordNo,
@@ -171,7 +223,7 @@ export async function POST(request: NextRequest) {
       }
     ]
 
-    // ✅ /payment/v1/view/request 응답값을 그대로 반환
+    // ✅ JSON 응답 (API 호출 결과)
     return NextResponse.json({
       success: true,
       
