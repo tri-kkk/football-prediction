@@ -134,6 +134,19 @@ interface BlogPost {
   updated_at: string
 }
 
+// 📣 공지 타입
+interface Notice {
+  id: number
+  message: string
+  message_en: string | null
+  is_active: boolean
+  display_order: number
+  start_at: string | null
+  end_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 // 📊 트래픽 분석 타입 추가
 interface TrafficOverview {
   activeUsers: string
@@ -229,6 +242,7 @@ const TABS = [
   { id: 'blog', label: '블로그 관리', icon: '📝' },
   { id: 'proto', label: '프로토 관리', icon: '🎫' },
   { id: 'export', label: '예측 Export', icon: '📤' },
+  { id: 'notices', label: '공지 관리', icon: '📣' },
 ]
 
 /// 국기 이모지 매핑 - 확장
@@ -570,9 +584,90 @@ export default function AdminDashboard() {
   const [exportSelectedMatch, setExportSelectedMatch] = useState<any | null>(null)
   const [exportCopyStatus, setExportCopyStatus] = useState<string>('')
   
+  // ===== 📣 공지 관리 상태 =====
+  const [notices, setNotices] = useState<Notice[]>([])
+  const [noticesLoading, setNoticesLoading] = useState(false)
+  const [noticeForm, setNoticeForm] = useState({ message: '', message_en: '', is_active: true, display_order: 0, start_at: '', end_at: '' })
+  const [editingNotice, setEditingNotice] = useState<Notice | null>(null)
+  const [noticeSaving, setNoticeSaving] = useState(false)
+  
   // ===== Refs =====
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+
+  // ===== 📣 공지 불러오기 =====
+  useEffect(() => {
+    if (activeTab === 'notices' && isAuthenticated) {
+      loadNotices()
+    }
+  }, [activeTab, isAuthenticated])
+
+  const loadNotices = async () => {
+    setNoticesLoading(true)
+    try {
+      const res = await fetch('/api/admin/notices?admin=true')
+      const data = await res.json()
+      if (Array.isArray(data)) setNotices(data)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setNoticesLoading(false)
+    }
+  }
+
+  const handleNoticeSave = async () => {
+    if (!noticeForm.message.trim()) return
+    setNoticeSaving(true)
+    try {
+      if (editingNotice) {
+        await fetch('/api/admin/notices', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...noticeForm, id: editingNotice.id })
+        })
+      } else {
+        await fetch('/api/admin/notices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(noticeForm)
+        })
+      }
+      setNoticeForm({ message: '', message_en: '', is_active: true, display_order: 0, start_at: '', end_at: '' })
+      setEditingNotice(null)
+      await loadNotices()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setNoticeSaving(false)
+    }
+  }
+
+  const handleNoticeDelete = async (id: number) => {
+    if (!confirm('삭제하시겠습니까?')) return
+    await fetch(`/api/admin/notices?id=${id}`, { method: 'DELETE' })
+    await loadNotices()
+  }
+
+  const handleNoticeEdit = (notice: Notice) => {
+    setEditingNotice(notice)
+    setNoticeForm({
+      message: notice.message,
+      message_en: notice.message_en || '',
+      is_active: notice.is_active,
+      display_order: notice.display_order,
+      start_at: notice.start_at ? new Date(notice.start_at).toISOString().slice(0, 16) : '',
+      end_at: notice.end_at ? new Date(notice.end_at).toISOString().slice(0, 16) : '',
+    })
+  }
+
+  const handleNoticeToggle = async (notice: Notice) => {
+    await fetch('/api/admin/notices', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...notice, is_active: !notice.is_active })
+    })
+    await loadNotices()
+  }
 
   // ==================== 인증 ====================
 
@@ -4274,6 +4369,196 @@ export default function AdminDashboard() {
           </>
         )}
       </main>
+
+      {/* 📣 공지 관리 탭 */}
+      {activeTab === 'notices' && (
+        <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+          <h2 className="text-xl font-bold text-white">📣 공지 롤링 배너 관리</h2>
+
+          {/* 작성/수정 폼 */}
+          <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+            <h3 className="text-base font-semibold text-white mb-4">
+              {editingNotice ? '✏️ 공지 수정' : '➕ 새 공지 추가'}
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">한글 메시지 *</label>
+                <input
+                  type="text"
+                  value={noticeForm.message}
+                  onChange={e => setNoticeForm({ ...noticeForm, message: e.target.value })}
+                  placeholder="예: 🔥 오늘의 PICK이 업데이트됐습니다!"
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">영어 메시지 (선택)</label>
+                <input
+                  type="text"
+                  value={noticeForm.message_en}
+                  onChange={e => setNoticeForm({ ...noticeForm, message_en: e.target.value })}
+                  placeholder="예: 🔥 Today's PICK is updated!"
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 text-sm"
+                />
+              </div>
+              <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-400">표시 순서</label>
+                  <input
+                    type="number"
+                    value={noticeForm.display_order}
+                    onChange={e => setNoticeForm({ ...noticeForm, display_order: parseInt(e.target.value) || 0 })}
+                    className="w-20 px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:outline-none focus:border-orange-500"
+                    min={0}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setNoticeForm({ ...noticeForm, is_active: !noticeForm.is_active })}
+                    className={`relative w-10 h-6 rounded-full transition-colors ${noticeForm.is_active ? 'bg-orange-500' : 'bg-gray-600'}`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${noticeForm.is_active ? 'left-5' : 'left-1'}`} />
+                  </button>
+                  <span className="text-sm text-gray-400">{noticeForm.is_active ? '활성' : '비활성'}</span>
+                </div>
+              </div>
+
+              {/* 노출 기간 예약 */}
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-xl" style={{ background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.2)' }}>
+                <div>
+                  <label className="block text-xs text-orange-400 mb-1.5 font-medium">📅 노출 시작 (선택)</label>
+                  <input
+                    type="datetime-local"
+                    value={noticeForm.start_at}
+                    onChange={e => setNoticeForm({ ...noticeForm, start_at: e.target.value })}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white text-xs focus:outline-none focus:border-orange-500"
+                  />
+                  <p className="text-[10px] text-gray-600 mt-1">비워두면 즉시 노출</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-orange-400 mb-1.5 font-medium">⏰ 노출 종료 (선택)</label>
+                  <input
+                    type="datetime-local"
+                    value={noticeForm.end_at}
+                    onChange={e => setNoticeForm({ ...noticeForm, end_at: e.target.value })}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white text-xs focus:outline-none focus:border-orange-500"
+                  />
+                  <p className="text-[10px] text-gray-600 mt-1">비워두면 무기한 노출</p>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-1">
+                {editingNotice && (
+                  <button
+                    onClick={() => { setEditingNotice(null); setNoticeForm({ message: '', message_en: '', is_active: true, display_order: 0 }) }}
+                    className="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-xl text-sm font-medium transition-colors"
+                  >
+                    취소
+                  </button>
+                )}
+                <button
+                  onClick={handleNoticeSave}
+                  disabled={noticeSaving || !noticeForm.message.trim()}
+                  className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+                >
+                  {noticeSaving ? '저장 중...' : editingNotice ? '수정 완료' : '추가'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 공지 목록 */}
+          <div className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-300">전체 공지 ({notices.length}개)</span>
+              <button onClick={loadNotices} className="text-xs text-gray-500 hover:text-gray-300">새로고침</button>
+            </div>
+            {noticesLoading ? (
+              <div className="p-8 text-center text-gray-500 text-sm">불러오는 중...</div>
+            ) : notices.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 text-sm">등록된 공지가 없습니다</div>
+            ) : (
+              <div className="divide-y divide-gray-700">
+                {notices.map(notice => {
+                  const now = new Date()
+                  const isScheduled = notice.start_at && new Date(notice.start_at) > now
+                  const isExpired = notice.end_at && new Date(notice.end_at) < now
+                  const formatDt = (dt: string) => new Date(dt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+                  return (
+                    <div key={notice.id} className="px-6 py-4 flex items-start gap-4">
+                      <span className="shrink-0 text-xs text-gray-500 mt-1 w-5 text-center">{notice.display_order}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white leading-relaxed">{notice.message}</p>
+                        {notice.message_en && (
+                          <p className="text-xs text-gray-500 mt-0.5">{notice.message_en}</p>
+                        )}
+                        {/* 노출 기간 */}
+                        {(notice.start_at || notice.end_at) && (
+                          <div className="flex items-center gap-2 mt-1.5">
+                            {notice.start_at && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa' }}>
+                                시작 {formatDt(notice.start_at)}
+                              </span>
+                            )}
+                            {notice.end_at && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: isExpired ? 'rgba(239,68,68,0.15)' : 'rgba(249,115,22,0.15)', color: isExpired ? '#f87171' : '#fb923c' }}>
+                                {isExpired ? '만료 ' : '종료 '}{formatDt(notice.end_at)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {isScheduled && (
+                          <span className="inline-block mt-1 text-[10px] text-yellow-400">⏳ 예약됨</span>
+                        )}
+                        {isExpired && (
+                          <span className="inline-block mt-1 text-[10px] text-red-400">⚠️ 기간 만료</span>
+                        )}
+                      </div>
+                      <div className="shrink-0 flex items-center gap-2">
+                        <button
+                          onClick={() => handleNoticeToggle(notice)}
+                          className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                            notice.is_active && !isExpired
+                              ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                              : 'bg-gray-600/50 text-gray-400 hover:bg-gray-600'
+                          }`}
+                        >
+                          {notice.is_active && !isExpired ? '활성' : '비활성'}
+                        </button>
+                        <button
+                          onClick={() => handleNoticeEdit(notice)}
+                          className="text-xs px-2.5 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-full font-medium transition-colors"
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => handleNoticeDelete(notice.id)}
+                          className="text-xs px-2.5 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-full font-medium transition-colors"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 미리보기 */}
+          <div className="bg-gray-800 rounded-2xl p-5 border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400 mb-3">미리보기 (메인 페이지 노출 모습)</h3>
+            <div className="flex items-center gap-2 px-4 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-xs text-gray-300" style={{ minHeight: '34px' }}>
+              <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: '#f97316', color: '#fff' }}>공지</span>
+              <span className="truncate flex-1">{notices.find(n => n.is_active)?.message || '활성 공지가 없습니다'}</span>
+              {notices.filter(n => n.is_active).length > 1 && (
+                <span className="text-gray-500 text-[10px]">+{notices.filter(n => n.is_active).length - 1}개</span>
+              )}
+              <span className="text-gray-600 ml-1">✕</span>
+            </div>
+          </div>
+        </main>
+      )}
 
       {/* 광고 모달 */}
       {isAdModalOpen && (

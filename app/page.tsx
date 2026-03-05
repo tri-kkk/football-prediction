@@ -23,6 +23,7 @@ import MatchPoll from './components/MatchPoll'
 // 🌐 다국어 지원 데이터 import
 import { LEAGUES, LEAGUE_GROUPS, LEAGUES_WITH_ODDS, getLeagueByCode } from './data/leagues'
 import LanguageSelector from './components/LanguageSelector'
+import NoticeBanner from './components/NoticeBanner'
 
 // 🔥 리그 정보는 ./data/leagues.ts에서 import됨 (LEAGUES, LEAGUE_GROUPS, LEAGUES_WITH_ODDS)
 
@@ -3904,6 +3905,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
       )}
 
       {/* 🔥 플로팅 PICK 배너 (PC 전용) */}
+      <NoticeBanner lang={currentLanguage as 'ko' | 'en'} darkMode={true} />
       <a 
         href={session ? "/premium" : "/login?callbackUrl=/premium"}
         className="hidden lg:flex fixed bottom-8 right-20 z-[9999] group"
