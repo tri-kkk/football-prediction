@@ -26,7 +26,16 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       initEdiDate: data.initEdiDate || '없음',
       returnUrl: data.returnUrl || '없음',
       mbsReserved: data.mbsReserved ? data.mbsReserved.substring(0, 50) + '...' : '없음',
+      // ✅ 추가: 승인에 필요한 필드들
+      nonce: data.nonce || '없음',
+      payData: data.payData ? data.payData.substring(0, 50) + '...' : '없음',
+      approvalUrl: data.approvalUrl || '없음',
+      signData: data.signData ? data.signData.substring(0, 50) + '...' : '없음',
     })
+
+    // 🔍 전체 Form 데이터 디버깅 로그
+    console.log('🔍 [Callback] 전체 Form 데이터 키:', Object.keys(data).sort())
+    console.log('🔍 [Callback] Form 데이터 개수:', Object.keys(data).length)
 
     // 인증 실패 처리
     if (data.resultCd !== '0000') {
