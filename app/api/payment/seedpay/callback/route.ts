@@ -157,7 +157,7 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       nonce: data.nonce,
       tid: data.tid,
       ediDate: ediDate,
-      mId: mid,
+      mid: mid,
       amount: data.goodsAmt,
       hashString: approvalHash,
       payData: payData,
