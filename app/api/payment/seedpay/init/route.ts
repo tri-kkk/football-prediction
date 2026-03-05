@@ -91,6 +91,8 @@ export async function POST(request: NextRequest) {
       init_edi_date: ediDate,
       mid,
       goods_amt: goodsAmt,
+      user_email: session.user.email,  // ✅ 추가: 사용자 이메일
+      user_name: session.user.name || '구매자',  // ✅ 추가: 사용자명
     })
 
     if (sessionError) {

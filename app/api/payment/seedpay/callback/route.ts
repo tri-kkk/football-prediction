@@ -290,14 +290,22 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
 
     console.log('✅ [DB] payments 저장 완료')
 
-    // 유저 구독 처리
-    const userEmail = data.ordEmail
-    console.log('👤 [DB] 구매자 이메일:', userEmail)
+    // ✅ payment_sessions에서 user_email 조회
+    console.log('🔍 [DB] payment_sessions에서 사용자 이메일 조회:', data.ordNo)
+    const { data: paymentSession } = await supabase
+      .from('payment_sessions')
+      .select('user_email, user_name')
+      .eq('order_id', data.ordNo)
+      .single()
 
-    if (!userEmail) {
-      console.error('❌ [DB] 사용자 이메일 없음')
+    if (!paymentSession || !paymentSession.user_email) {
+      console.error('❌ [DB] payment_sessions에서 사용자 이메일을 찾을 수 없음')
       return { error: '사용자 정보 오류', status: 400 }
     }
+
+    // 유저 구독 처리
+    const userEmail = paymentSession.user_email  // ✅ payment_sessions에서 가져옴
+    console.log('👤 [DB] 구매자 이메일:', userEmail)
 
     console.log('🔍 [DB] users 테이블에서 유저 검색:', userEmail)
     const { data: user } = await supabase
