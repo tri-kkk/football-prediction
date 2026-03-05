@@ -134,7 +134,7 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       nonce: data.nonce ? '있음' : '없음',
       tid: data.tid.substring(0, 10) + '***',
       ediDate: ediDate,
-      mId: mid.substring(0, 5) + '***',
+      mid: mid.substring(0, 5) + '***',  // ✅ mId → mid
       amount: data.goodsAmt,
       payData: payData ? '있음' : '없음',
       hashString: approvalHash.substring(0, 20) + '...',
@@ -145,7 +145,7 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       nonce: data.nonce || '없음',
       tid: data.tid,
       ediDate: ediDate,
-      mId: mid,
+      mid: mid,  // ✅ mId → mid
       amount: data.goodsAmt,
       hashString: approvalHash,
       payData: payData || '없음',
