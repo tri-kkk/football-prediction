@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // 4. SeedPay 파라미터 생성
+    // 4. SeedPay /payment/v1/view/request 호출 파라미터 생성
     const now = new Date()
     const ediDate = now.getFullYear().toString() +
       String(now.getMonth() + 1).padStart(2, '0') +
@@ -54,16 +54,13 @@ export async function POST(request: NextRequest) {
     const ordNo = `TS${Date.now()}${Math.floor(Math.random() * 1000)}`
     const goodsAmt = selected.amount.toString()
 
-    // ✅ nonce 생성 (필수!)
-    const nonce = `${mid}${ediDate}${Math.random().toString(36).substring(2, 15)}`
-
-    // SHA-256 해시 (mid + ediDate + goodsAmt + key)
+    // SHA-256 해시 (Init 해시: mid + ediDate + goodsAmt + key)
     const hashString = crypto
       .createHash('sha256')
       .update(mid + ediDate + goodsAmt + merchantKey)
       .digest('hex')
 
-    console.log('🔐 Hash 계산:', {
+    console.log('🔐 [Init] Hash 계산:', {
       mid,
       ediDate,
       goodsAmt,
@@ -72,37 +69,89 @@ export async function POST(request: NextRequest) {
       hashString,
     })
 
-    // 5. 결과 콜백 URL (✅ ediDate를 쿼리 파라미터에 포함!)
+    // 5. SeedPay /payment/v1/view/request 호출
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trendsoccer.com'
-    const returnUrl = `${baseUrl}/api/payment/seedpay/callback?initEdiDate=${ediDate}`
+    const returnUrl = `${baseUrl}/api/payment/seedpay/callback`
 
-    console.log('✅ SeedPay 결제 요청 파라미터 생성:', {
-      mid: mid.substring(0, 5) + '***',
+    const viewRequestBody = new URLSearchParams()
+    viewRequestBody.append('method', 'CARD')
+    viewRequestBody.append('mid', mid)
+    viewRequestBody.append('goodsNm', selected.name)
+    viewRequestBody.append('ordNo', ordNo)
+    viewRequestBody.append('goodsAmt', goodsAmt)
+    viewRequestBody.append('ordNm', session.user.name || '구매자')
+    viewRequestBody.append('ordEmail', session.user.email)
+    viewRequestBody.append('returnUrl', returnUrl)
+    viewRequestBody.append('ediDate', ediDate)
+    viewRequestBody.append('hashString', hashString)
+
+    console.log('📤 [Init] /payment/v1/view/request 호출:', {
+      mid,
       ordNo,
       goodsAmt,
       ediDate,
-      hashString: hashString.substring(0, 20) + '...',
+      returnUrl,
     })
 
-    // ✅ Payment Session DB에 저장 (ediDate 유지)
+    const viewRequestResponse = await fetch('https://pay.seedpayments.co.kr/payment/v1/view/request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: viewRequestBody.toString(),
+    })
+
+    if (!viewRequestResponse.ok) {
+      console.error('❌ [Init] /payment/v1/view/request 실패:', viewRequestResponse.status)
+      return NextResponse.json({ 
+        error: 'SeedPay 결제창 요청 실패',
+        status: viewRequestResponse.status
+      }, { status: 500 })
+    }
+
+    const viewRequestData = await viewRequestResponse.json()
+
+    console.log('✅ [Init] /payment/v1/view/request 응답:', {
+      nonce: viewRequestData.nonce ? '있음' : '없음',
+      tid: viewRequestData.tid ? '있음' : '없음',
+      payData: viewRequestData.payData ? '있음' : '없음',
+      approvalUrl: viewRequestData.approvalUrl ? '있음' : '없음',
+      signData: viewRequestData.signData ? '있음' : '없음',
+    })
+
+    // ✅ 응답값 확인
+    if (!viewRequestData.nonce || !viewRequestData.payData) {
+      console.error('❌ [Init] 필수 응답값 없음:', viewRequestData)
+      return NextResponse.json({ 
+        error: 'SeedPay 응답에 필수 필드가 없습니다',
+        missing: {
+          nonce: !viewRequestData.nonce,
+          payData: !viewRequestData.payData,
+          approvalUrl: !viewRequestData.approvalUrl,
+        }
+      }, { status: 500 })
+    }
+
+    // 6. Payment Session DB에 저장
     console.log('💾 [Init] Payment Session 저장 시작:', ordNo)
     const { error: sessionError } = await supabase.from('payment_sessions').insert({
       order_id: ordNo,
       init_edi_date: ediDate,
       mid,
       goods_amt: goodsAmt,
-      user_email: session.user.email,  // ✅ 추가: 사용자 이메일
-      user_name: session.user.name || '구매자',  // ✅ 추가: 사용자명
+      user_email: session.user.email,
+      user_name: session.user.name || '구매자',
+      nonce: viewRequestData.nonce,
+      approval_url: viewRequestData.approvalUrl,
     })
 
     if (sessionError) {
       console.error('⚠️ [Init] Payment Session 저장 실패 (계속 진행):', sessionError.message)
-      // 실패해도 계속 진행
     } else {
       console.log('✅ [Init] Payment Session 저장 완료')
     }
 
-    // 약관 데이터 (SeedPay에서 null로 오던 약관 4번 추가)
+    // 약관 데이터
     const terms = [
       {
         termTitle: '전자금융거래 기본약관',
@@ -122,41 +171,37 @@ export async function POST(request: NextRequest) {
       }
     ]
 
-    // ✅ SeedPay 표준 결제 가이드 기준으로 반환 (v0.9.0 구 필드명)
+    // ✅ /payment/v1/view/request 응답값을 그대로 반환
     return NextResponse.json({
       success: true,
       
       // === 약관 데이터 ===
       terms,
       
-      // === SeedPay 필수 필드 (v0.9.0 구 필드명) ===
-      method: 'CARD',                         // 결제 수단: CARD (필수)
-      mid,                                    // 상점 아이디 (필수)
-      goodsNm: selected.name,                 // 상품명 (필수)
-      ordNo,                                  // 주문번호 (필수, Unique)
-      goodsAmt,                               // 결제금액 (필수)
-      ordNm: session.user.name || '구매자',   // 구매자명 (필수)
+      // === SeedPay /payment/v1/view/request 응답값 ===
+      nonce: viewRequestData.nonce,
+      tid: viewRequestData.tid,
+      payData: viewRequestData.payData,
+      approvalUrl: viewRequestData.approvalUrl,
+      signData: viewRequestData.signData,
       
-      // === 선택사항 ===
-      ordTel: '0000000000',                   // 구매자 전화
-      ordEmail: session.user.email,           // 구매자 이메일
-      
-      // === 보안 ===
-      nonce,                                  // ✅ nonce 추가 (필수!)
-      returnUrl,                              // Callback URL
-      ediDate,                                // 타임스탐프
-      hashString,                             // SHA-256 해시
+      // === 기본 파라미터 ===
+      method: 'CARD',
+      mid,
+      goodsNm: selected.name,
+      ordNo,
+      goodsAmt,
+      ordNm: session.user.name || '구매자',
+      ordEmail: session.user.email,
+      returnUrl,
+      ediDate,
+      hashString,
       
       // === 내부 관리용 ===
       plan,
       months: selected.months,
       userEmail: session.user.email,
       userName: session.user.name || '구매자',
-      mbsReserved: JSON.stringify({
-        email: session.user.email,
-        plan,
-        timestamp: new Date().toISOString(),
-      }),
     })
 
   } catch (error) {

@@ -181,20 +181,22 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
     })
 
     // ✅ SeedPay 공식 필드명 (승인 요청)
+    // ✅ nonce, payData는 DB에서 가져옴
     const approvalBody = {
-      nonce: data.nonce || '',  // ✅ 빈 문자열 (없으면)
+      nonce: paymentSession.nonce || '',  // ✅ DB에서 가져옴
       tid: data.tid,
-      mid: mid,  // ✅ mId → mid (소문자 i)
-      goodsAmt: data.goodsAmt,  // ✅ amount → goodsAmt
+      mid: mid,
+      goodsAmt: data.goodsAmt,
       ediDate: ediDate,
       mbsReserved: data.mbsReserved || '',
       hashString: approvalHash,
-      payData: payData || '',  // ✅ 빈 문자열 (없으면)
+      payData: data.payData || '',  // ✅ Callback에서 받음
     }
 
-    // ✅ Callback에서 받은 approvalUrl 사용
-    const approvalUrl = data.approvalUrl || 'https://pay.seedpayments.co.kr/payment/v1/approval'
+    // ✅ payment_sessions에서 approval_url 사용
+    const approvalUrl = paymentSession.approval_url || 'https://pay.seedpayments.co.kr/payment/v1/approval'
     console.log('📍 [Approval] 승인 요청 URL:', approvalUrl)
+    console.log('📍 [Approval] nonce 출처:', paymentSession.nonce ? 'payment_sessions DB' : '없음')
 
     // ✅ URLEncoded 형식으로 변환 (SeedPay 샘플 기준)
     const approvalBodyUrlencoded = new URLSearchParams()
@@ -207,14 +209,19 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
     approvalBodyUrlencoded.append('hashString', approvalBody.hashString)
     approvalBodyUrlencoded.append('payData', approvalBody.payData)
 
-    console.log('📤 [Approval] URLEncoded Body:', approvalBodyUrlencoded.toString().substring(0, 100) + '...')
+    console.log('📤 [Approval] URLEncoded Body:', {
+      nonce: approvalBody.nonce ? '있음' : '없음',
+      tid: approvalBody.tid.substring(0, 10) + '***',
+      payData: approvalBody.payData ? '있음' : '없음',
+      hashString: approvalBody.hashString.substring(0, 20) + '...',
+    })
 
     const approvalResponse = await fetch(approvalUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',  // ✅ URLEncoded로 변경
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: approvalBodyUrlencoded.toString(),  // ✅ URLEncoded 문자열
+      body: approvalBodyUrlencoded.toString(),
     })
 
     const approvalData = await approvalResponse.json()
@@ -279,18 +286,24 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
 
     console.log('✅ [DB] payments 저장 완료')
 
-    // ✅ payment_sessions에서 user_email 조회
-    console.log('🔍 [DB] payment_sessions에서 사용자 이메일 조회:', data.ordNo)
+    // ✅ payment_sessions에서 user_email, nonce, approval_url 조회
+    console.log('🔍 [DB] payment_sessions에서 데이터 조회:', data.ordNo)
     const { data: paymentSession } = await supabase
       .from('payment_sessions')
-      .select('user_email, user_name')
+      .select('user_email, user_name, nonce, approval_url')
       .eq('order_id', data.ordNo)
       .single()
 
     if (!paymentSession || !paymentSession.user_email) {
-      console.error('❌ [DB] payment_sessions에서 사용자 이메일을 찾을 수 없음')
+      console.error('❌ [DB] payment_sessions에서 데이터를 찾을 수 없음')
       return { error: '사용자 정보 오류', status: 400 }
     }
+
+    console.log('✅ [DB] payment_sessions 조회 완료:', {
+      user_email: paymentSession.user_email,
+      nonce: paymentSession.nonce ? '있음' : '없음',
+      approval_url: paymentSession.approval_url ? '있음' : '없음',
+    })
 
     // 유저 구독 처리
     const userEmail = paymentSession.user_email  // ✅ payment_sessions에서 가져옴
