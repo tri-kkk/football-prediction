@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       })
 
       return NextResponse.redirect(
-        new URL(`/premium/pricing/result?status=failed&ordNo=${ordNo}&msg=${encodeURIComponent(resultMsg || '결제 실패')}`, request.url)
+        new URL(`/premium/pricing/result?status=failed&message=${encodeURIComponent(resultMsg || '결제 실패')}`, request.url)
       )
     }
 
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     if (sessionError || !sessionData) {
       console.error('❌ [DB] payment_sessions 조회 실패:', sessionError?.message)
       return NextResponse.redirect(
-        new URL(`/premium/pricing/result?status=failed&ordNo=${ordNo}&msg=${encodeURIComponent('세션 데이터 없음')}`, request.url)
+        new URL(`/premium/pricing/result?status=failed&message=${encodeURIComponent('세션 데이터 없음')}`, request.url)
       )
     }
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     if (userSelectError || !userData) {
       console.error('❌ [DB] 사용자 조회 실패:', userSelectError?.message)
       return NextResponse.redirect(
-        new URL(`/premium/pricing/result?status=failed&ordNo=${ordNo}&msg=${encodeURIComponent('사용자 조회 실패')}`, request.url)
+        new URL(`/premium/pricing/result?status=failed&message=${encodeURIComponent('사용자 조회 실패')}`, request.url)
       )
     }
 
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     // 9️⃣ 성공 페이지로 리다이렉트
     console.log('✅ [Callback] 결제 완료, 성공 페이지로 이동')
     return NextResponse.redirect(
-      new URL(`/premium/pricing/result?status=success&ordNo=${ordNo}`, request.url)
+      new URL(`/premium/pricing/result?status=success&amount=${planAmount}`, request.url)
     )
 
   } catch (error) {
