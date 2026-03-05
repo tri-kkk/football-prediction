@@ -180,6 +180,25 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       mbsReserved: data.mbsReserved ? data.mbsReserved.substring(0, 30) + '...' : '',
     })
 
+    // ✅ payment_sessions에서 approval_url과 nonce 조회
+    console.log('🔍 [DB] payment_sessions에서 데이터 조회:', data.ordNo)
+    const { data: paymentSession } = await supabase
+      .from('payment_sessions')
+      .select('user_email, user_name, nonce, approval_url')
+      .eq('order_id', data.ordNo)
+      .single()
+
+    if (!paymentSession || !paymentSession.user_email) {
+      console.error('❌ [DB] payment_sessions에서 데이터를 찾을 수 없음')
+      return { error: '사용자 정보 오류', status: 400 }
+    }
+
+    console.log('✅ [DB] payment_sessions 조회 완료:', {
+      user_email: paymentSession.user_email,
+      nonce: paymentSession.nonce ? '있음' : '없음',
+      approval_url: paymentSession.approval_url ? '있음' : '없음',
+    })
+
     // ✅ SeedPay 공식 필드명 (승인 요청)
     // ✅ nonce, payData는 DB에서 가져옴
     const approvalBody = {
@@ -237,9 +256,6 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       console.error('❌ 승인 실패:', approvalData.resultMsg)
       
       // ✅ 승인 실패해도 계속 진행해서 user 정보 저장
-      // (아래 payment_sessions 조회 로직은 필수)
-    } else {
-      console.log('✅ [Callback] 승인 완료! (resultCd: 0000)')
     }
 
     // 결제 금액 확인
@@ -286,24 +302,7 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
 
     console.log('✅ [DB] payments 저장 완료')
 
-    // ✅ payment_sessions에서 user_email, nonce, approval_url 조회
-    console.log('🔍 [DB] payment_sessions에서 데이터 조회:', data.ordNo)
-    const { data: paymentSession } = await supabase
-      .from('payment_sessions')
-      .select('user_email, user_name, nonce, approval_url')
-      .eq('order_id', data.ordNo)
-      .single()
-
-    if (!paymentSession || !paymentSession.user_email) {
-      console.error('❌ [DB] payment_sessions에서 데이터를 찾을 수 없음')
-      return { error: '사용자 정보 오류', status: 400 }
-    }
-
-    console.log('✅ [DB] payment_sessions 조회 완료:', {
-      user_email: paymentSession.user_email,
-      nonce: paymentSession.nonce ? '있음' : '없음',
-      approval_url: paymentSession.approval_url ? '있음' : '없음',
-    })
+    // ✅ paymentSession은 이미 라인 192에서 조회됨 (중복 제거)
 
     // 유저 구독 처리
     const userEmail = paymentSession.user_email  // ✅ payment_sessions에서 가져옴

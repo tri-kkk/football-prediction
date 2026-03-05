@@ -111,6 +111,39 @@ export async function POST(request: NextRequest) {
     console.log('📋 [Init] 응답 내용 길이:', responseText.length)
     console.log('📋 [Init] 응답 첫 200자:', responseText.substring(0, 200))
 
+    // ✅ 응답 전체 로깅 (중요!)
+    console.log('📋 [Init] 응답 전체:', responseText)
+    
+    // ✅ JSON 파싱 시도
+    try {
+      const jsonResponse = JSON.parse(responseText)
+      console.log('✅ [Init] JSON 응답 파싱 성공:', jsonResponse)
+      console.log('✅ [Init] nonce:', jsonResponse.nonce)
+      console.log('✅ [Init] payData:', jsonResponse.payData)
+      console.log('✅ [Init] approvalUrl:', jsonResponse.approvalUrl)
+    } catch (e) {
+      console.log('❌ [Init] JSON 파싱 실패 - HTML 또는 다른 형식')
+      
+      // ✅ HTML에서 ordInfoRes 추출 시도
+      const ordInfoMatch = responseText.match(/var ordInfoRes = ({[\s\S]*?});/)
+      if (ordInfoMatch) {
+        try {
+          const ordInfoRes = JSON.parse(ordInfoMatch[1])
+          console.log('✅ [Init] HTML에서 ordInfoRes 추출 성공:', ordInfoRes)
+          console.log('✅ [Init] nonce (HTML):', ordInfoRes.nonce)
+          console.log('✅ [Init] payData (HTML):', ordInfoRes.payData || '없음')
+          console.log('✅ [Init] approvalUrl (HTML):', ordInfoRes.approvalUrl || '없음')
+          
+          // ✅ Payment Session에 nonce 저장
+          if (ordInfoRes.nonce) {
+            console.log('💾 [Init] nonce를 DB에 저장할 예정:', ordInfoRes.nonce)
+          }
+        } catch (parseError) {
+          console.error('❌ [Init] HTML의 ordInfoRes 파싱 실패:', parseError)
+        }
+      }
+    }
+
     if (!viewRequestResponse.ok) {
       console.error('❌ [Init] /payment/v1/view/request 실패:', {
         status: viewRequestResponse.status,
@@ -125,18 +158,23 @@ export async function POST(request: NextRequest) {
 
     // ✅ HTML 결제 페이지면 그대로 반환
     if (contentType?.includes('text/html')) {
-      console.log('✅ [Init] HTML 결제 페이지 반환중...')
+      console.log('✅ [Init] HTML 결제 페이지 감지')
       
-      // ✅ 상대 경로를 절대 경로로 변환 (Blob URL에서 작동하도록)
-      let html = responseText
+      // ✅ HTML에서 ordInfoRes 추출
+      const ordInfoMatch = responseText.match(/var ordInfoRes = ({[\s\S]*?});/)
+      let extractedNonce = ''
       
-      // /로 시작하는 상대 경로를 SeedPay 절대 경로로 변환
-      html = html.replace(/href="\/([^/])/g, 'href="https://pay.seedpayments.co.kr/$1')
-      html = html.replace(/src="\/([^/])/g, 'src="https://pay.seedpayments.co.kr/$1')
+      if (ordInfoMatch) {
+        try {
+          const ordInfoRes = JSON.parse(ordInfoMatch[1])
+          extractedNonce = ordInfoRes.nonce || ''
+          console.log('✅ [Init] ordInfoRes 추출 성공, nonce:', extractedNonce)
+        } catch (e) {
+          console.error('❌ [Init] ordInfoRes 파싱 실패')
+        }
+      }
       
-      console.log('✅ [Init] 상대 경로를 절대 경로로 변환 완료')
-      
-      // ✅ Payment Session DB에 저장 (결제 페이지 표시 전)
+      // ✅ Payment Session DB에 저장 (nonce 포함!)
       console.log('💾 [Init] Payment Session 저장 시작:', ordNo)
       const { error: sessionError } = await supabase.from('payment_sessions').insert({
         order_id: ordNo,
@@ -145,17 +183,29 @@ export async function POST(request: NextRequest) {
         goods_amt: goodsAmt,
         user_email: session.user.email,
         user_name: session.user.name || '구매자',
+        nonce: extractedNonce,  // ✅ HTML에서 추출한 nonce 저장!
+        approval_url: 'https://pay.seedpayments.co.kr/payment/v1/approval',
       })
 
       if (sessionError) {
         console.error('⚠️ [Init] Payment Session 저장 실패:', sessionError.message)
       } else {
-        console.log('✅ [Init] Payment Session 저장 완료')
+        console.log('✅ [Init] Payment Session 저장 완료 (nonce:', extractedNonce, ')')
       }
       
-      return new NextResponse(html, {
-        status: 200,
-        headers: { 'Content-Type': 'text/html;charset=UTF-8' }
+      // ✅ JSON 반환 (HTML은 반환하지 않음)
+      return NextResponse.json({
+        success: true,
+        method: 'CARD',
+        mid,
+        goodsNm: selected.name,
+        ordNo,
+        goodsAmt,
+        ordNm: session.user.name || '구매자',
+        ordEmail: session.user.email,
+        returnUrl,
+        ediDate,
+        hashString,
       })
     }
 

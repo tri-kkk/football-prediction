@@ -196,28 +196,7 @@ export default function PricingPage() {
       // ✅ Content-Type 확인 (HTML vs JSON)
       const contentType = res.headers.get('content-type')
       
-      if (contentType?.includes('text/html')) {
-        // ✅ HTML 결제 페이지를 새 창에서 열기
-        console.log('✅ [Payment] HTML 결제 페이지 받음, 새 창 열기')
-        
-        // ✅ Blob URL 생성 (document.write 대신 사용)
-        const html = await res.text()
-        const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-        const blobUrl = URL.createObjectURL(blob)
-        
-        // 새 창 열기
-        const newWindow = window.open(blobUrl, 'SeedPayment', 'width=1000,height=800')
-        if (newWindow) {
-          console.log('✅ [Payment] 새 창에 결제 페이지 표시 완료')
-        } else {
-          console.error('❌ [Payment] 새 창 열기 실패')
-          throw new Error('새 창을 열 수 없습니다. 팝업 차단을 해제해주세요.')
-        }
-        setLoading(false)
-        return
-      }
-
-      // JSON 응답 처리
+      // JSON 응답만 처리
       const data = await res.json()
 
       if (!data.success) {
@@ -226,15 +205,56 @@ export default function PricingPage() {
 
       console.log('✅ [Payment] Init API 응답 성공')
 
-      // ✅ nonce와 ediDate를 sessionStorage에 저장 (Hash 검증용)
-      if (data.nonce) {
-        sessionStorage.setItem('seedpay_nonce', data.nonce)
-        console.log('✅ nonce를 sessionStorage에 저장')
+      // ✅ 현재 페이지 위에 overlay 생성
+      const overlay = document.createElement('div')
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999'
+      document.body.appendChild(overlay)
+
+      // ✅ iframe 생성
+      const iframe = document.createElement('iframe')
+      iframe.name = 'seedpay_iframe'
+      iframe.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:900px;height:700px;border:none;border-radius:8px;z-index:10000'
+      document.body.appendChild(iframe)
+
+      // ✅ Form POST를 iframe에서 실행
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = 'https://pay.seedpayments.co.kr/payment/v1/view/request'
+      form.target = 'seedpay_iframe'
+      form.style.display = 'none'
+
+      // Form 필드 추가
+      const fields: Record<string, string> = {
+        method: data.method,
+        mid: data.mid,
+        goodsNm: data.goodsNm,
+        ordNo: data.ordNo,
+        goodsAmt: data.goodsAmt,
+        ordNm: data.ordNm,
+        ordEmail: data.ordEmail,
+        returnUrl: data.returnUrl,
+        ediDate: data.ediDate,
+        hashString: data.hashString,
       }
-      if (data.ediDate) {
-        sessionStorage.setItem('seedpay_ediDate', data.ediDate)
-        console.log('✅ ediDate를 sessionStorage에 저장')
-      }
+
+      Object.entries(fields).forEach(([key, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = key
+        input.value = value
+        form.appendChild(input)
+      })
+
+      document.body.appendChild(form)
+      console.log('📤 [Payment] iframe에 Form POST 전송')
+      form.submit()
+
+      setLoading(false)
+      return
+
+      // JSON 응답 처리 (위에서 반환되었으므로 실행 안 됨)
+
+      // ✅ nonce와 ediDate는 더 이상 필요 없음 (Form POST로 직접 전송)
       
       // ✅ null인 약관 4번을 우리 약관으로 채우기
       if (data.data && Array.isArray(data.data)) {
@@ -249,69 +269,8 @@ export default function PricingPage() {
         })
       }
 
-      // 2. 기존 Form 제거
-      const existingForm = document.querySelector('form[name="payInit"]')
-      if (existingForm) existingForm.remove()
-
-      // 3. Form 생성 (같은 페이지에서 처리)
-      const form = document.createElement('form')
-      form.name = 'payInit'
-      form.method = 'post'
-      form.action = 'https://pay.seedpayments.co.kr/payment/v1/view/request'
-      form.style.display = 'none'
-
-      // Form 필드 추가 (이전 버전과 정확히 동일)
-      const fields: Record<string, string> = {
-        method: 'CARD',
-        mid: data.mid,
-        goodsNm: data.goodsNm,
-        ordNo: data.ordNo,
-        goodsAmt: data.goodsAmt,
-        ordNm: data.ordNm,
-        ordEmail: data.ordEmail,
-        returnUrl: data.returnUrl,
-        ediDate: data.ediDate,
-        hashString: data.hashString,
-        initEdiDate: data.ediDate,  // ✅ 추가!
-        //nonce: data.nonce,  // ✅ 추가!
-      }
-
-      // Form에 필드 추가
-      Object.entries(fields).forEach(([name, value]) => {
-        const input = document.createElement('input')
-        input.type = 'hidden'
-        input.name = name
-        input.value = value
-        form.appendChild(input)
-      })
-
-      // ✅ sessionStorage 저장
-      if (data.ediDate) {
-        sessionStorage.setItem('seedpay_ediDate', data.ediDate)
-      }
-      if (data.nonce) {
-        sessionStorage.setItem('seedpay_nonce', data.nonce)
-      }
-
-      // 🔍 Form action 확인
-      console.log('🔍 [Payment] Form action:', form.action)
-      console.log('📋 Form 필드 개수:', form.children.length)
-
-      // ✅ 주 창에서 Form 생성 및 SendPay 호출 (팝업 아님)
-      document.body.appendChild(form)
-
-      // ✅ SendPay 함수 사용 (주 창에서)
-      setTimeout(() => {
-        if (window.SendPay && typeof window.SendPay === 'function') {
-          console.log('📱 [Payment] 주 창에서 SendPay 함수로 결제 창 오픈')
-          window.SendPay(form)
-        } else {
-          console.warn('⚠️ [Payment] SendPay 함수 없음, 직접 submit 실행')
-          form.submit()
-        }
-      }, 100)
-      
-      setLoading(false)
+      // ✅ 주석: Form POST는 위에서 이미 실행됨 (return 문으로 끝남)
+      // 아래 코드는 도달하지 않음
 
     } catch (err) {
       console.error('[Payment] 에러:', err)
