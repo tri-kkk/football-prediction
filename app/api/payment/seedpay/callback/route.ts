@@ -229,24 +229,13 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
     if (approvalData.resultCd !== '0000') {
       console.error('❌ 승인 실패:', approvalData.resultMsg)
       
-      await supabase.from('payments').upsert({
-        order_id: data.ordNo,
-        status: 'failed',
-        result_code: approvalData.resultCd,
-        result_message: approvalData.resultMsg,
-        mid: mid,
-        tid: data.tid,
-        amount: parseInt(data.goodsAmt) || 0,
-        payment_method: data.method,
-        raw_response: JSON.stringify(approvalData),
-      }, { onConflict: 'order_id' })
-
-      return { error: approvalData.resultMsg || '승인 실패', status: 400 }
+      // ✅ 승인 실패해도 계속 진행해서 user 정보 저장
+      // (아래 payment_sessions 조회 로직은 필수)
+    } else {
+      console.log('✅ [Callback] 승인 완료! (resultCd: 0000)')
     }
 
-    console.log('✅ [Callback] 승인 완료! (resultCd: 0000)')
-
-    // 결제 성공 처리
+    // 결제 금액 확인
     const amount = parseInt(data.goodsAmt) || 0
     console.log('💰 [Callback] 결제 금액:', amount)
 
@@ -262,14 +251,14 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
     // DB 저장 - Payments
     console.log('💾 [DB] payments 테이블에 저장 시작:', {
       ordNo: data.ordNo,
-      status: 'success',
+      status: approvalData.resultCd === '0000' ? 'success' : 'failed',
       tid: data.tid,
       appNo: approvalData.appNo,
     })
 
     const { error: payError } = await supabase.from('payments').upsert({
       order_id: data.ordNo,
-      status: 'success',
+      status: approvalData.resultCd === '0000' ? 'success' : 'failed',
       payment_method: data.method,
       amount,
       tid: data.tid,
