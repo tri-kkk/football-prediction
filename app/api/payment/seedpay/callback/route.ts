@@ -168,16 +168,17 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       mbsReserved: data.mbsReserved || '',
     }
 
-    const approvalResponse = await fetch(
-      'https://pay.seedpayments.co.kr/payment/v1/approval',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(approvalBody),
-      }
-    )
+    // ✅ Callback에서 받은 approvalUrl 사용
+    const approvalUrl = data.approvalUrl || 'https://pay.seedpayments.co.kr/payment/v1/approval'
+    console.log('📍 [Approval] 승인 요청 URL:', approvalUrl)
+
+    const approvalResponse = await fetch(approvalUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(approvalBody),
+    })
 
     const approvalData = await approvalResponse.json()
 
