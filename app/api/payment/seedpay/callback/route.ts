@@ -164,14 +164,14 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
 
     // ✅ SeedPay 공식 필드명 (승인 요청)
     const approvalBody = {
-      nonce: data.nonce,
+      nonce: data.nonce || '',  // ✅ 빈 문자열 (없으면)
       tid: data.tid,
       mid: mid,  // ✅ mId → mid (소문자 i)
       goodsAmt: data.goodsAmt,  // ✅ amount → goodsAmt
       ediDate: ediDate,
       mbsReserved: data.mbsReserved || '',
       hashString: approvalHash,
-      payData: payData,
+      payData: payData || '',  // ✅ 빈 문자열 (없으면)
     }
 
     // ✅ Callback에서 받은 approvalUrl 사용
