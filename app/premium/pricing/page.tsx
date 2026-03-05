@@ -197,20 +197,21 @@ export default function PricingPage() {
       const contentType = res.headers.get('content-type')
       
       if (contentType?.includes('text/html')) {
-        // ✅ HTML 결제 페이지를 팝업에서 열기
-        console.log('✅ [Payment] HTML 결제 페이지 받음, 팝업 열기')
-        const html = await res.text()
+        // ✅ HTML 결제 페이지를 새 창에서 열기
+        console.log('✅ [Payment] HTML 결제 페이지 받음, 새 창 열기')
         
-        // ✅ Blob URL 방식으로 변경
+        // ✅ Blob URL 생성 (document.write 대신 사용)
+        const html = await res.text()
         const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
         const blobUrl = URL.createObjectURL(blob)
         
-        const popup = window.open(blobUrl, 'SeedPayment', 'width=800,height=600,top=100,left=100')
-        if (popup) {
-          console.log('✅ [Payment] 팝업 창에 결제 페이지 표시 완료')
+        // 새 창 열기
+        const newWindow = window.open(blobUrl, 'SeedPayment', 'width=1000,height=800')
+        if (newWindow) {
+          console.log('✅ [Payment] 새 창에 결제 페이지 표시 완료')
         } else {
-          console.error('❌ [Payment] 팝업 차단됨 - 팝업 차단 설정 확인')
-          throw new Error('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.')
+          console.error('❌ [Payment] 새 창 열기 실패')
+          throw new Error('새 창을 열 수 없습니다. 팝업 차단을 해제해주세요.')
         }
         setLoading(false)
         return
