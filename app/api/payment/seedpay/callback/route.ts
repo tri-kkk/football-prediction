@@ -100,14 +100,13 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       console.log('⚠️ [Approval] SeedPay가 hashString을 보내지 않음, 직접 계산')
       
       // 🔍 Hash 입력값 상세 로깅
-      // 공식: SHA256(tid + mid + ediDate + goodsAmt + ordNo + merchantKey)
-      const hashInput = data.tid + mid + ediDate + data.goodsAmt + data.ordNo + merchantKey
+      // ✅ 정확한 공식: SHA256(mid + ediDate + goodsAmt + merchantKey)
+      // (tid, ordNo는 포함하면 안됨!)
+      const hashInput = mid + ediDate + data.goodsAmt + merchantKey
       console.log('🔐 [Approval] Hash 입력값 상세:', {
-        tid: data.tid,
         mid: mid,
         ediDate: ediDate,
         goodsAmt: data.goodsAmt,
-        ordNo: data.ordNo,
         merchantKeyLength: merchantKey.length,
         merchantKeyFirst20: merchantKey.substring(0, 20),
         totalInputLength: hashInput.length,
@@ -120,17 +119,15 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
         .digest('hex')
       
       console.log('🔐 [Approval] 해시 생성:', {
-        hashInput: `${data.tid} + ${mid} + ${ediDate} + ${data.goodsAmt} + ${data.ordNo} + ***merchantKey***`,
+        hashInput: `${mid} + ${ediDate} + ${data.goodsAmt} + ***merchantKey***`,
         hashString: approvalHash,
       })
       
       // 🔍 Hash 검증용 상세 로깅
       console.log('🔐 [Approval] Hash 검증 정보:', {
-        tid: data.tid,
         mid: mid,
         ediDate: ediDate,
         goodsAmt: data.goodsAmt,
-        ordNo: data.ordNo,
         merchantKeyLength: merchantKey.length,
         merchantKeyFirst20: merchantKey.substring(0, 20),
         merchantKeyLast10: merchantKey.substring(merchantKey.length - 10),
@@ -148,7 +145,7 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       tid: data.tid.substring(0, 10) + '***',
       ediDate: ediDate,
       mid: mid.substring(0, 5) + '***',  // ✅ mId → mid
-      amount: data.goodsAmt,
+      goodsAmt: data.goodsAmt,  // ✅ amount → goodsAmt
       payData: payData ? '있음' : '없음',
       hashString: approvalHash.substring(0, 20) + '...',
     })
@@ -159,7 +156,7 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
       tid: data.tid,
       ediDate: ediDate,
       mid: mid,  // ✅ mId → mid
-      amount: data.goodsAmt,
+      goodsAmt: data.goodsAmt,  // ✅ amount → goodsAmt
       hashString: approvalHash,
       payData: payData || '없음',
       mbsReserved: data.mbsReserved ? data.mbsReserved.substring(0, 30) + '...' : '',
@@ -169,12 +166,12 @@ async function handleCallback(data: Record<string, string>, request?: NextReques
     const approvalBody = {
       nonce: data.nonce,
       tid: data.tid,
+      mid: mid,  // ✅ mId → mid (소문자 i)
+      goodsAmt: data.goodsAmt,  // ✅ amount → goodsAmt
       ediDate: ediDate,
-      mid: mid,
-      amount: data.goodsAmt,
+      mbsReserved: data.mbsReserved || '',
       hashString: approvalHash,
       payData: payData,
-      mbsReserved: data.mbsReserved || '',
     }
 
     // ✅ Callback에서 받은 approvalUrl 사용
