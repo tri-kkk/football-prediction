@@ -5,6 +5,13 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '../../contexts/LanguageContext'
 
+// ✅ SeedPay pgAsistant.js 동적 로드
+declare global {
+  interface Window {
+    SendPay?: (form: HTMLFormElement, mode?: string) => void
+  }
+}
+
 export default function PricingPage() {
   const { language } = useLanguage()
   const { data: session } = useSession()
@@ -13,9 +20,22 @@ export default function PricingPage() {
   const [mounted, setMounted] = useState(false)
   const [showMaintenance, setShowMaintenance] = useState(false)  // ✅ 유지보수 모달
 
-  // ✅ Hydration 문제 해결
+  // ✅ pgAsistant.js 로드
   useEffect(() => {
-    setMounted(true)
+    const script = document.createElement('script')
+    script.src = 'https://pay.seedpayments.co.kr/js/pgAsistant.js'
+    script.async = true
+    script.onload = () => {
+      console.log('✅ [Payment] pgAsistant.js 로드 완료')
+    }
+    script.onerror = () => {
+      console.error('❌ [Payment] pgAsistant.js 로드 실패')
+    }
+    document.head.appendChild(script)
+    
+    return () => {
+      // cleanup 불필요 (스크립트는 재사용)
+    }
   }, [])
 
   // ✅ SeedPay postMessage 수신 (payData2에서 보냄)
@@ -252,21 +272,26 @@ export default function PricingPage() {
       console.log('🔍 [Payment] Form action:', form.action)
       console.log('📋 Form 필드 개수:', form.children.length)
 
-      // ✅ 팝업 창으로 결제 화면 열기 (이전 버전과 동일)
+      // ✅ 팝업 창으로 결제 화면 열기 → SendPay 함수 사용
       const popup = window.open('', 'SeedPayment', 'width=1000,height=900,left=50,top=50')
       
       if (popup) {
         // 팝업에 form 추가
         popup.document.open()
-        popup.document.write('<html><head><meta charset="UTF-8"></head><body></body></html>')
+        popup.document.write('<html><head><meta charset="UTF-8"><script src="https://pay.seedpayments.co.kr/js/pgAsistant.js"><\/script></head><body></body></html>')
         popup.document.close()
         
         popup.document.body.appendChild(form)
         
-        // 폼 서브밋
+        // ✅ SendPay 함수 사용 (직접 submit 대신)
         setTimeout(() => {
-          popup.document.querySelector('form')?.submit()
-          console.log('📱 [Payment] 팝업 창에서 결제 화면 오픈')
+          if (popup.window.SendPay && typeof popup.window.SendPay === 'function') {
+            console.log('📱 [Payment] SendPay 함수로 결제 창 오픈')
+            popup.window.SendPay(popup.document.querySelector('form') as HTMLFormElement)
+          } else {
+            console.warn('⚠️ [Payment] SendPay 함수 없음, 직접 submit 실행')
+            popup.document.querySelector('form')?.submit()
+          }
         }, 100)
       } else {
         console.error('❌ [Payment] 팝업 창 열기 실패 (팝업 차단됨)')
