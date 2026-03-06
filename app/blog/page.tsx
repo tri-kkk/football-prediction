@@ -133,14 +133,6 @@ export default function BlogPage() {
                 alt={getTitle(post)}
                 className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
               />
-              <div className="absolute top-3 left-3">
-                <span className="px-2.5 py-1 bg-[#A3FF4C]/90 backdrop-blur-sm text-gray-900 text-xs font-bold rounded-full">
-                  {currentLanguage === 'ko' 
-                    ? categories.find(c => c.value === post.category)?.labelKo 
-                    : categories.find(c => c.value === post.category)?.labelEn
-                  }
-                </span>
-              </div>
               {currentLanguage === 'en' && !post.content_en && (
                 <div className="absolute top-3 right-3">
                   <span className="px-2 py-1 bg-gray-900/80 backdrop-blur-sm text-gray-300 text-xs rounded">

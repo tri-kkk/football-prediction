@@ -166,56 +166,20 @@ export default function BlogPreviewSidebar({ darkMode }: BlogPreviewSidebarProps
                     alt={getTitle(post)}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {
-                      // 이미지 로드 실패 시 플레이스홀더
                       e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="280" height="157"><rect width="280" height="157" fill="%23334155"/><text x="50%" y="50%" fill="%239CA3AF" font-size="40" text-anchor="middle" dominant-baseline="middle">⚽</text></svg>'
                     }}
                   />
-                  {/* 카테고리 배지 */}
-                  <div className="absolute top-2 left-2">
-                    {(() => {
-                      const cat = post.category?.toLowerCase().trim()
-                      return (
-                        <span className={`px-2 py-1 text-white text-xs font-bold rounded-full shadow-lg ${
-                          cat === 'preview' 
-                            ? 'bg-gradient-to-r from-rose-500 to-pink-500' 
-                            : cat === 'weekly' 
-                            ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                            : cat === 'news'
-                            ? 'bg-green-500/90'
-                            : 'bg-gray-500/90'
-                        }`}>
-                          {language === 'ko' 
-                            ? (cat === 'preview' ? '경기 프리뷰' 
-                              : cat === 'weekly' ? '주간 분석' 
-                              : cat === 'news' ? '뉴스' 
-                              : post.category)
-                            : (cat === 'preview' ? 'Preview' 
-                              : cat === 'weekly' ? 'Weekly' 
-                              : cat === 'news' ? 'News' 
-                              : post.category)
-                          }
-                        </span>
-                      )
-                    })()}
-                  </div>
                 </div>
               )}
 
               {/* 내용 */}
               <div className="p-3">
                 {/* 제목 */}
-                <h4 className={`text-sm font-bold mb-2 line-clamp-2 group-hover:text-blue-400 transition ${
+                <h4 className={`text-sm font-bold line-clamp-2 group-hover:text-blue-400 transition ${
                   darkMode ? 'text-white' : 'text-gray-900'
                 }`}>
                   {getTitle(post)}
                 </h4>
-
-                {/* 날짜 */}
-                <div className={`text-xs ${
-                  darkMode ? 'text-slate-400' : 'text-gray-500'
-                }`}>
-                  📅 {formatDate(post.published_at)}
-                </div>
               </div>
             </div>
           </Link>
