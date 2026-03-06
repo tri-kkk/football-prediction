@@ -619,9 +619,12 @@ async function fetchTeamNews(teamName: string, matchDate: string, leagueName: st
       published_before: publishedBefore,
     })
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
     const res = await fetch(`https://api.thenewsapi.com/v1/news/all?${params}`, {
-      next: { revalidate: 3600 }
-    })
+      next: { revalidate: 3600 },
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId))
     if (!res.ok) { console.error(`fetchTeamNews [${teamName}] error: ${res.status}`); return [] }
 
     const data = await res.json()
@@ -1495,7 +1498,15 @@ export async function GET(request: NextRequest) {
     const results: any[] = []
     let generated = 0, skipped = 0, failed = 0, noData = 0
     
+    const TIMEOUT_MS = 700 * 1000 // 700초 (Pro 플랜 800초 제한 여유)
+
     for (const match of supportedMatches) {
+      // 타임아웃 임박 시 조기 종료 (남은 경기는 다음 실행에서 처리)
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        console.log(`⏱️ Timeout guard: stopping after ${generated} generated (${supportedMatches.indexOf(match)}/${supportedMatches.length})`)
+        break
+      }
+
       const leagueInfo = LEAGUE_INFO[match.league_code]
       const slug = generateSlug(match.home_team, match.away_team, match.league_code, match.commence_time)
       
