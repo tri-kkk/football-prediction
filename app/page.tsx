@@ -2556,6 +2556,24 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         </Link>
 
 
+        {/* 🎁 48시간 무료 체험 배너 - 비로그인 유저만 */}
+        {!session && (
+          <Link href="/login" className="block mb-3 active:scale-[0.99] transition-transform">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-yellow-500/25" style={{ background: 'rgba(234,179,8,0.06)' }}>
+              <span className="text-xl flex-shrink-0">🎁</span>
+              <div className="flex-1 min-w-0">
+                <span className="text-yellow-400 font-bold text-sm">
+                  {currentLanguage === 'ko' ? '가입만 해도 48시간 프리미엄 무료 체험' : '48-Hour Free Premium Trial on Sign Up'}
+                </span>
+              
+              </div>
+              <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
+        )}
+
         {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
         <div className="mb-4 md:mb-8">
           <div className="flex items-center justify-center gap-4">

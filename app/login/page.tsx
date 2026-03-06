@@ -173,27 +173,15 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* 🎉 프로모션 배너 */}
-        {isPromoPeriod && !refCode && (
-          <div className="bg-gradient-to-r from-[#1a2a1a] to-[#1a1a2a] border border-green-500/30 rounded-2xl p-5 mb-6">
-            <div className="text-center">
-              <div className="inline-block px-3 py-1 bg-green-500/20 rounded-full mb-3">
-                <span className="text-green-400 text-xs font-bold tracking-wider">OPEN EVENT</span>
-              </div>
-              <h3 className="text-white font-bold text-lg mb-2">
-                {language === 'ko' ? '2월 28일까지 가입하면' : 'Sign up by Feb 28'}
-              </h3>
-              <p className="text-2xl font-black" style={{ 
-                background: 'linear-gradient(to right, #22d3ee, #34d399)', 
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}>
-                {language === 'ko' ? '프리미엄 예측픽 무료' : 'FREE Premium Picks'}
+        {/* 🎁 48시간 무료 체험 배너 */}
+        {!refCode && (
+          <div className="border border-yellow-500/25 rounded-2xl p-4 mb-6 flex items-center gap-4" style={{ background: 'rgba(234,179,8,0.06)' }}>
+            <span className="text-2xl flex-shrink-0">🎁</span>
+            <div>
+              <p className="text-yellow-400 font-bold text-sm">
+                {language === 'ko' ? '신규 가입 시 48시간 프리미엄 무료 체험' : '48-Hour Free Premium Trial'}
               </p>
-              <p className="text-gray-500 text-xs mt-2">
-                {language === 'ko' ? '* 프로모션 기간: ~2026.02.28' : '* Promo period: ~2026.02.28'}
-              </p>
+              
             </div>
           </div>
         )}
@@ -247,8 +235,7 @@ export default function LoginPage() {
           </div>
 
           {/* 프리미엄 혜택 안내 */}
-          {isPromoPeriod && (
-            <div className="mt-6 pt-6 border-t border-gray-800">
+          <div className="mt-6 pt-6 border-t border-gray-800">
               <div className="text-gray-500 text-xs mb-3 text-center tracking-wider">PREMIUM BENEFITS</div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="flex items-center gap-2 text-gray-400 bg-[#111] rounded-lg px-3 py-2">
@@ -269,7 +256,6 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
-          )}
 
           {/* 🎫 프로토 계산기 배너 - 한국어만 */}
           {language === 'ko' && (
