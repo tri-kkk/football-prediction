@@ -628,6 +628,19 @@ export default function Home() {
   const [sidebarNews, setSidebarNews] = useState<any[]>([])
   // 🔴 라이브 경기 수
   const [liveCount, setLiveCount] = useState(0)
+
+  // ✅ 체험판 만료 모달
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false)
+
+  useEffect(() => {
+    if (!session?.user) return
+    const trialUsed = (session.user as any)?.trialUsed
+    const tier = (session.user as any)?.tier
+    if (trialUsed === true && tier === 'free') {
+      const dismissed = sessionStorage.getItem('trial_expired_dismissed')
+      if (!dismissed) setShowTrialExpiredModal(true)
+    }
+  }, [session])
   // 🔴 라이브 스코어 실시간 데이터
   const [liveScores, setLiveScores] = useState<Record<number, { 
     homeScore: number, 
@@ -2114,6 +2127,68 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
+
+      {/* ✅ 체험판 만료 모달 */}
+      {showTrialExpiredModal && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-md" onClick={() => { setShowTrialExpiredModal(false); sessionStorage.setItem('trial_expired_dismissed', '1') }} />
+
+          <div className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#111111' }}>
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/60 to-transparent" />
+
+            {/* 닫기 */}
+            <button
+              onClick={() => { setShowTrialExpiredModal(false); sessionStorage.setItem('trial_expired_dismissed', '1') }}
+              className="absolute top-4 right-4 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+
+            {/* 헤더 */}
+            <div className="px-6 pt-8 pb-6 text-center" style={{ background: 'linear-gradient(180deg, #1a1200 0%, #111111 100%)' }}>
+              <p className="text-amber-500 text-xs font-bold tracking-widest uppercase mb-3">
+                {currentLanguage === 'ko' ? '프리미엄 체험 종료' : 'Premium Trial Ended'}
+              </p>
+              
+              
+              <p className="text-gray-500 text-sm">
+                {currentLanguage === 'ko' ? '계속 이용하려면 구독이 필요해요' : 'Subscribe to keep all features'}
+              </p>
+            </div>
+
+            {/* 심플 혜택 */}
+            <div className="px-6 pb-2 space-y-2.5 text-center">
+              {[
+                { ko: 'PICK 상세 분석 & 신뢰도 점수', en: 'Full PICK Analysis & Confidence Score' },
+                { ko: '광고 없는 쾌적한 이용', en: 'Completely Ad-free' },
+                { ko: '24시간 전 예측 선공개', en: '24h Early Predictions' },
+              ].map((item, i) => (
+                <p key={i} className="text-gray-300 text-sm">{currentLanguage === 'ko' ? item.ko : item.en}</p>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="p-6 pt-5">
+              <Link
+                href="/premium/pricing"
+                onClick={() => { setShowTrialExpiredModal(false); sessionStorage.setItem('trial_expired_dismissed', '1') }}
+                className="block w-full py-4 rounded-2xl text-center font-black text-base text-black active:scale-[0.98] transition-transform"
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}
+              >
+                {currentLanguage === 'ko' ? '월 4,900원으로 구독하기 →' : 'Subscribe from ₩9,900/mo →'}
+              </Link>
+              <button
+                onClick={() => { setShowTrialExpiredModal(false); sessionStorage.setItem('trial_expired_dismissed', '1') }}
+                className="w-full py-3 text-gray-600 hover:text-gray-400 text-sm transition-colors"
+              >
+                {currentLanguage === 'ko' ? '무료로 계속하기' : 'Continue for free'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {/* SEO용 H1 태그 - 화면에서 숨김 */}
       <h1 className="sr-only">
         실시간 해외축구 경기 예측 & 프리뷰 플랫폼 · Trend Soccer
@@ -2565,7 +2640,9 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                 <span className="text-yellow-400 font-bold text-sm">
                   {currentLanguage === 'ko' ? '가입만 해도 48시간 프리미엄 무료 체험' : '48-Hour Free Premium Trial on Sign Up'}
                 </span>
-              
+                <span className="text-gray-500 text-xs ml-2">
+                  {currentLanguage === 'ko' ? '신용카드 불필요' : 'No card required'}
+                </span>
               </div>
               <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
