@@ -190,7 +190,7 @@ export default function SignupCompletePage() {
           </ol>
 
           <Link
-            href="/premium"
+            href="/premium/pricing"
             className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold rounded-lg transition-all duration-200 active:scale-[0.98] text-center block text-sm"
           >
             {language === 'ko' ? 'Premium으로 업그레이드' : 'Upgrade to Premium'}
