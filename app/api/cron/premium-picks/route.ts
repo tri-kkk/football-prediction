@@ -47,12 +47,19 @@ export async function GET(request: Request) {
     const validDate = kstNow.toISOString().split('T')[0] // YYYY-MM-DD
     
     console.log('📅 Valid Date (KST):', validDate)
-    
-    // 2. 기존 오늘 픽 삭제
-    await supabase
-      .from('premium_picks')
-      .delete()
-      .eq('valid_date', validDate)
+
+    // 2. KST 18:00 메인 배치면 전체 갱신, 그 외엔 추가만 (중복 방지)
+    const kstHour = kstNow.getUTCHours()
+    const isMainBatch = kstHour >= 18
+    console.log(`📌 Batch mode: ${isMainBatch ? '전체 갱신 (KST 18:00)' : '추가만 (중간 배치)'}`)
+
+    if (isMainBatch) {
+      await supabase
+        .from('premium_picks')
+        .delete()
+        .eq('valid_date', validDate)
+      console.log('🗑️ 기존 픽 삭제 완료')
+    }
     
     // 3. 경기 데이터 가져오기 (현재 ~ 24시간 이내)
     let allMatches: any[] = []
@@ -164,9 +171,29 @@ export async function GET(request: Request) {
     
     console.log('💎 Premium Picks filtered:', premiumPicks.length)
     
-    // 7. DB에 저장
+    // 7. DB에 저장 (중간 배치는 중복 방지)
     if (premiumPicks.length > 0) {
-      const picksToInsert = premiumPicks.map(m => ({
+      let picksToSave = premiumPicks
+
+      if (!isMainBatch) {
+        // 이미 저장된 match_id 조회
+        const { data: existing } = await supabase
+          .from('premium_picks')
+          .select('match_id')
+          .eq('valid_date', validDate)
+        const existingIds = new Set((existing || []).map((p: any) => p.match_id))
+        // 중복 제거
+        picksToSave = premiumPicks.filter(m => {
+          const matchId = m.match_id?.toString() || m.id?.toString()
+          return !existingIds.has(matchId)
+        })
+        console.log(`📌 중간 배치 추가: ${picksToSave.length}개 (중복 ${premiumPicks.length - picksToSave.length}개 스킵)`)
+      }
+
+      if (picksToSave.length === 0) {
+        console.log('⏭️ 추가할 새 픽 없음')
+      } else {
+      const picksToInsert = picksToSave.map(m => ({
         match_id: m.match_id?.toString() || m.id?.toString(),
         home_team: m.home_team,
         away_team: m.away_team,
@@ -189,6 +216,7 @@ export async function GET(request: Request) {
         console.error('DB Insert error:', error)
         throw error
       }
+      } // end picksToSave.length > 0
     }
     
     // 8. 오래된 데이터 정리 (7일 이상)

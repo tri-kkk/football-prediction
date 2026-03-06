@@ -1942,6 +1942,16 @@ export default function PremiumPredictPage() {
     loadUpcomingMatches()
     loadPickAccuracy()  // ✅ PICK 적중률 로드
   }, [])
+
+  // ✅ 픽 없을 때 5분마다 재시도 (KST 18:00 픽 생성 대비)
+  useEffect(() => {
+    if (!noPremiumPicks) return
+    const interval = setInterval(() => {
+      console.log('🔄 Retrying premium picks...')
+      loadPremiumPicks()
+    }, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [noPremiumPicks])
   
   // 🔥 프리미엄 픽 로드 함수 (DB에서 조회)
   const loadPremiumPicks = async () => {
