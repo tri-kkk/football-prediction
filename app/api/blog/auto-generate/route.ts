@@ -408,6 +408,124 @@ const TEAM_NAME_KO: Record<string, string> = {
   'Austin FC': '오스틴 FC',
   'St. Louis City SC': '세인트루이스 시티', 'St Louis City SC': '세인트루이스 시티',
   'Colorado Rapids': '콜로라도 래피즈',
+  'San Diego FC': '샌디에이고 FC', 'San Diego': '샌디에이고 FC',
+
+  // PL 축약/변형
+  "Nott'm Forest": '노팅엄', 'Nottm Forest': '노팅엄',
+  'Man City': '맨시티', 'Man United': '맨유', 'Man Utd': '맨유', 'Spurs': '토트넘',
+
+  // La Liga 특수문자 변형
+  'Atlético Madrid': '아틀레티코', 'Atlético de Madrid': '아틀레티코',
+  'Atletico de Madrid': '아틀레티코',
+
+  // Bundesliga 누락/변형
+  'VfL Bochum': '보훔', 'Bochum': '보훔',
+  '1. FC Köln': '쾰른', 'FC Köln': '쾰른', 'Koln': '쾰른', '1. FC Koln': '쾰른',
+  'Hamburger SV': '함부르크', 'Hamburg': '함부르크', 'HSV': '함부르크',
+  'Hannover 96': '하노버', 'Hannover': '하노버',
+  'SV Werder Bremen': '브레멘',
+  'Stuttgart': '슈투트가르트',
+  'Frankfurt': '프랑크푸르트',
+  'Bayer 04 Leverkusen': '레버쿠젠', 'Leverkusen': '레버쿠젠',
+  'RasenBallsport Leipzig': '라이프치히', 'Leipzig': '라이프치히',
+  "Borussia M'gladbach": '묀헨글라트바흐', 'Gladbach': '묀헨글라트바흐',
+  'Mönchengladbach': '묀헨글라트바흐', 'Borussia Mönchengladbach': '묀헨글라트바흐',
+  'Union Berlin': '우니온 베를린',
+  'Heidenheim': '하이덴하임', 'FC Heidenheim 1846': '하이덴하임',
+  'St. Pauli': '장크트 파울리',
+  'Mainz': '마인츠', 'Mainz 05': '마인츠',
+
+  // Serie A 변형/승격팀
+  'FC Inter': '인터', 'Internazionale': '인터', 'FC Internazionale': '인터',
+  'Juventus FC': '유벤투스',
+  'Hellas Verona': '베로나',
+  'Cremonese': '크레모네세', 'US Cremonese': '크레모네세',
+  'Spezia': '스페치아', 'Spezia Calcio': '스페치아',
+  'Sassuolo': '사수올로', 'US Sassuolo': '사수올로', 'US Sassuolo Calcio': '사수올로',
+  'Sampdoria': '삼프도리아', 'UC Sampdoria': '삼프도리아',
+  'Pisa SC': '피사', 'SC Pisa 1909': '피사',
+
+  // Ligue 1 변형
+  'Olympique de Marseille': '마르세유',
+  'OL': '리옹',
+  'LOSC Lille': '릴', 'LOSC': '릴',
+  'Paris SG': 'PSG', 'PSG': 'PSG',
+  'AS Monaco FC': '모나코',
+  'Stade Rennais': '렌',
+  'HAC': '르아브르',
+  'AS Saint-Étienne': '생테티엔', 'Saint-Étienne': '생테티엔',
+
+  // Eredivisie 변형
+  'Groningen': '흐로닝언',
+  'Utrecht': '위트레흐트',
+  'Heerenveen': '헤이렌베인',
+  'Almere City': '알머르 시티',
+  'RKC': 'RKC 발베이크',
+  'Zwolle': 'PEC 즈볼레',
+  'Excelsior': '엑셀시오르', 'SBV Excelsior': '엑셀시오르',
+  'NAC': 'NAC 브레다',
+  'Heracles': '헤라클레스',
+
+  // K League 1 축약/변형
+  'Jeonbuk Hyundai': '전북 현대',
+  'Ulsan': '울산 HD', 'Ulsan HD FC': '울산 HD',
+  'Seoul': 'FC 서울',
+  'Suwon': '수원 삼성',
+  'Pohang': '포항 스틸러스',
+  'Jeju': '제주 유나이티드',
+  'Incheon': '인천 유나이티드',
+  'Daegu': '대구 FC',
+  'Gangwon': '강원 FC',
+  'Gwangju': '광주 FC',
+  'Daejeon': '대전 시티즌',
+  'Gimcheon': '김천 상무',
+  'Seongnam FC': '성남 FC', 'Seongnam': '성남 FC',
+  'Chungbuk Cheongju FC': '충북 청주', 'Chungbuk Cheongju': '충북 청주',
+  'Jeongnam Dragons': '전남 드래곤즈',
+
+  // K League 2 축약/변형
+  'Bucheon': '부천 FC',
+  'Chungnam': '충남 아산',
+  'Anyang': '안양 FC',
+  'Gyeongnam': '경남 FC',
+  'Jeonnam': '전남 드래곤즈',
+  'Ansan': '안산 그리너스',
+  'Gimpo': '김포 FC',
+  'Cheonan': '천안 시티',
+  'Cheongju': '청주 FC',
+
+  // J1 League 변형/승격팀
+  'Vissel Kobe FC': '비셀 고베',
+  'Yokohama Marinos': '요코하마 F 마리노스', 'Yokohama FM': '요코하마 F 마리노스',
+  'Kawasaki': '가와사키 프론탈레',
+  'Urawa': '우라와 레즈',
+  'Kashima': '가시마 앤틀러스',
+  'Tokyo': 'FC 도쿄',
+  'Nagoya': '나고야 그램퍼스',
+  'Hiroshima': '산프레체 히로시마', 'Sanfrecce': '산프레체 히로시마',
+  'Cerezo': '세레소 오사카',
+  'Gamba': '감바 오사카',
+  'Sapporo': '콘사돌레 삿포로', 'Consadole': '콘사돌레 삿포로',
+  'Fukuoka': '아비스파 후쿠오카', 'Avispa': '아비스파 후쿠오카',
+  'Sagan': '사간 도스',
+  'Kyoto': '교토 상가',
+  'Niigata': '알비렉스 니가타',
+  'Tokyo Verdy FC': '도쿄 베르디',
+  'Jubilo': '주빌로 이와타', 'Iwata': '주빌로 이와타',
+  'Zelvia': '마치다 젤비아', 'Machida': '마치다 젤비아',
+  'Shonan Bellmare': '쇼난 벨마레', 'Shonan': '쇼난 벨마레',
+  'Vegalta Sendai': '베갈타 센다이', 'Sendai': '베갈타 센다이',
+  'Kashiwa Reysol': '가시와 레이솔', 'Kashiwa': '가시와 레이솔',
+
+  // J2 League 추가 팀
+  'Omiya Ardija': '오미야 아르디자', 'Omiya': '오미야 아르디자',
+  'Thespakusatsu Gunma': '테스파 쿠사츠', 'Gunma': '테스파 쿠사츠',
+  'Giravanz Kitakyushu': '기라반츠 기타큐슈', 'Kitakyushu': '기라반츠 기타큐슈',
+  'Blaublitz Akita': '블라우블리츠 아키타', 'Akita': '블라우블리츠 아키타',
+  'V-Varen Nagasaki': '브이파렌 나가사키', 'Nagasaki': '브이파렌 나가사키',
+  'Montedio Yamagata': '몬테디오 야마가타', 'Yamagata': '몬테디오 야마가타',
+  'Ehime FC': '에히메 FC', 'Ehime': '에히메 FC',
+  'Matsumoto Yamaga': '마쓰모토 야마가', 'Matsumoto': '마쓰모토 야마가',
 }
 
 // 영어 강점/약점 → 한글 변환
@@ -468,12 +586,97 @@ function getTeamNameKo(name: string): string {
 }
 
 // ============================================
+// TheNewsAPI — 팀 관련 최근 뉴스 수집 (7일 이내)
+// ============================================
+const NEWS_API_TOKEN = process.env.NEWS_API_TOKEN || ''
+
+interface NewsItem {
+  title: string
+  description: string
+  publishedAt: string
+  source: string
+}
+
+async function fetchTeamNews(teamName: string, matchDate: string, leagueName: string): Promise<NewsItem[]> {
+  if (!NEWS_API_TOKEN) return []
+  try {
+    // 경기일 기준 7일 전 ~ 경기 당일
+    const matchDt = new Date(matchDate)
+    const sevenDaysAgo = new Date(matchDt.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const oneDayAfter = new Date(matchDt.getTime() + 24 * 60 * 60 * 1000)
+    const publishedAfter = sevenDaysAgo.toISOString().split('T')[0]
+    const publishedBefore = oneDayAfter.toISOString().split('T')[0]
+
+    const params = new URLSearchParams({
+      api_token: NEWS_API_TOKEN,
+      categories: 'sports',
+      search: `${teamName} ${leagueName}`,
+      language: 'en',
+      limit: '5',
+      sort: 'published_at',
+      sort_order: 'desc',
+      published_after: publishedAfter,
+      published_before: publishedBefore,
+    })
+
+    const res = await fetch(`https://api.thenewsapi.com/v1/news/all?${params}`, {
+      next: { revalidate: 3600 }
+    })
+    if (!res.ok) { console.error(`fetchTeamNews [${teamName}] error: ${res.status}`); return [] }
+
+    const data = await res.json()
+    if (!data.data || !Array.isArray(data.data)) return []
+
+    const articles = data.data.map((a: any) => ({
+      title: a.title || '',
+      description: a.description || a.snippet || '',
+      publishedAt: a.published_at || '',
+      source: a.source || '',
+    })).filter((a: NewsItem) => a.title.length > 0)
+    console.log(`📰 News [${teamName}]: ${articles.length}건 (${publishedAfter} ~ ${publishedBefore})`)
+    articles.forEach((a: NewsItem) => console.log(`  - ${a.publishedAt.substring(0,10)} | ${a.title}`))
+    return articles
+  } catch (e) {
+    console.error('fetchTeamNews error:', e)
+    return []
+  }
+}
+
+function formatNewsForPrompt(homeNews: NewsItem[], awayNews: NewsItem[], homeKo: string, awayKo: string, home: string, away: string): string {
+  if (homeNews.length === 0 && awayNews.length === 0) return ''
+
+  let result = '\n\n## 📰 최근 뉴스 (경기일 기준 7일 이내)\n'
+  result += '※ 부상/출장정지/감독교체/주요 이슈가 있으면 분석에 반영하되, 없으면 생략하세요.\n'
+
+  if (homeNews.length > 0) {
+    result += `\n### ${homeKo} (${home})\n`
+    homeNews.forEach(n => {
+      const date = n.publishedAt ? n.publishedAt.substring(0, 10) : ''
+      result += `- [${date}] ${n.title}\n`
+      if (n.description) result += `  ${n.description.substring(0, 100)}\n`
+    })
+  }
+
+  if (awayNews.length > 0) {
+    result += `\n### ${awayKo} (${away})\n`
+    awayNews.forEach(n => {
+      const date = n.publishedAt ? n.publishedAt.substring(0, 10) : ''
+      result += `- [${date}] ${n.title}\n`
+      if (n.description) result += `  ${n.description.substring(0, 100)}\n`
+    })
+  }
+
+  return result
+}
+
+// ============================================
 // Claude API — AI 섹션 생성 (인트로+전술+승부처)
 // ============================================
 interface AISections {
   introKo: string; introEn: string
   tacticalKo: string; tacticalEn: string
   keyFactorsKo: string; keyFactorsEn: string
+  newsKo: string; newsEn: string
 }
 
 async function generateAISections(
@@ -497,6 +700,13 @@ async function generateAISections(
     // 시즌 상황 감지
     const seasonCtx = detectSeasonContext(match.league_code, hS, aS)
     const seasonNote = seasonCtx.cautionNote ? `\n\n## ⚠️ 시즌 상황 (반드시 준수)\n- 현재: **${seasonCtx.phaseKo}** (${seasonCtx.phaseEn})\n- ${seasonCtx.cautionNote}` : ''
+
+    // 뉴스 수집 (병렬, 실패해도 계속 진행)
+    const [homeNews, awayNews] = await Promise.allSettled([
+      fetchTeamNews(match.home_team, match.commence_time, li.nameEn),
+      fetchTeamNews(match.away_team, match.commence_time, li.nameEn),
+    ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : []))
+    const newsContext = formatNewsForPrompt(homeNews as NewsItem[], awayNews as NewsItem[], hKo, aKo, match.home_team, match.away_team)
 
     const prompt = `당신은 축구 데이터 분석 전문가입니다. 아래 통계를 기반으로 **객관적이고 데이터 중심적인** 분석을 작성하세요.
 
@@ -525,7 +735,7 @@ ${aKo} 약점: ${(aS?.weaknesses||[]).slice(0,2).join(', ')||'없음'}
 ${(pred.recommendation.reasons||[]).slice(0,4).join('\n')}
 
 ## 상대전적
-${h2hSum}${seasonNote}
+${h2hSum}${seasonNote}${newsContext}
 
 ---
 ## 핵심 작성 규칙
@@ -539,7 +749,7 @@ ${h2hSum}${seasonNote}
 ### 절대 금지
 - "살펴보겠습니다", "주목할 만합니다", "분석해보겠습니다"
 - "~할 것으로 보입니다", "~할 것으로 예상됩니다"
-- 데이터에 없는 내용 창작 (선수 이름, 부상 정보, 이적 등)
+- 데이터에 없는 내용 창작 (선수 이름, 부상 정보, 이적 등) — 단, 뉴스에 명시된 내용은 인용 가능
 - **예측 결과(승/무/패, 확률%) 언급 금지** — 인트로와 전술에서 결과를 암시하지 마세요
 
 ### 데이터 정합성 (매우 중요)
@@ -548,10 +758,20 @@ ${h2hSum}${seasonNote}
 - 연승/연패는 데이터에 명시된 경우에만 사용하세요.
 ${seasonCtx.cautionNote ? `- **${seasonCtx.cautionNote}**` : ''}
 
+### 뉴스 이슈 처리 규칙
+- 뉴스에 **부상/출장정지/감독교체/이적** 등 경기력에 영향을 줄 수 있는 이슈가 있으면 news_ko, news_en 태그에 작성하세요.
+- 주요 선수 부상은 회복 중이거나 출전 여부가 불확실해도 포함하세요. 단, "완전히 회복" 또는 "정상 출전 예정"이 확인된 경우는 제외.
+- 이슈가 전혀 없거나 뉴스가 없으면 태그를 **완전히 비워두세요**.
+- **절대 금지**: 이슈가 없다는 설명, "관련 정보 없음", "확인되지 않음" 등의 문장을 태그 안에 쓰지 마세요. 없으면 그냥 빈 태그.
+- **news_ko**: 영어 뉴스를 한글로 번역하여 요약. 팀명/선수명은 한글로 표기.
+- **news_en**: 영어 원문 기반으로 간결하게 요약.
+- 베팅/토토/배당 관련 기사는 무시하세요.
+
 ### 섹션별 요구
 1. **인트로 (3-4문장)**: 경기 날짜/시간 포함, 양팀 현재 상황과 이번 경기의 관전 포인트. 예측 결과를 직접 언급하지 말 것.
 2. **전술 포인트 (4-6문장)**: 양팀 강점/약점 데이터 기반 전술 맞대결 분석. 수치 근거 필수.
 3. **승부처 (3개, 각 2-3문장)**: 분석 근거 데이터 기반, **1. 제목** 형식. 구체적 수치 포함.
+4. **뉴스 이슈**: 경기력에 영향을 줄 이슈만, 없으면 빈 태그.
 
 한글/영어 각각 독립 작성 (번역하지 말 것)
 
@@ -561,7 +781,9 @@ ${seasonCtx.cautionNote ? `- **${seasonCtx.cautionNote}**` : ''}
 <tactical_ko>(한글 전술 분석)</tactical_ko>
 <tactical_en>(영어 전술 분석)</tactical_en>
 <keyfactors_ko>(한글 승부처 **1. 제목** 형식 3개)</keyfactors_ko>
-<keyfactors_en>(영어 Key Factors **1. Title** 형식 3개)</keyfactors_en>`
+<keyfactors_en>(영어 Key Factors **1. Title** 형식 3개)</keyfactors_en>
+<news_ko>(확정된 부상/결장/감독교체 이슈만. 없으면 반드시 빈 태그)</news_ko>
+<news_en>(Confirmed injury/suspension/manager issues only. Empty tag if none)</news_en>`
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -571,7 +793,7 @@ ${seasonCtx.cautionNote ? `- **${seasonCtx.cautionNote}**` : ''}
     if (!res.ok) { console.error('Claude API error:', res.status); return null }
     const txt = (await res.json()).content?.[0]?.text || ''
     const ex = (tag: string) => { const m = txt.match(new RegExp(`<${tag}>\\s*([\\s\\S]*?)\\s*</${tag}>`)); return m ? m[1].trim() : '' }
-    const sections: AISections = { introKo: ex('intro_ko'), introEn: ex('intro_en'), tacticalKo: ex('tactical_ko'), tacticalEn: ex('tactical_en'), keyFactorsKo: ex('keyfactors_ko'), keyFactorsEn: ex('keyfactors_en') }
+    const sections: AISections = { introKo: ex('intro_ko'), introEn: ex('intro_en'), tacticalKo: ex('tactical_ko'), tacticalEn: ex('tactical_en'), keyFactorsKo: ex('keyfactors_ko'), keyFactorsEn: ex('keyfactors_en'), newsKo: ex('news_ko'), newsEn: ex('news_en') }
     return sections.introKo.length > 20 ? sections : null
   } catch (e) { console.error('AI generation error:', e); return null }
 }
@@ -868,7 +1090,6 @@ function generateContentKo(
     const f5 = homeStats.recentForm.last5?.results || []
     const l10 = homeStats.recentForm.last10
     c += `### ${homeKo}\n\n`
-    c += `${formatFormEmoji(f5)} **${formatFormText(f5)}**\n\n`
     if (l10) {
       c += `| 항목 | 수치 |\n|:---|:---|\n`
       c += `| 최근 10경기 | **${l10.wins}승 ${l10.draws}무 ${l10.losses}패** |\n`
@@ -885,7 +1106,6 @@ function generateContentKo(
     const f5 = awayStats.recentForm.last5?.results || []
     const l10 = awayStats.recentForm.last10
     c += `### ${awayKo}\n\n`
-    c += `${formatFormEmoji(f5)} **${formatFormText(f5)}**\n\n`
     if (l10) {
       c += `| 항목 | 수치 |\n|:---|:---|\n`
       c += `| 최근 10경기 | **${l10.wins}승 ${l10.draws}무 ${l10.losses}패** |\n`
@@ -1007,6 +1227,12 @@ function generateContentKo(
       c += `**${i + 1}. ${translateReason(reason)}**\n\n`
     })
   }
+
+  // ===== 📰 최근 이슈 (뉴스 기반, 있을 때만) =====
+  if (ai?.newsKo && ai.newsKo.trim().length > 0) {
+    c += `## 📰 최근 이슈\n\n`
+    c += ai.newsKo + '\n\n'
+  }
   
   // ===== 📈 TrendSoccer 예측 =====
   c += `## TrendSoccer 예측\n\n`
@@ -1074,7 +1300,6 @@ function generateContentEn(
     const f5 = homeStats.recentForm.last5?.results || []
     const l10 = homeStats.recentForm.last10
     c += `### ${home}\n\n`
-    c += `${formatFormEmoji(f5)} **${formatFormTextEn(f5)}**\n\n`
     if (l10) {
       c += `| Stat | Value |\n|:---|:---|\n`
       c += `| Last 10 | **${l10.wins}W ${l10.draws}D ${l10.losses}L** |\n`
@@ -1090,7 +1315,6 @@ function generateContentEn(
     const f5 = awayStats.recentForm.last5?.results || []
     const l10 = awayStats.recentForm.last10
     c += `### ${away}\n\n`
-    c += `${formatFormEmoji(f5)} **${formatFormTextEn(f5)}**\n\n`
     if (l10) {
       c += `| Stat | Value |\n|:---|:---|\n`
       c += `| Last 10 | **${l10.wins}W ${l10.draws}D ${l10.losses}L** |\n`
@@ -1181,6 +1405,12 @@ function generateContentEn(
     prediction.recommendation.reasons.slice(0, 3).forEach((reason: string, i: number) => {
       c += `**${i + 1}. ${reason}**\n\n`
     })
+  }
+
+  // 📰 Latest News Issues (only if present)
+  if (ai?.newsEn && ai.newsEn.trim().length > 0) {
+    c += `## 📰 Latest News\n\n`
+    c += ai.newsEn + '\n\n'
   }
   
   // Prediction
