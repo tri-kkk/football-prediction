@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,7 +15,6 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔍 약관 동의 API 시작')
 
-    // ✅ 요청 본문을 한 번만 읽기
     try {
       body = await request.json()
     } catch (parseError) {
@@ -25,31 +25,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-
     const { email, termsAgreed, privacyAgreed, marketingAgreed } = body
 
     console.log('📥 요청 데이터:', { email, termsAgreed, privacyAgreed, marketingAgreed })
 
     if (!email) {
-      console.error('❌ 이메일 없음')
-      return NextResponse.json(
-        { error: '이메일이 필요합니다.' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '이메일이 필요합니다.' }, { status: 400 })
     }
 
     if (!termsAgreed || !privacyAgreed) {
-      console.error('❌ 필수 약관 미동의')
-      return NextResponse.json(
-        { error: '필수 약관에 동의해주세요.' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '필수 약관에 동의해주세요.' }, { status: 400 })
     }
 
     const emailLower = email.toLowerCase()
 
     // ✅ users 테이블 확인
-    console.log('🔍 users 테이블 확인:', emailLower)
     const { data: existingUser, error: existingError } = await supabase
       .from('users')
       .select('id, terms_agreed_at')
@@ -58,10 +48,7 @@ export async function POST(request: NextRequest) {
 
     if (existingError && existingError.code !== 'PGRST116') {
       console.error('❌ users 조회 실패:', existingError)
-      return NextResponse.json(
-        { error: 'DB 조회 오류' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'DB 조회 오류' }, { status: 500 })
     }
 
     if (existingUser) {
@@ -69,10 +56,7 @@ export async function POST(request: NextRequest) {
       
       if (existingUser.terms_agreed_at) {
         console.log('✅ 이미 약관 동의함')
-        return NextResponse.json({
-          success: true,
-          alreadyAgreed: true
-        })
+        return NextResponse.json({ success: true, alreadyAgreed: true })
       }
       
       // 약관 미동의 상태 → 업데이트
@@ -89,21 +73,13 @@ export async function POST(request: NextRequest) {
 
       if (updateError) {
         console.error('❌ users 업데이트 실패:', updateError)
-        return NextResponse.json(
-          { error: 'Update failed' },
-          { status: 500 }
-        )
+        return NextResponse.json({ error: 'Update failed' }, { status: 500 })
       }
 
-      console.log('✅ users 약관 동의 업데이트 완료')
-      return NextResponse.json({
-        success: true,
-        message: '약관 동의가 완료되었습니다.'
-      })
+      return NextResponse.json({ success: true, message: '약관 동의가 완료되었습니다.' })
     }
 
     // ✅ pending_users 확인
-    console.log('🔍 pending_users 확인:', emailLower)
     const { data: pendingUser, error: pendingError } = await supabase
       .from('pending_users')
       .select('*')
@@ -111,19 +87,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (pendingError && pendingError.code !== 'PGRST116') {
-      console.error('❌ pending_users 조회 실패:', pendingError)
-      return NextResponse.json(
-        { error: 'DB 조회 오류' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'DB 조회 오류' }, { status: 500 })
     }
 
     if (!pendingUser) {
-      console.error('❌ pending_users에서 찾을 수 없음')
-      return NextResponse.json(
-        { error: '사용자 정보를 찾을 수 없습니다.' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
     }
 
     console.log('✅ pending_users 찾음')
@@ -132,20 +100,47 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const isPromoPeriod = now < PROMO_END_DATE
     const promoCode = pendingUser.pending_promo && isPromoPeriod ? pendingUser.pending_promo : null
-    
-    let tier = 'free'
-    let premiumExpiresAt = null
+
+    // ✅ 탈퇴 이력 확인 (재가입 시 체험판 중복 방지)
+    const emailHash = crypto.createHash('sha256').update(emailLower).digest('hex')
+    const { data: deletedUser } = await supabase
+      .from('deleted_users')
+      .select('trial_used, promo_code')
+      .eq('email_hash', emailHash)
+      .limit(1)
+      .maybeSingle()  // ✅ 여러 행이어도 첫 번째 반환
+
+    const hasDeleteHistory = deletedUser !== null
+    console.log('🔍 탈퇴 이력:', { hasDeleteHistory, deletedUser })
+
+    let tier = 'premium'
+    let premiumExpiresAt: string
     let promoAppliedAt = null
+    let trialStartedAt: string | null = now.toISOString()
+    let trialUsed = true
 
     if (promoCode === 'LAUNCH_2026') {
-      tier = 'premium'
+      // 프로모션 코드 있으면 프로모션 기간 우선 적용
       premiumExpiresAt = PROMO_END_DATE.toISOString()
       promoAppliedAt = now.toISOString()
+      trialStartedAt = null
+      trialUsed = false // 프로모 유저는 trial 소진 안 함
       console.log('🎉 프로모션 적용')
+    } else if (hasDeleteHistory) {
+      // ✅ 재가입 + 이미 체험판 사용 → free로 시작
+      tier = 'free'
+      premiumExpiresAt = null as any
+      trialStartedAt = null
+      trialUsed = false
+      console.log('🚫 탈퇴 이력 있는 재가입 유저 → free 시작')
+    } else {
+      // ✅ 일반 신규 가입 → 48시간 체험판
+      const trialEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+      premiumExpiresAt = trialEnd.toISOString()
+      console.log('🎁 48시간 체험판 적용, 만료:', trialEnd.toISOString())
     }
 
     // ✅ users 테이블에 INSERT
-    console.log('📝 users 테이블에 데이터 삽입')
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
@@ -169,6 +164,10 @@ export async function POST(request: NextRequest) {
         promo_code: promoCode,
         promo_applied_at: promoAppliedAt,
         premium_expires_at: premiumExpiresAt,
+
+        // ✅ 체험판
+        trial_used: trialUsed,
+        trial_started_at: trialStartedAt,
         
         // 기타
         created_at: pendingUser.created_at || now.toISOString(),
@@ -179,16 +178,12 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('❌ users 삽입 실패:', insertError)
-      return NextResponse.json(
-        { error: 'Insert failed' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Insert failed' }, { status: 500 })
     }
 
     console.log('✅ users 삽입 완료:', newUser.id)
 
     // ✅ pending_users 삭제
-    console.log('🗑️ pending_users 삭제')
     const { error: deleteError } = await supabase
       .from('pending_users')
       .delete()
@@ -198,26 +193,17 @@ export async function POST(request: NextRequest) {
       console.warn('⚠️ pending_users 삭제 실패 (무시)')
     }
 
-    console.log(`✅ 약관 동의 완료`)
-
     return NextResponse.json({
       success: true,
-      message: promoCode 
+      isTrial: trialUsed,
+      message: promoCode
         ? '🎉 프로모션이 적용되었습니다.'
-        : '회원가입이 완료되었습니다.',
+        : '🎁 48시간 프리미엄 체험이 시작되었습니다!',
     })
 
   } catch (error) {
     console.error('❌ API 에러:', error)
-    
-    if (error instanceof Error) {
-      console.error('에러:', error.message)
-    }
-
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
   }
 }
 
@@ -228,15 +214,11 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get('email')
 
     if (!email) {
-      return NextResponse.json(
-        { error: '이메일이 필요합니다.' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '이메일이 필요합니다.' }, { status: 400 })
     }
 
     const emailLower = email.toLowerCase()
 
-    // 1️⃣ users 테이블 확인
     const { data: userData } = await supabase
       .from('users')
       .select('id, terms_agreed_at')
@@ -247,7 +229,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ termsAgreed: true, agreed: true })
     }
 
-    // 2️⃣ pending_users 확인
     const { data: pendingData } = await supabase
       .from('pending_users')
       .select('id')
@@ -262,9 +243,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ GET 에러:', error)
-    return NextResponse.json(
-      { termsAgreed: false },
-      { status: 200 }
-    )
+    return NextResponse.json({ termsAgreed: false }, { status: 200 })
   }
 }

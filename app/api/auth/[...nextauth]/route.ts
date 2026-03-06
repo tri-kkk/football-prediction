@@ -20,53 +20,27 @@ async function getCountryFromIP(ip: string): Promise<{ country: string; countryC
   if (ip === 'unknown' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip === '::1') {
     return { country: 'Local', countryCode: 'LO' }
   }
-  
   try {
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=country,countryCode`, {
       signal: AbortSignal.timeout(3000)
     })
     const data = await res.json()
-    
     if (data.country) {
       return { country: data.country, countryCode: data.countryCode }
     }
   } catch (error) {
     console.error('IP Geolocation failed:', error)
   }
-  
   return { country: 'Unknown', countryCode: 'XX' }
 }
 
-/**
- * ✅ 안전한 문자열 변환
- * - null, undefined 체크
- * - 이미 문자열이면 그대로 반환
- */
 function safeStringify(value: any): string | null {
-  if (value === null || value === undefined) {
-    return null
-  }
-  
-  // 이미 문자열이면 그대로 반환
-  if (typeof value === 'string') {
-    return value
-  }
-  
-  // 객체면 JSON 문자열로
+  if (value === null || value === undefined) return null
+  if (typeof value === 'string') return value
   if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value)
-    } catch {
-      return null
-    }
+    try { return JSON.stringify(value) } catch { return null }
   }
-  
-  // 그 외에는 toString() 사용
-  try {
-    return Object.prototype.toString.call(value)
-  } catch {
-    return null
-  }
+  try { return Object.prototype.toString.call(value) } catch { return null }
 }
 
 const handler = NextAuth({
@@ -86,13 +60,12 @@ const handler = NextAuth({
 
       try {
         const headersList = await headers()
-        const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() 
-          || headersList.get('x-real-ip') 
+        const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
+          || headersList.get('x-real-ip')
           || 'unknown'
-        
+
         const now = new Date().toISOString()
-        
-        // ✅ 1. users 테이블에서 확인
+
         const { data: existingUser } = await supabase
           .from('users')
           .select('id, name, terms_agreed_at')
@@ -100,32 +73,20 @@ const handler = NextAuth({
           .single()
 
         if (existingUser) {
-          const updateData: any = { 
-            last_login_at: now,
-            last_login_ip: ip
-          }
-
+          const updateData: any = { last_login_at: now, last_login_ip: ip }
           if (!existingUser.name) {
-            const userName = user.name 
-              || (profile as any)?.response?.name 
+            const userName = user.name
+              || (profile as any)?.response?.name
               || (profile as any)?.response?.nickname
               || (profile as any)?.name
               || null
-            if (userName) {
-              updateData.name = userName
-            }
+            if (userName) updateData.name = userName
           }
-
-          await supabase
-            .from('users')
-            .update(updateData)
-            .eq('email', user.email.toLowerCase())
-          
+          await supabase.from('users').update(updateData).eq('email', user.email.toLowerCase())
           console.log(`✅ Existing user login: ${user.email}`)
           return true
         }
 
-        // ✅ 2. pending_users에서 확인
         const { data: pendingUser } = await supabase
           .from('pending_users')
           .select('id')
@@ -135,32 +96,28 @@ const handler = NextAuth({
         if (pendingUser) {
           await supabase
             .from('pending_users')
-            .update({ 
+            .update({
               updated_at: now,
               expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
             })
             .eq('email', user.email.toLowerCase())
-          
           console.log(`🔄 Pending user re-login: ${user.email}`)
           return true
         }
 
-        // ✅ 3. 신규 사용자
         const { country, countryCode } = await getCountryFromIP(ip)
         const isPromoPeriod = new Date() < PROMO_END_DATE
-        
         const emailHash = hashEmail(user.email)
         const { data: deletedUser } = await supabase
           .from('deleted_users')
           .select('promo_code')
           .eq('email_hash', emailHash)
           .single()
-        
+
         const hadPromo = deletedUser?.promo_code ? true : false
         const canGetPromo = isPromoPeriod && !hadPromo
-        
-        const userName = user.name 
-          || (profile as any)?.response?.name 
+        const userName = user.name
+          || (profile as any)?.response?.name
           || (profile as any)?.response?.nickname
           || (profile as any)?.name
           || null
@@ -177,7 +134,7 @@ const handler = NextAuth({
           pending_promo: canGetPromo ? 'LAUNCH_2026' : null,
           expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         })
-        
+
         console.log(`🆕 New pending user: ${user.email}`)
         return true
 
@@ -188,213 +145,136 @@ const handler = NextAuth({
     },
 
     async session({ session }) {
-      console.log('🔍 [SESSION] SESSION CALLBACK START')
-      console.log('🔍 [SESSION] session.user.email:', session.user?.email)
-      
-      if (!session.user?.email) {
-        console.log('❌ [SESSION] No email in session')
-        return session
-      }
+      if (!session.user?.email) return session
 
       try {
-        console.log('🔍 [SESSION] Querying users table for:', session.user.email.toLowerCase())
-        
-        // ✅ users 테이블 확인
+        // ✅ trial_used, trial_started_at, premium_expires_at 추가 조회
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('id, tier, name, promo_code, terms_agreed_at')
+          .select('id, tier, name, promo_code, terms_agreed_at, premium_expires_at, trial_used, trial_started_at')
           .ilike('email', session.user.email)
           .single()
 
-        console.log('🔍 [SESSION] userData:', userData)
-        console.log('🔍 [SESSION] userError:', userError)
-        console.log('🔍 [SESSION] userData.terms_agreed_at:', userData?.terms_agreed_at)
-
         if (userData && userData.terms_agreed_at) {
-          console.log('✅ User in users table - SETTING PREMIUM DATA')
           session.user.id = userData.id
           session.user.termsAgreed = true
           session.user.pendingPromo = null
-          ;(session.user as any).tier = userData.tier || 'free'
-          
-          if (userData.name) {
-            session.user.name = userData.name
-          }
-
-          // ✅ promo_code 할당 (안전)
           ;(session.user as any).promo_code = userData.promo_code || null
-          
-          console.log('💎 [SESSION] Assigned promo_code:', userData.promo_code)
 
-          // ✅ 프리미엄 사용자면 subscriptions 테이블에서 만료일 조회
-          if (userData.tier === 'premium' && userData.id) {
-            console.log('💎 [SESSION] Premium user detected, fetching subscription...')
-            
-            try {
-              // subscriptions 테이블에서 active 구독 조회
-              const { data: subscription, error: subError } = await supabase
-                .from('subscriptions')
-                .select('expires_at, plan')
-                .eq('user_id', userData.id)
-                .eq('status', 'active')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle()
+          if (userData.name) session.user.name = userData.name
 
-              if (subError) {
-                console.error('❌ [SESSION] Subscription query error:', subError)
-              }
+          // ✅ trial 정보 세션에 포함
+          ;(session.user as any).trialUsed = userData.trial_used || false
+          ;(session.user as any).trialStartedAt = userData.trial_started_at || null
 
-              if (subscription?.expires_at) {
-                // ✅ 안전한 문자열 변환 (이미 문자열일 수 있음)
-                const expiresAtStr = safeStringify(subscription.expires_at)
-                
-                if (expiresAtStr) {
-                  ;(session.user as any).premium_expires_at = expiresAtStr
-                  console.log('✅ [SESSION] Assigned premium_expires_at:', expiresAtStr)
-                  
-                  // 만료 여부 확인
-                  try {
-                    const expiresAt = new Date(expiresAtStr)
-                    const now = new Date()
-                    
-                    if (now > expiresAt) {
-                      console.log('⏰ [SESSION] Premium expired, downgrading to free')
-                      
-                      // ✅ tier를 'free'로 변경
-                      ;(session.user as any).tier = 'free'
-                      ;(session.user as any).premium_expires_at = null
-                      
-                      // ✅ DB에도 업데이트 (비동기)
-                      supabase
-                        .from('users')
-                        .update({ 
-                          tier: 'free',
-                          updated_at: new Date().toISOString()
-                        })
-                        .eq('id', userData.id)
-                        .then(() => {
-                          console.log('✅ [SESSION] User tier downgraded to free in DB')
-                        })
-                        .catch((error) => {
-                          console.log('⚠️ [SESSION] Failed to update tier:', error)
-                        })
-                    } else {
-                      const daysRemaining = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-                      console.log(`✅ [SESSION] Premium active: ${daysRemaining}일 남음`)
-                    }
-                  } catch (dateError) {
-                    // 에러 처리
-                    ;(session.user as any).premium_expires_at = expiresAtStr
-                  }
-                } else {
-                  ;(session.user as any).premium_expires_at = null
-                }
-              } else {
-                // ✅ 구독이 없으면
-                console.log('⚠️ [SESSION] Premium user with no active subscription - downgrading to free')
+          const now = new Date()
+
+          // ✅ users.premium_expires_at 기준으로 먼저 만료 체크
+          if (userData.premium_expires_at) {
+            const expiresAt = new Date(userData.premium_expires_at)
+
+            if (now > expiresAt) {
+              // 만료됨 → free로 다운그레이드
+              console.log('⏰ [SESSION] premium_expires_at 만료 → free')
+              ;(session.user as any).tier = 'free'
+              ;(session.user as any).premiumExpiresAt = null
+
+              supabase
+                .from('users')
+                .update({ tier: 'free', updated_at: now.toISOString() })
+                .eq('id', userData.id)
+                .then(() => console.log('✅ tier downgraded to free'))
+                .catch(() => {})
+            } else {
+              // 아직 유효 → premium 유지
+              ;(session.user as any).tier = 'premium'
+              ;(session.user as any).premiumExpiresAt = userData.premium_expires_at
+
+              const hoursLeft = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60))
+              const isTrial = userData.trial_used === true && hoursLeft <= 48
+              console.log(`✅ [SESSION] premium 유효 (${hoursLeft}h 남음, trial: ${isTrial})`)
+            }
+          } else if (userData.tier === 'premium') {
+            // premium_expires_at 없는 프리미엄 → subscriptions 테이블 확인
+            console.log('💎 [SESSION] subscriptions 테이블 확인')
+
+            const { data: subscription } = await supabase
+              .from('subscriptions')
+              .select('expires_at, plan')
+              .eq('user_id', userData.id)
+              .eq('status', 'active')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+
+            if (subscription?.expires_at) {
+              const expiresAtStr = safeStringify(subscription.expires_at)
+              const expiresAt = expiresAtStr ? new Date(expiresAtStr) : null
+
+              if (expiresAt && now > expiresAt) {
                 ;(session.user as any).tier = 'free'
-                ;(session.user as any).premium_expires_at = null
-                
-                // ✅ DB에도 업데이트 (비동기)
-                supabase
-                  .from('users')
-                  .update({ 
-                    tier: 'free',
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq('id', userData.id)
-                  .then(() => {
-                    console.log('✅ [SESSION] Premium user with no subscription downgraded to free in DB')
-                  })
-                  .catch((error) => {
-                    console.log('⚠️ [SESSION] Failed to downgrade premium without subscription:', error)
-                  })
+                ;(session.user as any).premiumExpiresAt = null
+                supabase.from('users').update({ tier: 'free', updated_at: now.toISOString() }).eq('id', userData.id).then(() => {}).catch(() => {})
+              } else {
+                ;(session.user as any).tier = 'premium'
+                ;(session.user as any).premiumExpiresAt = expiresAtStr
               }
-            } catch (subException) {
-              ;(session.user as any).premium_expires_at = null
+            } else {
+              // 구독도 없음 → free
+              console.log('⚠️ [SESSION] 구독 없음 → free')
+              ;(session.user as any).tier = 'free'
+              ;(session.user as any).premiumExpiresAt = null
+              supabase.from('users').update({ tier: 'free', updated_at: now.toISOString() }).eq('id', userData.id).then(() => {}).catch(() => {})
             }
           } else {
-            // 무료 사용자
-            ;(session.user as any).premium_expires_at = null
-            console.log('🆓 [SESSION] Free user - premium_expires_at set to null')
+            // 그냥 free
+            ;(session.user as any).tier = 'free'
+            ;(session.user as any).premiumExpiresAt = null
           }
-          
-          console.log('🔍 [SESSION] Returning session with tier:', (session.user as any).tier)
+
           return session
         }
 
-        console.log('🔍 [SESSION] User data not found or terms_agreed_at is null, checking pending_users')
-
-        // ✅ pending_users 확인
-        const { data: pendingData, error: pendingError } = await supabase
+        // pending_users 확인
+        const { data: pendingData } = await supabase
           .from('pending_users')
           .select('id, pending_promo')
           .ilike('email', session.user.email)
           .single()
 
-        console.log('🔍 [SESSION] pendingData:', pendingData)
-        console.log('🔍 [SESSION] pendingError:', pendingError)
-
         if (pendingData) {
-          console.log('⏳ User in pending_users')
           session.user.id = pendingData.id
           session.user.termsAgreed = false
           session.user.pendingPromo = pendingData.pending_promo
-          // ✅ 타입 캐스팅 사용
           ;(session.user as any).tier = 'free'
-          ;(session.user as any).premium_expires_at = null
+          ;(session.user as any).premiumExpiresAt = null
           ;(session.user as any).promo_code = null
+          ;(session.user as any).trialUsed = false
           return session
         }
 
-        console.log('⚠️ User not found')
         session.user.termsAgreed = false
-        // ✅ 타입 캐스팅 사용
         ;(session.user as any).tier = 'free'
-        ;(session.user as any).premium_expires_at = null
+        ;(session.user as any).premiumExpiresAt = null
         ;(session.user as any).promo_code = null
+        ;(session.user as any).trialUsed = false
 
       } catch (error) {
-        console.log('⚠️ [SESSION] Session error:', error)
+        console.log('⚠️ [SESSION] error:', error)
         session.user.termsAgreed = false
-        // ✅ 타입 캐스팅 사용
         ;(session.user as any).tier = 'free'
-        ;(session.user as any).premium_expires_at = null
+        ;(session.user as any).premiumExpiresAt = null
         ;(session.user as any).promo_code = null
+        ;(session.user as any).trialUsed = false
       }
 
-      console.log('🔍 [SESSION] RETURNING SESSION:', {
-        email: session.user?.email,
-        tier: (session.user as any)?.tier,
-        termsAgreed: (session.user as any)?.termsAgreed,
-        premium_expires_at: (session.user as any)?.premium_expires_at
-      })
-      
       return session
     },
 
-    // ✅ redirect 콜백 - /signup-complete 제외
     async redirect({ url, baseUrl }) {
-      console.log('🔀 Redirect checking:', url)
-
-      // ✅ /signup-complete는 그대로 반환 (리다이렉트하지 않음)
-      if (url.includes('/signup-complete')) {
-        console.log('⏭️ Skipping redirect for /signup-complete')
-        return url
-      }
-
-      // 상대경로면 그대로
-      if (url.startsWith('/')) {
-        return url
-      }
-      
-      // 같은 도메인이면 그대로
-      if (new URL(url).origin === baseUrl) {
-        return url
-      }
-      
-      // 그 외에는 홈으로
+      if (url.includes('/signup-complete')) return url
+      if (url.startsWith('/')) return url
+      if (new URL(url).origin === baseUrl) return url
       return baseUrl
     },
   },
