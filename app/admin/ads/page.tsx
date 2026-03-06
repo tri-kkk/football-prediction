@@ -15,6 +15,7 @@ interface User {
   created_at: string
   updated_at: string
   last_login_at: string | null
+  premium_expires_at: string | null
   // 🌍 국가 정보 추가
   signup_ip: string | null
   signup_country: string | null
@@ -511,6 +512,9 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   
+  // ===== 유효기간 편집 상태 =====
+  const [editingExpiry, setEditingExpiry] = useState<{ userId: string; value: string } | null>(null)
+
   // ===== 필터 상태 =====
   const [userFilter, setUserFilter] = useState<'all' | 'free' | 'premium'>('all')
   const [countryFilter, setCountryFilter] = useState<string>('all')
@@ -2050,16 +2054,58 @@ export default function AdminDashboard() {
 
   const handleUpdateUserTier = async (userId: string, newTier: 'free' | 'premium') => {
     try {
-      const response = await fetch('/api/admin/users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: userId, tier: newTier }),
-      })
-      if (!response.ok) throw new Error('업데이트 실패')
-      fetchUsers()
+      const body: Record<string, string | null> = { id: userId, tier: newTier }
+      if (newTier === 'free') {
+        body.premium_expires_at = null
+        const response = await fetch('/api/admin/users', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (!response.ok) throw new Error('업데이트 실패')
+        fetchUsers()
+      } else {
+        // 프리미엄 전환 시 바로 날짜 입력 UI 열기 (기본 +30일)
+        const defaultExpiry = new Date()
+        defaultExpiry.setDate(defaultExpiry.getDate() + 30)
+        // tier만 먼저 업데이트
+        const response = await fetch('/api/admin/users', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (!response.ok) throw new Error('업데이트 실패')
+        await fetchUsers()
+        // 날짜 입력 UI 열기
+        setEditingExpiry({ userId, value: defaultExpiry.toISOString().split('T')[0] })
+      }
     } catch (err) {
       alert('등급 변경에 실패했습니다')
     }
+  }
+
+  const handleUpdateExpiry = async (userId: string, expiresAt: string) => {
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, tier: 'premium', premium_expires_at: expiresAt }),
+      })
+      if (!response.ok) throw new Error('업데이트 실패')
+      setEditingExpiry(null)
+      fetchUsers()
+    } catch (err) {
+      alert('유효기간 변경에 실패했습니다')
+    }
+  }
+
+  const handleQuickExpiry = async (userId: string, days: number) => {
+    const user = users.find(u => u.id === userId)
+    const base = user?.premium_expires_at && new Date(user.premium_expires_at) > new Date()
+      ? new Date(user.premium_expires_at)  // 기존 만료일 기준
+      : new Date()                          // 만료됐거나 없으면 오늘 기준
+    base.setDate(base.getDate() + days)
+    await handleUpdateExpiry(userId, base.toISOString())
   }
 
   // ==================== 구독 관리 함수 ====================
@@ -2903,6 +2949,7 @@ export default function AdminDashboard() {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">가입일</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">가입 방식</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">등급</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">프리미엄 유효기간</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">마지막 접속</th>
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">액션</th>
                         </tr>
@@ -2910,7 +2957,7 @@ export default function AdminDashboard() {
                       <tbody className="divide-y divide-gray-700/50">
                         {filteredUsers.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
+                            <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
                               회원이 없습니다
                             </td>
                           </tr>
@@ -2957,18 +3004,84 @@ export default function AdminDashboard() {
                                   {user.tier === 'premium' ? '💎 프리미엄' : '무료'}
                                 </span>
                               </td>
+                              {/* 프리미엄 유효기간 컬럼 */}
+                              <td className="px-4 py-4">
+                                {editingExpiry?.userId === user.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="date"
+                                      value={editingExpiry.value}
+                                      onChange={(e) => setEditingExpiry({ userId: user.id, value: e.target.value })}
+                                      className="px-2 py-1 bg-gray-700 border border-emerald-500 rounded text-xs text-white focus:outline-none"
+                                    />
+                                    <button
+                                      onClick={() => handleUpdateExpiry(user.id, new Date(editingExpiry.value).toISOString())}
+                                      className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-xs text-white"
+                                    >✓</button>
+                                    <button
+                                      onClick={() => setEditingExpiry(null)}
+                                      className="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white"
+                                    >✕</button>
+                                  </div>
+                                ) : user.tier === 'premium' ? (
+                                  <div className="flex items-center gap-1.5">
+                                    {user.premium_expires_at ? (
+                                      <span className={`text-xs font-medium ${
+                                        new Date(user.premium_expires_at) < new Date()
+                                          ? 'text-red-400'
+                                          : new Date(user.premium_expires_at) < new Date(Date.now() + 7 * 86400000)
+                                          ? 'text-yellow-400'
+                                          : 'text-emerald-400'
+                                      }`}>
+                                        {new Date(user.premium_expires_at).toLocaleDateString('ko-KR')}
+                                        {new Date(user.premium_expires_at) < new Date() && ' (만료)'}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-gray-500">미설정</span>
+                                    )}
+                                    <button
+                                      onClick={() => setEditingExpiry({
+                                        userId: user.id,
+                                        value: user.premium_expires_at
+                                          ? new Date(user.premium_expires_at).toISOString().split('T')[0]
+                                          : new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+                                      })}
+                                      className="text-gray-500 hover:text-white text-xs"
+                                      title="유효기간 변경"
+                                    >✏️</button>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-600">-</span>
+                                )}
+                              </td>
                               <td className="px-4 py-4 text-sm text-gray-400">
                                 {user.last_login_at ? formatDateTime(user.last_login_at) : '-'}
                               </td>
                               <td className="px-4 py-4 text-right">
-                                <select
-                                  value={user.tier}
-                                  onChange={(e) => handleUpdateUserTier(user.id, e.target.value as 'free' | 'premium')}
-                                  className="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:border-emerald-500"
-                                >
-                                  <option value="free">무료</option>
-                                  <option value="premium">프리미엄</option>
-                                </select>
+                                <div className="flex items-center justify-end gap-2">
+                                  <select
+                                    value={user.tier}
+                                    onChange={(e) => handleUpdateUserTier(user.id, e.target.value as 'free' | 'premium')}
+                                    className="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:border-emerald-500"
+                                  >
+                                    <option value="free">무료</option>
+                                    <option value="premium">프리미엄</option>
+                                  </select>
+                                  {user.tier === 'premium' && (
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => handleQuickExpiry(user.id, 30)}
+                                        className="px-2 py-1 bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/30 rounded text-xs text-blue-400"
+                                        title="30일 연장"
+                                      >+30일</button>
+                                      <button
+                                        onClick={() => handleQuickExpiry(user.id, 90)}
+                                        className="px-2 py-1 bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/30 rounded text-xs text-purple-400"
+                                        title="90일 연장"
+                                      >+90일</button>
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))

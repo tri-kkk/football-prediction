@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, tier, name } = body
+    const { id, tier, name, premium_expires_at } = body
 
     if (!id) {
       return NextResponse.json(
@@ -98,6 +98,7 @@ export async function PUT(request: NextRequest) {
     
     if (tier) updateData.tier = tier
     if (name !== undefined) updateData.name = name
+    if (premium_expires_at !== undefined) updateData.premium_expires_at = premium_expires_at
 
     const { data, error } = await supabase
       .from('users')
@@ -115,6 +116,32 @@ export async function PUT(request: NextRequest) {
         .update({ status: 'cancelled' })
         .eq('user_id', id)
         .eq('status', 'active')
+    } else if (tier === 'premium' && premium_expires_at) {
+      // 기존 active 구독 확인
+      const { data: existing } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', id)
+        .eq('status', 'active')
+        .single()
+
+      if (existing) {
+        await supabase
+          .from('subscriptions')
+          .update({ expires_at: premium_expires_at, updated_at: new Date().toISOString() })
+          .eq('id', existing.id)
+      } else {
+        await supabase
+          .from('subscriptions')
+          .insert({
+            user_id: id,
+            plan: 'monthly',
+            status: 'active',
+            started_at: new Date().toISOString(),
+            expires_at: premium_expires_at,
+            price: 0,
+          })
+      }
     }
 
     return NextResponse.json({ user: data, success: true })

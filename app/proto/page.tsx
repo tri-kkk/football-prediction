@@ -67,6 +67,7 @@ const SPORT_FILTERS_CONFIG = [
   { key: 'SOCCER', label: '축구', icon: '⚽', leagues: ['UCL', 'UEL', 'EPL', 'PL', 'U23아컵', '에레디비', 'EFL챔', 'EFL', '라리가', '분데스리', '세리에', '리그', '프리그', 'A리그', 'J1백년', 'J2J3백년', 'J백년', '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵', 'ACLE', 'ACL2'] },
   { key: 'BASKETBALL', label: '농구', icon: '🏀', leagues: ['KBL', 'WKBL', 'NBA', 'EASL', '남농'] },
   { key: 'VOLLEYBALL', label: '배구', icon: '🏐', leagues: ['KOVO'] },
+  { key: 'BASEBALL', label: '야구', icon: '⚾', leagues: ['WBC', 'KBO', 'MLB', 'NPB', 'CPBL', 'KBO', '한국시리즈', '올스타'] },
 ]
 
 // 유형 필터 (컴포넌트 외부)
@@ -630,6 +631,7 @@ export default function ProtoPage() {
     if (['UCL', 'UEL', 'EPL', 'PL', '라리가', '분데스리', '세리에', '리그', '프리그', 'EFL', 'U23아컵', 'A리그', 'J1백년', 'J2J3백년', 'J백년', '에레디비', '이탈FA컵', '스페FA컵', '스페FA', '독일FA컵', '잉글FA컵', '프랑FA컵', '네덜FA컵', 'ACLE', 'ACL2'].some(l => league.includes(l))) return '⚽'
     if (['KBL', 'WKBL', 'NBA', 'EASL', '남농'].some(l => league.includes(l))) return '🏀'
     if (league.includes('KOVO')) return '🏐'
+    if (['WBC', 'KBO', 'MLB', 'NPB', 'CPBL'].some(l => league.includes(l))) return '⚾'
     return '🎯'
   }
 

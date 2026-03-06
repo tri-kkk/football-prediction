@@ -25,12 +25,15 @@ export async function GET(request: NextRequest) {
         .rpc('get_proto_round_status')
       
       if (statusData && statusData.length > 0) {
-        // 우선순위: 진행중(결과 일부) > 발매전(결과 0) > 최신
-        const inProgress = statusData.find((r: any) => r.finished > 0 && r.finished < r.total)
-        if (inProgress) {
-          activeRound = inProgress.round
+        // 결과가 하나도 없는 회차 중 가장 낮은 번호 = 현재 진행중인 회차
+        const notStarted = statusData
+          .filter((r: any) => r.finished === 0)
+          .sort((a: any, b: any) => parseInt(a.round) - parseInt(b.round))
+        
+        if (notStarted.length > 0) {
+          activeRound = notStarted[0].round
         } else {
-          // 진행중 없으면 가장 높은 회차
+          // 모든 회차에 결과가 있으면 가장 최신
           activeRound = statusData[0].round
         }
       }
