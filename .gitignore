@@ -8,8 +8,6 @@ node_modules/
 
 # Baseball (개발 �?
 /app/baseball/
-/app/api/baseball/
-/app/api/baseball/**
 
 # Backup files
 *.bak
@@ -21,5 +19,3 @@ app/api/cron/collect-toto/
 app/api/toto/
 app/toto/
 
-app/api/baseball/
-lib/baseball_teams.ts

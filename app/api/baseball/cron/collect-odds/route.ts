@@ -1,7 +1,7 @@
 // app/api/baseball/cron/collect-odds/route.ts
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-//import { getKoreanTeamName } from '../../../../../lib/baseball_teams'
+import { getKoreanTeamName } from '../../../../../lib/baseball_teams'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
