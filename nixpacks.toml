@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ['python39']
+nixPkgs = ['python39', 'python39Packages.pip']
 
 [phases.install]
-cmds = ['cd python-api && pip install -r requirements.txt']
+cmds = ['cd python-api && python -m pip install -r requirements.txt']
 
 [start]
-cmd = 'cd python-api && uvicorn baseball_api_server:app --host 0.0.0.0 --port $PORT'
+cmd = 'cd python-api && python -m uvicorn baseball_api_server:app --host 0.0.0.0 --port $PORT'
