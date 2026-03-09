@@ -64,15 +64,25 @@ export async function GET() {
       console.log(`\n📊 Processing ${league.name} (ID: ${league.id})...`)
       
       try {
-        // 1. 경기 목록 가져오기 (오늘 날짜만)
-        const today = new Date().toISOString().split('T')[0]
-        
-        // Baseball API는 date 파라미터만 지원 (from/to 미지원)
-        const fixturesUrl = `https://v1.baseball.api-sports.io/games?league=${league.id}&season=${league.season}&date=${today}`
+        // 1. 경기 목록 가져오기 (전체 시즌)
+        // Baseball API는 season 단위로 조회
+        const fixturesUrl = `https://v1.baseball.api-sports.io/games?league=${league.id}&season=${league.season}`
         
         console.log(`  📡 Fetching fixtures...`)
         console.log(`     URL: ${fixturesUrl}`)
-        console.log(`     Date: ${today}`)
+        console.log(`     Season: ${league.season}`)
+        
+        // 날짜 범위 계산 (과거 7일 + 미래 14일)
+        const now = new Date()
+        const pastDate = new Date(now)
+        pastDate.setDate(pastDate.getDate() - 7)
+        const futureDate = new Date(now)
+        futureDate.setDate(futureDate.getDate() + 14)
+        
+        const pastDateStr = pastDate.toISOString().split('T')[0]
+        const futureDateStr = futureDate.toISOString().split('T')[0]
+        
+        console.log(`     Date range: ${pastDateStr} ~ ${futureDateStr}`)
         
         const fixturesResponse = await fetch(fixturesUrl, {
           headers: {
@@ -108,12 +118,20 @@ export async function GET() {
           })
           continue
         }
+        
+        // 날짜 범위로 필터링 (과거 7일 ~ 미래 14일)
+        const filteredFixtures = fixturesData.response.filter((game: any) => {
+          const gameDate = game.date.split('T')[0]
+          return gameDate >= pastDateStr && gameDate <= futureDateStr
+        })
+        
+        console.log(`  🎯 Filtered to ${filteredFixtures.length} games (${pastDateStr} ~ ${futureDateStr})`)
 
         let matchesSaved = 0
         let oddsSaved = 0
 
-        // 2. 각 경기 처리
-        for (const fixture of fixturesData.response) {
+        // 2. 각 경기 처리 (필터링된 경기만)
+        for (const fixture of filteredFixtures) {
           try {
             const matchId = fixture.id.toString()
             const homeTeam = fixture.teams.home.name
