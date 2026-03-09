@@ -84,19 +84,6 @@ export default function AuthButton() {
               
               {/* 메뉴 항목 */}
               <div className="py-1">
-                {/* 🎁 친구 초대 - NEW */}
-                <Link
-                  href="/referral"
-                  onClick={() => setShowDropdown(false)}
-                  className="block px-3 md:px-4 py-2 text-xs md:text-sm text-gray-300 hover:bg-gray-800"
-                >
-                  <span className="mr-2">🎁</span>
-                  {language === 'ko' ? '친구 초대' : 'Invite Friends'}
-                  <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-green-500 text-white rounded-full">
-                    +2일
-                  </span>
-                </Link>
-                
                 {/* 프로토 계산기 - 한국어만 */}
                 {language === 'ko' && (
                   <Link
