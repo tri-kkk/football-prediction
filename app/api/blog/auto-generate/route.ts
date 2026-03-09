@@ -646,23 +646,34 @@ async function fetchTeamNews(teamName: string, matchDate: string, leagueName: st
 }
 
 function formatNewsForPrompt(homeNews: NewsItem[], awayNews: NewsItem[], homeKo: string, awayKo: string, home: string, away: string): string {
-  if (homeNews.length === 0 && awayNews.length === 0) return ''
+  // 3일 이내 기사만 사용
+  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+  const filterRecent = (news: NewsItem[]) =>
+    news.filter(n => {
+      if (!n.publishedAt) return false
+      return new Date(n.publishedAt) >= cutoff
+    })
 
-  let result = '\n\n## 📰 최근 뉴스 (경기일 기준 7일 이내)\n'
-  result += '※ 부상/출장정지/감독교체/주요 이슈가 있으면 분석에 반영하되, 없으면 생략하세요.\n'
+  const recentHome = filterRecent(homeNews)
+  const recentAway = filterRecent(awayNews)
 
-  if (homeNews.length > 0) {
+  if (recentHome.length === 0 && recentAway.length === 0) return ''
+
+  let result = '\n\n## 📰 최근 뉴스 (3일 이내 기사만)\n'
+  result += '※ 아래는 최근 3일 이내 기사입니다. 팀 관련 소식(부상/이적/팀 동향 등)을 요약하세요.\n'
+
+  if (recentHome.length > 0) {
     result += `\n### ${homeKo} (${home})\n`
-    homeNews.forEach(n => {
+    recentHome.forEach(n => {
       const date = n.publishedAt ? n.publishedAt.substring(0, 10) : ''
       result += `- [${date}] ${n.title}\n`
       if (n.description) result += `  ${n.description.substring(0, 100)}\n`
     })
   }
 
-  if (awayNews.length > 0) {
+  if (recentAway.length > 0) {
     result += `\n### ${awayKo} (${away})\n`
-    awayNews.forEach(n => {
+    recentAway.forEach(n => {
       const date = n.publishedAt ? n.publishedAt.substring(0, 10) : ''
       result += `- [${date}] ${n.title}\n`
       if (n.description) result += `  ${n.description.substring(0, 100)}\n`
@@ -762,10 +773,10 @@ ${h2hSum}${seasonNote}${newsContext}
 ${seasonCtx.cautionNote ? `- **${seasonCtx.cautionNote}**` : ''}
 
 ### 뉴스 이슈 처리 규칙
-- 뉴스에 **부상/출장정지/감독교체/이적** 등 경기력에 영향을 줄 수 있는 이슈가 있으면 news_ko, news_en 태그에 작성하세요.
-- 주요 선수 부상은 회복 중이거나 출전 여부가 불확실해도 포함하세요. 단, "완전히 회복" 또는 "정상 출전 예정"이 확인된 경우는 제외.
-- 이슈가 전혀 없거나 뉴스가 없으면 태그를 **완전히 비워두세요**.
-- **절대 금지**: 이슈가 없다는 설명, "관련 정보 없음", "확인되지 않음" 등의 문장을 태그 안에 쓰지 마세요. 없으면 그냥 빈 태그.
+- 뉴스에 **부상/출장정지/감독교체/이적/선수 영입·방출/팀 분위기/주요 선수 소식** 등 팀과 관련된 내용이 있으면 news_ko, news_en 태그에 작성하세요.
+- 경기력에 직접 영향을 주는 내용(부상, 출장정지)을 우선 작성하되, 팀 동향·선수 이적·감독 관련 소식도 포함하세요.
+- 수집된 뉴스가 해당 팀과 전혀 무관한 경우에만 태그를 비워두세요.
+- **절대 금지**: "관련 정보 없음", "확인되지 않음", "이슈 없음" 등의 문장을 태그 안에 쓰지 마세요. 없으면 그냥 빈 태그.
 - **news_ko**: 영어 뉴스를 한글로 번역하여 요약. 팀명/선수명은 한글로 표기.
 - **news_en**: 영어 원문 기반으로 간결하게 요약.
 - 베팅/토토/배당 관련 기사는 무시하세요.
@@ -774,7 +785,7 @@ ${seasonCtx.cautionNote ? `- **${seasonCtx.cautionNote}**` : ''}
 1. **인트로 (3-4문장)**: 경기 날짜/시간 포함, 양팀 현재 상황과 이번 경기의 관전 포인트. 예측 결과를 직접 언급하지 말 것.
 2. **전술 포인트 (4-6문장)**: 양팀 강점/약점 데이터 기반 전술 맞대결 분석. 수치 근거 필수.
 3. **승부처 (3개, 각 2-3문장)**: 분석 근거 데이터 기반, **1. 제목** 형식. 구체적 수치 포함.
-4. **뉴스 이슈**: 경기력에 영향을 줄 이슈만, 없으면 빈 태그.
+4. **뉴스 이슈**: 부상/결장/이적/팀 소식 등 관련 뉴스 요약. 해당 팀 관련 뉴스가 없으면 빈 태그.
 
 한글/영어 각각 독립 작성 (번역하지 말 것)
 
@@ -785,8 +796,8 @@ ${seasonCtx.cautionNote ? `- **${seasonCtx.cautionNote}**` : ''}
 <tactical_en>(영어 전술 분석)</tactical_en>
 <keyfactors_ko>(한글 승부처 **1. 제목** 형식 3개)</keyfactors_ko>
 <keyfactors_en>(영어 Key Factors **1. Title** 형식 3개)</keyfactors_en>
-<news_ko>(확정된 부상/결장/감독교체 이슈만. 없으면 반드시 빈 태그)</news_ko>
-<news_en>(Confirmed injury/suspension/manager issues only. Empty tag if none)</news_en>`
+<news_ko>(팀 관련 뉴스 한글 요약. 부상·이적·팀 소식 포함. 관련 뉴스 없으면 빈 태그)</news_ko>
+<news_en>(Team news summary in English. Include injuries, transfers, team updates. Empty tag if no relevant news)</news_en>`
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
