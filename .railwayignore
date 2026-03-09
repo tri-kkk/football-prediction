@@ -1,0 +1,12 @@
+app/
+components/
+lib/
+public/
+styles/
+package.json
+package-lock.json
+next.config.js
+tsconfig.json
+vercel.json
+.next/
+node_modules/
