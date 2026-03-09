@@ -244,6 +244,7 @@ const TABS = [
   { id: 'proto', label: '프로토 관리', icon: '🎫' },
   { id: 'export', label: '예측 Export', icon: '📤' },
   { id: 'notices', label: '공지 관리', icon: '📣' },
+  { id: 'revenue', label: '매출 관리', icon: '💵' },
 ]
 
 /// 국기 이모지 매핑 - 확장
@@ -504,6 +505,9 @@ export default function AdminDashboard() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
   const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null)
+  const [revenueFilter, setRevenueFilter] = useState<'all' | '7' | '30' | '90'>('all')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [revenueLoading, setRevenueLoading] = useState(false)
   const [ads, setAds] = useState<Advertisement[]>([])
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([])
   const [todayAdStats, setTodayAdStats] = useState<Record<string, AdStats>>({})
@@ -795,6 +799,21 @@ export default function AdminDashboard() {
       setPaymentStats(data.stats || null)
     } catch (err) {
       console.error('Payments fetch error:', err)
+    }
+  }
+
+  const fetchRevenue = async () => {
+    setRevenueLoading(true)
+    try {
+      const response = await fetch('/api/admin/payments?status=success')
+      if (!response.ok) return
+      const data = await response.json()
+      setPayments(data.payments || [])
+      setPaymentStats(data.stats || null)
+    } catch (err) {
+      console.error('Revenue fetch error:', err)
+    } finally {
+      setRevenueLoading(false)
     }
   }
 
@@ -2213,64 +2232,98 @@ export default function AdminDashboard() {
 
   // 메인 대시보드
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      {/* 헤더 */}
-      <nav className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">⚽</span>
-              <span className="text-xl font-bold text-white">TrendSoccer Admin</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex overflow-x-hidden">
+
+      {/* 좌측 사이드바 */}
+      <>
+      {/* 모바일 오버레이 */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* 좌측 사이드바 */}
+      <aside className={`fixed md:sticky top-0 left-0 h-full md:h-screen w-56 shrink-0 bg-gray-900/95 border-r border-gray-800 min-h-screen flex flex-col z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        {/* 로고 */}
+        <div className="px-5 py-5 border-b border-gray-800">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">⚽</span>
+            <div>
+              <div className="text-sm font-bold text-white leading-tight">TrendSoccer</div>
+              <div className="text-[10px] text-emerald-400 font-medium">Admin Panel</div>
             </div>
-            
-            <div className="flex items-center gap-4">
-              <select
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value as '7' | '14' | '30')}
-                className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option value="7">최근 7일</option>
-                <option value="14">최근 14일</option>
-                <option value="30">최근 30일</option>
-              </select>
-              
-              <button
-                onClick={loadAllData}
-                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors"
-              >
-                🔄 새로고침
-              </button>
-              
-              <button
-                onClick={handleLogout}
-                className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm transition-colors"
-              >
-                로그아웃
-              </button>
-            </div>
-          </div>
-          
-          {/* 탭 네비게이션 */}
-          <div className="flex items-center gap-1 -mb-px overflow-x-auto">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300'
-                }`}
-              >
-                {tab.icon} {tab.label}
-              </button>
-            ))}
           </div>
         </div>
-      </nav>
+
+        {/* 탭 네비게이션 */}
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSidebarOpen(false) }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left ${
+                activeTab === tab.id
+                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
+              }`}
+            >
+              <span className="text-base">{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* 하단 유틸리티 */}
+        <div className="px-2 py-3 border-t border-gray-800 space-y-1.5">
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value as '7' | '14' | '30')}
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
+          >
+            <option value="7">최근 7일</option>
+            <option value="14">최근 14일</option>
+            <option value="30">최근 30일</option>
+          </select>
+          <button
+            onClick={loadAllData}
+            className="w-full px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs transition-colors"
+          >
+            🔄 새로고침
+          </button>
+          <button
+            onClick={handleLogout}
+            className="w-full px-3 py-2 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg text-xs transition-colors"
+          >
+            로그아웃
+          </button>
+        </div>
+      </aside>
+      </>
+
+      {/* 우측 메인 영역 */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* 상단 헤더바 */}
+        <header className="bg-gray-900/60 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-30 px-4 md:px-6 h-14 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            {/* 모바일 햄버거 */}
+            <button
+              className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <span className="text-base">{TABS.find(t => t.id === activeTab)?.icon}</span>
+            <span className="text-white font-semibold text-sm">{TABS.find(t => t.id === activeTab)?.label}</span>
+          </div>
+          <div className="text-xs text-gray-500 hidden md:block">TrendSoccer Admin</div>
+        </header>
 
       {/* 메인 콘텐츠 */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <div className="flex-1 px-3 md:px-6 py-4 md:py-6 overflow-y-auto pb-20 md:pb-6">
         {loading && (
           <div className="text-center py-20">
             <div className="text-4xl mb-4 animate-bounce">⚽</div>
@@ -2297,7 +2350,7 @@ export default function AdminDashboard() {
             {activeTab === 'dashboard' && (
               <div className="space-y-6">
                 {/* 요약 카드 */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                   <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 rounded-xl p-5 border border-blue-500/30">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-2xl">👥</span>
@@ -2361,7 +2414,7 @@ export default function AdminDashboard() {
 
                 {/* 광고 통계 카드 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="flex items-center gap-3 mb-3">
                       <span className="text-2xl">📢</span>
                       <div>
@@ -2371,7 +2424,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="flex items-center gap-3 mb-3">
                       <span className="text-2xl">👁️</span>
                       <div>
@@ -2381,7 +2434,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="flex items-center gap-3 mb-3">
                       <span className="text-2xl">👆</span>
                       <div>
@@ -2565,7 +2618,7 @@ export default function AdminDashboard() {
                     {comparisonData && (
                       <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
                         <h3 className="text-lg font-semibold text-white mb-4">📈 전주 대비 성장률</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                           {[
                             { label: '사용자', current: comparisonData.current.users, growth: comparisonData.growth.users },
                             { label: '세션', current: comparisonData.current.sessions, growth: comparisonData.growth.sessions },
@@ -3101,36 +3154,36 @@ export default function AdminDashboard() {
             {activeTab === 'subscriptions' && (
               <div className="space-y-6">
                 {/* 매출 요약 카드 */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">💰</div>
                     <div className="text-2xl font-bold text-emerald-400">
                       {formatCurrency(paymentStats?.totalRevenue || 0)}
                     </div>
                     <div className="text-sm text-gray-400">총 매출</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">📅</div>
                     <div className="text-2xl font-bold text-white">
                       {formatCurrency(paymentStats?.todayRevenue || 0)}
                     </div>
                     <div className="text-sm text-gray-400">오늘 매출 ({paymentStats?.todayCount || 0}건)</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">💳</div>
                     <div className="text-2xl font-bold text-white">
                       {subscriptions.filter(s => s.status === 'active').length}
                     </div>
                     <div className="text-sm text-gray-400">활성 구독</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">✅</div>
                     <div className="text-2xl font-bold text-white">
                       {paymentStats?.successCount || 0}
                     </div>
                     <div className="text-sm text-gray-400">성공 결제</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">❌</div>
                     <div className="text-2xl font-bold text-white">
                       {paymentStats?.failedCount || 0}
@@ -3141,7 +3194,7 @@ export default function AdminDashboard() {
 
                 {/* 월별 매출 차트 */}
                 {paymentStats?.monthlyRevenue && Object.keys(paymentStats.monthlyRevenue).length > 0 && (
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <h3 className="text-white font-bold mb-4">📊 월별 매출</h3>
                     <div className="flex items-end gap-2 h-32">
                       {Object.entries(paymentStats.monthlyRevenue)
@@ -3541,21 +3594,21 @@ export default function AdminDashboard() {
 
                 {/* 요약 카드 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">👁️</div>
                     <div className="text-2xl font-bold text-white">
                       {reportSummary.reduce((sum, s) => sum + s.impressions, 0).toLocaleString()}
                     </div>
                     <div className="text-sm text-gray-400">총 노출</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">👆</div>
                     <div className="text-2xl font-bold text-white">
                       {reportSummary.reduce((sum, s) => sum + s.clicks, 0).toLocaleString()}
                     </div>
                     <div className="text-sm text-gray-400">총 클릭</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">📊</div>
                     <div className="text-2xl font-bold text-emerald-400">
                       {calculateCTR(
@@ -3762,17 +3815,17 @@ export default function AdminDashboard() {
               <div className="space-y-6">
                 {/* 블로그 통계 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">📝</div>
                     <div className="text-2xl font-bold text-white">{blogStats.totalPosts}</div>
                     <div className="text-sm text-gray-400">전체 포스트</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">✅</div>
                     <div className="text-2xl font-bold text-emerald-400">{blogStats.publishedPosts}</div>
                     <div className="text-sm text-gray-400">발행됨</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-2xl mb-2">👁️</div>
                     <div className="text-2xl font-bold text-white">{blogStats.totalViews.toLocaleString()}</div>
                     <div className="text-sm text-gray-400">총 조회수</div>
@@ -4481,11 +4534,171 @@ export default function AdminDashboard() {
             )}
           </>
         )}
-      </main>
+
+      {/* 💵 매출 관리 탭 */}
+      {activeTab === 'revenue' && (
+        <div className="w-full px-3 md:px-6 py-4 md:py-6 max-w-6xl space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">💵 매출 관리</h2>
+            <button
+              onClick={fetchRevenue}
+              disabled={revenueLoading}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors"
+            >
+              {revenueLoading ? '⏳ 로딩...' : '🔄 새로고침'}
+            </button>
+          </div>
+
+          {/* 기간 필터 */}
+          <div className="flex items-center gap-2">
+            {([['all','전체'], ['7','최근 7일'], ['30','최근 30일'], ['90','최근 90일']] as const).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setRevenueFilter(val)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  revenueFilter === val
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* 실제 매출 데이터 - status=success만 */}
+          {(() => {
+            const now = new Date()
+            const filtered = payments.filter(p => {
+              if (p.status !== 'success') return false
+              if (revenueFilter === 'all') return true
+              const days = parseInt(revenueFilter)
+              const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+              return new Date(p.created_at) >= cutoff
+            })
+
+            const totalRevenue = filtered.reduce((sum, p) => sum + (p.amount || 0), 0)
+            const todayRevenue = filtered.filter(p => {
+              const d = new Date(p.created_at)
+              return d.toDateString() === now.toDateString()
+            }).reduce((sum, p) => sum + (p.amount || 0), 0)
+
+            // 월별 집계
+            const monthly: Record<string, number> = {}
+            filtered.forEach(p => {
+              const month = p.created_at.slice(0, 7)
+              monthly[month] = (monthly[month] || 0) + p.amount
+            })
+            const monthEntries = Object.entries(monthly).sort(([a],[b]) => a.localeCompare(b))
+            const maxMonthly = Math.max(...Object.values(monthly), 1)
+
+            return (
+              <>
+                {/* 요약 카드 */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                  <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 rounded-xl p-5 border border-emerald-500/30">
+                    <div className="text-xs text-emerald-400 mb-1">실제 총 매출</div>
+                    <div className="text-2xl font-bold text-white">{formatCurrency(totalRevenue)}</div>
+                    <div className="text-xs text-gray-500 mt-1">성공 결제만 집계</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
+                    <div className="text-xs text-gray-400 mb-1">오늘 매출</div>
+                    <div className="text-2xl font-bold text-white">{formatCurrency(todayRevenue)}</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
+                    <div className="text-xs text-gray-400 mb-1">결제 건수</div>
+                    <div className="text-2xl font-bold text-white">{filtered.length}건</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
+                    <div className="text-xs text-gray-400 mb-1">건당 평균</div>
+                    <div className="text-2xl font-bold text-white">
+                      {filtered.length > 0 ? formatCurrency(Math.round(totalRevenue / filtered.length)) : '-'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 월별 매출 바 차트 */}
+                {monthEntries.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                    <h3 className="text-white font-bold mb-5">📊 월별 실매출</h3>
+                    <div className="flex items-end gap-3 h-40">
+                      {monthEntries.slice(-12).map(([month, rev]) => (
+                        <div key={month} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                          <div className="text-[10px] text-emerald-400 font-medium truncate w-full text-center">
+                            {formatCurrency(rev)}
+                          </div>
+                          <div
+                            className="w-full bg-emerald-500/70 hover:bg-emerald-400/80 rounded-t transition-colors cursor-default"
+                            style={{ height: `${(rev / maxMonthly) * 130}px`, minHeight: '4px' }}
+                            title={`${month}: ${formatCurrency(rev)}`}
+                          />
+                          <div className="text-[10px] text-gray-500">{month.slice(5)}월</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 실매출 상세 테이블 */}
+                <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                    <h3 className="text-white font-bold">✅ 성공 결제 내역 ({filtered.length}건)</h3>
+                    <span className="text-xs text-gray-500">취소/실패 제외</span>
+                  </div>
+                  {filtered.length === 0 ? (
+                    <div className="px-5 py-12 text-center text-gray-500">결제 내역이 없습니다</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-900/50">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">일시</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">이메일</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">플랜</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">금액</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">카드</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">승인번호</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">주문번호</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/50">
+                          {filtered.map((p) => (
+                            <tr key={p.id} className="hover:bg-gray-700/20 transition-colors">
+                              <td className="px-4 py-3 text-sm text-gray-400 whitespace-nowrap">
+                                {formatDateTime(p.created_at)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-white">{p.user_email}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  p.plan === 'yearly' ? 'bg-orange-500/20 text-orange-400' :
+                                  p.plan === 'quarterly' ? 'bg-purple-500/20 text-purple-400' :
+                                  'bg-blue-500/20 text-blue-400'
+                                }`}>
+                                  {p.plan === 'yearly' ? '연간' : p.plan === 'quarterly' ? '3개월' : '월간'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-emerald-400 font-bold text-right">
+                                {formatCurrency(p.amount)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-400">{p.card_name || '-'}</td>
+                              <td className="px-4 py-3 text-sm text-gray-500 font-mono">{p.approval_number || '-'}</td>
+                              <td className="px-4 py-3 text-xs text-gray-600 font-mono">{p.order_id || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            )
+          })()}
+        </div>
+      )}
 
       {/* 📣 공지 관리 탭 */}
       {activeTab === 'notices' && (
-        <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <div className="w-full px-3 md:px-6 py-4 md:py-6 max-w-4xl space-y-6">
           <h2 className="text-xl font-bold text-white">📣 공지 롤링 배너 관리</h2>
 
           {/* 작성/수정 폼 */}
@@ -4670,8 +4883,47 @@ export default function AdminDashboard() {
               <span className="text-gray-600 ml-1">✕</span>
             </div>
           </div>
-        </main>
+        </div>
       )}
+      </div>
+
+
+      {/* 모바일 하단 탭바 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 border-t border-gray-800 z-40 md:hidden">
+        <div className="flex items-center justify-around px-2 py-1 safe-area-pb">
+          {[
+            { id: 'dashboard', icon: '📊', label: '대시보드' },
+            { id: 'users', icon: '👥', label: '회원' },
+            { id: 'subscriptions', icon: '💳', label: '구독' },
+            { id: 'revenue', icon: '💵', label: '매출' },
+            { id: 'blog', icon: '✍️', label: '블로그' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSidebarOpen(false) }}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-colors min-w-0 flex-1 ${
+                activeTab === tab.id
+                  ? 'text-emerald-400'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <span className="text-lg leading-none">{tab.icon}</span>
+              <span className="text-[9px] font-medium leading-none mt-0.5 truncate">{tab.label}</span>
+            </button>
+          ))}
+          {/* 더보기 버튼 */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition-colors flex-1"
+          >
+            <span className="text-lg leading-none">☰</span>
+            <span className="text-[9px] font-medium leading-none mt-0.5">더보기</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 모바일 하단바 여백 */}
+      <div className="h-16 md:hidden" />
 
       {/* 광고 모달 */}
       {isAdModalOpen && (
@@ -4860,6 +5112,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
