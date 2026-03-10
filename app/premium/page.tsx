@@ -1922,6 +1922,51 @@ export default function PremiumPredictPage() {
     correctPicks: number
   }>({ roi: 0, streak: 0, totalPicks: 0, correctPicks: 0 })
   
+  // 이번 달 적중 건수
+  const [monthlyWins, setMonthlyWins] = useState(0)
+  // 픽 마감까지 남은 시간
+  const [pickDeadline, setPickDeadline] = useState('')
+
+  // 최근 적중 슬라이드 인덱스
+  const [currentPickIdx, setCurrentPickIdx] = useState(0)
+  const [pickVisible, setPickVisible] = useState(true)
+
+  // 픽 마감 카운트다운 (매일 오전 6시 기준)
+  useEffect(() => {
+    const update = () => {
+      const now = new Date()
+      // 오전 9시, 오후 6시 두 마감 중 가장 가까운 것
+      const candidates = [9, 18].map(h => {
+        const d = new Date()
+        d.setHours(h, 0, 0, 0)
+        if (now >= d) d.setDate(d.getDate() + 1)
+        return d
+      })
+      const deadline = candidates[0].getTime() < candidates[1].getTime() ? candidates[0] : candidates[1]
+      const diff = deadline.getTime() - now.getTime()
+      const h = Math.floor(diff / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
+      setPickDeadline(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`)
+    }
+    update()
+    const t = setInterval(update, 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  // 최근 적중 슬라이드 타이머
+  useEffect(() => {
+    if (recentCorrectPicks.length === 0) return
+    const interval = setInterval(() => {
+      setPickVisible(false)
+      setTimeout(() => {
+        setCurrentPickIdx(prev => (prev + 1) % recentCorrectPicks.length)
+        setPickVisible(true)
+      }, 400)
+    }, 3500)
+    return () => clearInterval(interval)
+  }, [recentCorrectPicks])
+
   // 리그 데이터 - 국기 + 한글명 추가
   const leagues = [
     { code: 'ALL', name: 'ALL', nameKo: '전체', logo: '', flag: '' },
@@ -2216,16 +2261,11 @@ export default function PremiumPredictPage() {
             }))
           setRecentCorrectPicks(correctPicks)
           
-          // ✅ 이번 주 통계 계산 (적중률 + 연승) - 프리미엄 픽 기준
-          const oneWeekAgo = new Date()
-          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-          
-          // 결과가 확정된 경기만 필터링
-          const weeklyPicks = premiumData.picks.filter((pick: any) => {
-            const pickDate = new Date(pick.commence_time)
-            const isSettled = pick.result === 'WIN' || pick.result === 'LOSE'
-            return pickDate >= oneWeekAgo && isSettled
-          })
+          // ✅ 최근 10경기 기준 통계 계산
+          const allSettled = premiumData.picks
+            .filter((pick: any) => pick.result === 'WIN' || pick.result === 'LOSE')
+            .sort((a: any, b: any) => new Date(b.commence_time).getTime() - new Date(a.commence_time).getTime())
+          const weeklyPicks = allSettled.slice(0, 10)
           
           // 연승 계산 (최근부터)
           let streak = 0
@@ -2241,6 +2281,15 @@ export default function PremiumPredictPage() {
             }
           }
           
+          // 이번 달 적중 건수
+          const now = new Date()
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+          const monthlyWinCount = premiumData.picks.filter((pick: any) => {
+            const pickDate = new Date(pick.commence_time)
+            return pickDate >= monthStart && pick.result === 'WIN'
+          }).length
+          setMonthlyWins(monthlyWinCount)
+
           setWeeklyStats({
             roi: 0,
             streak,
@@ -2434,89 +2483,72 @@ export default function PremiumPredictPage() {
                       {language === 'ko' ? '프리미엄 픽' : 'Premium Picks'}
                     </span>
                   </div>
-                  {weeklyStats.streak >= 1 && (
-                    <div className="flex items-center gap-1 bg-gradient-to-r from-orange-500/20 to-red-500/20 px-3 py-1 rounded-full border border-orange-500/30 animate-pulse">
-                      <span className="text-orange-400 font-bold text-sm">
-                        {weeklyStats.streak}{language === 'ko' ? '연승!' : ' Streak!'}
-                      </span>
-                    </div>
-                  )}
+
                 </div>
                 
                 {/* 적중률 - 60% 이상일 때만 표시 */}
-                {weeklyStats.totalPicks >= 5 && Math.round((weeklyStats.correctPicks / weeklyStats.totalPicks) * 100) >= 60 && (
-                  <div className="px-4 py-4 border-b border-gray-800">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400 text-sm">
-                        {language === 'ko' ? '적중률' : 'Win Rate'}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-green-400 font-black text-3xl">
-                          {Math.round((weeklyStats.correctPicks / weeklyStats.totalPicks) * 100)}%
-                        </span>
-                        <span className="text-gray-500 text-sm">
-                          ({weeklyStats.correctPicks}/{weeklyStats.totalPicks})
-                        </span>
-                      </div>
-                    </div>
-                    {/* 프로그레스 바 */}
-                    <div className="mt-2 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.round((weeklyStats.correctPicks / weeklyStats.totalPicks) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
+
                 
-                {/* 최근 적중 - 항상 표시 */}
+                {/* 최근 적중 - 아래→위 슬라이드 애니메이션 */}
                 {recentCorrectPicks.length > 0 && (
                   <div className="px-4 py-3 border-b border-gray-800 bg-green-500/5">
                     <div className="text-gray-500 text-xs mb-2 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
                       {language === 'ko' ? '최근 적중' : 'Recent Wins'}
+
                     </div>
-                    <div className="max-w-lg mx-auto">
-                    {recentCorrectPicks.slice(0, 3).map((pick, idx) => (
-                      <div key={idx} className="flex items-center justify-between py-2 px-3 bg-green-500/10 rounded-lg mb-2 last:mb-0 border border-green-500/20">
-                        {/* 팀 영역 */}
-                        <div className="flex-1 grid min-w-0" style={{ gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)', alignItems: 'center', gap: '0 6px' }}>
-                          {/* 홈팀 - 우측 정렬 */}
-                          <div className="flex items-center gap-1.5 justify-end overflow-hidden">
-                            <span className="text-white font-medium text-sm truncate text-right">{language === 'ko' ? (teamNameKo[pick.home_team] || pick.home_team) : pick.home_team}</span>
-                            <img 
-                              src={pick.home_team_id 
-                                ? `https://media.api-sports.io/football/teams/${pick.home_team_id}.png`
-                                : getTeamLogo(pick.home_team)} 
-                              alt="" 
-                              className="w-6 h-6 object-contain flex-shrink-0"
-                              onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
-                            />
+                    <div className="max-w-lg mx-auto overflow-hidden" style={{ height: '48px' }}>
+                      {(() => {
+                        const pick = recentCorrectPicks[currentPickIdx]
+                        if (!pick) return null
+                        return (
+                        <div
+                          className="flex items-center justify-between py-2 px-3 bg-green-500/10 rounded-lg border border-green-500/20 h-full"
+                          style={{
+                            opacity: pickVisible ? 1 : 0,
+                            transform: pickVisible ? 'translateY(0)' : 'translateY(20px)',
+                            transition: 'opacity 0.4s ease, transform 0.4s ease',
+                          }}
+                        >
+                          {/* 팀 영역 */}
+                          <div className="flex-1 grid min-w-0" style={{ gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)', alignItems: 'center', gap: '0 6px' }}>
+                            {/* 홈팀 - 우측 정렬 */}
+                            <div className="flex items-center gap-1.5 justify-end overflow-hidden">
+                              <span className="text-white font-medium text-sm truncate text-right">{language === 'ko' ? (teamNameKo[pick.home_team] || pick.home_team) : pick.home_team}</span>
+                              <img
+                                src={pick.home_team_id
+                                  ? `https://media.api-sports.io/football/teams/${pick.home_team_id}.png`
+                                  : getTeamLogo(pick.home_team)}
+                                alt=""
+                                className="w-6 h-6 object-contain flex-shrink-0"
+                                onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
+                              />
+                            </div>
+                            {/* vs 중앙 고정 */}
+                            <span className="text-gray-500 text-xs">vs</span>
+                            {/* 원정팀 - 좌측 정렬 */}
+                            <div className="flex items-center gap-1.5 overflow-hidden">
+                              <img
+                                src={pick.away_team_id
+                                  ? `https://media.api-sports.io/football/teams/${pick.away_team_id}.png`
+                                  : getTeamLogo(pick.away_team)}
+                                alt=""
+                                className="w-6 h-6 object-contain flex-shrink-0"
+                                onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
+                              />
+                              <span className="text-white font-medium text-sm truncate">{language === 'ko' ? (teamNameKo[pick.away_team] || pick.away_team) : pick.away_team}</span>
+                            </div>
                           </div>
-                          {/* vs 중앙 고정 */}
-                          <span className="text-gray-500 text-xs">vs</span>
-                          {/* 원정팀 - 좌측 정렬 */}
-                          <div className="flex items-center gap-1.5 overflow-hidden">
-                            <img 
-                              src={pick.away_team_id 
-                                ? `https://media.api-sports.io/football/teams/${pick.away_team_id}.png`
-                                : getTeamLogo(pick.away_team)} 
-                              alt="" 
-                              className="w-6 h-6 object-contain flex-shrink-0"
-                              onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.sofascore.com/static/images/placeholders/team.svg' }}
-                            />
-                            <span className="text-white font-medium text-sm truncate">{language === 'ko' ? (teamNameKo[pick.away_team] || pick.away_team) : pick.away_team}</span>
+                          {/* 배지 - 우측 고정 */}
+                          <div className="flex items-center gap-1 flex-shrink-0 ml-3">
+                            <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded">WIN</span>
+                            <span className="text-yellow-400 text-xs font-bold px-2 py-0.5 bg-yellow-500/20 rounded border border-yellow-500/30">
+                              {pick.pick_result}
+                            </span>
                           </div>
                         </div>
-                        {/* 배지 - 우측 고정 */}
-                        <div className="flex items-center gap-1 flex-shrink-0 ml-3">
-                          <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded">WIN</span>
-                          <span className="text-yellow-400 text-xs font-bold px-2 py-0.5 bg-yellow-500/20 rounded border border-yellow-500/30">
-                            {pick.pick_result}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                        )
+                      })()}
                     </div>
                   </div>
                 )}
@@ -2524,6 +2556,33 @@ export default function PremiumPredictPage() {
                 {/* CTA 영역 */}
                 {!premiumRequested ? (
                   <div className="p-4">
+                    {/* 신뢰 지표 3개 */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {/* 최근 적중률 */}
+                      <div className="bg-gray-800/60 rounded-xl p-3 text-center border border-gray-700/50">
+                        <div className="text-green-400 font-black text-xl leading-none">
+                          {weeklyStats.totalPicks > 0
+                            ? `${Math.round((weeklyStats.correctPicks / weeklyStats.totalPicks) * 100)}%`
+                            : '-'}
+                        </div>
+                        <div className="text-gray-500 text-xs mt-1">{language === 'ko' ? '최근 적중률' : 'Win Rate'}</div>
+                      </div>
+                      {/* 마감 카운트다운 */}
+                      <div className="bg-red-900/20 rounded-xl p-3 text-center border border-red-500/30">
+                        <div className="text-red-400 font-black text-lg leading-none tabular-nums">
+                          {pickDeadline || '--:--:--'}
+                        </div>
+                        <div className="text-gray-500 text-xs mt-1">{language === 'ko' ? '마감까지' : 'Closes In'}</div>
+                      </div>
+                      {/* 현재 연승 */}
+                      <div className="bg-gray-800/60 rounded-xl p-3 text-center border border-gray-700/50">
+                        <div className="text-orange-400 font-black text-xl leading-none">
+                          {weeklyStats.streak > 0 ? `${weeklyStats.streak}연승` : '-'}
+                        </div>
+                        <div className="text-gray-500 text-xs mt-1">{language === 'ko' ? '현재 연승' : 'Win Streak'}</div>
+                      </div>
+                    </div>
+
                     {/* 긴급성 문구 */}
                     <div className="text-center mb-3">
                       <span className="inline-flex items-center gap-2 text-yellow-400 text-sm">
@@ -2670,38 +2729,16 @@ export default function PremiumPredictPage() {
                         </div>
                         
                         {/* 적중률 사회적 증거 - 60% 이상 & 5경기 이상일 때만 */}
-                        {weeklyStats.totalPicks >= 5 && Math.round((weeklyStats.correctPicks / weeklyStats.totalPicks) * 100) >= 60 && (
-                          <div className="flex items-center justify-center gap-4 md:gap-6 mb-6 md:mb-8 bg-green-500/5 border border-green-500/20 rounded-xl py-3 md:py-4 px-4 max-w-md mx-auto">
+                        {weeklyStats.totalPicks >= 3 && (
+                          <div className="flex items-center justify-center mb-6 md:mb-8 bg-green-500/5 border border-green-500/20 rounded-xl py-3 md:py-4 px-4 max-w-md mx-auto">
                             <div className="text-center">
                               <span className="text-green-400 text-2xl md:text-3xl font-black block">
                                 {Math.round((weeklyStats.correctPicks / weeklyStats.totalPicks) * 100)}%
                               </span>
                               <span className="text-gray-500 text-xs md:text-sm">
-                                {language === 'ko' ? '적중률' : 'Win Rate'}
+                                {language === 'ko' ? '최근 적중률' : 'Last Win Rate'}
                               </span>
                             </div>
-                            <div className="w-px h-8 bg-gray-700" />
-                            <div className="text-center">
-                              <span className="text-white text-2xl md:text-3xl font-black block">
-                                {weeklyStats.correctPicks}/{weeklyStats.totalPicks}
-                              </span>
-                              <span className="text-gray-500 text-xs md:text-sm">
-                                {language === 'ko' ? '최근 성적' : 'Recent'}
-                              </span>
-                            </div>
-                            {weeklyStats.streak >= 2 && (
-                              <>
-                                <div className="w-px h-8 bg-gray-700" />
-                                <div className="text-center">
-                                  <span className="text-orange-400 text-2xl md:text-3xl font-black block">
-                                    {weeklyStats.streak}
-                                  </span>
-                                  <span className="text-gray-500 text-xs md:text-sm">
-                                    {language === 'ko' ? '연승' : 'Streak'}
-                                  </span>
-                                </div>
-                              </>
-                            )}
                           </div>
                         )}
                         
