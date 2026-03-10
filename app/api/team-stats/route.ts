@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
   }
   
   try {
-    // 1. fg_team_stats에서 시즌 통계 가져오기
+    // 1. fg_team_stats에서 시즌 통계 가져오기 (전체 시즌 조회 후 최적 시즌 선택)
     let statsQuery = supabase
       .from('fg_team_stats')
       .select('*')
@@ -117,7 +117,14 @@ export async function GET(request: NextRequest) {
       statsQuery = statsQuery.eq('league_code', leagueCode)
     }
     
-    const { data: statsData, error: statsError } = await statsQuery.limit(1).single()
+    const { data: allSeasonStats, error: statsError } = await statsQuery.limit(5)
+    
+    // 최적 시즌 선택: 20경기 이상인 가장 최신 시즌 우선, 없으면 경기수 가장 많은 시즌
+    let statsData: any = null
+    if (allSeasonStats && allSeasonStats.length > 0) {
+      statsData = allSeasonStats.find((s: any) => (s.total_played || 0) >= 20)
+        || allSeasonStats.reduce((a: any, b: any) => (a.total_played || 0) >= (b.total_played || 0) ? a : b)
+    }
     
     // 2. fg_match_history에서 최근 경기 가져오기 (실시간 폼 계산용)
     let matchQuery = supabase
