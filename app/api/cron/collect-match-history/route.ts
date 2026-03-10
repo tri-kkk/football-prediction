@@ -31,11 +31,15 @@ const LEAGUES = [
   // 아시아 리그 (신규)
   { id: 292, code: 'K1', name: 'K League 1', country: 'South Korea', region: 'asia' },
   { id: 98, code: 'J1', name: 'J1 League', country: 'Japan', region: 'asia' },
+
+  // 아메리카 리그
+  { id: 253, code: 'MLS', name: 'Major League Soccer', country: 'USA', region: 'americas' },
 ]
 
-// 수집할 시즌 (유럽: 2022-23 ~ 2025-26, 아시아: 2022 ~ 2025)
+// 수집할 시즌 (유럽: 2022-23 ~ 2025-26, 아시아: 2022 ~ 2025, 아메리카: 2022 ~ 2026)
 const EUROPE_SEASONS = [2022, 2023, 2024, 2025]
 const ASIA_SEASONS = [2022, 2023, 2024, 2025]
+const AMERICAS_SEASONS = [2022, 2023, 2024, 2025, 2026]
 
 // ============================================
 // 팀명 한글 매핑
@@ -315,8 +319,8 @@ function calculateResult(homeScore: number, awayScore: number): string {
 
 // 게임 코드 생성 (리그별 시즌 형식 다름)
 function generateGameCode(leagueCode: string, season: number, region: string): string {
-  if (region === 'asia') {
-    // 아시아: 단일 연도 (예: k1-2025)
+  if (region === 'asia' || region === 'americas') {
+    // 아시아/아메리카: 단일 연도 (예: k1-2025, mls-2026)
     return `${leagueCode.toLowerCase()}-${season}`
   } else {
     // 유럽: 시즌 형식 (예: pl-24-25)
@@ -572,6 +576,7 @@ export async function GET(request: NextRequest) {
   // 리그별로 분류
   const europeLeagues = LEAGUES.filter(l => l.region === 'europe')
   const asiaLeagues = LEAGUES.filter(l => l.region === 'asia')
+  const americasLeagues = LEAGUES.filter(l => l.region === 'americas')
 
   return NextResponse.json({
     status: 'ready',
@@ -581,14 +586,17 @@ export async function GET(request: NextRequest) {
     leagues: {
       europe: europeLeagues.map(l => ({ code: l.code, name: l.name, id: l.id })),
       asia: asiaLeagues.map(l => ({ code: l.code, name: l.name, id: l.id })),
+      americas: americasLeagues.map(l => ({ code: l.code, name: l.name, id: l.id })),
     },
     supportedSeasons: {
       europe: EUROPE_SEASONS.map(s => `${s}-${s+1}`),
       asia: ASIA_SEASONS,
+      americas: AMERICAS_SEASONS,
     },
     currentSeason: {
       europe: '2025-26',
       asia: 2025,
+      americas: 2026,
     },
     usage: {
       status: 'GET /api/cron/collect-match-history',
@@ -632,6 +640,16 @@ export async function POST(request: NextRequest) {
       // 아시아
       for (const s of ASIA_SEASONS) {
         for (const league of LEAGUES.filter(l => l.region === 'asia')) {
+          const result = await collectLeagueSeason(league, s, skipOdds)
+          totalCollected += result.collected
+          totalSkipped += result.skipped
+          totalErrors += result.errors
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+      }
+      // 아메리카
+      for (const s of AMERICAS_SEASONS) {
+        for (const league of LEAGUES.filter(l => l.region === 'americas')) {
           const result = await collectLeagueSeason(league, s, skipOdds)
           totalCollected += result.collected
           totalSkipped += result.skipped
@@ -683,7 +701,7 @@ export async function POST(request: NextRequest) {
         console.log(`\n📊 Recent matches: ${league.name}`)
         
         // 현재 시즌 결정
-        const currentSeason = league.region === 'asia' ? 2025 : 2025
+        const currentSeason = league.region === 'americas' ? 2026 : league.region === 'asia' ? 2025 : 2025
         
         const fixturesData = await fetchFromApiFootball(
           `/fixtures?league=${league.id}&season=${currentSeason}&from=${fromDate}&to=${toDate}&status=FT`
