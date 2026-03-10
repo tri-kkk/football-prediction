@@ -7,6 +7,8 @@ interface PredictionProps {
   matchId: number
   homeTeam: string
   awayTeam: string
+  homeTeamKo?: string
+  awayTeamKo?: string
   season: string
 }
 
@@ -41,9 +43,13 @@ interface AIInsights {
 export default function BaseballAIPrediction({ 
   matchId, 
   homeTeam, 
-  awayTeam, 
+  awayTeam,
+  homeTeamKo,
+  awayTeamKo,
   season 
 }: PredictionProps) {
+  const homeTeamName = homeTeamKo || homeTeam
+  const awayTeamName = awayTeamKo || awayTeam
   const [prediction, setPrediction] = useState<PredictionResult | null>(null)
   const [insights, setInsights] = useState<AIInsights | null>(null)
   const [loading, setLoading] = useState(true)
@@ -137,20 +143,20 @@ export default function BaseballAIPrediction({
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-900/50 rounded-lg p-4 text-center border border-gray-700 hover:border-blue-500/50 transition-colors">
-                  <div className="text-xs text-gray-400 mb-2 font-medium">{homeTeam}</div>
-                  <div className="text-4xl font-bold text-blue-400 mb-1">
-                    {(prediction.homeWinProb * 100).toFixed(1)}%
-                  </div>
-                  <div className="text-xs text-gray-500">홈팀</div>
-                </div>
-                
                 <div className="bg-gray-900/50 rounded-lg p-4 text-center border border-gray-700 hover:border-red-500/50 transition-colors">
-                  <div className="text-xs text-gray-400 mb-2 font-medium">{awayTeam}</div>
+                  <div className="text-xs text-gray-400 mb-2 font-medium">{awayTeamName}</div>
                   <div className="text-4xl font-bold text-red-400 mb-1">
-                    {(prediction.awayWinProb * 100).toFixed(1)}%
+                    {prediction.awayWinProb}%
                   </div>
                   <div className="text-xs text-gray-500">원정팀</div>
+                </div>
+                
+                <div className="bg-gray-900/50 rounded-lg p-4 text-center border border-gray-700 hover:border-blue-500/50 transition-colors">
+                  <div className="text-xs text-gray-400 mb-2 font-medium">{homeTeamName}</div>
+                  <div className="text-4xl font-bold text-blue-400 mb-1">
+                    {prediction.homeWinProb}%
+                  </div>
+                  <div className="text-xs text-gray-500">홈팀</div>
                 </div>
               </div>
             </div>
@@ -165,14 +171,14 @@ export default function BaseballAIPrediction({
                 <div className="bg-gray-900/50 rounded-lg p-4 text-center border border-gray-700">
                   <div className="text-xs text-gray-400 mb-2">오버</div>
                   <div className="text-2xl font-bold text-orange-400">
-                    {(prediction.overProb * 100).toFixed(1)}%
+                    {prediction.overProb}%
                   </div>
                 </div>
                 
                 <div className="bg-gray-900/50 rounded-lg p-4 text-center border border-gray-700">
                   <div className="text-xs text-gray-400 mb-2">언더</div>
                   <div className="text-2xl font-bold text-purple-400">
-                    {(prediction.underProb * 100).toFixed(1)}%
+                    {prediction.underProb}%
                   </div>
                 </div>
               </div>
@@ -187,7 +193,11 @@ export default function BaseballAIPrediction({
                     <div className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">
                       분석 요약
                     </div>
-                    <div className="text-sm text-gray-300 leading-relaxed">{insights.summary}</div>
+                    <div className="text-sm text-gray-300 leading-relaxed">
+                      {insights.summary
+                        .replace(homeTeam, homeTeamName)
+                        .replace(awayTeam, awayTeamName)}
+                    </div>
                   </div>
                 </div>
                 
@@ -197,21 +207,26 @@ export default function BaseballAIPrediction({
                     주요 영향 요소
                   </div>
                   <div className="space-y-4">
-                    {insights.keyFactors.slice(0, 3).map((factor, idx) => (
-                      <div key={idx} className="group">
-                        <div className="flex items-center justify-between text-xs mb-2">
-                          <span className="text-gray-300 font-medium">{factor.name}</span>
-                          <span className="text-blue-400 font-semibold">{factor.impact.toFixed(0)}%</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
-                            style={{ width: `${Math.min(factor.impact, 100)}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1.5">{factor.description}</div>
-                      </div>
-                    ))}
+                    {(() => {
+                      const maxImpact = Math.max(...insights.keyFactors.slice(0, 3).map(f => f.impact), 1)
+                      return insights.keyFactors.slice(0, 3).map((factor, idx) => {
+                        const normalizedPct = Math.min((factor.impact / maxImpact) * 100, 100)
+                        return (
+                          <div key={idx} className="group">
+                            <div className="flex items-center justify-between text-xs mb-2">
+                              <span className="text-gray-300 font-medium">{factor.name}</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                                style={{ width: `${normalizedPct}%` }}
+                              />
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1.5">{factor.description}</div>
+                          </div>
+                        )
+                      })
+                    })()}
                   </div>
                 </div>
                 
@@ -224,12 +239,12 @@ export default function BaseballAIPrediction({
                     <div className="bg-gray-900/50 rounded-lg p-4 text-center border border-gray-700">
                       <div className="text-xs text-gray-400 mb-2">홈 승률</div>
                       <div className="text-3xl font-bold text-blue-400">{insights.homeAdvantage.homeRecord}</div>
-                      <div className="text-xs text-gray-500 mt-1">{homeTeam}</div>
+                      <div className="text-xs text-gray-500 mt-1">{homeTeamName}</div>
                     </div>
                     <div className="bg-gray-900/50 rounded-lg p-4 text-center border border-gray-700">
                       <div className="text-xs text-gray-400 mb-2">원정 승률</div>
                       <div className="text-3xl font-bold text-red-400">{insights.homeAdvantage.awayRecord}</div>
-                      <div className="text-xs text-gray-500 mt-1">{awayTeam}</div>
+                      <div className="text-xs text-gray-500 mt-1">{awayTeamName}</div>
                     </div>
                   </div>
                   {insights.homeAdvantage.advantage > 0.1 && (
@@ -248,11 +263,11 @@ export default function BaseballAIPrediction({
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
-                      <div className="text-xs text-gray-400 mb-2">{homeTeam}</div>
+                      <div className="text-xs text-gray-400 mb-2">{homeTeamName}</div>
                       <div className="text-3xl font-bold text-green-400">{insights.recentForm.home}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs text-gray-400 mb-2">{awayTeam}</div>
+                      <div className="text-xs text-gray-400 mb-2">{awayTeamName}</div>
                       <div className="text-3xl font-bold text-orange-400">{insights.recentForm.away}</div>
                     </div>
                   </div>

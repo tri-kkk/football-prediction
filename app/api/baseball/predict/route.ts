@@ -2,192 +2,258 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-// Python API URL
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:8000'
+const RAILWAY_URL = 'https://web-production-efc2e.up.railway.app'
+const WINDOW = 10
+
+async function getTeamRollingStats(team: string, beforeDate: string) {
+  const [{ data: homeGames }, { data: awayGames }] = await Promise.all([
+    supabase
+      .from('baseball_matches')
+      .select('match_date, home_score, away_score, home_hits, away_hits')
+      .eq('home_team', team)
+      .eq('status', 'FT')
+      .eq('league', 'MLB')
+      .lt('match_date', beforeDate)
+      .order('match_date', { ascending: false })
+      .limit(WINDOW),
+    supabase
+      .from('baseball_matches')
+      .select('match_date, home_score, away_score, home_hits, away_hits')
+      .eq('away_team', team)
+      .eq('status', 'FT')
+      .eq('league', 'MLB')
+      .lt('match_date', beforeDate)
+      .order('match_date', { ascending: false })
+      .limit(WINDOW),
+  ])
+
+  const allGames: Array<{
+    scored: number
+    conceded: number
+    hits: number
+    won: number
+    is_home: number
+    match_date: string
+  }> = []
+
+  for (const g of homeGames || []) {
+    allGames.push({
+      scored: g.home_score,
+      conceded: g.away_score,
+      hits: g.home_hits ?? 8,
+      won: g.home_score > g.away_score ? 1 : 0,
+      is_home: 1,
+      match_date: g.match_date,
+    })
+  }
+
+  for (const g of awayGames || []) {
+    allGames.push({
+      scored: g.away_score,
+      conceded: g.home_score,
+      hits: g.away_hits ?? 8,
+      won: g.away_score > g.home_score ? 1 : 0,
+      is_home: 0,
+      match_date: g.match_date,
+    })
+  }
+
+  allGames.sort((a, b) => a.match_date.localeCompare(b.match_date))
+  const recent = allGames.slice(-WINDOW)
+  const recent5 = recent.slice(-5)
+
+  if (recent.length === 0) {
+    return {
+      win_pct: 0.5, avg_scored: 4.5, avg_conceded: 4.5,
+      avg_hits: 8.0, home_win_pct: 0.5, away_win_pct: 0.5,
+      recent_form: 0.5, run_diff: 0.0, games_played: 0,
+      home_record: '-.---', away_record: '-.---',
+      recent_wins: 0, recent_total: 0,
+    }
+  }
+
+  const avg = (arr: number[]) =>
+    arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0.5
+
+  const homeOnly = recent.filter(g => g.is_home === 1)
+  const awayOnly = recent.filter(g => g.is_home === 0)
+  const homeWinPct = homeOnly.length > 0 ? avg(homeOnly.map(g => g.won)) : 0.5
+  const awayWinPct = awayOnly.length > 0 ? avg(awayOnly.map(g => g.won)) : 0.5
+  const recentForm = avg(recent5.map(g => g.won))
+
+  return {
+    win_pct: avg(recent.map(g => g.won)),
+    avg_scored: avg(recent.map(g => g.scored)),
+    avg_conceded: avg(recent.map(g => g.conceded)),
+    avg_hits: avg(recent.map(g => g.hits)),
+    home_win_pct: homeWinPct,
+    away_win_pct: awayWinPct,
+    recent_form: recentForm,
+    run_diff: avg(recent.map(g => g.scored - g.conceded)),
+    games_played: recent.length,
+    // 인사이트용 포맷
+    home_record: homeOnly.length > 0
+      ? `${(homeWinPct * 100).toFixed(0)}%`
+      : 'N/A',
+    away_record: awayOnly.length > 0
+      ? `${(awayWinPct * 100).toFixed(0)}%`
+      : 'N/A',
+    recent_wins: recent5.filter(g => g.won === 1).length,
+    recent_total: recent5.length,
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { matchId, homeTeam, awayTeam, season } = await request.json()
-    
-    console.log('🎯 예측 요청:', { matchId, homeTeam, awayTeam, season })
-    
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    
-    // 팀명 정규화
-    const normalizeTeamName = (team: string) => {
-      const mapping: Record<string, string> = {
-        'Oakland Athletics': 'Athletics',
-        'Cleveland Indians': 'Cleveland Guardians'
-      }
-      return mapping[team] || team
+    const { matchId, homeTeam, awayTeam } = await request.json()
+
+    if (!matchId) {
+      return NextResponse.json({ error: 'matchId required' }, { status: 400 })
     }
-    
-    const homeTeamNormalized = normalizeTeamName(homeTeam)
-    const awayTeamNormalized = normalizeTeamName(awayTeam)
-    
-    // 1. 홈팀 통계 가져오기
-    const { data: homeStats, error: homeError } = await supabase
-      .from('baseball_team_season_stats')
-      .select('*')
-      .eq('team_name', homeTeamNormalized)
-      .eq('season', season)
+
+    // 경기 날짜 조회
+    const { data: match, error } = await supabase
+      .from('baseball_matches')
+      .select('match_date, league')
+      .eq('id', matchId)
       .single()
-    
-    if (homeError || !homeStats) {
-      console.error('홈팀 통계 오류:', homeError)
-      return NextResponse.json({
-        error: `홈팀 통계를 찾을 수 없습니다: ${homeTeamNormalized}`
-      }, { status: 404 })
+
+    if (error || !match) {
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
-    
-    // 2. 원정팀 통계 가져오기
-    const { data: awayStats, error: awayError } = await supabase
-      .from('baseball_team_season_stats')
-      .select('*')
-      .eq('team_name', awayTeamNormalized)
-      .eq('season', season)
-      .single()
-    
-    if (awayError || !awayStats) {
-      console.error('원정팀 통계 오류:', awayError)
-      return NextResponse.json({
-        error: `원정팀 통계를 찾을 수 없습니다: ${awayTeamNormalized}`
-      }, { status: 404 })
+
+    // MLB만 AI 예측 지원
+    if (match.league !== 'MLB') {
+      return NextResponse.json(
+        { error: 'AI 예측은 현재 MLB만 지원합니다.' },
+        { status: 400 }
+      )
     }
-    
-    console.log('✅ 팀 통계 로드 성공')
-    
-    // 3. Features 계산
-    const parseLastTen = (record: string) => {
-      try {
-        if (!record) return 0.5
-        const [wins, losses] = record.split('-').map(Number)
-        return wins / (wins + losses)
-      } catch {
-        return 0.5
-      }
-    }
-    
+
+    // Rolling feature 계산
+    const [homeStats, awayStats] = await Promise.all([
+      getTeamRollingStats(homeTeam, match.match_date),
+      getTeamRollingStats(awayTeam, match.match_date),
+    ])
+
+    // 데이터 부족 경고
+    const dataReliable =
+      homeStats.games_played >= 5 && awayStats.games_played >= 5
+
+    // Railway 모델 feature
     const features = {
-      win_pct_home: homeStats.win_pct || 0.5,
-      win_pct_away: awayStats.win_pct || 0.5,
-      win_pct_diff: (homeStats.win_pct || 0.5) - (awayStats.win_pct || 0.5),
-      
-      team_era_home: homeStats.team_era || 4.5,
-      team_era_away: awayStats.team_era || 4.5,
-      era_diff: (awayStats.team_era || 4.5) - (homeStats.team_era || 4.5),
-      
-      team_runs_per_game_home: homeStats.team_runs_per_game || 4.5,
-      team_runs_per_game_away: awayStats.team_runs_per_game || 4.5,
-      rpg_diff: (homeStats.team_runs_per_game || 4.5) - (awayStats.team_runs_per_game || 4.5),
-      
-      home_home_win_pct: homeStats.home_wins / (homeStats.home_wins + homeStats.home_losses) || 0.5,
-      away_away_win_pct: awayStats.away_wins / (awayStats.away_wins + awayStats.away_losses) || 0.5,
-      
-      home_recent_form: parseLastTen(homeStats.last_10_record || '5-5'),
-      away_recent_form: parseLastTen(awayStats.last_10_record || '5-5'),
+      home_win_pct: homeStats.win_pct,
+      home_avg_scored: homeStats.avg_scored,
+      home_avg_conceded: homeStats.avg_conceded,
+      home_avg_hits: homeStats.avg_hits,
+      home_home_win_pct: homeStats.home_win_pct,
+      home_recent_form: homeStats.recent_form,
+      home_run_diff: homeStats.run_diff,
+      away_win_pct: awayStats.win_pct,
+      away_avg_scored: awayStats.avg_scored,
+      away_avg_conceded: awayStats.avg_conceded,
+      away_avg_hits: awayStats.avg_hits,
+      away_away_win_pct: awayStats.away_win_pct,
+      away_recent_form: awayStats.recent_form,
+      away_run_diff: awayStats.run_diff,
+      win_pct_diff: homeStats.win_pct - awayStats.win_pct,
+      scored_diff: homeStats.avg_scored - awayStats.avg_scored,
+      conceded_diff: homeStats.avg_conceded - awayStats.avg_conceded,
+      form_diff: homeStats.recent_form - awayStats.recent_form,
+      run_diff_diff: homeStats.run_diff - awayStats.run_diff,
+      total_avg_scored: homeStats.avg_scored + awayStats.avg_scored,
     }
-    
-    console.log('✅ Features 계산 완료')
-    
-    // 4. Python 모델 API 호출
-    console.log('🤖 Python API 호출:', PYTHON_API_URL)
-    
-    const pythonResponse = await fetch(`${PYTHON_API_URL}/predict`, {
+
+    // Railway API 호출
+    const aiResponse = await fetch(`${RAILWAY_URL}/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ features })
+      body: JSON.stringify({ features }),
+      signal: AbortSignal.timeout(5000),
     })
-    
-    if (!pythonResponse.ok) {
-      const errorText = await pythonResponse.text()
-      console.error('Python API 오류:', errorText)
-      throw new Error(`Python API 오류: ${pythonResponse.status}`)
+
+    if (!aiResponse.ok) {
+      throw new Error(`Railway API error: ${aiResponse.status}`)
     }
-    
-    const prediction = await pythonResponse.json()
-    
-    console.log('✅ 예측 완료:', prediction)
-    
-    // 5. AI 인사이트 생성
-    const insights = {
-      // 주요 영향 요소 (Feature Importance 기반)
-      keyFactors: [
-        {
-          name: '승률 차이',
-          value: features.win_pct_diff,
-          impact: Math.abs(features.win_pct_diff) * 100,
-          description: features.win_pct_diff > 0 
-            ? `${homeTeam}이(가) ${Math.abs(features.win_pct_diff * 100).toFixed(1)}% 더 높은 승률`
-            : `${awayTeam}이(가) ${Math.abs(features.win_pct_diff * 100).toFixed(1)}% 더 높은 승률`
-        },
-        {
-          name: '평균 득점 차이',
-          value: features.rpg_diff,
-          impact: Math.abs(features.rpg_diff) * 15,
-          description: features.rpg_diff > 0
-            ? `${homeTeam}이(가) 경기당 ${Math.abs(features.rpg_diff).toFixed(1)}점 더 많이 득점`
-            : `${awayTeam}이(가) 경기당 ${Math.abs(features.rpg_diff).toFixed(1)}점 더 많이 득점`
-        },
-        {
-          name: '방어율 차이',
-          value: features.era_diff,
-          impact: Math.abs(features.era_diff) * 10,
-          description: features.era_diff > 0
-            ? `${homeTeam}의 방어율이 ${Math.abs(features.era_diff).toFixed(2)} 더 우수`
-            : `${awayTeam}의 방어율이 ${Math.abs(features.era_diff).toFixed(2)} 더 우수`
-        }
-      ].sort((a, b) => b.impact - a.impact),
-      
-      // 홈/원정 어드밴티지
-      homeAdvantage: {
-        homeRecord: `${(features.home_home_win_pct * 100).toFixed(1)}%`,
-        awayRecord: `${(features.away_away_win_pct * 100).toFixed(1)}%`,
-        advantage: features.home_home_win_pct - features.away_away_win_pct
+
+    const aiResult = await aiResponse.json()
+
+    // homeWinProb를 정수 %로 변환 (컴포넌트에서 * 100 하지 않도록)
+    const homeWinProb = Math.round(aiResult.home_win_prob * 100)
+    const awayWinProb = Math.round(aiResult.away_win_prob * 100)
+    const overProb = Math.round(aiResult.over_prob * 100)
+    const underProb = Math.round(aiResult.under_prob * 100)
+
+    // 인사이트 생성
+    const winDiff = Math.abs(homeStats.win_pct - awayStats.win_pct)
+    const formDiff = Math.abs(homeStats.recent_form - awayStats.recent_form)
+
+    const keyFactors = [
+      {
+        name: '최근 10경기 안타',
+        value: homeStats.avg_hits,
+        impact: Math.round(8.04 * 100),
+        description: `홈 ${homeStats.avg_hits.toFixed(1)}개 vs 원정 ${awayStats.avg_hits.toFixed(1)}개`,
       },
-      
-      // 최근 폼
-      recentForm: {
-        home: `${(features.home_recent_form * 100).toFixed(0)}%`,
-        away: `${(features.away_recent_form * 100).toFixed(0)}%`
+      {
+        name: '득실점 차이',
+        value: homeStats.run_diff,
+        impact: Math.round(7.25 * 100),
+        description: `홈 ${homeStats.run_diff > 0 ? '+' : ''}${homeStats.run_diff.toFixed(1)} vs 원정 ${awayStats.run_diff > 0 ? '+' : ''}${awayStats.run_diff.toFixed(1)}`,
       },
-      
-      // 예측 요약
-      summary: prediction.grade === 'PICK' 
-        ? `높은 신뢰도로 ${prediction.home_win_prob > 0.5 ? homeTeam : awayTeam} 승리 예측`
-        : prediction.grade === 'GOOD'
-        ? `${prediction.home_win_prob > 0.5 ? homeTeam : awayTeam} 우세 예상`
-        : '접전 예상, 신중한 접근 필요'
-    }
-    
-    // 6. 결과 반환
+      {
+        name: '최근 5경기 폼',
+        value: homeStats.recent_form,
+        impact: Math.round(formDiff * 100),
+        description: `홈 ${homeStats.recent_wins}/${homeStats.recent_total}승 vs 원정 ${awayStats.recent_wins}/${awayStats.recent_total}승`,
+      },
+    ]
+
+    const favoredTeam = homeWinProb >= awayWinProb ? homeTeam : awayTeam
+    const favoredProb = Math.max(homeWinProb, awayWinProb)
+    const summary = dataReliable
+      ? `${favoredTeam}이 ${favoredProb}% 확률로 우세합니다. 최근 득실점 흐름과 안타 생산력이 주요 예측 근거입니다.`
+      : `데이터가 부족하여 예측 신뢰도가 낮습니다. (홈 ${homeStats.games_played}경기, 원정 ${awayStats.games_played}경기)`
+
     return NextResponse.json({
       success: true,
-      matchId,
-      homeTeam,
-      awayTeam,
-      season,
       prediction: {
-        homeWinProb: prediction.home_win_prob,
-        awayWinProb: prediction.away_win_prob,
-        overProb: prediction.over_prob,
-        underProb: prediction.under_prob,
-        confidence: prediction.confidence,
-        grade: prediction.grade
+        homeWinProb,
+        awayWinProb,
+        overProb,
+        underProb,
+        confidence: aiResult.confidence,
+        grade: aiResult.grade,
       },
-      insights,
-      features,
-      timestamp: new Date().toISOString()
+      insights: {
+        keyFactors,
+        homeAdvantage: {
+          homeRecord: homeStats.home_record,
+          awayRecord: awayStats.away_record,
+          advantage: homeStats.home_win_pct - homeStats.win_pct,
+        },
+        recentForm: {
+          home: `${(homeStats.recent_form * 100).toFixed(0)}%`,
+          away: `${(awayStats.recent_form * 100).toFixed(0)}%`,
+        },
+        summary,
+      },
+      dataQuality: {
+        homeGamesPlayed: homeStats.games_played,
+        awayGamesPlayed: awayStats.games_played,
+        reliable: dataReliable,
+      },
     })
-    
-  } catch (error: any) {
-    console.error('❌ 예측 오류:', error)
-    return NextResponse.json({
-      success: false,
-      error: error.message || 'Unknown error'
-    }, { status: 500 })
+  } catch (err) {
+    console.error('AI predict error:', err)
+    return NextResponse.json(
+      { success: false, error: String(err) },
+      { status: 500 }
+    )
   }
 }
