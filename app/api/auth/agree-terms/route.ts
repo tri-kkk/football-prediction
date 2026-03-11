@@ -108,10 +108,11 @@ export async function POST(request: NextRequest) {
       .select('trial_used, promo_code')
       .eq('email_hash', emailHash)
       .limit(1)
-      .maybeSingle()  // ✅ 여러 행이어도 첫 번째 반환
+      .maybeSingle()
 
     const hasDeleteHistory = deletedUser !== null
-    console.log('🔍 탈퇴 이력:', { hasDeleteHistory, deletedUser })
+    const hadTrial = deletedUser?.trial_used === true  // ✅ 실제 trial 사용 여부 체크
+    console.log('🔍 탈퇴 이력:', { hasDeleteHistory, hadTrial, deletedUser })
 
     let tier = 'premium'
     let premiumExpiresAt: string
@@ -126,15 +127,15 @@ export async function POST(request: NextRequest) {
       trialStartedAt = null
       trialUsed = false // 프로모 유저는 trial 소진 안 함
       console.log('🎉 프로모션 적용')
-    } else if (hasDeleteHistory) {
-      // ✅ 재가입 + 이미 체험판 사용 → free로 시작
+    } else if (hasDeleteHistory && hadTrial) {
+      // ✅ 재가입 + 이전에 체험판 사용한 경우만 → free로 시작
       tier = 'free'
       premiumExpiresAt = null as any
       trialStartedAt = null
       trialUsed = false
-      console.log('🚫 탈퇴 이력 있는 재가입 유저 → free 시작')
+      console.log('🚫 탈퇴 이력 + trial 사용됨 → free 시작')
     } else {
-      // ✅ 일반 신규 가입 → 48시간 체험판
+      // ✅ 일반 신규 가입 OR 탈퇴 이력 있지만 trial 미사용 → 48시간 체험판
       const trialEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000)
       premiumExpiresAt = trialEnd.toISOString()
       console.log('🎁 48시간 체험판 적용, 만료:', trialEnd.toISOString())
@@ -198,7 +199,9 @@ export async function POST(request: NextRequest) {
       isTrial: trialUsed,
       message: promoCode
         ? '🎉 프로모션이 적용되었습니다.'
-        : '🎁 48시간 프리미엄 체험이 시작되었습니다!',
+        : trialUsed
+          ? '🎁 48시간 프리미엄 체험이 시작되었습니다!'
+          : '✅ 회원가입이 완료되었습니다.',
     })
 
   } catch (error) {
