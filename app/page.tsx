@@ -2640,9 +2640,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                 <span className="text-yellow-400 font-bold text-sm">
                   {currentLanguage === 'ko' ? '가입만 해도 48시간 프리미엄 무료 체험' : '48-Hour Free Premium Trial on Sign Up'}
                 </span>
-                <span className="text-gray-500 text-xs ml-2">
-                  {currentLanguage === 'ko' ? '신용카드 불필요' : 'No card required'}
-                </span>
+                
               </div>
               <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
