@@ -159,12 +159,26 @@ export async function PUT(request: NextRequest) {
 
     if (error) throw error
 
-    // 취소된 경우 사용자 등급도 변경
+    // 취소된 경우 사용자 등급도 변경 + payments 취소 처리
     if (status === 'cancelled' || status === 'expired') {
+      // users 등급 free로 변경
       await supabase
         .from('users')
         .update({ tier: 'free', updated_at: new Date().toISOString() })
         .eq('id', subscription.user_id)
+
+      // ✅ payments 테이블도 cancelled로 업데이트 (매출 집계 제외)
+      if (subscription.payment_id) {
+        await supabase
+          .from('payments')
+          .update({
+            status: 'cancelled',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('order_id', subscription.payment_id)
+
+        console.log('✅ payments cancelled:', subscription.payment_id)
+      }
     }
 
     return NextResponse.json({ subscription, success: true })
