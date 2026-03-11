@@ -30,6 +30,10 @@ interface PredictionInput {
   commenceTime?: string
   homeTeamLogo?: string
   awayTeamLogo?: string
+  // 배당 데이터 (컵대회 가중치용)
+  homeOdds?: number
+  drawOdds?: number
+  awayOdds?: number
 }
 
 interface TeamStats {
@@ -478,7 +482,10 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   let finalDraw = avgDraw
   let finalLose = avgLose
   
-  if (patternData && patternData.total_matches >= 10) {
+  const CUP_LEAGUES_PATTERN = ['CL', 'EL', 'UECL', 'FAC', 'DFB', 'CDR', 'CDF']
+  const skipPattern = CUP_LEAGUES_PATTERN.includes(input.leagueCode)
+  
+  if (!skipPattern && patternData && patternData.total_matches >= 10) {
     patternStats = {
       totalMatches: patternData.total_matches,
       homeWinRate: patternData.home_win_rate,
@@ -495,6 +502,36 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
     finalWin /= finalTotal
     finalDraw /= finalTotal
     finalLose /= finalTotal
+  }
+  
+  // ============================================
+  // 8단계: 컵대회 배당 가중치 보정
+  // ============================================
+  const CUP_LEAGUES = ['CL', 'EL', 'UECL', 'FAC', 'DFB', 'CDR', 'CDF']
+  const isCupLeague = CUP_LEAGUES.includes(input.leagueCode)
+  
+  if (isCupLeague && input.homeOdds && input.drawOdds && input.awayOdds) {
+    // 배당 → implied probability 변환
+    const rawHome = 1 / input.homeOdds
+    const rawDraw = 1 / input.drawOdds
+    const rawAway = 1 / input.awayOdds
+    const rawTotal = rawHome + rawDraw + rawAway
+    const oddsHome = rawHome / rawTotal
+    const oddsDraw = rawDraw / rawTotal
+    const oddsAway = rawAway / rawTotal
+    
+    // 컵대회: 배당 80% + 폼통계 20%
+    const ODDS_WEIGHT = 0.80
+    finalWin = finalWin * (1 - ODDS_WEIGHT) + oddsHome * ODDS_WEIGHT
+    finalDraw = finalDraw * (1 - ODDS_WEIGHT) + oddsDraw * ODDS_WEIGHT
+    finalLose = finalLose * (1 - ODDS_WEIGHT) + oddsAway * ODDS_WEIGHT
+    
+    const cupTotal = finalWin + finalDraw + finalLose
+    finalWin /= cupTotal
+    finalDraw /= cupTotal
+    finalLose /= cupTotal
+    
+    console.log(`🏆 Cup odds weight applied (${input.leagueCode}): ${Math.round(oddsHome*100)}/${Math.round(oddsDraw*100)}/${Math.round(oddsAway*100)} -> final: ${Math.round(finalWin*100)}/${Math.round(finalDraw*100)}/${Math.round(finalLose*100)}`)
   }
   
   // ============================================

@@ -673,9 +673,11 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
         if (match.home_team_id) h2hParams.append('homeTeamId', String(match.home_team_id))
         if (match.away_team_id) h2hParams.append('awayTeamId', String(match.away_team_id))
         
+        const homeTeamIdParam = match.home_team_id ? `&teamId=${match.home_team_id}` : ''
+        const awayTeamIdParam = match.away_team_id ? `&teamId=${match.away_team_id}` : ''
         const [homeRes, awayRes, h2hRes] = await Promise.all([
-          fetch(`/api/team-stats?team=${encodeURIComponent(match.home_team)}&league=${match.league_code}`),
-          fetch(`/api/team-stats?team=${encodeURIComponent(match.away_team)}&league=${match.league_code}`),
+          fetch(`/api/team-stats?team=${encodeURIComponent(match.home_team)}&league=${match.league_code}${homeTeamIdParam}`),
+          fetch(`/api/team-stats?team=${encodeURIComponent(match.away_team)}&league=${match.league_code}${awayTeamIdParam}`),
           fetch(`/api/h2h-analysis?${h2hParams.toString()}`)
         ])
         
@@ -1969,16 +1971,18 @@ export default function PremiumPredictPage() {
 
   // 리그 데이터 - 국기 + 한글명 추가
   const leagues = [
-    { code: 'ALL', name: 'ALL', nameKo: '전체', logo: '', flag: '' },
-    { code: 'PL', name: 'EPL', nameKo: '프리미어리그', logo: 'https://media.api-sports.io/football/leagues/39.png', flag: 'https://media.api-sports.io/flags/gb.svg' },
-    { code: 'PD', name: 'LALIGA', nameKo: '라리가', logo: 'https://media.api-sports.io/football/leagues/140.png', flag: 'https://media.api-sports.io/flags/es.svg' },
-    { code: 'BL1', name: 'BUNDESLIGA', nameKo: '분데스리가', logo: 'https://media.api-sports.io/football/leagues/78.png', flag: 'https://media.api-sports.io/flags/de.svg' },
-    { code: 'SA', name: 'SERIE A', nameKo: '세리에A', logo: 'https://media.api-sports.io/football/leagues/135.png', flag: 'https://media.api-sports.io/flags/it.svg' },
-    { code: 'FL1', name: 'LIGUE 1', nameKo: '리그1', logo: 'https://media.api-sports.io/football/leagues/61.png', flag: 'https://media.api-sports.io/flags/fr.svg' },
-    { code: 'DED', name: 'EREDIVISIE', nameKo: '에레디비시', logo: 'https://media.api-sports.io/football/leagues/88.png', flag: 'https://media.api-sports.io/flags/nl.svg' },
+    { code: 'ALL', name: 'ALL', nameKo: 'ALL', logo: '', flag: '' },
+    { code: 'PL', name: 'EPL', nameKo: 'EPL', logo: 'https://media.api-sports.io/football/leagues/39.png', flag: 'https://media.api-sports.io/flags/gb.svg' },
+    { code: 'PD', name: 'LALIGA', nameKo: 'LL', logo: 'https://media.api-sports.io/football/leagues/140.png', flag: 'https://media.api-sports.io/flags/es.svg' },
+    { code: 'BL1', name: 'BUNDESLIGA', nameKo: 'BL', logo: 'https://media.api-sports.io/football/leagues/78.png', flag: 'https://media.api-sports.io/flags/de.svg' },
+    { code: 'SA', name: 'SERIE A', nameKo: 'SA', logo: 'https://media.api-sports.io/football/leagues/135.png', flag: 'https://media.api-sports.io/flags/it.svg' },
+    { code: 'FL1', name: 'LIGUE 1', nameKo: 'L1', logo: 'https://media.api-sports.io/football/leagues/61.png', flag: 'https://media.api-sports.io/flags/fr.svg' },
+    { code: 'DED', name: 'EREDIVISIE', nameKo: 'ERE', logo: 'https://media.api-sports.io/football/leagues/88.png', flag: 'https://media.api-sports.io/flags/nl.svg' },
     { code: 'MLS', name: 'MLS', nameKo: 'MLS', logo: 'https://media.api-sports.io/football/leagues/253.png', flag: 'https://media.api-sports.io/flags/us.svg' },
-    { code: 'KL', name: 'K LEAGUE', nameKo: 'K리그', logo: 'https://media.api-sports.io/football/leagues/292.png', flag: 'https://media.api-sports.io/flags/kr.svg' },
-    { code: 'J', name: 'J1/2', nameKo: 'J리그', logo: 'https://media.api-sports.io/football/leagues/98.png', flag: 'https://media.api-sports.io/flags/jp.svg' },
+    { code: 'KL', name: 'K LEAGUE', nameKo: 'KL', logo: 'https://media.api-sports.io/football/leagues/292.png', flag: 'https://media.api-sports.io/flags/kr.svg' },
+    { code: 'J', name: 'J1/2', nameKo: 'JL', logo: 'https://media.api-sports.io/football/leagues/98.png', flag: 'https://media.api-sports.io/flags/jp.svg' },
+    { code: 'CL', name: 'UCL', nameKo: 'UCL', logo: 'https://media.api-sports.io/football/leagues/2.png', flag: 'https://media.api-sports.io/flags/eu.svg' },
+    { code: 'EL', name: 'UEL', nameKo: 'UEL', logo: 'https://media.api-sports.io/football/leagues/3.png', flag: 'https://media.api-sports.io/flags/eu.svg' },
   ]
   
   // 예정 경기 로드
@@ -2102,6 +2106,9 @@ export default function PremiumPredictPage() {
             leagueId: leagueIdMap[match.league_code] || 39,
             leagueCode: match.league_code,
             season: '2025',
+            homeOdds: match.home_odds,
+            drawOdds: match.draw_odds,
+            awayOdds: match.away_odds,
           }),
         })
         
@@ -2161,7 +2168,7 @@ export default function PremiumPredictPage() {
     setLoading(true)
     try {
       // 여러 리그 조회해서 합치기
-      const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'MLS', 'KL1', 'KL2', 'J1', 'J2']
+      const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'MLS', 'KL1', 'KL2', 'J1', 'J2', 'CL', 'EL']
       let allMatches: any[] = []
       
       for (const league of leagueCodes) {
@@ -2323,6 +2330,9 @@ export default function PremiumPredictPage() {
           leagueId: leagueIdMap[match.league_code] || 39,
           leagueCode: match.league_code,
           season: '2025',
+          homeOdds: match.home_odds,
+          drawOdds: match.draw_odds,
+          awayOdds: match.away_odds,
         }),
       })
       

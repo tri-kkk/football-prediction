@@ -90,6 +90,133 @@ interface TeamSecretStats {
   }[]
 }
 
+// API-Football에서 팀 통계 직접 가져오기 (fg_team_stats에 없는 팀용)
+async function fetchStatsFromAPIFootball(teamId: number, leagueId: number, season: number) {
+  const apiKey = process.env.API_FOOTBALL_KEY || '87fdad3a68c6386ce1921080461e91e6'
+  if (!apiKey) return null
+
+  try {
+    // 통계 + 최근 경기 병렬 호출
+    const [statsRes, fixturesRes] = await Promise.all([
+      fetch(`https://v3.football.api-sports.io/teams/statistics?team=${teamId}&league=${leagueId}&season=${season}`, {
+        headers: { 'x-apisports-key': apiKey },
+        next: { revalidate: 3600 }
+      }),
+      fetch(`https://v3.football.api-sports.io/fixtures?team=${teamId}&last=15`, {
+        headers: { 'x-apisports-key': apiKey },
+        next: { revalidate: 3600 }
+      })
+    ])
+
+    if (!statsRes.ok) return null
+    const statsJson = await statsRes.json()
+    const s = statsJson?.response
+    if (!s) return null
+
+    const f = s.fixtures
+    const g = s.goals
+
+    // 최근 경기 파싱 → fg_match_history 구조로 변환
+    let recentMatches: any[] = []
+    if (fixturesRes.ok) {
+      const fixturesJson = await fixturesRes.json()
+      const fixtures: any[] = fixturesJson?.response || []
+      recentMatches = fixtures
+        .filter((fix: any) => fix.fixture?.status?.short === 'FT')
+        .sort((a: any, b: any) => b.fixture.timestamp - a.fixture.timestamp)
+        .slice(0, 15)
+        .map((fix: any) => ({
+          match_date: fix.fixture.date?.split('T')[0],
+          home_team: fix.teams.home.name,
+          away_team: fix.teams.away.name,
+          home_team_ko: null,
+          away_team_ko: null,
+          home_team_id: fix.teams.home.id,
+          away_team_id: fix.teams.away.id,
+          home_score: fix.goals.home,
+          away_score: fix.goals.away,
+        }))
+    }
+
+    return {
+      team_id: teamId,
+      team_name: s.team?.name || '',
+      team_name_ko: null,
+      league_code: null,
+      season: String(season),
+      total_played: f?.played?.total || 0,
+      total_wins: f?.wins?.total || 0,
+      total_draws: f?.draws?.total || 0,
+      total_losses: f?.loses?.total || 0,
+      total_goals_for: (g?.for?.total?.home || 0) + (g?.for?.total?.away || 0),
+      total_goals_against: (g?.against?.total?.home || 0) + (g?.against?.total?.away || 0),
+      home_played: f?.played?.home || 0,
+      home_wins: f?.wins?.home || 0,
+      home_draws: f?.draws?.home || 0,
+      home_losses: f?.loses?.home || 0,
+      home_goals_for: g?.for?.total?.home || 0,
+      home_goals_against: g?.against?.total?.home || 0,
+      away_played: f?.played?.away || 0,
+      away_wins: f?.wins?.away || 0,
+      away_draws: f?.draws?.away || 0,
+      away_losses: f?.loses?.away || 0,
+      away_goals_for: g?.for?.total?.away || 0,
+      away_goals_against: g?.against?.total?.away || 0,
+      home_first_goal_games: 0,
+      home_first_goal_wins: 0,
+      away_first_goal_games: 0,
+      away_first_goal_wins: 0,
+      home_concede_first_games: 0,
+      home_concede_first_wins: 0,
+      away_concede_first_games: 0,
+      away_concede_first_wins: 0,
+      _recentMatches: recentMatches, // 폼 계산용
+      _source: 'api-football'
+    }
+  } catch {
+    return null
+  }
+}
+
+// 컵대회 league_id 목록 (API-Football 기준)
+const CUP_LEAGUE_IDS = new Set([2, 3, 848, 45, 48, 9, 10, 529, 530, 531, 532, 533])
+
+// API-Football에서 팀 소속 리그 자동 탐색 (최신 시즌 국내 리그)
+async function findTeamLeague(teamId: number): Promise<{ leagueId: number, season: number } | null> {
+  const apiKey = process.env.API_FOOTBALL_KEY || '87fdad3a68c6386ce1921080461e91e6'
+
+  try {
+    const res = await fetch(
+      `https://v3.football.api-sports.io/leagues?team=${teamId}`,
+      { headers: { 'x-apisports-key': apiKey } }
+    )
+    if (!res.ok) {
+      console.log(`🔍 leagues API error: ${res.status}`)
+      return null
+    }
+    const json = await res.json()
+    console.log(`🔍 leagues API response count: ${json?.response?.length}, errors: ${JSON.stringify(json?.errors)}`)
+    const leagues: any[] = json?.response || []
+
+    // 컵대회 제외, type=League만, 가장 최신 시즌 선택
+    const candidates = leagues
+      .filter((l: any) => l.league?.type === 'League' && !CUP_LEAGUE_IDS.has(l.league?.id))
+      .map((l: any) => ({
+        leagueId: l.league.id,
+        season: Math.max(...(l.seasons || []).map((s: any) => s.year)),
+      }))
+      .sort((a, b) => b.season - a.season)
+
+    if (candidates.length === 0) return null
+
+    const result = candidates[0]
+    console.log(`🔍 findTeamLeague: teamId=${teamId}, leagueId=${result.leagueId}, season=${result.season}`)
+    return result
+  } catch {
+    return null
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const teamName = searchParams.get('team')
@@ -113,7 +240,10 @@ export async function GET(request: NextRequest) {
       statsQuery = statsQuery.or(`team_name.ilike.%${teamName}%,team_name_ko.ilike.%${teamName}%`)
     }
     
-    if (leagueCode) {
+    // 컵대회는 league_code 필터 스킵 (자국 리그 데이터로 fallback)
+    const CUP_CODES = ['CL', 'EL', 'UECL', 'FAC', 'DFB', 'CDR', 'CDF', 'EFL']
+    const isCup = leagueCode && CUP_CODES.includes(leagueCode)
+    if (leagueCode && !isCup) {
       statsQuery = statsQuery.eq('league_code', leagueCode)
     }
     
@@ -126,23 +256,54 @@ export async function GET(request: NextRequest) {
         || allSeasonStats.reduce((a: any, b: any) => (a.total_played || 0) >= (b.total_played || 0) ? a : b)
     }
     
-    // 2. fg_match_history에서 최근 경기 가져오기 (실시간 폼 계산용)
-    let matchQuery = supabase
-      .from('fg_match_history')
-      .select('*')
-      .order('match_date', { ascending: false })
-    
-    if (teamId) {
-      matchQuery = matchQuery.or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-    } else if (teamName) {
-      matchQuery = matchQuery.or(
-        `home_team.ilike.%${teamName}%,away_team.ilike.%${teamName}%,` +
-        `home_team_ko.ilike.%${teamName}%,away_team_ko.ilike.%${teamName}%`
-      )
+    // 1-2. fg_team_stats에 없으면 API-Football에서 직접 가져오기
+    let apiFootballSource = false
+    if (!statsData && teamId) {
+      console.log(`🔍 No DB stats for teamId=${teamId}, trying API-Football fallback...`)
+      const league = await findTeamLeague(parseInt(teamId))
+      console.log(`🔍 findTeamLeague result:`, league)
+      if (league) {
+        let apifbStats = await fetchStatsFromAPIFootball(parseInt(teamId), league.leagueId, league.season)
+        // 데이터 없으면 이전 시즌으로 재시도
+        if (!apifbStats || (apifbStats.total_played === 0 && league.season > 2023)) {
+          console.log(`🔍 No data for season ${league.season}, trying ${league.season - 1}...`)
+          apifbStats = await fetchStatsFromAPIFootball(parseInt(teamId), league.leagueId, league.season - 1)
+        }
+        console.log(`🔍 apifbStats total_played:`, apifbStats?.total_played)
+        if (apifbStats) {
+          statsData = apifbStats
+          apiFootballSource = true
+        }
+      }
     }
-    
-    const { data: matchesData, error: matchError } = await matchQuery.limit(15)
-    
+
+    // 2. fg_match_history에서 최근 경기 가져오기 (실시간 폼 계산용)
+    // API-Football fallback 시 _recentMatches 사용
+    let matchesData: any[] = []
+    let matchError: any = null
+
+    if (apiFootballSource && statsData?._recentMatches?.length > 0) {
+      matchesData = statsData._recentMatches
+    } else {
+      let matchQuery = supabase
+        .from('fg_match_history')
+        .select('*')
+        .order('match_date', { ascending: false })
+
+      if (teamId) {
+        matchQuery = matchQuery.or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+      } else if (teamName) {
+        matchQuery = matchQuery.or(
+          `home_team.ilike.%${teamName}%,away_team.ilike.%${teamName}%,` +
+          `home_team_ko.ilike.%${teamName}%,away_team_ko.ilike.%${teamName}%`
+        )
+      }
+
+      const { data: historyData, error: historyError } = await matchQuery.limit(15)
+      matchesData = historyData || []
+      matchError = historyError
+    }
+
     if (statsError && matchError) {
       return NextResponse.json({
         success: false,
@@ -150,15 +311,15 @@ export async function GET(request: NextRequest) {
         team: teamName || teamId,
       }, { status: 404 })
     }
-    
+
     // 3. 통계 계산
     const stats = calculateTeamStats(
-      statsData, 
-      matchesData || [], 
-      teamName || '', 
+      statsData,
+      matchesData,
+      teamName || '',
       teamId ? parseInt(teamId) : null
     )
-    
+
     return NextResponse.json({
       success: true,
       team: statsData?.team_name || teamName,
@@ -166,7 +327,7 @@ export async function GET(request: NextRequest) {
       league: statsData?.league_code || leagueCode,
       season: statsData?.season,
       data: stats,
-      source: 'supabase'
+      source: apiFootballSource ? 'api-football' : 'supabase'
     })
     
   } catch (error) {
@@ -204,6 +365,7 @@ function calculateTeamStats(
   const last10Stats = { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 }
   let currentStreakType: 'W' | 'D' | 'L' | 'none' = 'none'
   let currentStreakCount = 0
+  let streakBroken = false
   let scoringStreak = 0
   let countingScoring = true
   let cleanSheetStreak = 0
@@ -243,8 +405,10 @@ function calculateTeamStats(
     if (idx === 0) {
       currentStreakType = result
       currentStreakCount = 1
-    } else if (currentStreakType === result && idx < 10) {
+    } else if (!streakBroken && result === currentStreakType) {
       currentStreakCount++
+    } else if (!streakBroken) {
+      streakBroken = true
     }
     
     // 연속 득점
