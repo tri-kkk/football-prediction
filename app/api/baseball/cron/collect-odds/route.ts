@@ -192,51 +192,60 @@ export async function GET() {
         // 배당률 수집 (경기 저장 후)
         console.log(`\n💰 Collecting odds for ${league.name}...`)
         
-        // 저장된 경기 ID 목록 가져오기
+        // 저장된 경기 ID 목록 가져오기 (날짜 범위 내만)
         const { data: savedMatches } = await supabase
           .from('baseball_matches')
           .select('api_match_id')
           .eq('league', league.code)
           .eq('is_spring_training', league.isSpring || false)
+          .gte('match_date', pastDateStr)
+          .lte('match_date', futureDateStr)
         
-        const savedMatchIds = new Set(savedMatches?.map(m => m.api_match_id) || [])
+        // ✅ string으로 통일 (API는 number 반환, DB는 string 저장)
+        const savedMatchIds = new Set(savedMatches?.map(m => String(m.api_match_id)) || [])
         console.log(`  📋 Found ${savedMatchIds.size} saved matches in DB`)
         
         try {
-          const oddsUrl = `https://v1.baseball.api-sports.io/odds?league=${league.id}&season=${league.season}`
+          // ✅ 오늘부터 14일치 날짜별로 odds 수집
+          const oddsDateList: string[] = []
+          for (let i = 0; i <= 14; i++) {
+            const d = new Date(now)
+            d.setDate(d.getDate() + i)
+            oddsDateList.push(d.toISOString().split('T')[0])
+          }
           
-          console.log(`  📡 Fetching odds: ${oddsUrl}`)
-          
-          const oddsResponse = await fetch(oddsUrl, {
-            headers: {
-              'x-rapidapi-key': apiKey,
-              'x-rapidapi-host': 'v1.baseball.api-sports.io'
+          console.log(`  📅 Collecting odds for dates: ${oddsDateList[0]} ~ ${oddsDateList[oddsDateList.length - 1]}`)
+
+          for (const oddsDate of oddsDateList) {
+            const oddsUrl = `https://v1.baseball.api-sports.io/odds?league=${league.id}&season=${league.season}&date=${oddsDate}`
+            console.log(`  📡 Fetching odds for ${oddsDate}: ${oddsUrl}`)
+
+            const oddsResponse = await fetch(oddsUrl, {
+              headers: {
+                'x-rapidapi-key': apiKey,
+                'x-rapidapi-host': 'v1.baseball.api-sports.io'
+              }
+            })
+
+            if (!oddsResponse.ok) {
+              console.log(`  ❌ Odds API failed for ${oddsDate}: ${oddsResponse.status}`)
+              await new Promise(resolve => setTimeout(resolve, 500))
+              continue
             }
-          })
 
-          console.log(`  📥 Odds Response Status: ${oddsResponse.status}`)
-
-          if (oddsResponse.ok) {
             const oddsData = await oddsResponse.json()
-            console.log(`  ✅ Found ${oddsData.results} games with odds`)
-
-            if (oddsData.results === 0) {
-              console.log(`  ⚠️ No odds available for league ${league.id}`)
-            }
-
-            let processedCount = 0
+            console.log(`  ✅ ${oddsDate}: Found ${oddsData.results} games with odds`)
             
             for (const oddsGame of oddsData.response || []) {
               try {
-                processedCount++
                 
-                // 저장된 경기인지 확인
-                if (!savedMatchIds.has(oddsGame.game.id)) {
-                  console.log(`  ⏭️  Skipping game ${processedCount}/${oddsData.results}: ${oddsGame.game.teams.home.name} vs ${oddsGame.game.teams.away.name} (ID: ${oddsGame.game.id} - Not in DB)`)
+                // 저장된 경기인지 확인 (string으로 변환해서 비교)
+                if (!savedMatchIds.has(String(oddsGame.game.id))) {
+                  console.log(`  ⏭️  Skipping: ${oddsGame.game.teams.home.name} vs ${oddsGame.game.teams.away.name} (ID: ${oddsGame.game.id} - Not in DB)`)
                   continue
                 }
                 
-                console.log(`  🎯 Processing game ${processedCount}/${oddsData.results}: ${oddsGame.game.teams.home.name} vs ${oddsGame.game.teams.away.name}`)
+                console.log(`  🎯 Processing: ${oddsGame.game.teams.home.name} vs ${oddsGame.game.teams.away.name}`)
                 console.log(`     Game ID: ${oddsGame.game.id}`)
                 console.log(`     Bookmakers: ${oddsGame.bookmakers?.length || 0}`)
                 
@@ -333,13 +342,13 @@ export async function GET() {
               } catch (oddsError: any) {
                 console.error(`  ⚠️ Error processing odds game:`, oddsError.message)
               }
-            }
-            
-            console.log(`\n💰 Total odds saved: ${oddsSaved}/${oddsData.results}`)
+            } // end oddsGame loop
 
-          } else {
-            console.log(`  ❌ Odds API failed with status: ${oddsResponse.status}`)
-          }
+            // 날짜별 딜레이
+            await new Promise(resolve => setTimeout(resolve, 500))
+          } // end date loop
+
+          console.log(`\n💰 Total odds saved: ${oddsSaved}`)
 
         } catch (oddsError: any) {
           console.error(`❌ Odds collection failed:`, oddsError.message)
