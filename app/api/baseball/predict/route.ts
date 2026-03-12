@@ -10,11 +10,39 @@ const supabase = createClient(
 const RAILWAY_URL = 'https://web-production-efc2e.up.railway.app'
 const WINDOW = 10
 
+function parseInningStats(inningData: Record<string, Record<string, number>> | null) {
+  if (!inningData) return { firstScorer: null, homeComeback: false, awayComeback: false, homeBlown: false, awayBlown: false }
+  const home = inningData.home || {}
+  const away = inningData.away || {}
+  let homeCum = 0, awayCum = 0
+  let firstScorer: 'home' | 'away' | null = null
+  let homeEverLed = false, awayEverLed = false
+  for (let i = 1; i <= 9; i++) {
+    const k = String(i)
+    if (home[k] == null || away[k] == null) continue
+    awayCum += away[k] || 0
+    if (!firstScorer && awayCum > 0) firstScorer = 'away'
+    homeCum += home[k] || 0
+    if (!firstScorer && homeCum > 0) firstScorer = 'home'
+    if (homeCum > awayCum) homeEverLed = true
+    else if (awayCum > homeCum) awayEverLed = true
+  }
+  const homeWon = homeCum > awayCum
+  const awayWon = awayCum > homeCum
+  return {
+    firstScorer,
+    homeComeback: homeWon && awayEverLed,
+    awayComeback: awayWon && homeEverLed,
+    homeBlown: awayWon && homeEverLed,
+    awayBlown: homeWon && awayEverLed,
+  }
+}
+
 async function getTeamRollingStats(team: string, beforeDate: string) {
   const [{ data: homeGames }, { data: awayGames }] = await Promise.all([
     supabase
       .from('baseball_matches')
-      .select('match_date, home_score, away_score, home_hits, away_hits')
+      .select('match_date, home_score, away_score, home_hits, away_hits, innings_score')
       .eq('home_team', team)
       .eq('status', 'FT')
       .eq('league', 'MLB')
@@ -23,7 +51,7 @@ async function getTeamRollingStats(team: string, beforeDate: string) {
       .limit(WINDOW),
     supabase
       .from('baseball_matches')
-      .select('match_date, home_score, away_score, home_hits, away_hits')
+      .select('match_date, home_score, away_score, home_hits, away_hits, innings_score')
       .eq('away_team', team)
       .eq('status', 'FT')
       .eq('league', 'MLB')
@@ -33,33 +61,35 @@ async function getTeamRollingStats(team: string, beforeDate: string) {
   ])
 
   const allGames: Array<{
-    scored: number
-    conceded: number
-    hits: number
-    won: number
-    is_home: number
-    match_date: string
+    scored: number; conceded: number; hits: number; won: number
+    is_home: number; match_date: string
+    firstScorer: string | null; homeComeback: boolean; awayComeback: boolean
+    homeBlown: boolean; awayBlown: boolean
   }> = []
 
   for (const g of homeGames || []) {
+    const inn = parseInningStats(g.innings_score)
     allGames.push({
-      scored: g.home_score,
-      conceded: g.away_score,
+      scored: g.home_score, conceded: g.away_score,
       hits: g.home_hits ?? 8,
       won: g.home_score > g.away_score ? 1 : 0,
-      is_home: 1,
-      match_date: g.match_date,
+      is_home: 1, match_date: g.match_date,
+      firstScorer: inn.firstScorer,
+      homeComeback: inn.homeComeback, awayComeback: inn.awayComeback,
+      homeBlown: inn.homeBlown, awayBlown: inn.awayBlown,
     })
   }
 
   for (const g of awayGames || []) {
+    const inn = parseInningStats(g.innings_score)
     allGames.push({
-      scored: g.away_score,
-      conceded: g.home_score,
+      scored: g.away_score, conceded: g.home_score,
       hits: g.away_hits ?? 8,
       won: g.away_score > g.home_score ? 1 : 0,
-      is_home: 0,
-      match_date: g.match_date,
+      is_home: 0, match_date: g.match_date,
+      firstScorer: inn.firstScorer,
+      homeComeback: inn.awayComeback, awayComeback: inn.homeComeback,
+      homeBlown: inn.awayBlown, awayBlown: inn.homeBlown,
     })
   }
 
@@ -72,7 +102,8 @@ async function getTeamRollingStats(team: string, beforeDate: string) {
       win_pct: 0.5, avg_scored: 4.5, avg_conceded: 4.5,
       avg_hits: 8.0, home_win_pct: 0.5, away_win_pct: 0.5,
       recent_form: 0.5, run_diff: 0.0, games_played: 0,
-      home_record: '-.---', away_record: '-.---',
+      first_score_win_rate: 0.5, comeback_rate: 0.2, blown_lead_rate: 0.2,
+      home_record: 'N/A', away_record: 'N/A',
       recent_wins: 0, recent_total: 0,
     }
   }
@@ -86,6 +117,13 @@ async function getTeamRollingStats(team: string, beforeDate: string) {
   const awayWinPct = awayOnly.length > 0 ? avg(awayOnly.map(g => g.won)) : 0.5
   const recentForm = avg(recent5.map(g => g.won))
 
+  // 이닝 통계
+  const firstScoreWins = recent.filter(g => g.firstScorer === 'home' && g.won === 1).length
+  const firstScoreGames = recent.filter(g => g.firstScorer === 'home').length
+  const firstScoreWinRate = firstScoreGames > 0 ? firstScoreWins / firstScoreGames : 0.5
+  const comebackRate = avg(recent.map(g => g.homeComeback ? 1 : 0))
+  const blownLeadRate = avg(recent.map(g => g.homeBlown ? 1 : 0))
+
   return {
     win_pct: avg(recent.map(g => g.won)),
     avg_scored: avg(recent.map(g => g.scored)),
@@ -96,13 +134,11 @@ async function getTeamRollingStats(team: string, beforeDate: string) {
     recent_form: recentForm,
     run_diff: avg(recent.map(g => g.scored - g.conceded)),
     games_played: recent.length,
-    // 인사이트용 포맷
-    home_record: homeOnly.length > 0
-      ? `${(homeWinPct * 100).toFixed(0)}%`
-      : 'N/A',
-    away_record: awayOnly.length > 0
-      ? `${(awayWinPct * 100).toFixed(0)}%`
-      : 'N/A',
+    first_score_win_rate: firstScoreWinRate,
+    comeback_rate: comebackRate,
+    blown_lead_rate: blownLeadRate,
+    home_record: homeOnly.length > 0 ? `${(homeWinPct * 100).toFixed(0)}%` : 'N/A',
+    away_record: awayOnly.length > 0 ? `${(awayWinPct * 100).toFixed(0)}%` : 'N/A',
     recent_wins: recent5.filter(g => g.won === 1).length,
     recent_total: recent5.length,
   }
@@ -116,10 +152,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'matchId required' }, { status: 400 })
     }
 
-    // 경기 날짜 조회
+    // 경기 날짜 + 투수 데이터 조회
     const { data: match, error } = await supabase
       .from('baseball_matches')
-      .select('match_date, league')
+      .select('match_date, league, home_pitcher_era, home_pitcher_whip, home_pitcher_k, away_pitcher_era, away_pitcher_whip, away_pitcher_k')
       .eq('id', matchId)
       .single()
 
@@ -145,6 +181,15 @@ export async function POST(request: NextRequest) {
     const dataReliable =
       homeStats.games_played >= 5 && awayStats.games_played >= 5
 
+    // 투수 데이터 (null이면 리그 평균으로 대체)
+    const PITCHER_DEFAULTS = { era: 4.20, whip: 1.30, k: 150 }
+    const homePitcherEra = match.home_pitcher_era ?? PITCHER_DEFAULTS.era
+    const homePitcherWhip = match.home_pitcher_whip ?? PITCHER_DEFAULTS.whip
+    const homePitcherK = match.home_pitcher_k ?? PITCHER_DEFAULTS.k
+    const awayPitcherEra = match.away_pitcher_era ?? PITCHER_DEFAULTS.era
+    const awayPitcherWhip = match.away_pitcher_whip ?? PITCHER_DEFAULTS.whip
+    const awayPitcherK = match.away_pitcher_k ?? PITCHER_DEFAULTS.k
+
     // Railway 모델 feature
     const features = {
       home_win_pct: homeStats.win_pct,
@@ -167,6 +212,24 @@ export async function POST(request: NextRequest) {
       form_diff: homeStats.recent_form - awayStats.recent_form,
       run_diff_diff: homeStats.run_diff - awayStats.run_diff,
       total_avg_scored: homeStats.avg_scored + awayStats.avg_scored,
+      home_first_score_win_rate: homeStats.first_score_win_rate,
+      home_comeback_rate: homeStats.comeback_rate,
+      home_blown_lead_rate: homeStats.blown_lead_rate,
+      away_first_score_win_rate: awayStats.first_score_win_rate,
+      away_comeback_rate: awayStats.comeback_rate,
+      away_blown_lead_rate: awayStats.blown_lead_rate,
+      first_score_win_rate_diff: homeStats.first_score_win_rate - awayStats.first_score_win_rate,
+      comeback_rate_diff: homeStats.comeback_rate - awayStats.comeback_rate,
+      // MLB 투수 피처
+      home_pitcher_era: homePitcherEra,
+      home_pitcher_whip: homePitcherWhip,
+      home_pitcher_k: homePitcherK,
+      away_pitcher_era: awayPitcherEra,
+      away_pitcher_whip: awayPitcherWhip,
+      away_pitcher_k: awayPitcherK,
+      pitcher_era_diff: awayPitcherEra - homePitcherEra,
+      pitcher_whip_diff: awayPitcherWhip - homePitcherWhip,
+      pitcher_k_diff: homePitcherK - awayPitcherK,
     }
 
     // Railway API 호출
@@ -194,6 +257,12 @@ export async function POST(request: NextRequest) {
     const formDiff = Math.abs(homeStats.recent_form - awayStats.recent_form)
 
     const keyFactors = [
+      {
+        name: '선발투수 ERA',
+        value: homePitcherEra,
+        impact: Math.round(9.29 * 100),
+        description: `홈 ERA ${homePitcherEra.toFixed(2)} vs 원정 ERA ${awayPitcherEra.toFixed(2)}`,
+      },
       {
         name: '최근 10경기 안타',
         value: homeStats.avg_hits,
