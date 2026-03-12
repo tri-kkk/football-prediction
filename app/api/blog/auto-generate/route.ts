@@ -880,11 +880,14 @@ function hasEnoughData(homeStats: any, awayStats: any, leagueCode?: string): boo
   // 개막전/시즌 초반 리그는 완화된 검증
   const isSeasonStart = isLeagueInSeasonStart(leagueCode || '')
   
+  // CL/EL은 컵대회 — 팀들이 각자 다른 리그 소속이라 last10 데이터가 없을 수 있음
+  const isCup = ['CL', 'EL'].includes(leagueCode || '')
+  
   const homeForm = homeStats?.recentForm?.last5?.results
   const awayForm = awayStats?.recentForm?.last5?.results
   
-  if (isSeasonStart) {
-    // 개막전: 최근 폼 데이터 1개라도 있으면 OK (지난 시즌 데이터)
+  if (isSeasonStart || isCup) {
+    // 개막전/컵대회: 최근 폼 데이터 1개라도 있으면 OK
     if (!homeForm || homeForm.length < 1) return false
     if (!awayForm || awayForm.length < 1) return false
     return true
