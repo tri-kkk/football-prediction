@@ -636,12 +636,13 @@ async function fetchTeamNews(teamName: string, matchDate: string, leagueName: st
     const publishedAfter = sevenDaysAgo.toISOString().split('T')[0]
     const publishedBefore = oneDayAfter.toISOString().split('T')[0]
 
+    // 팀명만으로 검색 (리그명 포함 시 기사 수 급감)
     const params = new URLSearchParams({
       api_token: NEWS_API_TOKEN,
       categories: 'sports',
-      search: `${teamName} ${leagueName}`,
+      search: teamName,
       language: 'en',
-      limit: '5',
+      limit: '8',
       sort: 'published_at',
       sort_order: 'desc',
       published_after: publishedAfter,
@@ -675,37 +676,33 @@ async function fetchTeamNews(teamName: string, matchDate: string, leagueName: st
 }
 
 function formatNewsForPrompt(homeNews: NewsItem[], awayNews: NewsItem[], homeKo: string, awayKo: string, home: string, away: string): string {
-  // 3일 이내 기사만 사용
-  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-  const filterRecent = (news: NewsItem[]) =>
-    news.filter(n => {
-      if (!n.publishedAt) return false
-      return new Date(n.publishedAt) >= cutoff
-    })
+  // 7일 이내 기사 전체 사용 (3일 필터 제거 — 기사 수 확보 우선)
+  const filterValid = (news: NewsItem[]) =>
+    news.filter(n => n.publishedAt && n.title.length > 0)
 
-  const recentHome = filterRecent(homeNews)
-  const recentAway = filterRecent(awayNews)
+  const validHome = filterValid(homeNews)
+  const validAway = filterValid(awayNews)
 
-  if (recentHome.length === 0 && recentAway.length === 0) return ''
+  if (validHome.length === 0 && validAway.length === 0) return ''
 
-  let result = '\n\n## 📰 최근 뉴스 (3일 이내 기사만)\n'
-  result += '※ 아래는 최근 3일 이내 기사입니다. 팀 관련 소식(부상/이적/팀 동향 등)을 요약하세요.\n'
+  let result = '\n\n## 📰 최근 팀 뉴스 (7일 이내)\n'
+  result += '※ 부상/출장정지/이적/감독 소식 등 경기력에 영향을 주는 내용을 우선 요약하세요.\n'
 
-  if (recentHome.length > 0) {
+  if (validHome.length > 0) {
     result += `\n### ${homeKo} (${home})\n`
-    recentHome.forEach(n => {
+    validHome.forEach(n => {
       const date = n.publishedAt ? n.publishedAt.substring(0, 10) : ''
       result += `- [${date}] ${n.title}\n`
-      if (n.description) result += `  ${n.description.substring(0, 100)}\n`
+      if (n.description) result += `  ${n.description.substring(0, 150)}\n`
     })
   }
 
-  if (recentAway.length > 0) {
+  if (validAway.length > 0) {
     result += `\n### ${awayKo} (${away})\n`
-    recentAway.forEach(n => {
+    validAway.forEach(n => {
       const date = n.publishedAt ? n.publishedAt.substring(0, 10) : ''
       result += `- [${date}] ${n.title}\n`
-      if (n.description) result += `  ${n.description.substring(0, 100)}\n`
+      if (n.description) result += `  ${n.description.substring(0, 150)}\n`
     })
   }
 
