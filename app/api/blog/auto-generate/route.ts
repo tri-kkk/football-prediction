@@ -108,7 +108,7 @@ function detectSeasonContext(leagueCode: string, homeStats: any, awayStats: any)
     }
     if (month >= 1 && month <= 3) {
       return { phaseKo: '16강/8강', phaseEn: 'knockout stage', isOpening: false,
-        cautionNote: '챔피언스리그/유로파리그 토너먼트 단계입니다. 1·2차전 맥락, 원정 골 규칙 폐지, 단판 승부의 긴장감을 반영하세요.' }
+        cautionNote: '챔피언스리그/유로파리그 경기입니다. 대회 형식이나 라운드 구조(1차전/2차전/단판전 등)는 언급하지 말고, 이 경기 자체의 데이터와 양팀 현재 상태에만 집중하세요.' }
     }
     if (month >= 4 && month <= 6) {
       return { phaseKo: '준결승/결승', phaseEn: 'semi-final/final', isOpening: false,
@@ -791,6 +791,7 @@ ${h2hSum}${seasonNote}${newsContext}
 - "~할 것으로 보입니다", "~할 것으로 예상됩니다"
 - **선수 이름 언급 절대 금지** — 제공된 데이터에 선수명이 없으므로 어떤 경우에도 특정 선수를 언급하지 마세요
 - **예상 라인업 작성 절대 금지** — 라인업 데이터가 없으므로 포지션/전형 추측도 하지 마세요
+- **대회 형식/라운드 구조 언급 금지** — "단판전", "단판 승부", "1차전", "2차전", "원정 골 규칙" 등 대회 진행 방식을 임의로 서술하지 마세요. 이 경기 자체의 데이터만 다루세요
 - 데이터에 없는 내용 창작 (감독 전술 스타일, 팀 문화, 구단 역사 등) — 제공된 수치와 통계만 사용
 - 단, 뉴스에 명시된 선수명/감독명은 뉴스 섹션(news_ko/news_en)에서만 인용 가능
 - **예측 결과(승/무/패, 확률%) 언급 금지** — 인트로와 전술에서 결과를 암시하지 마세요
@@ -1509,14 +1510,14 @@ export async function GET(request: NextRequest) {
   
   try {
     const now = new Date()
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000)
     
-    // 24시간 이내 경기 조회
+    // 48시간 이내 경기 조회 (경기 하루 전부터 미리 생성)
     const { data: upcomingMatches, error: matchError } = await supabase
       .from('match_odds_latest')
       .select('*')
       .gte('commence_time', now.toISOString())
-      .lte('commence_time', tomorrow.toISOString())
+      .lte('commence_time', in48h.toISOString())
       .order('commence_time', { ascending: true })
     
     if (matchError) {
@@ -1524,7 +1525,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (!upcomingMatches || upcomingMatches.length === 0) {
-      return NextResponse.json({ success: true, message: 'No upcoming matches in 24h', generated: 0 })
+      return NextResponse.json({ success: true, message: 'No upcoming matches in 48h', generated: 0 })
     }
     
     // 지원 리그만 필터링
