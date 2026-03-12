@@ -26,8 +26,8 @@ const footballMenuItems: MenuItem[] = [
     icon: '/preview.svg'
   },
   { 
-    labelKo: '예측',
-    labelEn: 'Predict',
+    labelKo: '분석',
+    labelEn: 'Analysis',
     href: '/premium', 
     icon: 'insights',
     hidden: false
@@ -68,8 +68,8 @@ const baseballMenuItems: MenuItem[] = [
     icon: '/preview.svg'
   },
   { 
-    labelKo: '예측',
-    labelEn: 'Predict',
+    labelKo: '분석',
+    labelEn: 'Analysis',
     href: '/baseball/predictions', 
     icon: 'insights'
   },

@@ -261,25 +261,25 @@ export async function POST(request: NextRequest) {
         name: '선발투수 ERA',
         value: homePitcherEra,
         impact: Math.round(9.29 * 100),
-        description: `홈 ERA ${homePitcherEra.toFixed(2)} vs 원정 ERA ${awayPitcherEra.toFixed(2)}`,
+        description: `원정 ERA ${awayPitcherEra.toFixed(2)} vs 홈 ERA ${homePitcherEra.toFixed(2)}`,
       },
       {
         name: '최근 10경기 안타',
         value: homeStats.avg_hits,
         impact: Math.round(8.04 * 100),
-        description: `홈 ${homeStats.avg_hits.toFixed(1)}개 vs 원정 ${awayStats.avg_hits.toFixed(1)}개`,
+        description: `원정 ${awayStats.avg_hits.toFixed(1)}개 vs 홈 ${homeStats.avg_hits.toFixed(1)}개`,
       },
       {
         name: '득실점 차이',
         value: homeStats.run_diff,
         impact: Math.round(7.25 * 100),
-        description: `홈 ${homeStats.run_diff > 0 ? '+' : ''}${homeStats.run_diff.toFixed(1)} vs 원정 ${awayStats.run_diff > 0 ? '+' : ''}${awayStats.run_diff.toFixed(1)}`,
+        description: `원정 ${awayStats.run_diff > 0 ? '+' : ''}${awayStats.run_diff.toFixed(1)} vs 홈 ${homeStats.run_diff > 0 ? '+' : ''}${homeStats.run_diff.toFixed(1)}`,
       },
       {
         name: '최근 5경기 폼',
         value: homeStats.recent_form,
         impact: Math.round(formDiff * 100),
-        description: `홈 ${homeStats.recent_wins}/${homeStats.recent_total}승 vs 원정 ${awayStats.recent_wins}/${awayStats.recent_total}승`,
+        description: `원정 ${awayStats.recent_wins}/${awayStats.recent_total}승 vs 홈 ${homeStats.recent_wins}/${homeStats.recent_total}승`,
       },
     ]
 

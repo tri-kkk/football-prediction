@@ -26,8 +26,8 @@ export default function MobileBottomNav() {
     {
       href: '/premium',
       icon: 'insights',
-      labelKo: '예측',
-      labelEn: 'Predict',
+      labelKo: '분석',
+      labelEn: 'Analysis',
       hidden: false
     },
     {
@@ -65,8 +65,8 @@ export default function MobileBottomNav() {
     {
       href: '/baseball/predictions',
       icon: 'insights',
-      labelKo: '예측',
-      labelEn: 'Predict',
+      labelKo: '분석',
+      labelEn: 'Analysis',
       hidden: false
     },
     {

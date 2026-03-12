@@ -2200,18 +2200,18 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         <p>
           Trend Soccer는 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 
           챔피언스리그 등 주요 유럽 축구 리그의 실시간 배당 분석과 
-          경기 예측을 제공하는 전문 플랫폼입니다.
+          경기 트렌드를 제공하는 전문 플랫폼입니다.
         </p>
         <p>
-          데이터 기반 승률 분석, 24시간 트렌드 차트, AI 예측 알고리즘으로 
+          데이터 기반 배당 트렌드 분석, 24시간 트렌드 차트로 
           스마트한 축구 분석을 경험하세요. 매일 업데이트되는 경기 일정과 
           상세한 팀 통계, H2H 전적 분석을 무료로 제공합니다.
         </p>
         <h3>주요 기능</h3>
         <ul>
           <li>실시간 배당률 변동 추적 및 트렌드 분석</li>
-          <li>24시간 승률 트렌드 차트 시각화</li>
-          <li>AI 기반 경기 예측 및 PICK 추천</li>
+          <li>24시간 배당 트렌드 차트 시각화</li>
+          <li>경기 데이터 분석 및 통계 리포트</li>
           <li>팀 순위표 및 리그 통계</li>
           <li>H2H 상대전적 분석</li>
           <li>실시간 라인업 및 선발 명단</li>
@@ -2227,204 +2227,116 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         <h3>서비스 소개</h3>
         <p>
           Trend Soccer는 축구 팬들을 위한 무료 경기 분석 플랫폼입니다. 
-          실시간으로 업데이트되는 배당률 데이터를 바탕으로 승률을 계산하고, 
+          실시간으로 업데이트되는 배당률 데이터를 바탕으로 트렌드를 분석하고, 
           지난 24시간 동안의 배당 변동을 차트로 시각화하여 제공합니다. 
-          경기 전 팀의 최근 폼, 상대 전적, 예상 라인업까지 
+          경기 전 팀의 최근 폼, 상대 전적, 라인업까지 
           한눈에 확인할 수 있습니다.
         </p>
       </section>
       <section className="sr-only" lang="en">
   <h2>Real-Time Football Betting Odds Analysis</h2>
-  <p>Trend Soccer provides real-time betting odds analysis and match predictions 
+  <p>Trend Soccer provides real-time betting odds analysis and match trends 
      for major European football leagues including Premier League, La Liga, 
      Bundesliga, Serie A, Ligue 1, and UEFA Champions League.</p>
-  <p>Experience smart football analysis with data-driven win probability calculations, 
-     24-hour trend charts, and AI prediction algorithms. Free daily match schedules, 
+  <p>Experience smart football analysis with data-driven odds trend analysis and
+     24-hour trend charts. Free daily match schedules, 
      detailed team statistics, and H2H analysis.</p>
   <h3>Key Features</h3>
   <ul>
     <li>Real-time betting odds tracking and trend analysis</li>
-    <li>24-hour win probability trend chart visualization</li>
-    <li>AI-powered match predictions and PICK recommendations</li>
+    <li>24-hour odds trend chart visualization</li>
+    <li>Match data analysis and statistical reports</li>
     <li>League standings and team statistics</li>
     <li>Head-to-head analysis</li>
     <li>Live lineups and starting XI</li>
   </ul>
 </section>
 
-      {/* 승률 배너 (자동 스크롤) */}
-      
-      {/* 데스크톱: 세로형 카드 */}
-      <div className="hidden md:block bg-[#0f0f0f] border-b border-gray-900">
+      {/* 경기 분석 배너 (자동 스크롤) */}
+      <div className="bg-[#0f0f0f] border-b border-gray-900">
         <div className="py-2 overflow-hidden">
           <div 
             ref={desktopScrollRef}
-            className="flex gap-4 px-4 overflow-x-auto scrollbar-hide"
+            className="flex gap-3 px-4 overflow-x-auto scrollbar-hide"
             style={{ scrollBehavior: 'auto' }}
           >
             {(() => {
-              // 🆕 상단 롤링은 항상 전체 경기 기준
               const bannerMatches = allMatchesForBanner.length > 0 ? allMatchesForBanner : matches
               const uniqueMatches = bannerMatches.slice(0, 20)
-              // 무한 스크롤을 위해 2번 반복
-              return [...uniqueMatches, ...uniqueMatches].map((match, index) => {
-              const currentTrend = trendData[match.id]
-              const latestTrend = currentTrend?.[currentTrend.length - 1]
-              
-              const homeWin = latestTrend 
-                ? Math.round(latestTrend.homeWinProbability)
-                : match.homeWinRate
-              const awayWin = latestTrend 
-                ? Math.round(latestTrend.awayWinProbability)
-                : match.awayWinRate
-              
-              const homeTeam = currentLanguage === 'ko' 
-                ? (match.homeTeamKR || match.homeTeam)
-                : match.homeTeam
-              const homeTeamDisplay = homeTeam.length > 15 
-                ? homeTeam.substring(0, 15) + '...' 
-                : homeTeam
-              
-              const awayTeam = currentLanguage === 'ko'
-                ? (match.awayTeamKR || match.awayTeam)
-                : match.awayTeam
-              const awayTeamDisplay = awayTeam.length > 15 
-                ? awayTeam.substring(0, 15) + '...' 
-                : awayTeam
-              
-              const isHomeWinning = homeWin > awayWin
-              const winningTeam = isHomeWinning ? homeTeamDisplay : awayTeamDisplay
-              const winningCrest = isHomeWinning ? match.homeCrest : match.awayCrest
-              const winProbability = isHomeWinning ? homeWin : awayWin
-              
-              return (
-                <div
-                  key={`${match.id}-${index}`}
-                  onClick={() => {
-                    // 경기 카드로 스크롤
-                    const element = document.getElementById(`match-card-${match.id}`)
-                    if (element) {
-                      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    }
-                    // 경기 확장
-                    handleMatchClick(match)
-                  }}
-                  className={`flex flex-col p-2 rounded-lg min-w-[140px] cursor-pointer transition-all bg-[#1a1a1a] border border-gray-800 ${
-                    expandedMatchId === match.id ? 'ring-2 ring-blue-500' : 'hover:scale-105 hover:border-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <img 
-                      src={winningCrest} 
-                      alt={winningTeam} 
-                      className="w-6 h-6"
-                      onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><text y="24" font-size="24">⚽</text></svg>'
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-sm font-bold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {winningTeam}
-                      </div>
-                      <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                        {isHomeWinning ? t('match.home') : t('match.away')}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className={`text-xl font-black ${
-                    darkMode ? 'text-white' : 'text-black'
-                  }`}>
-                    {winProbability}%
-                  </div>
-                  <div className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                    {t('match.winProbability')}
-                  </div>
-                  
-                  <div className={`text-xs font-medium mt-1 pt-1 border-t ${
-                    darkMode ? 'border-gray-800 text-gray-400' : 'border-gray-200 text-gray-600'
-                  }`}>
-                    {match.homeTeam} - {match.awayTeam}
-                  </div>
-                  <div className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
-                    {formatTime(match.utcDate)}
-                  </div>
-                </div>
-              )
-            })
-          })()}
-          </div>
-        </div>
-      </div>
-
-      {/* 모바일: 콤팩트 가로형 */}
-      <div className="hidden bg-[#0f0f0f] border-b border-gray-900">
-        <div className="py-2 overflow-hidden">
-          <div 
-            ref={scrollContainerRef}
-            className="flex gap-2 px-3 overflow-x-auto scrollbar-hide"
-            style={{ scrollBehavior: 'auto' }}
-          >
-            {(() => {
-              const uniqueMatches = matches.slice(0, 20)
               return [...uniqueMatches, ...uniqueMatches].map((match, index) => {
                 const currentTrend = trendData[match.id]
                 const latestTrend = currentTrend?.[currentTrend.length - 1]
-                
-                const homeWin = latestTrend 
+
+                const homeWin = latestTrend
                   ? Math.round(latestTrend.homeWinProbability)
                   : match.homeWinRate
-                const awayWin = latestTrend 
+                const awayWin = latestTrend
                   ? Math.round(latestTrend.awayWinProbability)
                   : match.awayWinRate
-                
-                const homeTeam = currentLanguage === 'ko' 
+                const draw = Math.max(0, 100 - homeWin - awayWin)
+
+                const homeTeam = currentLanguage === 'ko'
                   ? (match.homeTeamKR || match.homeTeam)
                   : match.homeTeam
-                const homeTeamDisplay = homeTeam.length > 8 
-                  ? homeTeam.substring(0, 8) + '...' 
-                  : homeTeam
-                
                 const awayTeam = currentLanguage === 'ko'
                   ? (match.awayTeamKR || match.awayTeam)
                   : match.awayTeam
-                const awayTeamDisplay = awayTeam.length > 8 
-                  ? awayTeam.substring(0, 8) + '...' 
-                  : awayTeam
-                
-                const isHomeWinning = homeWin > awayWin
-                const winningTeam = isHomeWinning ? homeTeamDisplay : awayTeamDisplay
-                const winningCrest = isHomeWinning ? match.homeCrest : match.awayCrest
-                const winProbability = isHomeWinning ? homeWin : awayWin
-                
+
+                const diff = homeWin - awayWin
+                const advantageLabel = currentLanguage === 'ko'
+                  ? (diff > 8 ? '홈 우세' : diff < -8 ? '원정 우세' : '팽팽')
+                  : (diff > 8 ? 'Home' : diff < -8 ? 'Away' : 'Even')
+                const advantageColor = diff > 8
+                  ? 'text-blue-400'
+                  : diff < -8
+                  ? 'text-red-400'
+                  : 'text-gray-500'
+
                 return (
                   <div
-                    key={`mobile-${match.id}-${index}`}
+                    key={`banner-${match.id}-${index}`}
                     onClick={() => {
                       const element = document.getElementById(`match-card-${match.id}`)
-                      if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                      }
+                      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' })
                       handleMatchClick(match)
                     }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all bg-[#1a1a1a] border border-gray-800 whitespace-nowrap ${
-                      expandedMatchId === match.id ? 'ring-2 ring-blue-500' : 'hover:border-gray-700'
+                    className={`flex flex-col items-center gap-2 px-3 py-2.5 rounded-xl min-w-[130px] cursor-pointer transition-all flex-shrink-0 bg-[#1a1a1a] border border-gray-800 ${
+                      expandedMatchId === match.id ? 'ring-2 ring-blue-500' : 'hover:border-gray-700 hover:bg-[#222]'
                     }`}
                   >
-                    <img 
-                      src={winningCrest} 
-                      alt={winningTeam} 
-                      className="w-6 h-6 flex-shrink-0"
-                      onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">⚽</text></svg>'
-                      }}
-                    />
-                    <span className="text-sm font-bold text-white">
-                      {winningTeam}
-                    </span>
-                    <span className="text-lg font-black text-blue-400">
-                      {winProbability}%
-                    </span>
+                    {/* 엠블럼 + vs */}
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={match.homeCrest}
+                        alt={homeTeam}
+                        className="w-8 h-8"
+                        onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      />
+                      <span className="text-[11px] text-gray-600 font-medium">vs</span>
+                      <img
+                        src={match.awayCrest}
+                        alt={awayTeam}
+                        className="w-8 h-8"
+                        onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      />
+                    </div>
+
+                    {/* 바 (홈:무:원정) */}
+                    <div className="flex w-full h-[3px] rounded-full overflow-hidden">
+                      <div className="bg-blue-500 transition-all" style={{ width: `${homeWin}%` }} />
+                      <div className="bg-gray-700 transition-all" style={{ width: `${draw}%` }} />
+                      <div className="bg-red-500 transition-all" style={{ width: `${awayWin}%` }} />
+                    </div>
+
+                    {/* 우세 판정 + 시간 */}
+                    <div className="flex items-center justify-between w-full">
+                      <span className={`text-[11px] font-semibold ${advantageColor}`}>
+                        {advantageLabel}
+                      </span>
+                      <span className="text-[10px] text-gray-600">
+                        {formatTime(match.utcDate)}
+                      </span>
+                    </div>
                   </div>
                 )
               })
@@ -2593,7 +2505,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               {/* 좌측: 텍스트 */}
               <div className="flex-1 px-4 py-3.5 lg:px-6 lg:py-4">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-white font-black text-[18px] lg:text-[22px] leading-none tracking-tight">TREND PICK</span>
+                  <span className="text-white font-black text-[18px] lg:text-[22px] leading-none tracking-tight">TREND ANALYSIS</span>
                   <div className="flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/25 rounded px-1.5 py-[2px]">
                     <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
                     <span className="text-emerald-400 text-[8px] lg:text-[9px] font-bold tracking-wider">LIVE</span>
@@ -2601,10 +2513,10 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                 </div>
                 <div className="flex items-center gap-1.5 mb-3">
                   <span className="text-white font-extrabold text-[13px] lg:text-[15px] leading-none">10,000+</span>
-                  <span className="text-gray-400 text-[11px] lg:text-[13px] leading-none">{currentLanguage === 'ko' ? '경기 빅데이터 AI 분석' : 'Matches AI Big Data Analysis'}</span>
+                  <span className="text-gray-400 text-[11px] lg:text-[13px] leading-none">{currentLanguage === 'ko' ? '경기 데이터 트렌드 분석' : 'Match Data Trend Analysis'}</span>
                 </div>
                 <div className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg px-3.5 py-1.5 lg:px-5 lg:py-2 shadow-lg shadow-orange-500/25">
-                  <span className="text-white font-bold text-[11px] lg:text-[13px]">{currentLanguage === 'ko' ? '오늘의 PICK 확인' : "Today's PICK"}</span>
+                  <span className="text-white font-bold text-[11px] lg:text-[13px]">{currentLanguage === 'ko' ? '오늘의 트렌드 확인' : "Today's Trends"}</span>
                   <svg className="w-3 h-3 lg:w-4 lg:h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                 </div>
               </div>
@@ -4018,27 +3930,17 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             <div className="flex items-center justify-center gap-2 mb-3">
               <span className="text-xl">🔥</span>
               <span className="text-white font-bold text-sm">
-                {t('header.trendPick')}
+                TREND ANALYSIS
               </span>
               <span className="text-[10px] text-green-400 bg-green-500/20 px-2 py-0.5 rounded animate-pulse">LIVE</span>
             </div>
             
-            {/* 적중률 */}
-            <div className="text-center mb-3">
-              <div className="text-gray-400 text-xs mb-1">
-                {t('header.pickAccuracy')}
-              </div>
-              {accuracyLoading ? (
-                <div className="w-16 h-8 bg-yellow-400/20 rounded mx-auto animate-pulse"></div>
-              ) : (
-                <div className="text-yellow-400 font-bold text-3xl">{avgAccuracy}%</div>
-              )}
-            </div>
+            
             
             {/* CTA 버튼 */}
             <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg py-2 px-4 text-center group-hover:from-orange-400 group-hover:to-red-400 transition-all">
               <span className="text-white font-bold text-sm">
-                {t('header.viewPredictions')}
+                {currentLanguage === 'ko' ? '무료로 확인 →' : 'View Free →'}
               </span>
             </div>
           </div>
