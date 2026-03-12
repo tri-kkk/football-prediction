@@ -31,9 +31,8 @@ const LEAGUE_INFO: Record<string, {
   'SA':  { nameKo: '세리에A', nameEn: 'Serie A', tagKo: '세리에A', tagEn: 'SerieA', apiLeagueId: 135, leagueLogo: 'https://media.api-sports.io/football/leagues/135.png' },
   'FL1': { nameKo: '리그1', nameEn: 'Ligue 1', tagKo: '리그1', tagEn: 'Ligue1', apiLeagueId: 61, leagueLogo: 'https://media.api-sports.io/football/leagues/61.png' },
   'DED': { nameKo: '에레디비시', nameEn: 'Eredivisie', tagKo: '에레디비시', tagEn: 'Eredivisie', apiLeagueId: 88, leagueLogo: 'https://media.api-sports.io/football/leagues/88.png' },
-  // CL, EL 제외 - 정규리그만
-  // 'CL':  { nameKo: '챔피언스리그', nameEn: 'Champions League', ... },
-  // 'EL':  { nameKo: '유로파리그', nameEn: 'Europa League', ... },
+  'CL':  { nameKo: '챔피언스리그', nameEn: 'Champions League', tagKo: '챔피언스리그', tagEn: 'ChampionsLeague', apiLeagueId: 2, leagueLogo: 'https://media.api-sports.io/football/leagues/2.png' },
+  'EL':  { nameKo: '유로파리그', nameEn: 'Europa League', tagKo: '유로파리그', tagEn: 'EuropaLeague', apiLeagueId: 3, leagueLogo: 'https://media.api-sports.io/football/leagues/3.png' },
   'KL1': { nameKo: 'K리그1', nameEn: 'K League 1', tagKo: 'K리그', tagEn: 'KLeague', apiLeagueId: 292, leagueLogo: 'https://media.api-sports.io/football/leagues/292.png' },
   'KL2': { nameKo: 'K리그2', nameEn: 'K League 2', tagKo: 'K리그', tagEn: 'KLeague', apiLeagueId: 293, leagueLogo: 'https://media.api-sports.io/football/leagues/293.png' },
   'J1':  { nameKo: 'J리그', nameEn: 'J1 League', tagKo: 'J리그', tagEn: 'JLeague', apiLeagueId: 98, leagueLogo: 'https://media.api-sports.io/football/leagues/98.png' },
@@ -101,6 +100,22 @@ function detectSeasonContext(leagueCode: string, homeStats: any, awayStats: any)
     }
   }
   
+  // 유럽 컵 대회: 토너먼트 방식 (시즌 개막/후반 개념 다름)
+  if (['CL', 'EL'].includes(leagueCode)) {
+    if (month >= 9 && month <= 12) {
+      return { phaseKo: '조별리그', phaseEn: 'group stage', isOpening: false,
+        cautionNote: '챔피언스리그/유로파리그 조별리그 단계입니다. 각 팀의 조별 성적과 통과 가능성 맥락을 반영하세요. 리그 순위 경쟁 언급은 적절히 최소화하세요.' }
+    }
+    if (month >= 1 && month <= 3) {
+      return { phaseKo: '16강/8강', phaseEn: 'knockout stage', isOpening: false,
+        cautionNote: '챔피언스리그/유로파리그 토너먼트 단계입니다. 1·2차전 맥락, 원정 골 규칙 폐지, 단판 승부의 긴장감을 반영하세요.' }
+    }
+    if (month >= 4 && month <= 6) {
+      return { phaseKo: '준결승/결승', phaseEn: 'semi-final/final', isOpening: false,
+        cautionNote: '챔피언스리그/유로파리그 후반 토너먼트입니다. 역사적 맞대결, 우승 경쟁 맥락, 선수 컨디션 등을 강조하세요.' }
+    }
+  }
+
   // 유럽 리그: 8~9월 개막
   if (['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED'].includes(leagueCode)) {
     if (totalGames <= 2 || (month >= 8 && month <= 9 && totalGames <= 4)) {
@@ -582,7 +597,21 @@ function translateH2hInsight(text: string, homeKo: string, awayKo: string, homeE
 }
 
 function getTeamNameKo(name: string): string {
-  return TEAM_NAME_KO[name] || name
+  // 1. 직접 매핑
+  if (TEAM_NAME_KO[name]) return TEAM_NAME_KO[name]
+  // 2. 대소문자 무시
+  const lowerName = name.toLowerCase()
+  for (const [key, val] of Object.entries(TEAM_NAME_KO)) {
+    if (key.toLowerCase() === lowerName) return val
+  }
+  // 3. 부분 매핑 (API가 짧은 팀명 반환 시: "Heracles" → "Heracles Almelo")
+  for (const [key, val] of Object.entries(TEAM_NAME_KO)) {
+    const lowerKey = key.toLowerCase()
+    if (lowerKey.startsWith(lowerName) || lowerName.startsWith(lowerKey)) {
+      return val
+    }
+  }
+  return name
 }
 
 // ============================================
@@ -763,7 +792,10 @@ ${h2hSum}${seasonNote}${newsContext}
 ### 절대 금지
 - "살펴보겠습니다", "주목할 만합니다", "분석해보겠습니다"
 - "~할 것으로 보입니다", "~할 것으로 예상됩니다"
-- 데이터에 없는 내용 창작 (선수 이름, 부상 정보, 이적 등) — 단, 뉴스에 명시된 내용은 인용 가능
+- **선수 이름 언급 절대 금지** — 제공된 데이터에 선수명이 없으므로 어떤 경우에도 특정 선수를 언급하지 마세요
+- **예상 라인업 작성 절대 금지** — 라인업 데이터가 없으므로 포지션/전형 추측도 하지 마세요
+- 데이터에 없는 내용 창작 (감독 전술 스타일, 팀 문화, 구단 역사 등) — 제공된 수치와 통계만 사용
+- 단, 뉴스에 명시된 선수명/감독명은 뉴스 섹션(news_ko/news_en)에서만 인용 가능
 - **예측 결과(승/무/패, 확률%) 언급 금지** — 인트로와 전술에서 결과를 암시하지 마세요
 
 ### 데이터 정합성 (매우 중요)
@@ -782,9 +814,9 @@ ${seasonCtx.cautionNote ? `- **${seasonCtx.cautionNote}**` : ''}
 - 베팅/토토/배당 관련 기사는 무시하세요.
 
 ### 섹션별 요구
-1. **인트로 (3-4문장)**: 경기 날짜/시간 포함, 양팀 현재 상황과 이번 경기의 관전 포인트. 예측 결과를 직접 언급하지 말 것.
-2. **전술 포인트 (4-6문장)**: 양팀 강점/약점 데이터 기반 전술 맞대결 분석. 수치 근거 필수.
-3. **승부처 (3개, 각 2-3문장)**: 분석 근거 데이터 기반, **1. 제목** 형식. 구체적 수치 포함.
+1. **인트로 (3-4문장)**: 경기 날짜/시간 포함, 양팀 현재 상황과 이번 경기의 관전 포인트. 예측 결과를 직접 언급하지 말 것. 선수명/라인업 언급 금지.
+2. **전술 포인트 (4-6문장)**: 제공된 홈/원정 성적, 득실 평균, 강점/약점 데이터만 기반으로 분석. 반드시 구체적 수치 인용. 선수명/감독명/전술 시스템 추측 금지.
+3. **승부처 (3개, 각 2-3문장)**: 분석 근거 데이터 기반, **1. 제목** 형식. 구체적 수치 포함. 수치 없이 감으로 쓰는 문장 금지.
 4. **뉴스 이슈**: 부상/결장/이적/팀 소식 등 관련 뉴스 요약. 해당 팀 관련 뉴스가 없으면 빈 태그.
 
 한글/영어 각각 독립 작성 (번역하지 말 것)
@@ -1453,16 +1485,20 @@ function generateContentEn(
 // 태그 생성
 // ============================================
 function generateTags(match: any, leagueInfo: any): string[] {
+  const homeKo = getTeamNameKo(match.home_team)
+  const awayKo = getTeamNameKo(match.away_team)
+  // CL/EL은 유럽축구 대신 대회 특화 태그
+  const isCup = ['CL', 'EL'].includes(match.league_code)
   const tags: string[] = [
     leagueInfo.tagEn,
     leagueInfo.tagKo,
-    match.home_team.replace(/\s+/g, ''),
-    match.away_team.replace(/\s+/g, ''),
+    homeKo !== match.home_team ? homeKo : match.home_team.replace(/\s+/g, ''),
+    awayKo !== match.away_team ? awayKo : match.away_team.replace(/\s+/g, ''),
     'MatchPreview',
     '축구분석',
     '경기예측',
     'Football',
-    '해외축구',
+    isCup ? '유럽컵' : '해외축구',
     '프리뷰',
   ]
   return tags.slice(0, 10)
