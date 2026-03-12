@@ -993,6 +993,11 @@ async function fetchPrediction(match: any): Promise<any> {
         leagueId,
         leagueCode: match.league_code,
         season: getSeasonForLeague(match.league_code),
+        // 배당값 전달 — CL/EL 컵대회 가중치 적용에 필수
+        homeOdds: match.home_odds ? parseFloat(match.home_odds) : undefined,
+        drawOdds: match.draw_odds ? parseFloat(match.draw_odds) : undefined,
+        awayOdds: match.away_odds ? parseFloat(match.away_odds) : undefined,
+        matchId: match.match_id,
       }),
     })
     if (!response.ok) return null
