@@ -166,6 +166,7 @@ export async function GET(request: NextRequest) {
         league,
         league_name,
         match_date,
+        match_time,
         match_timestamp,
         home_team,
         home_team_ko,
@@ -200,9 +201,21 @@ export async function GET(request: NextRequest) {
       }
 
       if (status === 'scheduled') {
-        query = query.in('status', ['NS', 'SCHEDULED', 'TBD'])
+        const koreaOffset = 9 * 60
+        const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
+        const today = now.toISOString().split('T')[0]
+        query = query.in('status', ['NS', 'SCHEDULED', 'TBD']).gte('match_date', today)
       } else if (status === 'finished') {
         query = query.eq('status', 'FT')
+      } else if (status === 'live') {
+        // IN1, IN2, IN3 ... 등 이닝 진행 중 상태
+        query = query.like('status', 'IN%')
+      } else if (status === 'today') {
+        // 오늘 전체 (라이브 + 예정 + 종료)
+        const koreaOffset = 9 * 60
+        const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
+        const today = now.toISOString().split('T')[0]
+        query = query.eq('match_date', today)
       }
 
       if (date) {
@@ -210,7 +223,7 @@ export async function GET(request: NextRequest) {
       }
 
       query = query
-        .order('match_date', { ascending: status === 'finished' ? false : true })
+        .order('match_timestamp', { ascending: status === 'finished' ? false : true })
         .limit(limit)
     }
 
@@ -270,6 +283,7 @@ export async function GET(request: NextRequest) {
         league: match.league,
         leagueName: match.league_name,
         date: match.match_date,
+        time: match.match_time || null,
         timestamp: match.match_timestamp || match.match_date,
 
         homeTeam: match.home_team,

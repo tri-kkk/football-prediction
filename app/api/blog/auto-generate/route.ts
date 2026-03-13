@@ -1014,9 +1014,13 @@ async function fetchPrediction(match: any): Promise<any> {
 
 async function fetchTeamStats(teamName: string, leagueCode: string): Promise<any> {
   try {
-    const response = await fetch(
-      `${API_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}&league=${leagueCode}`
-    )
+    // CL/EL 팀들은 자국 리그 소속 — 리그코드 없이 조회해야 데이터 있음
+    const isCup = ['CL', 'EL'].includes(leagueCode)
+    const url = isCup
+      ? `${API_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}`
+      : `${API_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}&league=${leagueCode}`
+    
+    const response = await fetch(url)
     if (!response.ok) return null
     const data = await response.json()
     return data.success ? data.data : null

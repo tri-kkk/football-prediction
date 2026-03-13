@@ -50,9 +50,13 @@ const TEAM_NAME_MAP: Record<string, string[]> = {
   'Washington Nationals': ['Washington Nationals', 'Nationals'],
 }
 
-// 팀명 정규화 (비교용)
+// 팀명 정규화 (비교용) - 점, 공백 통일
 function normalizeName(name: string): string {
-  return name.toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim()
+  return name
+    .toLowerCase()
+    .replace(/\./g, ' ')       // 점 → 공백 (St. → St )
+    .replace(/\s+/g, ' ')      // 연속 공백 → 단일 공백
+    .trim()
 }
 
 // DB 팀명 → MLB API 팀명 변환
@@ -123,34 +127,30 @@ export async function GET(request: NextRequest) {
       const dbHome = normalizeName(dbMatch.home_team)
       const dbAway = normalizeName(dbMatch.away_team)
 
-      // MLB API 경기와 팀명 매핑
+      // 정확 매칭: 홈/어웨이 순서 무관하게 두 팀명 매칭
       const mlbGame = mlbGames.find((g: any) => {
         const mlbHome = normalizeName(g.teams?.home?.team?.name || '')
         const mlbAway = normalizeName(g.teams?.away?.team?.name || '')
-        return mlbHome === dbHome && mlbAway === dbAway
+        const teamsMatch =
+          (mlbHome === dbHome && mlbAway === dbAway) ||
+          (mlbHome === dbAway && mlbAway === dbHome)
+        return teamsMatch
       })
 
       if (!mlbGame) {
-        // 정규화 후에도 못 찾으면 부분 매칭 시도
-        const mlbGameFuzzy = mlbGames.find((g: any) => {
-          const mlbHome = normalizeName(g.teams?.home?.team?.name || '')
-          const mlbAway = normalizeName(g.teams?.away?.team?.name || '')
-          return mlbHome.includes(dbHome.split(' ').pop()!) ||
-                 mlbAway.includes(dbAway.split(' ').pop()!)
+        const mlbTeamPairs = mlbGames.map((g: any) =>
+          `${normalizeName(g.teams?.home?.team?.name||'')} vs ${normalizeName(g.teams?.away?.team?.name||'')}`
+        )
+        results.push({
+          match: `${dbMatch.home_team} vs ${dbMatch.away_team}`,
+          status: 'NOT_MATCHED',
+          dbNormalized: `${dbHome} vs ${dbAway}`,
+          mlbTeams: mlbTeamPairs,
         })
-
-        if (!mlbGameFuzzy) {
-          results.push({ match: `${dbMatch.home_team} vs ${dbMatch.away_team}`, status: 'NOT_MATCHED' })
-          continue
-        }
+        continue
       }
 
-      const game = mlbGame || mlbGames.find((g: any) => {
-        const mlbHome = normalizeName(g.teams?.home?.team?.name || '')
-        const mlbAway = normalizeName(g.teams?.away?.team?.name || '')
-        return mlbHome.includes(dbHome.split(' ').pop()!) ||
-               mlbAway.includes(dbAway.split(' ').pop()!)
-      })
+      const game = mlbGame
 
       const homePitcher = game.teams?.home?.probablePitcher
       const awayPitcher = game.teams?.away?.probablePitcher
