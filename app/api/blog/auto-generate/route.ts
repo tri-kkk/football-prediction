@@ -1522,14 +1522,14 @@ export async function GET(request: NextRequest) {
   
   try {
     const now = new Date()
-    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000)
     
-    // 24시간 이내 경기 조회
+    // 48시간 이내 경기 조회
     const { data: upcomingMatches, error: matchError } = await supabase
       .from('match_odds_latest')
       .select('*')
       .gte('commence_time', now.toISOString())
-      .lte('commence_time', in24h.toISOString())
+      .lte('commence_time', in48h.toISOString())
       .order('commence_time', { ascending: true })
     
     if (matchError) {
@@ -1537,7 +1537,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (!upcomingMatches || upcomingMatches.length === 0) {
-      return NextResponse.json({ success: true, message: 'No upcoming matches in 24h', generated: 0 })
+      return NextResponse.json({ success: true, message: 'No upcoming matches in 48h', generated: 0 })
     }
     
     // 지원 리그만 필터링
