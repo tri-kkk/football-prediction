@@ -245,6 +245,7 @@ const TABS = [
   { id: 'export', label: '예측 Export', icon: '📤' },
   { id: 'notices', label: '공지 관리', icon: '📣' },
   { id: 'revenue', label: '매출 관리', icon: '💵' },
+  { id: 'pitcher', label: '선발 관리', icon: '⚾' },
 ]
 
 /// 국기 이모지 매핑 - 확장
@@ -386,10 +387,16 @@ const calculateCTR = (clicks: number, impressions: number) => {
   return ((clicks / impressions) * 100).toFixed(2)
 }
 
+// KST(UTC+9) 기준 오늘 날짜 반환
+const getKSTDateString = (date: Date = new Date()): string => {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().split('T')[0]
+}
+
 const getDaysAgo = (days: number) => {
   const date = new Date()
   date.setDate(date.getDate() - days)
-  return date.toISOString().split('T')[0]
+  return getKSTDateString(date)
 }
 
 // ==================== 차트 컴포넌트 ====================
@@ -497,6 +504,30 @@ export default function AdminDashboard() {
   
   // ===== 탭 상태 =====
   const [activeTab, setActiveTab] = useState('dashboard')
+
+  // ===== 선발 관리 상태 =====
+  const [pitcherLeague, setPitcherLeague] = useState<'KBO' | 'NPB' | 'CPBL'>('KBO')
+  const [pitcherMatches, setPitcherMatches] = useState<any[]>([])
+  const [pitcherMatchesLoading, setPitcherMatchesLoading] = useState(false)
+  const [pitcherDate, setPitcherDate] = useState(() => getKSTDateString())
+  const [kboPitchers, setKboPitchers] = useState<{ name: string; team: string; pitch_hand?: string }[]>([])
+  const [pitcherEdits, setPitcherEdits] = useState<Record<number, { home: string; away: string }>>({})
+  const [pitcherSaving, setPitcherSaving] = useState<Record<number, boolean>>({})
+  const [pitcherSaved, setPitcherSaved] = useState<Record<number, boolean>>({})
+
+  const KBO_TEAM_MAP: Record<string, string> = {
+    'Hanwha Eagles': '한화', 'LG Twins': 'LG', 'Kiwoom Heroes': '키움',
+    'Lotte Giants': '롯데', 'Samsung Lions': '삼성', 'Doosan Bears': '두산',
+    'KT Wiz Suwon': 'KT', 'KT Wiz': 'KT', 'KIA Tigers': 'KIA',
+    'NC Dinos': 'NC', 'SSG Landers': 'SSG',
+  }
+  const NPB_TEAM_MAP: Record<string, string> = {
+    'Hanshin Tigers': '한신', 'Yomiuri Giants': '요미우리', 'Hiroshima Toyo Carp': '히로시마',
+    'Yakult Swallows': '야쿠르트', 'Yokohama DeNA BayStars': '요코하마', 'Chunichi Dragons': '주니치',
+    'SoftBank Hawks': '소프트뱅크', 'Orix Buffaloes': '오릭스', 'Lotte Marines': '지바롯데',
+    'Rakuten Eagles': '라쿠텐', 'Seibu Lions': '세이부', 'Nippon Ham Fighters': '니혼햄',
+  }
+  const TEAM_MAP = pitcherLeague === 'NPB' ? NPB_TEAM_MAP : KBO_TEAM_MAP
   
   // ===== 데이터 상태 =====
   const [users, setUsers] = useState<User[]>([])
@@ -584,7 +615,7 @@ export default function AdminDashboard() {
   const [protoSavedRounds, setProtoSavedRounds] = useState<string[]>([])  // 저장된 회차 목록
   
   // ===== 📤 Export 관리 상태 =====
-  const [exportDate, setExportDate] = useState<string>(() => new Date().toISOString().split('T')[0])
+  const [exportDate, setExportDate] = useState<string>(() => getKSTDateString())
   const [exportLeague, setExportLeague] = useState<string>('all')
   const [exportGrade, setExportGrade] = useState<string>('all')
   const [exportMatches, setExportMatches] = useState<any[]>([])
@@ -609,6 +640,65 @@ export default function AdminDashboard() {
       loadNotices()
     }
   }, [activeTab, isAuthenticated])
+
+  // ===== ⚾ 선발 관리 =====
+  useEffect(() => {
+    if (activeTab === 'pitcher' && isAuthenticated) {
+      fetchPitcherMatches()
+      if (pitcherLeague === 'KBO' || pitcherLeague === 'NPB') fetchKboPitchers()
+    }
+  }, [activeTab, isAuthenticated, pitcherLeague, pitcherDate])
+
+  const fetchPitcherMatches = async () => {
+    setPitcherMatchesLoading(true)
+    setPitcherEdits({})
+    setPitcherSaved({})
+    try {
+      const res = await fetch(`/api/admin/pitcher?league=${pitcherLeague}&date=${pitcherDate}`)
+      const data = await res.json()
+      setPitcherMatches(data.matches || [])
+      const edits: Record<number, { home: string; away: string }> = {}
+      ;(data.matches || []).forEach((m: any) => {
+        edits[m.id] = { home: m.home_pitcher_ko || '', away: m.away_pitcher_ko || '' }
+      })
+      setPitcherEdits(edits)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setPitcherMatchesLoading(false)
+    }
+  }
+
+  const fetchKboPitchers = async () => {
+    try {
+      const table = pitcherLeague === 'NPB' ? 'npb' : 'kbo'
+      const res = await fetch(`/api/admin/pitcher?type=list&league=${table}&season=2025`)
+      const data = await res.json()
+      setKboPitchers(data.pitchers || [])
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const savePitcher = async (matchId: number) => {
+    const edit = pitcherEdits[matchId]
+    if (!edit) return
+    setPitcherSaving(prev => ({ ...prev, [matchId]: true }))
+    try {
+      const res = await fetch('/api/admin/pitcher', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId, homePitcher: edit.home || null, awayPitcher: edit.away || null }),
+      })
+      if (!res.ok) throw new Error('저장 실패')
+      setPitcherSaved(prev => ({ ...prev, [matchId]: true }))
+      setTimeout(() => setPitcherSaved(prev => ({ ...prev, [matchId]: false })), 2000)
+    } catch (e) {
+      alert('저장 실패')
+    } finally {
+      setPitcherSaving(prev => ({ ...prev, [matchId]: false }))
+    }
+  }
 
   const loadNotices = async () => {
     setNoticesLoading(true)
@@ -844,7 +934,7 @@ export default function AdminDashboard() {
 
   const fetchAdStats = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getKSTDateString()
       const response = await fetch(`/api/ads/track?start=${today}&end=${today}`)
       if (!response.ok) return
       const data = await response.json()
@@ -1005,7 +1095,7 @@ export default function AdminDashboard() {
       XLSX.utils.book_append_sheet(wb, ws4, '요약')
 
       // 파일명 생성
-      const today = new Date().toISOString().split('T')[0]
+      const today = getKSTDateString()
       const fileName = `광고_리포트_${today}.xlsx`
 
       // 다운로드
@@ -1872,7 +1962,7 @@ export default function AdminDashboard() {
     const freeUsers = users.filter(u => u.tier === 'free').length
     const premiumUsers = users.filter(u => u.tier === 'premium').length
     
-    const today = new Date().toISOString().split('T')[0]
+    const today = getKSTDateString()
     const todayUsers = users.filter(u => u.created_at.startsWith(today)).length
     
     const activeSubscriptions = subscriptions.filter(s => s.status === 'active').length
@@ -4693,6 +4783,179 @@ export default function AdminDashboard() {
               </>
             )
           })()}
+        </div>
+      )}
+
+      {/* ⚾ 선발 관리 탭 */}
+      {activeTab === 'pitcher' && (
+        <div className="w-full px-3 md:px-6 py-4 md:py-6 max-w-4xl space-y-6">
+          <h2 className="text-xl font-bold text-white">⚾ 선발 투수 관리</h2>
+
+          {/* 리그 + 날짜 선택 */}
+          <div className="bg-gray-800 rounded-2xl p-4 border border-gray-700 flex flex-wrap gap-3 items-end">
+            {/* 리그 선택 */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-400">리그</label>
+              <div className="flex gap-2">
+                {(['KBO', 'NPB', 'CPBL'] as const).map(lg => (
+                  <button
+                    key={lg}
+                    onClick={() => setPitcherLeague(lg)}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                      pitcherLeague === lg
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >{lg}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 날짜 선택 */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-400">날짜</label>
+              <input
+                type="date"
+                value={pitcherDate}
+                onChange={e => setPitcherDate(e.target.value)}
+                className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm border border-gray-600 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <button
+              onClick={fetchPitcherMatches}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+            >🔍 조회</button>
+          </div>
+
+          {/* 경기 목록 */}
+          {pitcherMatchesLoading ? (
+            <div className="text-center text-gray-400 py-12">⏳ 불러오는 중...</div>
+          ) : pitcherMatches.length === 0 ? (
+            <div className="text-center text-gray-500 py-12">해당 날짜에 경기가 없어요</div>
+          ) : (
+            <div className="space-y-3">
+              {pitcherMatches.map(match => {
+                const edit = pitcherEdits[match.id] || { home: '', away: '' }
+                const saving = pitcherSaving[match.id]
+                const saved = pitcherSaved[match.id]
+                const awayName = match.away_team_ko || TEAM_MAP[match.away_team] || match.away_team
+                const homeName = match.home_team_ko || TEAM_MAP[match.home_team] || match.home_team
+
+                return (
+                  <div key={match.id} className="bg-gray-800 rounded-2xl p-4 border border-gray-700">
+                    {/* 경기 헤더 */}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs text-gray-400">
+                        {match.match_time ? match.match_time.slice(0, 5) : ''}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                        match.status === 'NS' ? 'bg-blue-900/40 text-blue-400' :
+                        match.status === 'FT' ? 'bg-gray-700 text-gray-400' :
+                        'bg-yellow-900/40 text-yellow-400'
+                      }`}>{match.status}</span>
+                    </div>
+
+                    {/* 팀 매치업 + 선발 입력 */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* 원정 */}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-xs font-bold text-red-400">원정 — {awayName}</span>
+                        {pitcherLeague !== 'CPBL' ? (
+                          <select
+                            value={edit.away}
+                            onChange={e => setPitcherEdits(prev => ({
+                              ...prev,
+                              [match.id]: { ...prev[match.id], away: e.target.value }
+                            }))}
+                            className="bg-gray-700 text-white rounded-lg px-2 py-1.5 text-sm border border-gray-600 focus:outline-none focus:border-emerald-500"
+                          >
+                            <option value="">선발 미정</option>
+                            {kboPitchers
+                              .filter(p => p.team === awayName || p.team === TEAM_MAP[match.away_team])
+                              .map(p => (
+                                <option key={`${p.name}-${p.team}`} value={p.name}>{p.name}{p.pitch_hand === '좌' ? ' (좌)' : ''}</option>
+                              ))
+                            }
+                            <optgroup label="전체">
+                              {kboPitchers.map(p => (
+                                <option key={`all-${p.name}-${p.team}`} value={p.name}>{p.name} ({p.team}){p.pitch_hand === '좌' ? ' 좌' : ''}</option>
+                              ))}
+                            </optgroup>
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={edit.away}
+                            onChange={e => setPitcherEdits(prev => ({
+                              ...prev,
+                              [match.id]: { ...prev[match.id], away: e.target.value }
+                            }))}
+                            placeholder="선발 투수명"
+                            className="bg-gray-700 text-white rounded-lg px-2 py-1.5 text-sm border border-gray-600 focus:outline-none focus:border-emerald-500"
+                          />
+                        )}
+                      </div>
+
+                      {/* 홈 */}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-xs font-bold text-blue-400">홈 — {homeName}</span>
+                        {pitcherLeague !== 'CPBL' ? (
+                          <select
+                            value={edit.home}
+                            onChange={e => setPitcherEdits(prev => ({
+                              ...prev,
+                              [match.id]: { ...prev[match.id], home: e.target.value }
+                            }))}
+                            className="bg-gray-700 text-white rounded-lg px-2 py-1.5 text-sm border border-gray-600 focus:outline-none focus:border-emerald-500"
+                          >
+                            <option value="">선발 미정</option>
+                            {kboPitchers
+                              .filter(p => p.team === homeName || p.team === TEAM_MAP[match.home_team])
+                              .map(p => (
+                                <option key={`${p.name}-${p.team}`} value={p.name}>{p.name}{p.pitch_hand === '좌' ? ' (좌)' : ''}</option>
+                              ))
+                            }
+                            <optgroup label="전체">
+                              {kboPitchers.map(p => (
+                                <option key={`all-${p.name}-${p.team}`} value={p.name}>{p.name} ({p.team}){p.pitch_hand === '좌' ? ' 좌' : ''}</option>
+                              ))}
+                            </optgroup>
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={edit.home}
+                            onChange={e => setPitcherEdits(prev => ({
+                              ...prev,
+                              [match.id]: { ...prev[match.id], home: e.target.value }
+                            }))}
+                            placeholder="선발 투수명"
+                            className="bg-gray-700 text-white rounded-lg px-2 py-1.5 text-sm border border-gray-600 focus:outline-none focus:border-emerald-500"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 저장 버튼 */}
+                    <div className="flex justify-end mt-3">
+                      <button
+                        onClick={() => savePitcher(match.id)}
+                        disabled={saving}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+                          saved
+                            ? 'bg-emerald-700 text-white'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50'
+                        }`}
+                      >
+                        {saving ? '저장 중...' : saved ? '✅ 저장됨' : '저장'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
