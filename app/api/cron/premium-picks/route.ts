@@ -219,14 +219,8 @@ export async function GET(request: Request) {
       } // end picksToSave.length > 0
     }
     
-    // 8. 오래된 데이터 정리 (7일 이상)
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    
-    await supabase
-      .from('premium_picks')
-      .delete()
-      .lt('valid_date', sevenDaysAgo.toISOString().split('T')[0])
+    // 8. 데이터 정리 — 적중률 통계 누적을 위해 삭제하지 않음
+    // 데이터가 쌓일수록 적중률 표본이 안정화됨
     
     console.log('✅ Premium Picks Cron Completed')
     

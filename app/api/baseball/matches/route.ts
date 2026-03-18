@@ -7,6 +7,22 @@ import { createClient } from '@supabase/supabase-js'
 // ✅ ML 예측값(mlPrediction) 추가 - 원본 구조 유지
 // =====================================================
 
+const TEAM_NAME_KO: Record<string, string> = {
+  'Hanwha Eagles': '한화', 'LG Twins': 'LG', 'Kiwoom Heroes': '키움',
+  'Lotte Giants': '롯데', 'Samsung Lions': '삼성', 'Doosan Bears': '두산',
+  'KT Wiz Suwon': 'KT', 'KT Wiz': 'KT', 'KIA Tigers': 'KIA',
+  'NC Dinos': 'NC', 'SSG Landers': 'SSG',
+  'Hanshin Tigers': '한신', 'Yomiuri Giants': '요미우리',
+  'Hiroshima Carp': '히로시마', 'Hiroshima Toyo Carp': '히로시마',
+  'Yakult Swallows': '야쿠르트', 'Yokohama BayStars': '요코하마',
+  'Yokohama DeNA BayStars': '요코하마', 'Chunichi Dragons': '주니치',
+  'Fukuoka S. Hawks': '소프트뱅크', 'SoftBank Hawks': '소프트뱅크',
+  'Orix Buffaloes': '오릭스', 'Chiba Lotte Marines': '지바롯데',
+  'Lotte Marines': '지바롯데', 'Rakuten Gold. Eagles': '라쿠텐',
+  'Rakuten Eagles': '라쿠텐', 'Seibu Lions': '세이부',
+  'Nippon Ham Fighters': '니혼햄',
+}
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
@@ -164,7 +180,6 @@ export async function GET(request: NextRequest) {
         id,
         api_match_id,
         league,
-        league_name,
         match_date,
         match_time,
         match_timestamp,
@@ -183,18 +198,26 @@ export async function GET(request: NextRequest) {
         is_spring_training,
         home_pitcher,
         home_pitcher_id,
+        home_pitcher_ko,
         home_pitcher_era,
         home_pitcher_whip,
         home_pitcher_k,
         away_pitcher,
         away_pitcher_id,
+        away_pitcher_ko,
         away_pitcher_era,
         away_pitcher_whip,
         away_pitcher_k
       `)
 
     if (matchId) {
-      query = query.eq('api_match_id', matchId).limit(1)
+      // 숫자면 DB id로, 아니면 api_match_id로 조회
+      const isNumericId = /^\d+$/.test(matchId)
+      if (isNumericId) {
+        query = query.eq('id', parseInt(matchId)).limit(1)
+      } else {
+        query = query.eq('api_match_id', matchId).limit(1)
+      }
     } else {
       if (league !== 'ALL') {
         query = query.eq('league', league)
@@ -280,6 +303,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: match.api_match_id,
+        dbId: match.id,
         league: match.league,
         leagueName: match.league_name,
         date: match.match_date,
@@ -287,13 +311,13 @@ export async function GET(request: NextRequest) {
         timestamp: match.match_timestamp || match.match_date,
 
         homeTeam: match.home_team,
-        homeTeamKo: match.home_team_ko || match.home_team,
+        homeTeamKo: match.home_team_ko || TEAM_NAME_KO[match.home_team] || match.home_team,
         homeTeamId: match.home_team_id,
         homeLogo: match.home_team_logo,
         homeScore: match.home_score,
 
         awayTeam: match.away_team,
-        awayTeamKo: match.away_team_ko || match.away_team,
+        awayTeamKo: match.away_team_ko || TEAM_NAME_KO[match.away_team] || match.away_team,
         awayTeamId: match.away_team_id,
         awayLogo: match.away_team_logo,
         awayScore: match.away_score,
@@ -320,8 +344,10 @@ export async function GET(request: NextRequest) {
         // ✅ 선발 투수 (MLB만, sync-pitchers API가 채워줌)
         homePitcher: match.home_pitcher ?? null,
         homePitcherId: match.home_pitcher_id ?? null,
+        homePitcherKo: match.home_pitcher_ko ?? null,
         awayPitcher: match.away_pitcher ?? null,
         awayPitcherId: match.away_pitcher_id ?? null,
+        awayPitcherKo: match.away_pitcher_ko ?? null,
       }
     }) || []
 

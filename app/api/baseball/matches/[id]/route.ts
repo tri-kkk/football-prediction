@@ -23,12 +23,13 @@ export async function GET(
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    // 경기 정보 조회
+    // 경기 정보 조회 (DB id 또는 api_match_id 둘 다 지원)
+    const isNumericId = /^\d+$/.test(matchId)
     const { data: match, error: matchError } = await supabase
       .from('baseball_matches')
       .select('*')
-      .eq('api_match_id', matchId)
-      .single()
+      .eq(isNumericId ? 'id' : 'api_match_id', isNumericId ? parseInt(matchId) : matchId)
+      .maybeSingle()
 
     if (matchError || !match) {
       return NextResponse.json({ 
@@ -40,14 +41,14 @@ export async function GET(
     const { data: latestOdds } = await supabase
       .from('baseball_odds_latest')
       .select('*')
-      .eq('api_match_id', matchId)
-      .single()
+      .eq('api_match_id', match.api_match_id)
+      .maybeSingle()
 
     // 오즈 히스토리 조회 (트렌드용)
     const { data: oddsHistory } = await supabase
       .from('baseball_odds_history')
       .select('*')
-      .eq('api_match_id', matchId)
+      .eq('api_match_id', match.api_match_id)
       .order('collected_at', { ascending: true })
 
     // 같은 리그 다른 경기 (관련 경기)
@@ -66,13 +67,14 @@ export async function GET(
         status
       `)
       .eq('league', match.league)
-      .neq('api_match_id', matchId)
+      .neq('api_match_id', match.api_match_id)
       .order('match_date', { ascending: false })
       .limit(5)
 
     // 결과 포맷팅
     const result = {
       id: match.api_match_id,
+      dbId: match.id,
       league: match.league,
       leagueName: match.league_name,
       season: match.season,
@@ -88,6 +90,8 @@ export async function GET(
         teamKo: match.home_team_ko,
         logo: match.home_team_logo,
         score: match.home_score,
+        hits: match.home_hits,
+        errors: match.home_errors,
       },
       
       away: {
@@ -96,10 +100,26 @@ export async function GET(
         teamKo: match.away_team_ko,
         logo: match.away_team_logo,
         score: match.away_score,
+        hits: match.away_hits,
+        errors: match.away_errors,
       },
       
       status: match.status,
       innings: match.innings_score,
+
+      // 선발 투수
+      homePitcher: match.home_pitcher ?? null,
+      homePitcherId: match.home_pitcher_id ?? null,
+      homePitcherKo: match.home_pitcher_ko ?? null,
+      homePitcherEra: match.home_pitcher_era ?? null,
+      homePitcherWhip: match.home_pitcher_whip ?? null,
+      homePitcherK: match.home_pitcher_k ?? null,
+      awayPitcher: match.away_pitcher ?? null,
+      awayPitcherId: match.away_pitcher_id ?? null,
+      awayPitcherKo: match.away_pitcher_ko ?? null,
+      awayPitcherEra: match.away_pitcher_era ?? null,
+      awayPitcherWhip: match.away_pitcher_whip ?? null,
+      awayPitcherK: match.away_pitcher_k ?? null,
       
       // 오즈 정보
       odds: latestOdds ? {

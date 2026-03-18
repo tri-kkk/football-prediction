@@ -24,13 +24,14 @@ export async function GET(request: NextRequest) {
     console.log(`📅 업데이트 대상: ${yesterdayStr}, ${todayStr}`)
     
     // 2. DB에서 업데이트가 필요한 경기 조회
-    // - 진행 중인 경기 (NS, LIVE, 1H-9H)
+    // - 진행 중인 경기 (NS, LIVE, IN1-IN9, 1H-9H)
     // - 종료된 경기 중 이닝 데이터가 없는 경기 (FT인데 inning IS NULL)
     const { data: matches, error: fetchError } = await supabase
       .from('baseball_matches')
       .select('api_match_id, home_team, away_team, match_date, status, inning')
-      .in('match_date', [yesterdayStr, todayStr])
-      .or(`status.in.(NS,LIVE,1H,2H,3H,4H,5H,6H,7H,8H,9H),and(status.eq.FT,inning.is.null)`)
+      .gte('match_date', yesterdayStr)
+      .lte('match_date', todayStr)
+      .or(`status.in.(NS,LIVE,IN1,IN2,IN3,IN4,IN5,IN6,IN7,IN8,IN9,1H,2H,3H,4H,5H,6H,7H,8H,9H),and(status.eq.FT,inning.is.null)`)
       .limit(50)
     
     if (fetchError) {
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest) {
         }
         
         // 4. 점수나 상태가 변경되었으면 업데이트
-        if (newStatus === 'FT' || newStatus === 'LIVE' || homeScore !== null || awayScore !== null) {
+        if (newStatus === 'FT' || newStatus === 'LIVE' || newStatus.startsWith('IN') || homeScore !== null || awayScore !== null) {
           console.log(`  💾 DB 업데이트 시도...`)
           
           const { error: updateError } = await supabase

@@ -11,14 +11,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET() {
   try {
-    // 최근 30일간의 프리미엄 픽 조회
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    
+    // 전체 히스토리 조회 (기간 제한 없음 — 적중률 표본 최대화)
     const { data: picks, error } = await supabase
       .from('premium_picks')
       .select('*')
-      .gte('commence_time', thirtyDaysAgo.toISOString())
       .order('commence_time', { ascending: false })
     
     if (error) {

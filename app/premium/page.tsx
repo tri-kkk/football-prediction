@@ -2272,7 +2272,7 @@ export default function PremiumPredictPage() {
           const allSettled = premiumData.picks
             .filter((pick: any) => pick.result === 'WIN' || pick.result === 'LOSE')
             .sort((a: any, b: any) => new Date(b.commence_time).getTime() - new Date(a.commence_time).getTime())
-          const weeklyPicks = allSettled.slice(0, 10)
+          const weeklyPicks = allSettled.slice(0, 30)
           
           // 연승 계산 (최근부터)
           let streak = 0

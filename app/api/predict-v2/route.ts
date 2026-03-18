@@ -4,6 +4,7 @@
 // 3가지 Method 평균 + 패턴 역대 승률 반영
 // ✅ v2.1: 전체 시즌 통합 통계 사용
 // ✅ v2.2: PICK 등급 자동 저장 기능 추가
+// ✅ v2.3: Method 2 리그별 무승부율 적용 / Method 3 실데이터 선제골 확률 적용
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -153,6 +154,27 @@ interface PredictionResult {
   }
   
   debug: any
+}
+
+// ============================================
+// ✅ v2.3 추가: 리그별 평균 무승부율 상수
+// 출처: 최근 3시즌 평균 기준
+// ============================================
+
+const LEAGUE_DRAW_RATES: Record<string, number> = {
+  'SA': 0.275,   // Serie A - 무승부 가장 많음
+  'FL1': 0.265,  // Ligue 1
+  'BL1': 0.248,  // Bundesliga
+  'PD': 0.242,   // La Liga
+  'PL': 0.228,   // Premier League - 무승부 적음
+  'DED': 0.278,  // Eredivisie
+  'KL1': 0.225,  // K리그1
+  'KL2': 0.220,  // K리그2
+  'J1': 0.215,   // J1리그 - 무승부 적음
+  'J2': 0.220,
+  'MLS': 0.230,
+  'CL': 0.235,   // 챔피언스리그
+  'EL': 0.240,
 }
 
 // ============================================
@@ -397,21 +419,32 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   
   // ============================================
   // 4단계: Method 2 - Min-Max 조합
+  // ✅ v2.3: 무승부율 리그별 상수로 교체 (기존 0.25 하드코딩 제거)
   // ============================================
   
   const mmComb = calcMinMaxCombination(homePA_all, homePA_five, awayPA_all, awayPA_five)
   
+  // 리그별 평균 무승부율 적용 (없으면 0.245 기본값)
+  const leagueDrawRate = LEAGUE_DRAW_RATES[leagueCode] ?? 0.245
+
   let method2_win = (mmComb.minmin * 0.3 + mmComb.maxmin * 0.4 + mmComb.minmax * 0.3)
-  let method2_draw = 0.25
+  let method2_draw = leagueDrawRate
   let method2_lose = 1 - method2_win - method2_draw
   
+  // 원정 승률이 너무 낮게 나오면 보정
   if (method2_lose < 0.1) {
     method2_lose = 0.1
     method2_win = 1 - method2_draw - method2_lose
   }
+  // 원정 승률이 음수가 되는 엣지케이스 방지
+  if (method2_win < 0.1) {
+    method2_win = 0.1
+    method2_lose = 1 - method2_draw - method2_win
+  }
   
   // ============================================
   // 5단계: Method 3 - 선제골 시나리오
+  // ✅ v2.3: 선제골 확률을 실데이터 기반으로 계산 (기존 0.55/0.45 고정값 제거)
   // ============================================
   
   const homeFirstGoalWinRate = calcWinRate(safeHomeStats.home_first_goal_wins, safeHomeStats.home_first_goal_games)
@@ -419,9 +452,35 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   const homeComebackRate = calcWinRate(safeHomeStats.home_concede_first_wins, safeHomeStats.home_concede_first_games)
   const awayComebackRate = calcWinRate(safeAwayStats.away_concede_first_wins, safeAwayStats.away_concede_first_games)
   
-  // 선제골 확률 추정
-  const homeFirstProb = 0.55  // 홈팀 선제골 기본 확률
-  const awayFirstProb = 0.45
+  // ✅ 선제골 확률: 홈팀 선제골 경기수 / (홈 선제골 + 원정 선제골) 실데이터 기반
+  // 양 팀 데이터가 충분할 때(각 5경기 이상)만 실데이터 사용, 아니면 0.55/0.45 fallback
+  const totalFirstGoalGames =
+    safeHomeStats.home_first_goal_games + safeAwayStats.away_first_goal_games
+  
+  let homeFirstProb: number
+  let awayFirstProb: number
+  
+  if (
+    safeHomeStats.home_first_goal_games >= 5 &&
+    safeAwayStats.away_first_goal_games >= 5 &&
+    totalFirstGoalGames > 0
+  ) {
+    // 실데이터 기반 - 홈팀의 선제골 빈도 비율
+    const rawHomeFirstProb =
+      safeHomeStats.home_first_goal_games / totalFirstGoalGames
+    // 0.35~0.70 범위로 클램프 (극단값 방지)
+    homeFirstProb = Math.min(0.70, Math.max(0.35, rawHomeFirstProb))
+    awayFirstProb = 1 - homeFirstProb
+    console.log(
+      `📊 Method3 homeFirstProb (real): ${homeFirstProb.toFixed(3)} ` +
+      `(home_fg=${safeHomeStats.home_first_goal_games}, away_fg=${safeAwayStats.away_first_goal_games})`
+    )
+  } else {
+    // 데이터 부족 시 기본값 fallback
+    homeFirstProb = 0.55
+    awayFirstProb = 0.45
+    console.log(`📊 Method3 homeFirstProb (fallback): 0.55`)
+  }
   
   // 시나리오별 승률
   const homeWin_scenario = 
@@ -535,7 +594,7 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   }
   
   // ============================================
-  // 8단계: 파워 점수 계산
+  // 9단계: 파워 점수 계산
   // ============================================
   
   const homeFormScore = (safeHomeStats.form_home_5 ?? 1.5) * 10
@@ -559,7 +618,7 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   )
   
   // ============================================
-  // 9단계: 추천 생성
+  // 10단계: 추천 생성
   // ============================================
   
   const recommendation = generateRecommendation(
@@ -605,6 +664,15 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
         form: safeAwayStats.form_away_5,
         formBonus: awayFormBonus.toFixed(3),
         isPromoted: safeAwayStats.is_promoted,
+      },
+      // ✅ v2.3 debug 추가
+      method3: {
+        homeFirstProb: homeFirstProb.toFixed(3),
+        awayFirstProb: awayFirstProb.toFixed(3),
+        usedRealData: safeHomeStats.home_first_goal_games >= 5 && safeAwayStats.away_first_goal_games >= 5,
+      },
+      method2: {
+        leagueDrawRate: leagueDrawRate.toFixed(3),
       },
     },
   }
@@ -708,7 +776,7 @@ function generateRecommendation(
 }
 
 // ============================================
-// ✅ 🔥 PICK 저장 함수 (NEW!)
+// ✅ 🔥 PICK 저장 함수
 // ============================================
 
 async function savePick(input: PredictionInput, result: PredictionResult): Promise<void> {
@@ -774,18 +842,20 @@ async function savePick(input: PredictionInput, result: PredictionResult): Promi
 export async function GET(request: NextRequest) {
   return NextResponse.json({
     status: 'ready',
-    version: 'v2.2-pick-tracking',
+    version: 'v2.3-draw-firstgoal-fix',
     changes: [
       '✅ 전체 시즌 통합 통계 사용',
       '✅ 2022-2025 시즌 합산',
       '✅ 경기 수 많아져서 승률 안정화',
       '✅ 🔥 PICK 등급 자동 저장 기능 추가',
+      '✅ v2.3: Method 2 무승부율 리그별 상수 적용 (기존 0.25 고정 제거)',
+      '✅ v2.3: Method 3 선제골 확률 실데이터 기반 계산 (기존 0.55/0.45 고정 제거)',
     ],
     algorithm: [
       '1. 전체 시즌 통합 P/A 계산',
       '2. Method 1: P/A 직접 비교 + 폼',
-      '3. Method 2: min-max 조합',
-      '4. Method 3: 선제골 시나리오',
+      '3. Method 2: min-max 조합 + 리그별 무승부율',
+      '4. Method 3: 선제골 시나리오 (실데이터 확률)',
       '5. 3 Method 평균',
       '6. 패턴 역대 승률 50% 반영',
       '7. 파워 점수 & 추천',

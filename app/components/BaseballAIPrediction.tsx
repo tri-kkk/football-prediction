@@ -9,6 +9,7 @@ interface PredictionProps {
   homeTeamKo?: string
   awayTeamKo?: string
   season: string
+  overUnderLine?: number | null  // 배당 라인 (없으면 8.5 기본값)
 }
 
 interface PredictionResult {
@@ -81,10 +82,13 @@ function LoadingDots({ color = '#3b82f6' }: { color?: string }) {
 }
 
 export default function BaseballAIPrediction({
-  matchId, homeTeam, awayTeam, homeTeamKo, awayTeamKo, season
+  matchId, homeTeam, awayTeam, homeTeamKo, awayTeamKo, season, overUnderLine
 }: PredictionProps) {
   const HN = homeTeamKo || homeTeam
   const AN = awayTeamKo || awayTeam
+
+  // 배당 라인: prop으로 받은 값 우선, 없으면 기본값 8.5
+  const ouLine = overUnderLine ?? 8.5
 
   const [pred, setPred] = useState<PredictionResult | null>(null)
   const [ins, setIns] = useState<AIInsights | null>(null)
@@ -220,13 +224,13 @@ export default function BaseballAIPrediction({
 
           {/* 총점 예측 */}
           <Section color="#f97316" label="총점 예측"
-            badge={<span className="text-[10px]" style={{ color: '#64748b' }}>기준 8.5</span>}>
+            badge={<span className="text-[10px]" style={{ color: '#64748b' }}>기준 {ouLine}</span>}>
             <div className="p-3">
               <div className="flex items-center justify-center mb-3">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
                   style={{ background: '#f9731618', border: '1px solid #f9731650' }}>
                   <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#f97316' }} />
-                  <span className="text-xs font-bold" style={{ color: '#f97316' }}>기준 8.5</span>
+                  <span className="text-xs font-bold" style={{ color: '#f97316' }}>기준 {ouLine}</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
