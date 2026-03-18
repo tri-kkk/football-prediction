@@ -74,9 +74,18 @@ const LEAGUE_MAP: Record<string, { id: string; name: string; nameKR: string; log
   },
 }
 
+// league/ endpoint를 사용하는 리그 (CL처럼 competition ID가 여러 개로 쪼개진 경우)
+const LEAGUE_ENDPOINT_CODES: Record<string, string> = {
+  'CL': 'uefa-champions-league',
+}
+
 async function fetchLeagueVideos(code: string, info: typeof LEAGUE_MAP[string]) {
   try {
-    const url = `https://www.scorebat.com/video-api/v3/competition/${info.id}/?token=${SCOREBAT_API_TOKEN}`
+    // CL 등은 /league/ endpoint 사용 (competition ID가 여러 개로 분리된 리그)
+    const leagueSlug = LEAGUE_ENDPOINT_CODES[code]
+    const url = leagueSlug
+      ? `https://www.scorebat.com/video-api/v3/league/${leagueSlug}/?token=${SCOREBAT_API_TOKEN}`
+      : `https://www.scorebat.com/video-api/v3/competition/${info.id}/?token=${SCOREBAT_API_TOKEN}`
     
     const response = await fetch(url, { 
       cache: 'no-store',
