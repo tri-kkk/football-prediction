@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '이메일이 필요합니다.' }, { status: 400 })
     }
 
-    // 2️⃣ 유저 존재 확인 + trial_used, promo_code 함께 조회
+    // 2️⃣ 유저 존재 확인 + trial_used, trial_started_at, promo_code 함께 조회
     const { data: userData, error: fetchError } = await supabase
       .from('users')
-      .select('id, promo_code, trial_used')
+      .select('id, promo_code, trial_used, trial_started_at')
       .eq('email', email.toLowerCase())
       .single()
 
@@ -47,14 +47,15 @@ export async function POST(request: NextRequest) {
       .upsert({
         email_hash: emailHash,
         promo_code: userData.promo_code || null,
-        trial_used: userData.trial_used || false,  // ✅ 체험판 사용 여부 저장
+        trial_used: userData.trial_used || false,
+        had_trial: userData.trial_started_at !== null,  // ✅ 체험판 받은 적 있으면 true
         deleted_at: new Date().toISOString(),
       }, { onConflict: 'email_hash' })
 
     if (deletedInsertError) {
       console.warn('⚠️ deleted_users 저장 실패 (계속 진행):', deletedInsertError.message)
     } else {
-      console.log('✅ deleted_users 저장 완료 (trial_used:', userData.trial_used, ')')
+      console.log('✅ deleted_users 저장 완료 (trial_used:', userData.trial_used, ', had_trial:', userData.trial_started_at !== null, ')')
     }
 
     // 4️⃣ 관련 테이블 삭제 (Foreign Key 순서)

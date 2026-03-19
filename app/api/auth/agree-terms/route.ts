@@ -105,13 +105,14 @@ export async function POST(request: NextRequest) {
     const emailHash = crypto.createHash('sha256').update(emailLower).digest('hex')
     const { data: deletedUser } = await supabase
       .from('deleted_users')
-      .select('trial_used, promo_code')
+      .select('trial_used, had_trial, promo_code')  // ✅ had_trial 추가
       .eq('email_hash', emailHash)
       .limit(1)
       .maybeSingle()
 
     const hasDeleteHistory = deletedUser !== null
-    const hadTrial = deletedUser?.trial_used === true  // ✅ 실제 trial 사용 여부 체크
+    // ✅ trial_used OR had_trial 둘 중 하나라도 true면 체험판 받은 것으로 처리
+    const hadTrial = deletedUser?.trial_used === true || deletedUser?.had_trial === true
     console.log('🔍 탈퇴 이력:', { hasDeleteHistory, hadTrial, deletedUser })
 
     let tier = 'premium'
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
       trialUsed = false // 프로모 유저는 trial 소진 안 함
       console.log('🎉 프로모션 적용')
     } else if (hasDeleteHistory && hadTrial) {
-      // ✅ 재가입 + 이전에 체험판 사용한 경우만 → free로 시작
+      // ✅ 재가입 + 체험판 받은 적 있으면 → free로 시작
       tier = 'free'
       premiumExpiresAt = null as any
       trialStartedAt = null
