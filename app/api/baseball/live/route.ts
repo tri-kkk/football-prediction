@@ -12,15 +12,17 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const BASEBALL_API_KEY = process.env.API_FOOTBALL_KEY!
 
-// 지원 리그 ID
+// 지원 리그 ID (API-Football baseball league IDs)
 const SUPPORTED_LEAGUES: Record<number, string> = {
-  1:  'KBO',
-  2:  'NPB',
-  3:  'MLB',
-  4:  'CPBL',
-  70: 'WBC',
-  71: 'MLB', // MLB Spring Training → MLB로 통합
+  1:  'MLB',           // MLB
+  71: 'MLB',          // MLB Spring Training → MLB로 통합
+  2:  'NPB',          // 일본프로야구
+  5:  'KBO',          // 한국프로야구
+  29: 'CPBL',         // 대만프로야구
 }
+
+// 허용된 league ID Set (이 외의 경기는 무시)
+const ALLOWED_LEAGUE_IDS = new Set(Object.keys(SUPPORTED_LEAGUES).map(Number))
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,7 +54,8 @@ export async function GET(request: NextRequest) {
 
     // 라이브 + 오늘 종료 경기 필터 (IN% + FT)
     const liveGames = allGames.filter((g: any) =>
-      g.status?.short?.startsWith('IN') || g.status?.short === 'FT'
+      (g.status?.short?.startsWith('IN') || g.status?.short === 'FT') &&
+      ALLOWED_LEAGUE_IDS.has(g.league?.id)
     )
 
     console.log(`✅ 전체 ${allGames.length}경기 중 업데이트 대상 ${liveGames.length}경기`)
@@ -67,7 +70,7 @@ export async function GET(request: NextRequest) {
     // 전체(라이브+종료) DB 업데이트, 응답은 라이브만
     const allUpdated = await Promise.all(
       liveGames.map(async (g: any) => {
-        const leagueCode = SUPPORTED_LEAGUES[g.league.id] || 'MLB'
+        const leagueCode = SUPPORTED_LEAGUES[g.league.id]  // ALLOWED_LEAGUE_IDS로 이미 필터됨
         const status = g.status.short
         const isLive = status.startsWith('IN')
         const homeScore = g.scores.home.total ?? 0
