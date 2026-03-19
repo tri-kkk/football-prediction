@@ -24,10 +24,9 @@ function buildPitcherBlock(
 
   const s = stats?.current ?? stats?.prev
   const season = stats?.current ? stats.current.season : (stats?.prev?.season ?? '전년도')
-  const hand = stats?.pitchHand ?? '?'
-  if (!s) return `[${label}] ${displayName} (${hand}투) — 스탯 없음`
+  if (!s) return `[${label}] ${displayName} — 스탯 없음`
 
-  return `[${label}] ${displayName} (${hand}투) — ${season}시즌
+  return `[${label}] ${displayName} — ${season}시즌
   ERA ${formatStat(s.era)} | WHIP ${formatStat(s.whip)} | K/9 ${s.strikeoutsPer9Inn ? formatStat(s.strikeoutsPer9Inn, 1) : '-'} | BB/9 ${s.walksPer9Inn ? formatStat(s.walksPer9Inn, 1) : '-'} | K/BB ${s.strikeoutWalkRatio ? formatStat(s.strikeoutWalkRatio, 2) : '-'}
   ${s.wins ?? 0}승 ${s.losses ?? 0}패 | ${s.gamesStarted ?? '-'}선발 | ${formatStat(s.inningsPitched, 1)}IP | ${s.strikeOuts ?? '-'}K | BB ${s.baseOnBalls ?? '-'} | HR ${s.homeRuns ?? '-'}`
 }
@@ -73,8 +72,9 @@ ${homeBlock}
 
 작성 규칙:
 - 200자 내외, 3~4문장
-- 두 투수의 스타일/강점 비교 → 오늘 승부 포인트 → 주목 변수 순서로
+- 두 투수의 스탯 기반 강점/약점 비교 → 오늘 승부 포인트 → 주목 변수 순서로
 - 야구 전문 용어 자연스럽게 사용 (ERA, WHIP, 제구력, 탈삼진, 피홈런 등)
+- 좌완/우완 등 투구 방향 언급 금지 (데이터 미검증)
 - 마크다운(#, *, **, -) 절대 사용 금지
 - 제목 없이 본문만, 번호 매기기 없이 자연스럽게 이어 쓰기`
 
