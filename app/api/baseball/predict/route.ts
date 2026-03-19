@@ -38,14 +38,14 @@ function parseInningStats(inningData: Record<string, Record<string, number>> | n
   }
 }
 
-async function getTeamRollingStats(team: string, beforeDate: string) {
+async function getTeamRollingStats(team: string, beforeDate: string, league: string = 'MLB') {
   const [{ data: homeGames }, { data: awayGames }] = await Promise.all([
     supabase
       .from('baseball_matches')
       .select('match_date, home_score, away_score, home_hits, away_hits, innings_score')
       .eq('home_team', team)
       .eq('status', 'FT')
-      .eq('league', 'MLB')
+      .eq('league', league)
       .lt('match_date', beforeDate)
       .order('match_date', { ascending: false })
       .limit(WINDOW),
@@ -54,7 +54,7 @@ async function getTeamRollingStats(team: string, beforeDate: string) {
       .select('match_date, home_score, away_score, home_hits, away_hits, innings_score')
       .eq('away_team', team)
       .eq('status', 'FT')
-      .eq('league', 'MLB')
+      .eq('league', league)
       .lt('match_date', beforeDate)
       .order('match_date', { ascending: false })
       .limit(WINDOW),
@@ -156,25 +156,21 @@ export async function POST(request: NextRequest) {
     const { data: match, error } = await supabase
       .from('baseball_matches')
       .select('match_date, league, home_pitcher_era, home_pitcher_whip, home_pitcher_k, away_pitcher_era, away_pitcher_whip, away_pitcher_k')
-      .eq('id', matchId)
+      .or(`id.eq.${matchId},api_match_id.eq.${matchId}`)
+      .limit(1)
       .single()
 
     if (error || !match) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
 
-    // MLB만 AI 예측 지원
-    if (match.league !== 'MLB') {
-      return NextResponse.json(
-        { error: 'AI 예측은 현재 MLB만 지원합니다.' },
-        { status: 400 }
-      )
-    }
+    // MLB만 AI 예측 지원 → 전체 리그 지원으로 변경
+    // KBO/NPB는 투수 피처 없이 팀 스탯만으로 예측
 
     // Rolling feature 계산
     const [homeStats, awayStats] = await Promise.all([
-      getTeamRollingStats(homeTeam, match.match_date),
-      getTeamRollingStats(awayTeam, match.match_date),
+      getTeamRollingStats(homeTeam, match.match_date, match.league),
+      getTeamRollingStats(awayTeam, match.match_date, match.league),
     ])
 
     // 데이터 부족 경고
@@ -236,7 +232,7 @@ export async function POST(request: NextRequest) {
     const aiResponse = await fetch(`${RAILWAY_URL}/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ features }),
+      body: JSON.stringify({ features, league: match.league }),
       signal: AbortSignal.timeout(5000),
     })
 

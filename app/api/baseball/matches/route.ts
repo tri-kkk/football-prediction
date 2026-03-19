@@ -213,12 +213,127 @@ export async function GET(request: NextRequest) {
     if (matchId) {
       const isNumericId = /^\d+$/.test(matchId)
       if (isNumericId) {
-        // id(PK) 또는 api_match_id 둘 다 조회 - MLB는 id=api_match_id, NPB는 api_match_id로 링크 생성
         query = query.or(`id.eq.${parseInt(matchId)},api_match_id.eq.${parseInt(matchId)}`).limit(1)
       } else {
         query = query.eq('api_match_id', matchId).limit(1)
       }
     } else {
+      // =====================================================
+      // ALL 필터: 리그별로 나눠서 가져온 후 합치기
+      // (MLB가 limit을 독점하는 문제 방지)
+      // =====================================================
+      if (league === 'ALL' && !matchId) {
+        const LEAGUES = ['MLB', 'KBO', 'NPB']
+        const perLeagueLimit = Math.ceil(limit / LEAGUES.length)
+
+        const koreaOffset = 9 * 60
+        const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
+        const today = now.toISOString().split('T')[0]
+
+        const leagueQueries = LEAGUES.map(lg => {
+          let q = supabase
+            .from('baseball_matches')
+            .select(`
+              id, api_match_id, league, match_date, match_time, match_timestamp,
+              home_team, home_team_ko, home_team_id, home_team_logo,
+              away_team, away_team_ko, away_team_id, away_team_logo,
+              home_score, away_score, status, inning, is_spring_training,
+              home_pitcher, home_pitcher_id, home_pitcher_ko, home_pitcher_era, home_pitcher_whip, home_pitcher_k,
+              away_pitcher, away_pitcher_id, away_pitcher_ko, away_pitcher_era, away_pitcher_whip, away_pitcher_k
+            `)
+            .eq('league', lg)
+
+          if (status === 'scheduled') {
+            q = q.in('status', ['NS', 'SCHEDULED', 'TBD']).gte('match_date', today)
+          } else if (status === 'finished') {
+            q = q.eq('status', 'FT')
+          } else if (status === 'live') {
+            q = q.like('status', 'IN%')
+          } else if (status === 'today') {
+            q = q.eq('match_date', today)
+          }
+
+          if (date) q = q.eq('match_date', date)
+
+          return q
+            .order('match_timestamp', { ascending: status === 'finished' ? false : true })
+            .limit(perLeagueLimit)
+        })
+
+        const results = await Promise.all(leagueQueries)
+        const allMatches = results.flatMap(r => r.data || [])
+
+        // 합친 후 다시 정렬
+        allMatches.sort((a, b) => {
+          const ta = new Date(a.match_timestamp || a.match_date).getTime()
+          const tb = new Date(b.match_timestamp || b.match_date).getTime()
+          return status === 'finished' ? tb - ta : ta - tb
+        })
+
+        // 이하 odds/ML 처리를 위해 matches 변수로 통일
+        const matches = allMatches
+        const matchApiIds = matches.map(m => m.api_match_id)
+
+        let odds: any[] = []
+        if (matchApiIds.length > 0) {
+          const { data: oddsData } = await supabase
+            .from('baseball_odds_latest')
+            .select('*')
+            .in('api_match_id', matchApiIds)
+          odds = oddsData || []
+        }
+        const oddsMap = new Map(odds.map(o => [o.api_match_id, o]))
+
+        const mlPredictions = await Promise.all(
+          matches.map(m =>
+            m.league === 'MLB' && ['NS', 'SCHEDULED', 'TBD'].includes(m.status)
+              ? fetchMLPrediction(supabase, m.home_team, m.away_team, m.match_date, {
+                  home_pitcher_era: m.home_pitcher_era ?? null,
+                  home_pitcher_whip: m.home_pitcher_whip ?? null,
+                  home_pitcher_k: m.home_pitcher_k ?? null,
+                  away_pitcher_era: m.away_pitcher_era ?? null,
+                  away_pitcher_whip: m.away_pitcher_whip ?? null,
+                  away_pitcher_k: m.away_pitcher_k ?? null,
+                })
+              : Promise.resolve(null)
+          )
+        )
+
+        const formattedMatches = matches.map((match, idx) => {
+          const matchOdds = oddsMap.get(match.api_match_id)
+          const mlData = mlPredictions[idx]
+          return {
+            id: match.api_match_id, dbId: match.id, league: match.league,
+            date: match.match_date, time: match.match_time || null,
+            timestamp: match.match_timestamp || match.match_date,
+            homeTeam: match.home_team,
+            homeTeamKo: match.home_team_ko || TEAM_NAME_KO[match.home_team] || match.home_team,
+            homeTeamId: match.home_team_id, homeLogo: match.home_team_logo, homeScore: match.home_score,
+            awayTeam: match.away_team,
+            awayTeamKo: match.away_team_ko || TEAM_NAME_KO[match.away_team] || match.away_team,
+            awayTeamId: match.away_team_id, awayLogo: match.away_team_logo, awayScore: match.away_score,
+            status: match.status || 'NS', innings: match.inning,
+            odds: matchOdds ? {
+              homeWinProb: matchOdds.home_win_prob, awayWinProb: matchOdds.away_win_prob,
+              homeWinOdds: matchOdds.home_win_odds, awayWinOdds: matchOdds.away_win_odds,
+              overUnderLine: matchOdds.over_under_line, overOdds: matchOdds.over_odds, underOdds: matchOdds.under_odds,
+            } : null,
+            mlPrediction: mlData ? { homeWinProb: mlData.homeWinProb, awayWinProb: mlData.awayWinProb } : null,
+            homePitcher: match.home_pitcher ?? null, homePitcherId: match.home_pitcher_id ?? null, homePitcherKo: match.home_pitcher_ko ?? null,
+            awayPitcher: match.away_pitcher ?? null, awayPitcherId: match.away_pitcher_id ?? null, awayPitcherKo: match.away_pitcher_ko ?? null,
+          }
+        })
+
+        return NextResponse.json({
+          success: true, count: formattedMatches.length,
+          filters: { league, status, limit, date },
+          matches: formattedMatches,
+        })
+      }
+
+      // =====================================================
+      // 특정 리그 필터
+      // =====================================================
       if (league !== 'ALL') {
         query = query.eq('league', league)
       }
@@ -231,10 +346,8 @@ export async function GET(request: NextRequest) {
       } else if (status === 'finished') {
         query = query.eq('status', 'FT')
       } else if (status === 'live') {
-        // IN1, IN2, IN3 ... 등 이닝 진행 중 상태
         query = query.like('status', 'IN%')
       } else if (status === 'today') {
-        // 오늘 전체 (라이브 + 예정 + 종료)
         const koreaOffset = 9 * 60
         const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
         const today = now.toISOString().split('T')[0]
