@@ -2031,8 +2031,21 @@ export default function PremiumPredictPage() {
             prediction: pick.prediction,
           }))
           
-          setPremiumPicksData(picks)
-          console.log('✅ Premium Picks loaded from DB:', picks.length)
+          // 종료된 경기 필터링 (경기 시작 후 2시간 지난 것 제외)
+          const now = new Date()
+          const activePicks = picks.filter((pick) => {
+            const matchTime = new Date(pick.commence_time)
+            const matchEndTime = new Date(matchTime.getTime() + 2 * 60 * 60 * 1000)
+            return matchEndTime > now
+          })
+
+          if (activePicks.length === 0) {
+            setNoPremiumPicks(true)
+            console.log('📭 All premium picks are finished (filtered from', picks.length, ')')
+          } else {
+            setPremiumPicksData(activePicks)
+            console.log('✅ Premium Picks loaded from DB:', activePicks.length, '(filtered from', picks.length, ')')
+          }
         } else {
           setNoPremiumPicks(true)
           console.log('📭 No premium picks available today')

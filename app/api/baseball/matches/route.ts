@@ -211,10 +211,10 @@ export async function GET(request: NextRequest) {
       `)
 
     if (matchId) {
-      // 숫자면 DB id로, 아니면 api_match_id로 조회
       const isNumericId = /^\d+$/.test(matchId)
       if (isNumericId) {
-        query = query.eq('id', parseInt(matchId)).limit(1)
+        // id(PK) 또는 api_match_id 둘 다 조회 - MLB는 id=api_match_id, NPB는 api_match_id로 링크 생성
+        query = query.or(`id.eq.${parseInt(matchId)},api_match_id.eq.${parseInt(matchId)}`).limit(1)
       } else {
         query = query.eq('api_match_id', matchId).limit(1)
       }

@@ -83,10 +83,23 @@ export async function GET(request: NextRequest) {
           away: g.scores.away.innings,
         }
 
-        // DB 업데이트
+        // DB upsert - 없으면 INSERT, 있으면 UPDATE
         const { error: updateError } = await supabase
           .from('baseball_matches')
-          .update({
+          .upsert({
+            api_match_id: g.id,
+            league: leagueCode,
+            match_date: today,
+            match_time: g.time || null,
+            match_timestamp: g.timestamp ? new Date(g.timestamp * 1000).toISOString() : null,
+            home_team: g.teams.home.name,
+            home_team_ko: null,
+            home_team_logo: g.teams.home.logo || null,
+            home_team_id: g.teams.home.id || null,
+            away_team: g.teams.away.name,
+            away_team_ko: null,
+            away_team_logo: g.teams.away.logo || null,
+            away_team_id: g.teams.away.id || null,
             status,
             home_score: homeScore,
             away_score: awayScore,
@@ -96,13 +109,12 @@ export async function GET(request: NextRequest) {
             away_errors: awayErrors,
             inning: inningData,
             updated_at: new Date().toISOString(),
-          })
-          .eq('api_match_id', g.id)
+          }, { onConflict: 'api_match_id' })
 
         if (updateError) {
-          console.error(`❌ DB 업데이트 실패 (${g.id}):`, updateError.message)
+          console.error(`❌ DB upsert 실패 (${g.id}):`, updateError.message)
         } else {
-          console.log(`✅ DB 업데이트: ${g.id} [${status}] ${homeScore}-${awayScore}`)
+          console.log(`✅ DB upsert: ${g.id} [${status}] ${homeScore}-${awayScore}`)
         }
 
         if (!isLive) return null // 종료 경기는 응답에서 제외

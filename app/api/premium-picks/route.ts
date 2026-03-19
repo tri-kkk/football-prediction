@@ -24,12 +24,16 @@ export async function GET() {
 
     let picks = null
 
+    // 경기 시작 후 2시간 지난 것은 종료로 간주 → 그 이후 경기만 표시
+    const twoHoursAgoUTC = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString()
+
     if (kstHour >= 18) {
       // KST 18:00 이후 → 오늘 배치 먼저 시도
       const { data } = await supabase
         .from('premium_picks')
         .select('*')
         .gte('created_at', todayOpenStr)
+        .gte('commence_time', twoHoursAgoUTC) // ✅ 종료된 경기 제외
         .order('commence_time', { ascending: true })
       picks = data
       console.log(`📅 Today batch: ${picks?.length || 0}개`)
@@ -42,6 +46,7 @@ export async function GET() {
         .select('*')
         .gte('created_at', yesterdayOpenStr)
         .lt('created_at', todayOpenStr)
+        .gte('commence_time', twoHoursAgoUTC) // ✅ 종료된 경기 제외
         .order('commence_time', { ascending: true })
       picks = data
       console.log(`📅 Yesterday batch: ${picks?.length || 0}개`)
