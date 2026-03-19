@@ -21,6 +21,9 @@ const LEAGUE_MAP: Record<string, { id: number; code: string; isSpring?: boolean 
   ],
 }
 
+// 허용된 league id 목록
+const ALLOWED_LEAGUE_IDS = new Set([1, 71, 2, 5, 29])
+
 // IN%(진행중), LIVE 제외하고 모두 저장
 const SKIP_STATUSES = ['LIVE']
 
@@ -55,6 +58,7 @@ export async function GET(request: NextRequest) {
     let totalCollected = 0
     let totalUpdated = 0
     let totalErrors = 0
+    let totalSkipped = 0
 
     for (const league of leagues) {
       console.log(`\n🏟️ [${league.code}${league.isSpring ? ' Spring' : ''}] league_id: ${league.id}`)
@@ -80,6 +84,21 @@ export async function GET(request: NextRequest) {
 
           for (const game of data.response) {
             try {
+              // ✅ 리그 ID 검증: API가 반환한 실제 league.id가 요청한 league.id와 다르면 스킵
+              const actualLeagueId = game.league?.id
+              if (actualLeagueId !== league.id) {
+                console.log(`  ⚠️ 리그 불일치 스킵: 요청=${league.id}, 실제=${actualLeagueId} (${game.league?.name}) - ${game.teams.home.name} vs ${game.teams.away.name}`)
+                totalSkipped++
+                continue
+              }
+
+              // ✅ 허용된 리그 ID인지 추가 검증
+              if (!ALLOWED_LEAGUE_IDS.has(actualLeagueId)) {
+                console.log(`  ⚠️ 허용되지 않은 리그 스킵: league_id=${actualLeagueId} (${game.league?.name})`)
+                totalSkipped++
+                continue
+              }
+
               const status = game.status.short
 
               // 진행중 경기 스킵 (live API가 처리)
@@ -157,7 +176,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`\n✅ 완료! 신규: ${totalCollected}, 업데이트: ${totalUpdated}, 오류: ${totalErrors}`)
+    console.log(`\n✅ 완료! 신규: ${totalCollected}, 업데이트: ${totalUpdated}, 스킵: ${totalSkipped}, 오류: ${totalErrors}`)
 
     return NextResponse.json({
       success: true,
@@ -166,6 +185,7 @@ export async function GET(request: NextRequest) {
       dateRange: { start: startDate, end: endDate },
       collected: totalCollected,
       updated: totalUpdated,
+      skipped: totalSkipped,
       errors: totalErrors,
       timestamp: new Date().toISOString()
     })
