@@ -530,10 +530,10 @@ function ProbabilityBar({ home, draw, away, t }: {
           {away >= 0.15 && `${(away * 100).toFixed(0)}%`}
         </div>
       </div>
-      <div className="flex justify-between text-xs text-gray-500 mt-1">
-        <span>{t.homeWin}</span>
-        <span>{t.drawResult}</span>
-        <span>{t.awayWin}</span>
+      <div className="flex justify-between text-xs mt-1">
+        <span className="text-blue-400 font-semibold">{t.homeWin} {(home * 100).toFixed(0)}%</span>
+        <span className="text-gray-400">{t.drawResult} {(draw * 100).toFixed(0)}%</span>
+        <span className="text-red-400 font-semibold">{t.awayWin} {(away * 100).toFixed(0)}%</span>
       </div>
     </div>
   )

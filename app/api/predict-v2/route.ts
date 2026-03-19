@@ -291,9 +291,9 @@ async function getAggregatedStats(
     away_concede_first_games: 0,
     away_concede_first_wins: 0,
     
-    // 최신 시즌 폼 사용
-    form_home_5: allSeasons[0].form_home_5,
-    form_away_5: allSeasons[0].form_away_5,
+    // 최신 시즌 폼 사용 (null일 때만 이전 시즌으로 fallback, 0은 실제 폼으로 유지)
+    form_home_5: allSeasons[0].form_home_5 ?? allSeasons[1]?.form_home_5 ?? 1.5,
+    form_away_5: allSeasons[0].form_away_5 ?? allSeasons[1]?.form_away_5 ?? 1.5,
     
     // 현재 시즌 승격팀 여부
     is_promoted: false,
@@ -627,7 +627,9 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
     patternStats,
     safeHomeStats,
     safeAwayStats,
-    { homeFirstGoalWinRate, awayFirstGoalWinRate, homeComebackRate, awayComebackRate }
+    { homeFirstGoalWinRate, awayFirstGoalWinRate, homeComebackRate, awayComebackRate },
+    input.leagueCode,
+    { homeOdds: input.homeOdds, drawOdds: input.drawOdds, awayOdds: input.awayOdds }
   )
   
   return {
@@ -685,7 +687,9 @@ function generateRecommendation(
   patternStats: any,
   homeStats: AggregatedStats,
   awayStats: AggregatedStats,
-  rates: { homeFirstGoalWinRate: number; awayFirstGoalWinRate: number; homeComebackRate: number; awayComebackRate: number }
+  rates: { homeFirstGoalWinRate: number; awayFirstGoalWinRate: number; homeComebackRate: number; awayComebackRate: number },
+  leagueCode?: string,
+  odds?: { homeOdds?: number; drawOdds?: number; awayOdds?: number }
 ): PredictionResult['recommendation'] {
   
   const reasons: string[] = []
@@ -717,11 +721,19 @@ function generateRecommendation(
       (pick === 'AWAY' && rates.awayFirstGoalWinRate >= 0.65)
     )
   
+  // 컵대회 배당 기반 신뢰도 체크
+  const isCupLeague = ['CL', 'EL', 'UECL'].includes(leagueCode || '')
+  const hasReliableOdds = isCupLeague &&
+    odds?.homeOdds && odds?.awayOdds &&
+    (odds.homeOdds <= 1.55 || odds.awayOdds <= 1.55) &&
+    probDiff >= 0.25 &&
+    Math.abs(powerDiff) >= 25
+
   // 👍 GOOD: 중간 기준 (괜찮음)
   const isGood = !isPick && 
     probDiff >= 0.15 &&
     Math.abs(powerDiff) >= 15 &&
-    minGames >= 20
+    (hasReliableOdds || minGames >= 20)
   
   // ⛔ PASS: 나머지 (비추)
   // isPick도 아니고 isGood도 아닌 경우
