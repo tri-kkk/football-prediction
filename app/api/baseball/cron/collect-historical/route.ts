@@ -55,6 +55,16 @@ export async function GET(request: NextRequest) {
     const dates = generateDateRange(startDate, endDate)
     console.log(`📅 수집 날짜: ${dates.length}일, 리그: ${leagues.length}개`)
 
+    // ✅ baseball_teams에서 한글명 캐시 로드
+    const { data: teamsData } = await supabase
+      .from('baseball_teams')
+      .select('team_name, team_name_ko')
+    const teamKoMap: Record<string, string> = {}
+    for (const t of teamsData || []) {
+      if (t.team_name && t.team_name_ko) teamKoMap[t.team_name] = t.team_name_ko
+    }
+    console.log(`📋 팀 한글명 캐시: ${Object.keys(teamKoMap).length}개`)
+
     let totalCollected = 0
     let totalUpdated = 0
     let totalErrors = 0
@@ -123,11 +133,11 @@ export async function GET(request: NextRequest) {
                 match_date: game.date.split('T')[0],
                 match_timestamp: game.date,
                 home_team: game.teams.home.name,
-                home_team_ko: null,
+                home_team_ko: teamKoMap[game.teams.home.name] || null,
                 home_team_id: game.teams.home.id,
                 home_team_logo: game.teams.home.logo,
                 away_team: game.teams.away.name,
-                away_team_ko: null,
+                away_team_ko: teamKoMap[game.teams.away.name] || null,
                 away_team_id: game.teams.away.id,
                 away_team_logo: game.teams.away.logo,
                 home_score: game.scores?.home?.total ?? null,
