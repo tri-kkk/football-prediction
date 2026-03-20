@@ -67,6 +67,15 @@ export async function GET(request: NextRequest) {
     // DB 업데이트 (service role key 사용)
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
+    // ✅ baseball_teams에서 한글명 캐시 로드
+    const { data: teamsData } = await supabase
+      .from('baseball_teams')
+      .select('team_name, team_name_ko')
+    const teamKoMap: Record<string, string> = {}
+    for (const t of teamsData || []) {
+      if (t.team_name && t.team_name_ko) teamKoMap[t.team_name] = t.team_name_ko
+    }
+
     // 전체(라이브+종료) DB 업데이트, 응답은 라이브만
     const allUpdated = await Promise.all(
       liveGames.map(async (g: any) => {
@@ -96,11 +105,11 @@ export async function GET(request: NextRequest) {
             match_time: g.time || null,
             match_timestamp: g.timestamp ? new Date(g.timestamp * 1000).toISOString() : null,
             home_team: g.teams.home.name,
-            home_team_ko: null,
+            home_team_ko: teamKoMap[g.teams.home.name] || null,
             home_team_logo: g.teams.home.logo || null,
             home_team_id: g.teams.home.id || null,
             away_team: g.teams.away.name,
-            away_team_ko: null,
+            away_team_ko: teamKoMap[g.teams.away.name] || null,
             away_team_logo: g.teams.away.logo || null,
             away_team_id: g.teams.away.id || null,
             status,
@@ -130,12 +139,14 @@ export async function GET(request: NextRequest) {
           timestamp: g.timestamp,
 
           homeTeam: g.teams.home.name,
+          homeTeamKo: teamKoMap[g.teams.home.name] || g.teams.home.name,
           homeLogo: g.teams.home.logo,
           homeScore,
           homeHits,
           homeErrors,
 
           awayTeam: g.teams.away.name,
+          awayTeamKo: teamKoMap[g.teams.away.name] || g.teams.away.name,
           awayLogo: g.teams.away.logo,
           awayScore,
           awayHits,
