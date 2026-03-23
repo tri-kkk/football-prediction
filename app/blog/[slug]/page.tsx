@@ -532,7 +532,7 @@ export default function BlogPostPage() {
         {post.tags && post.tags.length > 0 && (
           <div className="mt-12 pt-8 border-t border-gray-800">
             <div className="flex flex-wrap gap-2">
-              {post.tags.map(tag => (
+              {[...new Set(post.tags)].map(tag => (
                 <span 
                   key={tag}
                   className="px-4 py-2 bg-gray-800 text-gray-300 rounded-full text-sm hover:bg-gray-700 transition"
