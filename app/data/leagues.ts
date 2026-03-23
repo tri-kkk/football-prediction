@@ -20,6 +20,7 @@ export const LEAGUES = [
   { code: 'AFCON', name: '아프리카 네이션스컵', nameEn: 'Africa Cup of Nations', flag: 'https://img.icons8.com/color/48/africa.png', logo: 'https://media.api-sports.io/football/leagues/6.png', isEmoji: false },
   { code: 'ACL', name: 'AFC 챔피언스리그', nameEn: 'AFC Champions League Elite', flag: 'https://flagcdn.com/w40/kr.png', logo: 'https://media.api-sports.io/football/leagues/17.png', isEmoji: false },
   { code: 'ACL2', name: 'AFC 챔피언스리그2', nameEn: 'AFC Champions League Two', flag: 'https://flagcdn.com/w40/kr.png', logo: 'https://media.api-sports.io/football/leagues/18.png', isEmoji: false },
+  { code: 'AMATCH', name: '국제 A매치', nameEn: 'International', flag: 'https://img.icons8.com/color/48/globe--v1.png', logo: 'https://media.api-sports.io/football/leagues/10.png', isEmoji: false },
   
   // ===== 🌍 아프리카 리그 (5개) =====
   { code: 'EGY', name: '이집트 프리미어리그', nameEn: 'Egyptian Premier League', flag: 'https://flagcdn.com/w40/eg.png', logo: 'https://media.api-sports.io/football/leagues/233.png', isEmoji: false },
@@ -137,6 +138,7 @@ export const LEAGUE_GROUPS = [
       { code: 'EL', name: '유로파리그', nameEn: 'Europa League', logo: 'https://media.api-sports.io/football/leagues/3.png' },
       { code: 'UECL', name: '컨퍼런스리그', nameEn: 'Conference League', logo: 'https://media.api-sports.io/football/leagues/848.png' },
       { code: 'UNL', name: '네이션스리그', nameEn: 'Nations League', logo: 'https://media.api-sports.io/football/leagues/5.png' },
+      { code: 'AMATCH', name: 'A매치', nameEn: 'International', logo: 'https://media.api-sports.io/football/leagues/10.png' },
       { code: 'COP', name: '코파 리베르타도레스', nameEn: 'Copa Libertadores', logo: 'https://media.api-sports.io/football/leagues/13.png' },
       { code: 'COS', name: '코파 수다메리카나', nameEn: 'Copa Sudamericana', logo: 'https://media.api-sports.io/football/leagues/11.png' },
       { code: 'ACL', name: 'AFC 챔피언스리그', nameEn: 'ACL Elite', logo: 'https://media.api-sports.io/football/leagues/17.png' },
@@ -281,7 +283,7 @@ export const LEAGUE_GROUPS = [
 export const LEAGUES_WITH_ODDS = [
   'ALL',
   // 국제대회
-  'CL', 'EL', 'UECL', 'UNL', 'COP', 'COS', 'AFCON', 'ACL', 'ACL2',
+  'CL', 'EL', 'UECL', 'UNL', 'COP', 'COS', 'AFCON', 'ACL', 'ACL2', 'AMATCH',
   // 아프리카
   'EGY', 'RSA', 'MAR', 'DZA', 'TUN',
   // 잉글랜드

@@ -162,6 +162,7 @@ export default function BlogPage() {
                     if (aIsKorean === bIsKorean) return 0
                     return aIsKorean ? 1 : -1
                   })
+                  .filter((tag, i, arr) => arr.indexOf(tag) === i)
                   .slice(0, 3)
                   .map(tag => (
                   <span key={tag} className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded">
