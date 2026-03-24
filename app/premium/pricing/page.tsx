@@ -221,8 +221,8 @@ export default function PricingPage() {
               </h1>
               <p className="text-gray-400">
                 {language === 'ko'
-                  ? '적중률 68% · 매일 저녁 6시 갱신 · 확신 있을 때만'
-                  : '68% accuracy · Updated 6 PM daily · Only when confident'}
+                  ? '매일 저녁 6시 갱신 · 확신 있을 때만'
+                  : 'Updated 6 PM daily · Only when confident'}
               </p>
             </div>
 

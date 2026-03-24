@@ -38,7 +38,7 @@ function parseInningStats(inningData: Record<string, Record<string, number>> | n
   }
 }
 
-async function getTeamRollingStats(team: string, beforeDate: string, league: string = 'MLB') {
+async function getTeamRollingStats(team: string, league: string = 'MLB') {
   const [{ data: homeGames }, { data: awayGames }] = await Promise.all([
     supabase
       .from('baseball_matches')
@@ -46,7 +46,6 @@ async function getTeamRollingStats(team: string, beforeDate: string, league: str
       .eq('home_team', team)
       .eq('status', 'FT')
       .eq('league', league)
-      .lt('match_date', beforeDate)
       .order('match_date', { ascending: false })
       .limit(WINDOW),
     supabase
@@ -55,7 +54,6 @@ async function getTeamRollingStats(team: string, beforeDate: string, league: str
       .eq('away_team', team)
       .eq('status', 'FT')
       .eq('league', league)
-      .lt('match_date', beforeDate)
       .order('match_date', { ascending: false })
       .limit(WINDOW),
   ])
@@ -72,7 +70,7 @@ async function getTeamRollingStats(team: string, beforeDate: string, league: str
     allGames.push({
       scored: g.home_score, conceded: g.away_score,
       hits: g.home_hits ?? 8,
-      won: g.home_score > g.away_score ? 1 : 0,
+      won: g.home_score > g.away_score ? 1 : g.home_score === g.away_score ? -1 : 0,
       is_home: 1, match_date: g.match_date,
       firstScorer: inn.firstScorer,
       homeComeback: inn.homeComeback, awayComeback: inn.awayComeback,
@@ -85,7 +83,7 @@ async function getTeamRollingStats(team: string, beforeDate: string, league: str
     allGames.push({
       scored: g.away_score, conceded: g.home_score,
       hits: g.away_hits ?? 8,
-      won: g.away_score > g.home_score ? 1 : 0,
+      won: g.away_score > g.home_score ? 1 : g.away_score === g.home_score ? -1 : 0,
       is_home: 0, match_date: g.match_date,
       firstScorer: inn.firstScorer,
       homeComeback: inn.awayComeback, awayComeback: inn.homeComeback,
@@ -108,14 +106,16 @@ async function getTeamRollingStats(team: string, beforeDate: string, league: str
     }
   }
 
-  const avg = (arr: number[]) =>
-    arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0.5
+  const avg = (arr: number[]) => {
+    const valid = arr.filter(v => v !== -1)
+    return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0.5
+  }
 
   const homeOnly = recent.filter(g => g.is_home === 1)
   const awayOnly = recent.filter(g => g.is_home === 0)
   const homeWinPct = homeOnly.length > 0 ? avg(homeOnly.map(g => g.won)) : 0.5
   const awayWinPct = awayOnly.length > 0 ? avg(awayOnly.map(g => g.won)) : 0.5
-  const recentForm = avg(recent5.map(g => g.won))
+  const recentForm = avg(recent.map(g => g.won))
 
   // 이닝 통계
   const firstScoreWins = recent.filter(g => g.firstScorer === 'home' && g.won === 1).length
@@ -139,8 +139,8 @@ async function getTeamRollingStats(team: string, beforeDate: string, league: str
     blown_lead_rate: blownLeadRate,
     home_record: homeOnly.length > 0 ? `${(homeWinPct * 100).toFixed(0)}%` : 'N/A',
     away_record: awayOnly.length > 0 ? `${(awayWinPct * 100).toFixed(0)}%` : 'N/A',
-    recent_wins: recent5.filter(g => g.won === 1).length,
-    recent_total: recent5.length,
+    recent_wins: recent.filter(g => g.won === 1).length,
+    recent_total: recent.filter(g => g.won !== -1).length,
   }
 }
 
@@ -169,8 +169,8 @@ export async function POST(request: NextRequest) {
 
     // Rolling feature 계산
     const [homeStats, awayStats] = await Promise.all([
-      getTeamRollingStats(homeTeam, match.match_date, match.league),
-      getTeamRollingStats(awayTeam, match.match_date, match.league),
+      getTeamRollingStats(homeTeam, match.league),
+      getTeamRollingStats(awayTeam, match.league),
     ])
 
     // 데이터 부족 경고

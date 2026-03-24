@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const NEWS_API_TOKEN = process.env.NEWS_API_TOKEN || ''
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || ''
 
-async function fetchTeamNews(teamName: string, language: 'en' | 'ko' = 'en'): Promise<{ title: string; description: string }[]> {
+async function fetchTeamNews(teamName: string, language: 'en' | 'ko' | 'ja' = 'en'): Promise<{ title: string; description: string }[]> {
   if (!NEWS_API_TOKEN) return []
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -94,11 +94,33 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'homeTeam, awayTeam required' }, { status: 400 })
   }
 
-  // KBO는 한국어 팀명으로 한국어 뉴스 검색, 나머지는 영어
+  // NPB 일본어 팀명 매핑
+  const NPB_TEAM_JA: Record<string, string> = {
+    'Yomiuri Giants': '読売ジャイアンツ',
+    'Hanshin Tigers': '阪神タイガース',
+    'Hiroshima Carp': '広島東洋カープ',
+    'Hiroshima Toyo Carp': '広島東洋カープ',
+    'Yakult Swallows': '東京ヤクルトスワローズ',
+    'Yokohama BayStars': '横浜DeNAベイスターズ',
+    'Yokohama DeNA BayStars': '横浜DeNAベイスターズ',
+    'Chunichi Dragons': '中日ドラゴンズ',
+    'SoftBank Hawks': '福岡ソフトバンクホークス',
+    'Fukuoka S. Hawks': '福岡ソフトバンクホークス',
+    'Orix Buffaloes': 'オリックス・バファローズ',
+    'Chiba Lotte Marines': '千葉ロッテマリーンズ',
+    'Lotte Marines': '千葉ロッテマリーンズ',
+    'Rakuten Eagles': '東北楽天ゴールデンイーグルス',
+    'Rakuten Gold. Eagles': '東北楽天ゴールデンイーグルス',
+    'Seibu Lions': '埼玉西武ライオンズ',
+    'Nippon Ham Fighters': '北海道日本ハムファイターズ',
+  }
+
+  // KBO: 한국어, NPB: 일본어, 나머지: 영어
   const isKBO = league === 'KBO'
-  const searchLang: 'en' | 'ko' = isKBO ? 'ko' : 'en'
-  const homeSearchTerm = isKBO ? homeTeamKo : homeTeam
-  const awaySearchTerm = isKBO ? awayTeamKo : awayTeam
+  const isNPB = league === 'NPB'
+  const searchLang: 'en' | 'ko' | 'ja' = isKBO ? 'ko' : isNPB ? 'ja' : 'en'
+  const homeSearchTerm = isKBO ? homeTeamKo : isNPB ? (NPB_TEAM_JA[homeTeam] || homeTeam) : homeTeam
+  const awaySearchTerm = isKBO ? awayTeamKo : isNPB ? (NPB_TEAM_JA[awayTeam] || awayTeam) : awayTeam
 
   // 뉴스 수집 병렬
   const [homeArticles, awayArticles] = await Promise.all([

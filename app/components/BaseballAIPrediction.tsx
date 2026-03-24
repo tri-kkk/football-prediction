@@ -257,7 +257,7 @@ export default function BaseballAIPrediction({
           {ins && (
             <>
               {/* 홈/원정 전적 */}
-              <Section color="#f59e0b" label="홈 / 원정 전적">
+              <Section color="#f59e0b" label="최근 10경기 홈 / 원정 전적">
                 <div className="p-3">
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     {[

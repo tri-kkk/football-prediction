@@ -31,31 +31,33 @@ const RAILWAY_URL = 'https://web-production-efc2e.up.railway.app'
 const WINDOW = 10
 const PITCHER_DEFAULTS = { era: 4.20, whip: 1.30, k: 150 }
 
-async function getTeamStats(supabase: any, team: string, beforeDate: string) {
+async function getTeamStats(supabase: any, team: string, league?: string) {
   const [{ data: homeGames }, { data: awayGames }] = await Promise.all([
     supabase
       .from('baseball_matches')
       .select('home_score, away_score, home_hits, match_date')
-      .eq('home_team', team).eq('status', 'FT').eq('league', 'MLB')
-      .lt('match_date', beforeDate).order('match_date', { ascending: false }).limit(WINDOW),
+      .eq('home_team', team).eq('status', 'FT').eq('league', league || 'MLB')
+      .order('match_date', { ascending: false }).limit(WINDOW),
     supabase
       .from('baseball_matches')
       .select('home_score, away_score, away_hits, match_date')
-      .eq('away_team', team).eq('status', 'FT').eq('league', 'MLB')
-      .lt('match_date', beforeDate).order('match_date', { ascending: false }).limit(WINDOW),
+      .eq('away_team', team).eq('status', 'FT').eq('league', league || 'MLB')
+      .order('match_date', { ascending: false }).limit(WINDOW),
   ])
 
   const all: Array<{ scored: number; conceded: number; hits: number; won: number; is_home: number; match_date: string }> = []
   for (const g of homeGames || []) {
-    all.push({ scored: g.home_score, conceded: g.away_score, hits: g.home_hits ?? 8, won: g.home_score > g.away_score ? 1 : 0, is_home: 1, match_date: g.match_date })
+    all.push({ scored: g.home_score, conceded: g.away_score, hits: g.home_hits ?? 8, won: g.home_score > g.away_score ? 1 : g.home_score === g.away_score ? -1 : 0, is_home: 1, match_date: g.match_date })
   }
   for (const g of awayGames || []) {
-    all.push({ scored: g.away_score, conceded: g.home_score, hits: g.away_hits ?? 8, won: g.away_score > g.home_score ? 1 : 0, is_home: 0, match_date: g.match_date })
+    all.push({ scored: g.away_score, conceded: g.home_score, hits: g.away_hits ?? 8, won: g.away_score > g.home_score ? 1 : g.away_score === g.home_score ? -1 : 0, is_home: 0, match_date: g.match_date })
   }
   all.sort((a, b) => a.match_date.localeCompare(b.match_date))
   const recent = all.slice(-WINDOW)
-  const recent5 = recent.slice(-5)
-  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0.5
+  const avg = (arr: number[]) => {
+    const valid = arr.filter(v => v !== -1)
+    return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0.5
+  }
   const homeOnly = recent.filter(g => g.is_home === 1)
   const awayOnly = recent.filter(g => g.is_home === 0)
 
@@ -66,7 +68,7 @@ async function getTeamStats(supabase: any, team: string, beforeDate: string) {
     avg_hits: avg(recent.map(g => g.hits)),
     home_win_pct: homeOnly.length > 0 ? avg(homeOnly.map(g => g.won)) : 0.5,
     away_win_pct: awayOnly.length > 0 ? avg(awayOnly.map(g => g.won)) : 0.5,
-    recent_form: avg(recent5.map(g => g.won)),
+    recent_form: avg(recent.map(g => g.won)),
     run_diff: avg(recent.map(g => g.scored - g.conceded)),
   }
 }
@@ -83,12 +85,14 @@ async function fetchMLPrediction(
     away_pitcher_era: number | null
     away_pitcher_whip: number | null
     away_pitcher_k: number | null
-  }
+  },
+  matchId?: number,
+  league?: string
 ): Promise<{ homeWinProb: number; awayWinProb: number } | null> {
   try {
     const [homeStats, awayStats] = await Promise.all([
-      getTeamStats(supabase, homeTeam, matchDate),
-      getTeamStats(supabase, awayTeam, matchDate),
+      getTeamStats(supabase, homeTeam, league),
+      getTeamStats(supabase, awayTeam, league),
     ])
 
     const hEra = pitcher.home_pitcher_era ?? PITCHER_DEFAULTS.era
@@ -141,7 +145,7 @@ async function fetchMLPrediction(
     const aiResponse = await fetch(`${RAILWAY_URL}/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ features }),
+      body: JSON.stringify({ features, match_id: matchId, league: league || 'MLB' }),
       signal: AbortSignal.timeout(5000),
     })
 
@@ -286,7 +290,7 @@ export async function GET(request: NextRequest) {
 
         const mlPredictions = await Promise.all(
           matches.map(m =>
-            m.league === 'MLB' && ['NS', 'SCHEDULED', 'TBD'].includes(m.status)
+            ['NS', 'SCHEDULED', 'TBD'].includes(m.status)
               ? fetchMLPrediction(supabase, m.home_team, m.away_team, m.match_date, {
                   home_pitcher_era: m.home_pitcher_era ?? null,
                   home_pitcher_whip: m.home_pitcher_whip ?? null,
@@ -294,7 +298,7 @@ export async function GET(request: NextRequest) {
                   away_pitcher_era: m.away_pitcher_era ?? null,
                   away_pitcher_whip: m.away_pitcher_whip ?? null,
                   away_pitcher_k: m.away_pitcher_k ?? null,
-                })
+                }, m.api_match_id, m.league)
               : Promise.resolve(null)
           )
         )
@@ -319,6 +323,8 @@ export async function GET(request: NextRequest) {
               overUnderLine: matchOdds.over_under_line, overOdds: matchOdds.over_odds, underOdds: matchOdds.under_odds,
             } : null,
             mlPrediction: mlData ? { homeWinProb: mlData.homeWinProb, awayWinProb: mlData.awayWinProb } : null,
+            aiPick: matchOdds?.ai_pick ?? null,
+            aiPickConfidence: matchOdds?.ai_pick_confidence ?? null,
             homePitcher: match.home_pitcher ?? null, homePitcherId: match.home_pitcher_id ?? null, homePitcherKo: match.home_pitcher_ko ?? null,
             awayPitcher: match.away_pitcher ?? null, awayPitcherId: match.away_pitcher_id ?? null, awayPitcherKo: match.away_pitcher_ko ?? null,
           }
@@ -394,7 +400,7 @@ export async function GET(request: NextRequest) {
     // =====================================================
     const mlPredictions = await Promise.all(
       (matches || []).map(m =>
-        m.league === 'MLB' && ['NS', 'SCHEDULED', 'TBD'].includes(m.status)
+        ['NS', 'SCHEDULED', 'TBD'].includes(m.status)
           ? fetchMLPrediction(supabase, m.home_team, m.away_team, m.match_date, {
               home_pitcher_era: m.home_pitcher_era ?? null,
               home_pitcher_whip: m.home_pitcher_whip ?? null,
@@ -402,7 +408,7 @@ export async function GET(request: NextRequest) {
               away_pitcher_era: m.away_pitcher_era ?? null,
               away_pitcher_whip: m.away_pitcher_whip ?? null,
               away_pitcher_k: m.away_pitcher_k ?? null,
-            })
+            }, m.api_match_id, m.league)
           : Promise.resolve(null)
       )
     )
@@ -453,6 +459,9 @@ export async function GET(request: NextRequest) {
         mlPrediction: mlData
           ? { homeWinProb: mlData.homeWinProb, awayWinProb: mlData.awayWinProb }
           : null,
+        // ✅ DB에 저장된 AI pick (디테일 페이지와 동일한 소스)
+        aiPick: matchOdds?.ai_pick ?? null,
+        aiPickConfidence: matchOdds?.ai_pick_confidence ?? null,
 
         // ✅ 선발 투수 (MLB만, sync-pitchers API가 채워줌)
         homePitcher: match.home_pitcher ?? null,
