@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import ko from '../locales/ko.json'
 import en from '../locales/en.json'
 import fr from '../locales/fr.json'
+import { LEAGUES } from '../data/leagues'
 
 // 지원 언어 타입
 export type Language = 'ko' | 'en' | 'fr'
@@ -101,13 +102,24 @@ export function LanguageProvider({ children, defaultLanguage = 'ko' }: LanguageP
       if (enValue) return enValue
     }
     
-    // 그래도 못 찾으면 fallback 또는 키 반환
-    return fallback || key
+    // 그래도 못 찾으면 fallback 또는 키 반환 (fallback이 빈 문자열이면 빈 문자열 반환)
+    return fallback !== undefined ? fallback : key
   }
   
   // 리그명 가져오기 (편의 함수)
+  // locales에 없으면 leagues.ts의 name(한글) 또는 nameEn(영어) 사용
   const getLeagueName = (code: string): string => {
-    return t(`leagues.${code}`, code)
+    const fromLocale = t(`leagues.${code}`, '')
+    if (fromLocale) return fromLocale
+
+    const leagueData = LEAGUES.find(l => l.code === code)
+    if (leagueData) {
+      return language === 'en' || language === 'fr'
+        ? (leagueData.nameEn || leagueData.name)
+        : leagueData.name
+    }
+
+    return code
   }
   
   // 지역명 가져오기 (편의 함수)

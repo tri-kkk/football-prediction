@@ -124,6 +124,52 @@ export async function GET() {
           const normalizedHome = parseFloat(((homeProb / total) * 100).toFixed(2))
           const normalizedAway = parseFloat(((awayProb / total) * 100).toFixed(2))
 
+          // Over/Under (bet id: 5) - 10.5 라인 우선, 없으면 첫 번째 라인
+          const ouBet = bookmaker.bets?.find((b: any) => b.id === 5)
+          let ouLine: number | null = null
+          let overOdds: number | null = null
+          let underOdds: number | null = null
+          if (ouBet) {
+            const preferred = ouBet.values?.find((v: any) => v.value === 'Over 10.5')
+            if (preferred) {
+              ouLine = 10.5
+              overOdds = parseFloat(preferred.odd)
+              underOdds = parseFloat(ouBet.values?.find((v: any) => v.value === 'Under 10.5')?.odd ?? '0') || null
+            } else {
+              // 10.5 없으면 첫 번째 Over 라인 사용
+              const firstOver = ouBet.values?.find((v: any) => v.value?.startsWith('Over '))
+              if (firstOver) {
+                const lineStr = firstOver.value.replace('Over ', '')
+                ouLine = parseFloat(lineStr)
+                overOdds = parseFloat(firstOver.odd)
+                underOdds = parseFloat(ouBet.values?.find((v: any) => v.value === `Under ${lineStr}`)?.odd ?? '0') || null
+              }
+            }
+          }
+
+          // Runline (bet id: 2) - Home -1.5 기준
+          const runlineBet = bookmaker.bets?.find((b: any) => b.id === 2)
+          let runlineSpread: number | null = null
+          let homeRunlineOdds: number | null = null
+          let awayRunlineOdds: number | null = null
+          if (runlineBet) {
+            const homeMinus = runlineBet.values?.find((v: any) => v.value === 'Home -1.5')
+            const awayMinus = runlineBet.values?.find((v: any) => v.value === 'Away -1.5')
+            if (homeMinus) {
+              runlineSpread = -1.5
+              homeRunlineOdds = parseFloat(homeMinus.odd)
+              awayRunlineOdds = parseFloat(
+                runlineBet.values?.find((v: any) => v.value === 'Away +1.5' || v.value === 'Away -1.5')?.odd ?? '0'
+              ) || null
+            } else if (awayMinus) {
+              runlineSpread = 1.5
+              awayRunlineOdds = parseFloat(awayMinus.odd)
+              homeRunlineOdds = parseFloat(
+                runlineBet.values?.find((v: any) => v.value === 'Home +1.5' || v.value === 'Home -1.5')?.odd ?? '0'
+              ) || null
+            }
+          }
+
           const oddsRecord = {
             api_match_id: parseInt(gameId),
             match_id: parseInt(gameId),
@@ -132,6 +178,12 @@ export async function GET() {
             away_win_odds: parseFloat(awayOdds),
             home_win_prob: normalizedHome,
             away_win_prob: normalizedAway,
+            over_under_line: ouLine,
+            over_odds: overOdds,
+            under_odds: underOdds,
+            runline_spread: runlineSpread,
+            home_runline_odds: homeRunlineOdds,
+            away_runline_odds: awayRunlineOdds,
             bookmaker: bookmaker.name
           }
 
@@ -142,7 +194,10 @@ export async function GET() {
             home_win_odds: parseFloat(homeOdds),
             away_win_odds: parseFloat(awayOdds),
             home_win_prob: normalizedHome,
-            away_win_prob: normalizedAway
+            away_win_prob: normalizedAway,
+            over_under_line: ouLine,
+            over_odds: overOdds,
+            under_odds: underOdds
           }
 
           const { error: historyError } = await supabase

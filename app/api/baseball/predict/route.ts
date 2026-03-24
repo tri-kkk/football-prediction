@@ -232,7 +232,7 @@ export async function POST(request: NextRequest) {
     const aiResponse = await fetch(`${RAILWAY_URL}/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ features, league: match.league }),
+      body: JSON.stringify({ features, league: match.league, match_id: matchId }),
       signal: AbortSignal.timeout(5000),
     })
 

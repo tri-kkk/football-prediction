@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const NEWS_API_TOKEN = process.env.NEWS_API_TOKEN || ''
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || ''
 
-async function fetchTeamNews(teamName: string): Promise<{ title: string; description: string }[]> {
+async function fetchTeamNews(teamName: string, language: 'en' | 'ko' = 'en'): Promise<{ title: string; description: string }[]> {
   if (!NEWS_API_TOKEN) return []
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -14,7 +14,7 @@ async function fetchTeamNews(teamName: string): Promise<{ title: string; descrip
       api_token: NEWS_API_TOKEN,
       categories: 'sports',
       search: teamName,
-      language: 'en',
+      language,
       limit: '5',
       sort: 'published_at',
       sort_order: 'desc',
@@ -41,7 +41,8 @@ async function fetchTeamNews(teamName: string): Promise<{ title: string; descrip
 async function summarizeNews(
   teamName: string,
   teamNameKo: string,
-  articles: { title: string; description: string }[]
+  articles: { title: string; description: string }[],
+  league: string
 ): Promise<string | null> {
   if (!ANTHROPIC_API_KEY || articles.length === 0) return null
 
@@ -49,7 +50,9 @@ async function summarizeNews(
     .map((a, i) => `${i + 1}. ${a.title}${a.description ? '\n   ' + a.description : ''}`)
     .join('\n')
 
-  const prompt = `아래는 MLB 팀 "${teamName}"(${teamNameKo})의 최근 뉴스 기사 제목과 요약입니다.
+  const leagueLabel = league === 'KBO' ? 'KBO' : league === 'NPB' ? 'NPB' : league === 'CPBL' ? 'CPBL' : 'MLB'
+
+  const prompt = `아래는 ${leagueLabel} 팀 "${teamName}"(${teamNameKo})의 최근 뉴스 기사 제목과 요약입니다.
 
 ${articleText}
 
@@ -85,21 +88,28 @@ export async function GET(request: NextRequest) {
   const awayTeam = searchParams.get('awayTeam') || ''
   const homeTeamKo = searchParams.get('homeTeamKo') || homeTeam
   const awayTeamKo = searchParams.get('awayTeamKo') || awayTeam
+  const league = searchParams.get('league') || 'MLB'
 
   if (!homeTeam || !awayTeam) {
     return NextResponse.json({ success: false, error: 'homeTeam, awayTeam required' }, { status: 400 })
   }
 
+  // KBO는 한국어 팀명으로 한국어 뉴스 검색, 나머지는 영어
+  const isKBO = league === 'KBO'
+  const searchLang: 'en' | 'ko' = isKBO ? 'ko' : 'en'
+  const homeSearchTerm = isKBO ? homeTeamKo : homeTeam
+  const awaySearchTerm = isKBO ? awayTeamKo : awayTeam
+
   // 뉴스 수집 병렬
   const [homeArticles, awayArticles] = await Promise.all([
-    fetchTeamNews(homeTeam),
-    fetchTeamNews(awayTeam),
+    fetchTeamNews(homeSearchTerm, searchLang),
+    fetchTeamNews(awaySearchTerm, searchLang),
   ])
 
   // Claude 요약 병렬
   const [homeSummary, awaySummary] = await Promise.all([
-    summarizeNews(homeTeam, homeTeamKo, homeArticles),
-    summarizeNews(awayTeam, awayTeamKo, awayArticles),
+    summarizeNews(homeTeam, homeTeamKo, homeArticles, league),
+    summarizeNews(awayTeam, awayTeamKo, awayArticles, league),
   ])
 
   return NextResponse.json({

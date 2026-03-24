@@ -193,13 +193,13 @@ const LEAGUE_INFO: Record<string, { name: string; nameEn: string; priority: numb
   },
 
   // ===== 아시아 =====
-  'KOR1': { 
+  'KL1': { 
     name: 'K리그1', 
     nameEn: 'K League 1', 
     priority: 70, 
     logo: 'https://media.api-sports.io/football/leagues/292.png' 
   },
-  'KOR2': { 
+  'KL2': { 
     name: 'K리그2', 
     nameEn: 'K League 2', 
     priority: 71, 

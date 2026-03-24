@@ -9,6 +9,7 @@ interface PredictionProps {
   homeTeamKo?: string
   awayTeamKo?: string
   season: string
+  league?: string
   overUnderLine?: number | null  // 배당 라인 (없으면 8.5 기본값)
 }
 
@@ -82,7 +83,7 @@ function LoadingDots({ color = '#3b82f6' }: { color?: string }) {
 }
 
 export default function BaseballAIPrediction({
-  matchId, homeTeam, awayTeam, homeTeamKo, awayTeamKo, season, overUnderLine
+  matchId, homeTeam, awayTeam, homeTeamKo, awayTeamKo, season, league, overUnderLine
 }: PredictionProps) {
   const HN = homeTeamKo || homeTeam
   const AN = awayTeamKo || awayTeam
@@ -131,6 +132,7 @@ export default function BaseballAIPrediction({
       const params = new URLSearchParams({
         homeTeam, awayTeam,
         homeTeamKo: HN, awayTeamKo: AN,
+        league: league || 'MLB',
       })
       const r = await fetch(`/api/baseball/team-news?${params}`)
       if (!r.ok) throw new Error(`HTTP ${r.status}`)

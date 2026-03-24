@@ -1360,7 +1360,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               awayTeam: match.away_team || match.awayTeam,
               home_team_id: match.home_team_id,  // 🆕 팀 ID 추가
               away_team_id: match.away_team_id,  // 🆕 팀 ID 추가
-              league: match.league || getLeagueName(match.league_code) || result.league,
+              league: match.leagueName || match.league || getLeagueName(match.league_code) || result.league,
               leagueCode: match.league_code || match.leagueCode || result.league,
               utcDate: match.commence_time || match.utcDate,
               // 🆕 엠블럼: 여러 필드 체크 후 fallback
@@ -1414,7 +1414,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             awayTeam: match.away_team || match.awayTeam,
             home_team_id: match.home_team_id,  // 🆕 팀 ID 추가
             away_team_id: match.away_team_id,  // 🆕 팀 ID 추가
-            league: match.league || getLeagueName(match.league_code) || selectedLeague,
+            league: match.leagueName || match.league || getLeagueName(match.league_code) || selectedLeague,
             leagueCode: match.league_code || match.leagueCode,
             utcDate: match.commence_time || match.utcDate,
             // 🆕 엠블럼: 여러 필드 체크 후 fallback
