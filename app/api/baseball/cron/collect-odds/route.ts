@@ -18,6 +18,40 @@ const leagues = [
   { id: 29, code: 'CPBL', name: 'CPBL', season: 2026 },
 ]
 
+// O/U 라인 우선순위 (MLB 평균 총점 기준)
+const PREFERRED_OU_LINES = ['8.5', '9', '9.5', '7.5', '7', '8']
+
+function extractOUFromBet(ouBet: any): { ouLine: number | null; overOdds: number | null; underOdds: number | null } {
+  if (!ouBet) return { ouLine: null, overOdds: null, underOdds: null }
+
+  // 우선순위 라인 먼저 시도
+  for (const line of PREFERRED_OU_LINES) {
+    const overVal = ouBet.values?.find((v: any) => v.value === `Over ${line}`)
+    const underVal = ouBet.values?.find((v: any) => v.value === `Under ${line}`)
+    if (overVal && underVal) {
+      return {
+        ouLine: parseFloat(line),
+        overOdds: parseFloat(overVal.odd),
+        underOdds: parseFloat(underVal.odd),
+      }
+    }
+  }
+
+  // 우선순위 없으면 첫 번째 Over 라인
+  const firstOver = ouBet.values?.find((v: any) => v.value?.startsWith('Over '))
+  if (firstOver) {
+    const lineStr = firstOver.value.replace('Over ', '')
+    const underVal = ouBet.values?.find((v: any) => v.value === `Under ${lineStr}`)
+    return {
+      ouLine: parseFloat(lineStr),
+      overOdds: parseFloat(firstOver.odd),
+      underOdds: underVal ? parseFloat(underVal.odd) : null,
+    }
+  }
+
+  return { ouLine: null, overOdds: null, underOdds: null }
+}
+
 export async function GET() {
   const startTime = Date.now()
 
@@ -30,7 +64,6 @@ export async function GET() {
     const now = new Date()
     const currentMonth = now.getMonth() + 1
 
-    // 오늘 ~ 7일 후 (API 문서: 1-7일 전 경기만 배당 제공)
     const todayStr = now.toISOString().split('T')[0]
     const futureDate = new Date(now)
     futureDate.setDate(futureDate.getDate() + 7)
@@ -56,7 +89,6 @@ export async function GET() {
       console.log(`\n📊 Processing ${league.name}...`)
       let oddsSaved = 0
 
-      // DB에서 오늘~7일 경기 ID 목록 가져오기
       const { data: savedMatches } = await supabase
         .from('baseball_matches')
         .select('api_match_id')
@@ -74,15 +106,12 @@ export async function GET() {
         continue
       }
 
-      // game ID별로 개별 odds 조회 (API 문서 방식)
       for (const gameId of matchIds) {
         try {
           const oddsUrl = `https://v1.baseball.api-sports.io/odds?game=${gameId}`
 
           const oddsResponse = await fetch(oddsUrl, {
-            headers: {
-              'x-apisports-key': apiKey  // ✅ 올바른 헤더
-            }
+            headers: { 'x-apisports-key': apiKey }
           })
 
           if (!oddsResponse.ok) {
@@ -94,7 +123,6 @@ export async function GET() {
           const oddsData = await oddsResponse.json()
 
           if (!oddsData.results || oddsData.results === 0) {
-            // 배당 없는 경기는 로그 생략 (너무 많아짐)
             await new Promise(r => setTimeout(r, 200))
             continue
           }
@@ -102,53 +130,78 @@ export async function GET() {
           const oddsGame = oddsData.response?.[0]
           if (!oddsGame) continue
 
-          // Bet365(id:2) 우선, 없으면 첫 번째 북메이커
-          const bookmaker = oddsGame.bookmakers?.find((b: any) => b.id === 2) || oddsGame.bookmakers?.[0]
+          const bookmakers = oddsGame.bookmakers || []
+
+          // ✅ Home/Away: Bet365(2) → Pinnacle(4) → 10Bet(9) → Unibet(11) → 첫 번째
+          const HOMEAWAY_PRIORITY = [2, 4, 9, 11, 13]
+          let bookmaker: any = null
+          for (const bmId of HOMEAWAY_PRIORITY) {
+            const bm = bookmakers.find((b: any) => b.id === bmId)
+            if (bm?.bets?.find((b: any) => b.id === 1)) {
+              bookmaker = bm
+              break
+            }
+          }
+          if (!bookmaker) {
+            bookmaker = bookmakers.find((b: any) => b.bets?.find((bet: any) => bet.id === 1))
+          }
           if (!bookmaker) continue
 
-          // Home/Away 배당 (bet id: 1)
           const homeAwayBet = bookmaker.bets?.find((b: any) => b.id === 1)
-          if (!homeAwayBet) {
-            console.log(`  ⚠️ Game ${gameId}: No Home/Away bet. Available: ${bookmaker.bets?.map((b: any) => `${b.name}(${b.id})`).join(', ')}`)
-            continue
-          }
+          if (!homeAwayBet) continue
 
           const homeOdds = homeAwayBet.values?.find((v: any) => v.value === 'Home')?.odd
           const awayOdds = homeAwayBet.values?.find((v: any) => v.value === 'Away')?.odd
           if (!homeOdds || !awayOdds) continue
 
-          // 확률 계산
           const homeProb = (1 / parseFloat(homeOdds)) * 100
           const awayProb = (1 / parseFloat(awayOdds)) * 100
           const total = homeProb + awayProb
           const normalizedHome = parseFloat(((homeProb / total) * 100).toFixed(2))
           const normalizedAway = parseFloat(((awayProb / total) * 100).toFixed(2))
 
-          // Over/Under (bet id: 5) - 10.5 라인 우선, 없으면 첫 번째 라인
-          const ouBet = bookmaker.bets?.find((b: any) => b.id === 5)
+          // ✅ O/U: 전체 북메이커에서 탐색 - Bet365는 O/U 미제공 케이스 대비
+          // Pinnacle(4) → Fonbet(27) → 10Bet(9) → Unibet(11) → Betfair(13) → BetVictor(30) → 나머지
+          const OU_PRIORITY = [4, 27, 9, 11, 13, 30]
           let ouLine: number | null = null
           let overOdds: number | null = null
           let underOdds: number | null = null
-          if (ouBet) {
-            const preferred = ouBet.values?.find((v: any) => v.value === 'Over 10.5')
-            if (preferred) {
-              ouLine = 10.5
-              overOdds = parseFloat(preferred.odd)
-              underOdds = parseFloat(ouBet.values?.find((v: any) => v.value === 'Under 10.5')?.odd ?? '0') || null
-            } else {
-              // 10.5 없으면 첫 번째 Over 라인 사용
-              const firstOver = ouBet.values?.find((v: any) => v.value?.startsWith('Over '))
-              if (firstOver) {
-                const lineStr = firstOver.value.replace('Over ', '')
-                ouLine = parseFloat(lineStr)
-                overOdds = parseFloat(firstOver.odd)
-                underOdds = parseFloat(ouBet.values?.find((v: any) => v.value === `Under ${lineStr}`)?.odd ?? '0') || null
+
+          for (const bmId of OU_PRIORITY) {
+            const bm = bookmakers.find((b: any) => b.id === bmId)
+            const ouBet = bm?.bets?.find((b: any) => b.id === 5)
+            if (ouBet) {
+              const extracted = extractOUFromBet(ouBet)
+              if (extracted.ouLine !== null) {
+                ouLine = extracted.ouLine
+                overOdds = extracted.overOdds
+                underOdds = extracted.underOdds
+                console.log(`  📊 O/U from ${bm.name}: ${ouLine}`)
+                break
               }
             }
           }
 
-          // Runline (bet id: 2) - Home -1.5 기준
-          const runlineBet = bookmaker.bets?.find((b: any) => b.id === 2)
+          // 우선순위 외 나머지 북메이커에서 fallback
+          if (ouLine === null) {
+            for (const bm of bookmakers) {
+              const ouBet = bm.bets?.find((b: any) => b.id === 5)
+              if (ouBet) {
+                const extracted = extractOUFromBet(ouBet)
+                if (extracted.ouLine !== null) {
+                  ouLine = extracted.ouLine
+                  overOdds = extracted.overOdds
+                  underOdds = extracted.underOdds
+                  console.log(`  📊 O/U fallback from ${bm.name}: ${ouLine}`)
+                  break
+                }
+              }
+            }
+          }
+
+          // Runline (bet id: 2)
+          const runlineBm = bookmakers.find((b: any) => b.id === 2) || bookmakers.find((b: any) => b.bets?.find((bet: any) => bet.id === 2))
+          const runlineBet = runlineBm?.bets?.find((b: any) => b.id === 2)
           let runlineSpread: number | null = null
           let homeRunlineOdds: number | null = null
           let awayRunlineOdds: number | null = null
@@ -159,13 +212,13 @@ export async function GET() {
               runlineSpread = -1.5
               homeRunlineOdds = parseFloat(homeMinus.odd)
               awayRunlineOdds = parseFloat(
-                runlineBet.values?.find((v: any) => v.value === 'Away +1.5' || v.value === 'Away -1.5')?.odd ?? '0'
+                runlineBet.values?.find((v: any) => v.value === 'Away +1.5')?.odd ?? '0'
               ) || null
             } else if (awayMinus) {
               runlineSpread = 1.5
               awayRunlineOdds = parseFloat(awayMinus.odd)
               homeRunlineOdds = parseFloat(
-                runlineBet.values?.find((v: any) => v.value === 'Home +1.5' || v.value === 'Home -1.5')?.odd ?? '0'
+                runlineBet.values?.find((v: any) => v.value === 'Home +1.5')?.odd ?? '0'
               ) || null
             }
           }
@@ -220,7 +273,7 @@ export async function GET() {
 
           const homeName = getKoreanTeamName(oddsGame.game?.teams?.home?.name || '')
           const awayName = getKoreanTeamName(oddsGame.game?.teams?.away?.name || '')
-          console.log(`  💰 ${homeName} vs ${awayName}: ${homeOdds} / ${awayOdds} (${normalizedHome}% / ${normalizedAway}%)`)
+          console.log(`  💰 ${homeName} vs ${awayName}: ${homeOdds}/${awayOdds} O/U:${ouLine ?? 'N/A'}`)
           oddsSaved++
 
           await new Promise(r => setTimeout(r, 200))
