@@ -2,6 +2,8 @@
 // MLB Stats API에서 선발투수 정보를 가져와 baseball_matches 테이블에 업데이트
 // GET /api/baseball/sync-pitchers?date=2026-03-12  (날짜 지정)
 // GET /api/baseball/sync-pitchers  (오늘 날짜)
+// 
+// [v2] UTC 오프셋 문제 해결: MLB API를 전날/오늘/내일 3일치 조회 후 pool 합산
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -11,58 +13,20 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// MLB Stats API - 키 불필요, 무료
 const MLB_API = 'https://statsapi.mlb.com/api/v1'
 
-// DB 팀명 → MLB Stats API 팀명 매핑
-// (MLB API는 teamId로 매칭하는 게 더 정확하지만 이름으로도 가능)
-const TEAM_NAME_MAP: Record<string, string[]> = {
-  'Arizona Diamondbacks': ['Arizona Diamondbacks', 'D-backs'],
-  'Atlanta Braves': ['Atlanta Braves', 'Braves'],
-  'Baltimore Orioles': ['Baltimore Orioles', 'Orioles'],
-  'Boston Red Sox': ['Boston Red Sox', 'Red Sox'],
-  'Chicago Cubs': ['Chicago Cubs', 'Cubs'],
-  'Chicago White Sox': ['Chicago White Sox', 'White Sox'],
-  'Cincinnati Reds': ['Cincinnati Reds', 'Reds'],
-  'Cleveland Guardians': ['Cleveland Guardians', 'Guardians'],
-  'Colorado Rockies': ['Colorado Rockies', 'Rockies'],
-  'Detroit Tigers': ['Detroit Tigers', 'Tigers'],
-  'Houston Astros': ['Houston Astros', 'Astros'],
-  'Kansas City Royals': ['Kansas City Royals', 'Royals'],
-  'Los Angeles Angels': ['Los Angeles Angels', 'Angels'],
-  'Los Angeles Dodgers': ['Los Angeles Dodgers', 'Dodgers'],
-  'Miami Marlins': ['Miami Marlins', 'Marlins'],
-  'Milwaukee Brewers': ['Milwaukee Brewers', 'Brewers'],
-  'Minnesota Twins': ['Minnesota Twins', 'Twins'],
-  'New York Mets': ['New York Mets', 'Mets'],
-  'New York Yankees': ['New York Yankees', 'Yankees'],
-  'Oakland Athletics': ['Oakland Athletics', 'Athletics', "A's"],
-  'Philadelphia Phillies': ['Philadelphia Phillies', 'Phillies'],
-  'Pittsburgh Pirates': ['Pittsburgh Pirates', 'Pirates'],
-  'San Diego Padres': ['San Diego Padres', 'Padres'],
-  'San Francisco Giants': ['San Francisco Giants', 'Giants'],
-  'Seattle Mariners': ['Seattle Mariners', 'Mariners'],
-  'St.Louis Cardinals': ['St. Louis Cardinals', 'Cardinals'],  // DB는 St.Louis (점 뒤 공백 없음)
-  'St. Louis Cardinals': ['St. Louis Cardinals', 'Cardinals'],
-  'Tampa Bay Rays': ['Tampa Bay Rays', 'Rays'],
-  'Texas Rangers': ['Texas Rangers', 'Rangers'],
-  'Toronto Blue Jays': ['Toronto Blue Jays', 'Blue Jays'],
-  'Washington Nationals': ['Washington Nationals', 'Nationals'],
-}
-
-// 팀명 정규화 (비교용) - 점, 공백 통일
 function normalizeName(name: string): string {
   return name
     .toLowerCase()
-    .replace(/\./g, ' ')       // 점 → 공백 (St. → St )
-    .replace(/\s+/g, ' ')      // 연속 공백 → 단일 공백
+    .replace(/\./g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
 }
 
-// DB 팀명 → MLB API 팀명 변환
-function mapTeamName(dbTeam: string): string {
-  const mapped = TEAM_NAME_MAP[dbTeam]
-  return mapped ? mapped[0] : dbTeam
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
 }
 
 export async function GET(request: NextRequest) {
@@ -72,49 +36,69 @@ export async function GET(request: NextRequest) {
   console.log(`🔍 Syncing pitchers for date: ${date}`)
 
   try {
-    // 1. DB에서 해당 날짜 MLB 경기 조회
+    // 1. DB에서 전날 ~ 내일 MLB 정규시즌 경기 조회 (스프링트레이닝 제외)
+    const dateFrom = addDays(date, -1)
+    const dateTo = addDays(date, 1)
+
     const { data: dbMatches, error: dbError } = await supabase
       .from('baseball_matches')
       .select('id, api_match_id, home_team, away_team, match_date')
       .eq('league', 'MLB')
-      .eq('match_date', date)
+      .eq('is_spring_training', false)
+      .gte('match_date', dateFrom)
+      .lte('match_date', dateTo)
 
     if (dbError) throw dbError
 
     if (!dbMatches || dbMatches.length === 0) {
       return NextResponse.json({
         success: true,
-        message: `No MLB matches found in DB for ${date}`,
+        message: `No MLB regular season matches found in DB for ${dateFrom} ~ ${dateTo}`,
         updated: 0,
       })
     }
 
-    console.log(`📋 Found ${dbMatches.length} MLB matches in DB for ${date}`)
+    console.log(`📋 Found ${dbMatches.length} MLB matches in DB (${dateFrom} ~ ${dateTo})`)
 
-    // 2. MLB Stats API에서 해당 날짜 스케줄 조회
-    // sportId=1: MLB 정규시즌
-    // sportId=17: 스프링트레이닝 (Cactus/Grapefruit League)
-    const mlbRes = await fetch(
-      `${MLB_API}/schedule?sportId=1,17&date=${date}&hydrate=probablePitcher(note)`,
-      {
-        headers: { 'User-Agent': 'TrendSoccer/1.0' },
-        signal: AbortSignal.timeout(8000),
+    // 2. MLB Stats API에서 전날/오늘/내일 3일치 조회 → 전체 pool 합산
+    // UTC 오프셋으로 날짜가 하루 엇갈리는 문제 방지
+    const mlbGamePool: any[] = []
+    const fetchDates = [addDays(date, -1), date, addDays(date, 1)]
+
+    for (const fetchDate of fetchDates) {
+      try {
+        const res = await fetch(
+          `${MLB_API}/schedule?sportId=1&date=${fetchDate}&hydrate=probablePitcher(note)`,
+          {
+            headers: { 'User-Agent': 'TrendSoccer/1.0' },
+            signal: AbortSignal.timeout(8000),
+          }
+        )
+        if (!res.ok) continue
+
+        const data = await res.json()
+        const games = data.dates?.[0]?.games || []
+        console.log(`⚾ MLB API ${fetchDate}: ${games.length}경기`)
+        mlbGamePool.push(...games)
+      } catch (e) {
+        console.error(`MLB API fetch error for ${fetchDate}:`, e)
       }
-    )
-
-    if (!mlbRes.ok) {
-      throw new Error(`MLB API error: ${mlbRes.status}`)
     }
 
-    const mlbData = await mlbRes.json()
-    const mlbGames = mlbData.dates?.[0]?.games || []
+    // gamePk 기준 중복 제거
+    const seenPks = new Set<number>()
+    const uniqueGames = mlbGamePool.filter((g) => {
+      if (seenPks.has(g.gamePk)) return false
+      seenPks.add(g.gamePk)
+      return true
+    })
 
-    console.log(`⚾ Found ${mlbGames.length} games from MLB Stats API`)
+    console.log(`⚾ Total unique MLB games in pool: ${uniqueGames.length}`)
 
-    if (mlbGames.length === 0) {
+    if (uniqueGames.length === 0) {
       return NextResponse.json({
         success: true,
-        message: `No games from MLB API for ${date}`,
+        message: `No games from MLB API for ${dateFrom} ~ ${dateTo}`,
         updated: 0,
       })
     }
@@ -127,47 +111,41 @@ export async function GET(request: NextRequest) {
       const dbHome = normalizeName(dbMatch.home_team)
       const dbAway = normalizeName(dbMatch.away_team)
 
-      // 정확 매칭: 홈/어웨이 순서 무관하게 두 팀명 매칭
-      const mlbGame = mlbGames.find((g: any) => {
+      const mlbGame = uniqueGames.find((g: any) => {
         const mlbHome = normalizeName(g.teams?.home?.team?.name || '')
         const mlbAway = normalizeName(g.teams?.away?.team?.name || '')
-        const teamsMatch =
+        return (
           (mlbHome === dbHome && mlbAway === dbAway) ||
           (mlbHome === dbAway && mlbAway === dbHome)
-        return teamsMatch
+        )
       })
 
       if (!mlbGame) {
-        const mlbTeamPairs = mlbGames.map((g: any) =>
-          `${normalizeName(g.teams?.home?.team?.name||'')} vs ${normalizeName(g.teams?.away?.team?.name||'')}`
-        )
         results.push({
           match: `${dbMatch.home_team} vs ${dbMatch.away_team}`,
+          date: dbMatch.match_date,
           status: 'NOT_MATCHED',
-          dbNormalized: `${dbHome} vs ${dbAway}`,
-          mlbTeams: mlbTeamPairs,
         })
         continue
       }
 
-      const game = mlbGame
+      const homePitcher = mlbGame.teams?.home?.probablePitcher
+      const awayPitcher = mlbGame.teams?.away?.probablePitcher
 
-      const homePitcher = game.teams?.home?.probablePitcher
-      const awayPitcher = game.teams?.away?.probablePitcher
-
-      // 선발투수 없으면 skip
       if (!homePitcher && !awayPitcher) {
-        results.push({ match: `${dbMatch.home_team} vs ${dbMatch.away_team}`, status: 'NO_PITCHER' })
+        results.push({
+          match: `${dbMatch.home_team} vs ${dbMatch.away_team}`,
+          date: dbMatch.match_date,
+          status: 'NO_PITCHER',
+        })
         continue
       }
 
-      // DB 업데이트
       const updateData: Record<string, any> = {}
 
       if (homePitcher) {
         updateData.home_pitcher = homePitcher.fullName
         updateData.home_pitcher_id = homePitcher.id
-        // ERA 등 stats가 있으면 업데이트
         const homeStats = homePitcher.stats?.[0]?.stats
         if (homeStats?.era) updateData.home_pitcher_era = parseFloat(homeStats.era)
       }
@@ -185,16 +163,20 @@ export async function GET(request: NextRequest) {
         .eq('id', dbMatch.id)
 
       if (updateError) {
-        results.push({ match: `${dbMatch.home_team} vs ${dbMatch.away_team}`, status: 'UPDATE_ERROR', error: updateError.message })
+        results.push({
+          match: `${dbMatch.home_team} vs ${dbMatch.away_team}`,
+          date: dbMatch.match_date,
+          status: 'UPDATE_ERROR',
+          error: updateError.message,
+        })
       } else {
         updatedCount++
         results.push({
           match: `${dbMatch.home_team} vs ${dbMatch.away_team}`,
+          date: dbMatch.match_date,
           status: 'UPDATED',
           homePitcher: homePitcher?.fullName || null,
-          homePitcherId: homePitcher?.id || null,
           awayPitcher: awayPitcher?.fullName || null,
-          awayPitcherId: awayPitcher?.id || null,
         })
       }
     }
@@ -204,8 +186,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       date,
+      dateRange: `${dateFrom} ~ ${dateTo}`,
       dbMatches: dbMatches.length,
-      mlbGames: mlbGames.length,
+      mlbGamesInPool: uniqueGames.length,
       updated: updatedCount,
       results,
     })
