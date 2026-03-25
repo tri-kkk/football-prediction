@@ -321,6 +321,7 @@ export async function GET(request: NextRequest) {
               homeWinProb: matchOdds.home_win_prob, awayWinProb: matchOdds.away_win_prob,
               homeWinOdds: matchOdds.home_win_odds, awayWinOdds: matchOdds.away_win_odds,
               overUnderLine: matchOdds.over_under_line, overOdds: matchOdds.over_odds, underOdds: matchOdds.under_odds,
+              ouLines: matchOdds.ou_lines ?? null,
             } : null,
             mlPrediction: mlData ? { homeWinProb: mlData.homeWinProb, awayWinProb: mlData.awayWinProb } : null,
             aiPick: matchOdds?.ai_pick ?? null,
@@ -452,6 +453,7 @@ export async function GET(request: NextRequest) {
           overUnderLine: matchOdds.over_under_line,
           overOdds: matchOdds.over_odds,
           underOdds: matchOdds.under_odds,
+          ouLines: matchOdds.ou_lines ?? null,
         } : null,
 
         // ✅ Railway ML 승률 - 상세 페이지 BaseballAIPrediction과 동일한 값

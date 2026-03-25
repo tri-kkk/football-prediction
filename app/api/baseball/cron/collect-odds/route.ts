@@ -18,38 +18,95 @@ const leagues = [
   { id: 29, code: 'CPBL', name: 'CPBL', season: 2026 },
 ]
 
-// O/U 라인 우선순위 (MLB 평균 총점 기준)
-const PREFERRED_OU_LINES = ['8.5', '9', '9.5', '7.5', '7', '8']
+interface OULine {
+  line: number
+  over: number
+  under: number
+  diff: number // |over - under| 작을수록 맞배당
+}
 
-function extractOUFromBet(ouBet: any): { ouLine: number | null; overOdds: number | null; underOdds: number | null } {
-  if (!ouBet) return { ouLine: null, overOdds: null, underOdds: null }
+/**
+ * ouBet에서 전체 라인 추출 + 맞배당 기준선 선택
+ * 반환: { bestLine, ouLines }
+ * - bestLine: 맞배당에 가장 가까운 단일 라인
+ * - ouLines: 전체 라인 배열 (정렬됨), UI에서 3개 표시용
+ */
+function extractAllOULines(ouBet: any): {
+  bestLine: number | null
+  bestOver: number | null
+  bestUnder: number | null
+  ouLines: OULine[]
+} {
+  if (!ouBet?.values) return { bestLine: null, bestOver: null, bestUnder: null, ouLines: [] }
 
-  // 우선순위 라인 먼저 시도
-  for (const line of PREFERRED_OU_LINES) {
-    const overVal = ouBet.values?.find((v: any) => v.value === `Over ${line}`)
-    const underVal = ouBet.values?.find((v: any) => v.value === `Under ${line}`)
-    if (overVal && underVal) {
-      return {
-        ouLine: parseFloat(line),
-        overOdds: parseFloat(overVal.odd),
-        underOdds: parseFloat(underVal.odd),
-      }
-    }
+  const lines: OULine[] = []
+
+  // Over X.X 값 파싱
+  for (const val of ouBet.values) {
+    if (!val.value?.startsWith('Over ')) continue
+    const lineStr = val.value.replace('Over ', '')
+    const lineNum = parseFloat(lineStr)
+    if (isNaN(lineNum)) continue
+
+    const underVal = ouBet.values.find((v: any) => v.value === `Under ${lineStr}`)
+    if (!underVal) continue
+
+    const overOdd = parseFloat(val.odd)
+    const underOdd = parseFloat(underVal.odd)
+    if (isNaN(overOdd) || isNaN(underOdd)) continue
+
+    lines.push({
+      line: lineNum,
+      over: overOdd,
+      under: underOdd,
+      diff: Math.abs(overOdd - underOdd),
+    })
   }
 
-  // 우선순위 없으면 첫 번째 Over 라인
-  const firstOver = ouBet.values?.find((v: any) => v.value?.startsWith('Over '))
-  if (firstOver) {
-    const lineStr = firstOver.value.replace('Over ', '')
-    const underVal = ouBet.values?.find((v: any) => v.value === `Under ${lineStr}`)
-    return {
-      ouLine: parseFloat(lineStr),
-      overOdds: parseFloat(firstOver.odd),
-      underOdds: underVal ? parseFloat(underVal.odd) : null,
-    }
+  if (lines.length === 0) return { bestLine: null, bestOver: null, bestUnder: null, ouLines: [] }
+
+  // 라인 오름차순 정렬
+  lines.sort((a, b) => a.line - b.line)
+
+  // 맞배당 기준: diff가 가장 작은 라인
+  const best = lines.reduce((prev, curr) => curr.diff < prev.diff ? curr : prev)
+
+  return {
+    bestLine: best.line,
+    bestOver: best.over,
+    bestUnder: best.under,
+    ouLines: lines,
+  }
+}
+
+/**
+ * ouLines 배열에서 UI 표시용 3개 선택
+ * - best 라인 기준으로 위아래 1개씩
+ * - 없으면 best 포함 인접 라인들
+ */
+export function selectDisplayLines(ouLines: OULine[], bestLine: number): OULine[] {
+  if (ouLines.length === 0) return []
+  if (ouLines.length === 1) return ouLines
+
+  const bestIdx = ouLines.findIndex(l => l.line === bestLine)
+  if (bestIdx === -1) return ouLines.slice(0, 3)
+
+  const result: OULine[] = []
+
+  // 아래 라인
+  if (bestIdx > 0) result.push(ouLines[bestIdx - 1])
+  // 기준 라인
+  result.push(ouLines[bestIdx])
+  // 위 라인
+  if (bestIdx < ouLines.length - 1) result.push(ouLines[bestIdx + 1])
+
+  // 2개밖에 없으면 추가
+  if (result.length < 3) {
+    if (bestIdx > 1) result.unshift(ouLines[bestIdx - 2])
+    else if (bestIdx + 2 < ouLines.length) result.push(ouLines[bestIdx + 2])
   }
 
-  return { ouLine: null, overOdds: null, underOdds: null }
+  return result.sort((a, b) => a.line - b.line).slice(0, 3)
 }
 
 export async function GET() {
@@ -160,39 +217,41 @@ export async function GET() {
           const normalizedHome = parseFloat(((homeProb / total) * 100).toFixed(2))
           const normalizedAway = parseFloat(((awayProb / total) * 100).toFixed(2))
 
-          // ✅ O/U: 전체 북메이커에서 탐색 - Bet365는 O/U 미제공 케이스 대비
-          // Pinnacle(4) → Fonbet(27) → 10Bet(9) → Unibet(11) → Betfair(13) → BetVictor(30) → 나머지
-          const OU_PRIORITY = [4, 27, 9, 11, 13, 30]
-          let ouLine: number | null = null
-          let overOdds: number | null = null
-          let underOdds: number | null = null
+          // ✅ O/U: Pinnacle(4) → Fonbet(27) → 10Bet(9) → Unibet(11) → Betfair(13) → 나머지
+          const OU_PRIORITY = [4, 27, 9, 11, 13, 30, 2]
+          let bestLine: number | null = null
+          let bestOver: number | null = null
+          let bestUnder: number | null = null
+          let ouLines: OULine[] = []
 
           for (const bmId of OU_PRIORITY) {
             const bm = bookmakers.find((b: any) => b.id === bmId)
             const ouBet = bm?.bets?.find((b: any) => b.id === 5)
             if (ouBet) {
-              const extracted = extractOUFromBet(ouBet)
-              if (extracted.ouLine !== null) {
-                ouLine = extracted.ouLine
-                overOdds = extracted.overOdds
-                underOdds = extracted.underOdds
-                console.log(`  📊 O/U from ${bm.name}: ${ouLine}`)
+              const extracted = extractAllOULines(ouBet)
+              if (extracted.bestLine !== null) {
+                bestLine = extracted.bestLine
+                bestOver = extracted.bestOver
+                bestUnder = extracted.bestUnder
+                ouLines = extracted.ouLines
+                console.log(`  📊 O/U from ${bm.name}: ${ouLines.length}개 라인, 기준=${bestLine}`)
                 break
               }
             }
           }
 
-          // 우선순위 외 나머지 북메이커에서 fallback
-          if (ouLine === null) {
+          // fallback: 나머지 북메이커
+          if (bestLine === null) {
             for (const bm of bookmakers) {
               const ouBet = bm.bets?.find((b: any) => b.id === 5)
               if (ouBet) {
-                const extracted = extractOUFromBet(ouBet)
-                if (extracted.ouLine !== null) {
-                  ouLine = extracted.ouLine
-                  overOdds = extracted.overOdds
-                  underOdds = extracted.underOdds
-                  console.log(`  📊 O/U fallback from ${bm.name}: ${ouLine}`)
+                const extracted = extractAllOULines(ouBet)
+                if (extracted.bestLine !== null) {
+                  bestLine = extracted.bestLine
+                  bestOver = extracted.bestOver
+                  bestUnder = extracted.bestUnder
+                  ouLines = extracted.ouLines
+                  console.log(`  📊 O/U fallback from ${bm.name}: 기준=${bestLine}`)
                   break
                 }
               }
@@ -223,6 +282,9 @@ export async function GET() {
             }
           }
 
+          // UI 표시용 3개 라인 선택
+          const displayLines = bestLine !== null ? selectDisplayLines(ouLines, bestLine) : []
+
           const oddsRecord = {
             api_match_id: parseInt(gameId),
             match_id: parseInt(gameId),
@@ -231,9 +293,14 @@ export async function GET() {
             away_win_odds: parseFloat(awayOdds),
             home_win_prob: normalizedHome,
             away_win_prob: normalizedAway,
-            over_under_line: ouLine,
-            over_odds: overOdds,
-            under_odds: underOdds,
+            over_under_line: bestLine,
+            over_odds: bestOver,
+            under_odds: bestUnder,
+            ou_lines: displayLines.length > 0 ? displayLines.map(l => ({
+              line: l.line,
+              over: l.over,
+              under: l.under,
+            })) : null,
             runline_spread: runlineSpread,
             home_runline_odds: homeRunlineOdds,
             away_runline_odds: awayRunlineOdds,
@@ -248,9 +315,14 @@ export async function GET() {
             away_win_odds: parseFloat(awayOdds),
             home_win_prob: normalizedHome,
             away_win_prob: normalizedAway,
-            over_under_line: ouLine,
-            over_odds: overOdds,
-            under_odds: underOdds
+            over_under_line: bestLine,
+            over_odds: bestOver,
+            under_odds: bestUnder,
+            ou_lines: displayLines.length > 0 ? displayLines.map(l => ({
+              line: l.line,
+              over: l.over,
+              under: l.under,
+            })) : null,
           }
 
           const { error: historyError } = await supabase
@@ -273,7 +345,7 @@ export async function GET() {
 
           const homeName = getKoreanTeamName(oddsGame.game?.teams?.home?.name || '')
           const awayName = getKoreanTeamName(oddsGame.game?.teams?.away?.name || '')
-          console.log(`  💰 ${homeName} vs ${awayName}: ${homeOdds}/${awayOdds} O/U:${ouLine ?? 'N/A'}`)
+          console.log(`  💰 ${homeName} vs ${awayName}: ${homeOdds}/${awayOdds} O/U:${bestLine ?? 'N/A'} (${displayLines.length}개 라인)`)
           oddsSaved++
 
           await new Promise(r => setTimeout(r, 200))
