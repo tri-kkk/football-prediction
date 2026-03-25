@@ -671,13 +671,13 @@ export default function ProtoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <div className="min-h-screen text-white" style={{ background: '#0a0a0f' }}>
       {/* 제한 모달 */}
       {showLimitModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-800 rounded-2xl p-6 max-w-sm w-full border border-gray-700">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="rounded-2xl p-6 max-w-sm w-full" style={{ background: 'linear-gradient(180deg, #1a1f2e 0%, #141824 100%)', border: '1px solid #2a3040' }}>
             <div className="text-center">
-              <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#f59e0b15', border: '1px solid #f59e0b30' }}>
                 <span className="text-3xl">⚠️</span>
               </div>
               <h3 className="text-lg font-bold text-white mb-2">저장 한도 초과</h3>
@@ -685,7 +685,7 @@ export default function ProtoPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowLimitModal(false)}
-                  className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-xl text-sm transition-colors"
+                  className="flex-1 py-2.5 rounded-xl text-sm transition-colors" style={{ background: '#1e293b', color: '#94a3b8' }}
                 >
                   닫기
                 </button>
@@ -702,7 +702,7 @@ export default function ProtoPage() {
       )}
 
       {/* 헤더 - 완전 고정, 불투명 배경 */}
-      <header className="fixed top-[70px] md:top-[73px] left-0 right-0 z-50 bg-gray-950 shadow-lg shadow-black/50">
+      <header className="fixed top-[70px] md:top-[73px] left-0 right-0 z-50 shadow-lg shadow-black/50" style={{ background: '#0d0d14', borderBottom: '1px solid #1e293b40' }}>
         <div className="max-w-4xl mx-auto px-3 md:px-4 py-1.5 md:py-2 space-y-1.5 md:space-y-2">
           {/* 상단: 타이틀 + 탭 */}
           <div className="flex items-center justify-between">
@@ -713,19 +713,19 @@ export default function ProtoPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
-              <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
+              <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
                 프로토 계산기
               </h1>
             </div>
 
             {/* 탭 버튼 */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 p-0.5 rounded-xl" style={{ background: '#141824' }}>
               <button
                 onClick={() => changeTab('calculator')}
                 className={`py-1 px-2.5 md:py-1.5 md:px-4 rounded-lg text-[11px] md:text-sm font-medium transition-all ${
                   activeTab === 'calculator'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-800 text-gray-400'
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                    : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
                 🧮 계산기
@@ -734,15 +734,15 @@ export default function ProtoPage() {
                 onClick={() => changeTab('history')}
                 className={`py-1 px-2.5 md:py-1.5 md:px-4 rounded-lg text-[11px] md:text-sm font-medium transition-all relative ${
                   activeTab === 'history'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-800 text-gray-400'
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                    : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
                 📜 기록
                 {(() => {
                   const pendingCount = savedSlips.filter(s => s.status === 'pending').length
                   return pendingCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-red-500 rounded-full text-[9px] md:text-[10px] flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-red-500 rounded-full text-[9px] md:text-[10px] flex items-center justify-center font-bold">
                       {pendingCount > 9 ? '9+' : pendingCount}
                     </span>
                   )
@@ -752,8 +752,8 @@ export default function ProtoPage() {
                 onClick={() => changeTab('stats')}
                 className={`py-1 px-2.5 md:py-1.5 md:px-4 rounded-lg text-[11px] md:text-sm font-medium transition-all ${
                   activeTab === 'stats'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-800 text-gray-400'
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                    : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
                 📊 통계
@@ -770,7 +770,7 @@ export default function ProtoPage() {
                 <select
                   value={currentRound}
                   onChange={(e) => setCurrentRound(e.target.value)}
-                  className="bg-gray-800 border border-gray-700 rounded px-2 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="rounded-lg px-2 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500" style={{ background: '#141824', border: '1px solid #1e293b' }}
                 >
                   {availableRounds.map((round) => (
                     <option key={round} value={round}>
@@ -786,7 +786,7 @@ export default function ProtoPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="팀명 검색"
-                    className="w-full bg-gray-800 border border-gray-700 rounded pl-7 pr-7 py-1 md:pl-9 md:pr-8 md:py-1.5 text-[11px] md:text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                    className="w-full rounded-lg pl-7 pr-7 py-1 md:pl-9 md:pr-8 md:py-1.5 text-[11px] md:text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" style={{ background: '#141824', border: '1px solid #1e293b' }}
                   />
                   <svg className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2 w-3 h-3 md:w-4 md:h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -804,11 +804,12 @@ export default function ProtoPage() {
                 {/* 필터 토글 */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center justify-center w-7 h-7 md:w-9 md:h-9 rounded transition-all ${
+                  className={`flex items-center justify-center w-7 h-7 md:w-9 md:h-9 rounded-lg transition-all ${
                     showFilters || activeFilterCount > 0
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-800 border border-gray-700 text-gray-400'
+                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                      : 'text-gray-400 hover:text-white'
                   }`}
+                  style={!(showFilters || activeFilterCount > 0) ? { background: '#141824', border: '1px solid #1e293b' } : {}}
                 >
                   <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -818,7 +819,7 @@ export default function ProtoPage() {
                 {/* 다음 경기 버튼 */}
                 <button
                   onClick={scrollToNextMatch}
-                  className="flex items-center justify-center w-7 h-7 md:w-9 md:h-9 bg-blue-600 hover:bg-blue-500 rounded text-white transition-colors"
+                  className="flex items-center justify-center w-7 h-7 md:w-9 md:h-9 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors shadow-lg shadow-blue-600/20"
                 >
                   <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
@@ -833,7 +834,7 @@ export default function ProtoPage() {
 
               {/* 확장 필터 패널 */}
               {showFilters && (
-                <div className="p-3 bg-gray-800/80 rounded-lg border border-gray-700/50 space-y-3">
+                <div className="p-3 rounded-xl space-y-3" style={{ background: '#141824', border: '1px solid #1e293b60' }}>
                   {/* 날짜 필터 */}
                   <div>
                     <label className="text-[10px] text-gray-500 mb-1.5 block">날짜</label>
@@ -906,18 +907,19 @@ export default function ProtoPage() {
               <div className="flex items-center gap-0.5 md:gap-1 overflow-x-auto scrollbar-hide">
                 {/* 스포츠 필터 */}
                 {SPORT_FILTERS_CONFIG.map(filter => {
-                  const count = filter.key === 'ALL' 
-                    ? matches.length 
+                  const count = filter.key === 'ALL'
+                    ? matches.length
                     : matches.filter(m => filter.leagues?.some(l => m.leagueName.includes(l))).length
                   return (
                     <button
                       key={filter.key}
                       onClick={() => changeSportFilter(filter.key)}
-                      className={`flex items-center gap-0.5 md:gap-1 px-1.5 py-0.5 md:px-2.5 md:py-1 rounded text-[10px] md:text-xs font-medium whitespace-nowrap transition-all ${
+                      className={`flex items-center gap-0.5 md:gap-1 px-1.5 py-0.5 md:px-2.5 md:py-1 rounded-lg text-[10px] md:text-xs font-bold whitespace-nowrap transition-all ${
                         sportFilter === filter.key
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-gray-800 text-gray-400'
+                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                          : 'text-gray-400 hover:text-gray-200'
                       }`}
+                      style={sportFilter !== filter.key ? { background: '#141824' } : {}}
                     >
                       <span>{filter.icon}</span>
                       <span>{count}</span>
@@ -925,18 +927,19 @@ export default function ProtoPage() {
                   )
                 })}
                 
-                <div className="w-px h-3.5 md:h-5 bg-gray-700 mx-0.5 md:mx-1" />
-                
+                <div className="w-px h-3.5 md:h-5 mx-0.5 md:mx-1" style={{ background: '#1e293b' }} />
+
                 {/* 유형 필터 */}
                 {TYPE_FILTERS_CONFIG.map(filter => (
                   <button
                     key={filter.key}
                     onClick={() => changeTypeFilter(filter.key)}
-                    className={`px-1.5 py-0.5 md:px-2.5 md:py-1 rounded text-[10px] md:text-xs font-medium whitespace-nowrap transition-all ${
+                    className={`px-1.5 py-0.5 md:px-2.5 md:py-1 rounded-lg text-[10px] md:text-xs font-bold whitespace-nowrap transition-all ${
                       typeFilter === filter.key
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-800 text-gray-400'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                        : 'text-gray-400 hover:text-gray-200'
                     }`}
+                    style={typeFilter !== filter.key ? { background: '#141824' } : {}}
                   >
                     {filter.short}
                     {filter.key !== 'ALL' && (
@@ -955,7 +958,7 @@ export default function ProtoPage() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main ref={mainContentRef} className={`max-w-4xl mx-auto px-3 pb-24 ${activeTab === 'calculator' ? 'pt-[146px] md:pt-[155px]' : 'pt-[146px] md:pt-[155px]'}`}>
+      <main ref={mainContentRef} className={`max-w-4xl mx-auto px-3 pb-24 ${activeTab === 'calculator' ? 'pt-[146px] md:pt-[155px]' : 'pt-[90px] md:pt-[95px]'}`}>
         {/* 계산기 탭 */}
         {activeTab === 'calculator' && (
         <>
@@ -990,11 +993,11 @@ export default function ProtoPage() {
               className="mb-3 scroll-mt-[200px]"
             >
               {/* 날짜 헤더 */}
-              <div className="flex items-center gap-2 mb-3 sticky top-[176px] md:top-[195px] z-20 bg-gray-950 py-2 md:py-2.5 -mx-3 px-3 md:-mx-4 md:px-4 border-b border-gray-800/30">
-                <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-emerald-500 rounded-full" />
+              <div className="flex items-center gap-2.5 mb-3 sticky top-[176px] md:top-[195px] z-20 py-2 md:py-2.5 -mx-3 px-3 md:-mx-4 md:px-4" style={{ background: '#0a0a0f', borderBottom: '1px solid #1e293b40' }}>
+                <div className="w-1 h-5 rounded-full bg-emerald-500" />
                 <h2 className="text-xs md:text-sm font-bold text-white">{date}</h2>
-                <span className="text-[10px] md:text-xs text-gray-500">{dateMatches.length}경기</span>
-                <div className="flex-1 h-px bg-gray-800" />
+                <span className="px-2 py-0.5 rounded-full text-[10px] md:text-xs font-medium" style={{ background: '#10b98115', color: '#34d399', border: '1px solid #10b98130' }}>{dateMatches.length}경기</span>
+                <div className="flex-1 h-px" style={{ background: '#1e293b' }} />
               </div>
 
               {/* 경기 카드들 */}
@@ -1095,29 +1098,33 @@ export default function ProtoPage() {
                     <div
                       key={match.matchSeq}
                       ref={(el) => { matchRefs.current[match.matchSeq] = el }}
-                      className={`bg-gray-800/50 rounded-lg border transition-all ${
+                      className={`rounded-xl overflow-hidden transition-all ${
                         isFinished
-                          ? 'border-gray-600/30 opacity-60'
+                          ? 'opacity-50'
                           : isStarted
-                            ? 'border-orange-500/30 opacity-50'
+                            ? 'opacity-50'
                             : isLocked
-                              ? 'border-yellow-500/30 opacity-50'
-                              : isSelected 
-                                ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10' 
-                                : 'border-gray-700/50'
+                              ? 'opacity-50'
+                              : isSelected
+                                ? 'ring-1 ring-emerald-500/60 shadow-lg shadow-emerald-500/10'
+                                : ''
                       }`}
+                      style={{
+                        background: isSelected ? 'linear-gradient(180deg, #0f1623 0%, #0d1a1a 100%)' : '#0f1623',
+                        border: isSelected ? '1px solid #10b98140' : '1px solid #1e293b60'
+                      }}
                     >
                       {/* 경기 정보 헤더 */}
-                      <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-gray-700/30">
+                      <div className="flex items-center justify-between px-3 py-1.5" style={{ borderBottom: '1px solid #1e293b40' }}>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono text-gray-500">
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: '#1e293b60', color: '#64748b' }}>
                             #{String(match.matchSeq).padStart(3, '0')}
                           </span>
-                          <span className="px-1.5 py-0.5 bg-gray-700/50 rounded text-[10px] text-gray-300">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#1e293b80', color: '#94a3b8' }}>
                             {getLeagueIcon(match.leagueName)} {match.leagueName}
                           </span>
                           {match.matchType !== '승패' && (
-                            <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${getTypeBadgeColor(match.matchType)}`}>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${getTypeBadgeColor(match.matchType)}`}>
                               {match.matchType === '핸디캡' ? `H${match.handicapValue}` :
                                match.matchType === '언더오버' ? `U/O ${match.totalValue || ''}` :
                                match.matchType === 'SUM' ? 'SUM' :
@@ -1128,33 +1135,37 @@ export default function ProtoPage() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           {isStarted && !isFinished && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-500/20 text-orange-400">
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: '#f9731615', color: '#fb923c', border: '1px solid #f9731630' }}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
                               진행중
                             </span>
                           )}
                           {isLocked && !isStarted && !isFinished && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-500/20 text-yellow-400">
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium" style={{ background: '#eab30815', color: '#fbbf24', border: '1px solid #eab30830' }}>
                               🔒
                             </span>
                           )}
                           {isFinished && (
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                              ['home', 'over', 'odd'].includes(match.resultCode || '') ? 'bg-blue-500/20 text-blue-400' :
-                              match.resultCode === 'draw' ? 'bg-gray-500/20 text-gray-400' :
-                              'bg-red-500/20 text-red-400'
-                            }`}>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              ['home', 'over', 'odd'].includes(match.resultCode || '') ? '' :
+                              match.resultCode === 'draw' ? '' :
+                              ''
+                            }`} style={{
+                              background: ['home', 'over', 'odd'].includes(match.resultCode || '') ? '#3b82f615' : match.resultCode === 'draw' ? '#64748b15' : '#ef444415',
+                              color: ['home', 'over', 'odd'].includes(match.resultCode || '') ? '#60a5fa' : match.resultCode === 'draw' ? '#94a3b8' : '#f87171',
+                              border: `1px solid ${['home', 'over', 'odd'].includes(match.resultCode || '') ? '#3b82f630' : match.resultCode === 'draw' ? '#64748b30' : '#ef444430'}`
+                            }}>
                               {getResultText(match.resultCode, match.matchType)}
                             </span>
                           )}
-                          <span className="text-[10px] text-gray-500">{match.koreanTime}</span>
+                          <span className="text-[10px] font-medium" style={{ color: '#64748b' }}>{match.koreanTime}</span>
                         </div>
                       </div>
 
                       {/* 팀 & 배당률 */}
-                      <div className="p-2.5">
-                        <div className="flex items-center justify-center gap-2 mb-2">
+                      <div className="px-3 py-2.5">
+                        <div className="flex items-center justify-center gap-3 mb-2.5">
                           {(() => {
-                            // 팀명 색상도 matchType에 따라 결과 매핑
                             const leftResults = match.matchType === '언더오버' ? ['under'] :
                                                 match.matchType === 'SUM' || match.matchType === '홀짝' ? ['odd'] :
                                                 ['home']
@@ -1169,17 +1180,17 @@ export default function ProtoPage() {
                                                     ['away']
                             return (
                               <>
-                                <span className={`text-sm font-medium truncate max-w-[38%] ${
+                                <span className={`text-[13px] font-bold truncate max-w-[38%] ${
                                   isFinished && leftResults.includes(match.resultCode || '') ? 'text-blue-400' :
-                                  leftPredictions.includes(selection?.prediction || '') ? 'text-emerald-400' : 
+                                  leftPredictions.includes(selection?.prediction || '') ? 'text-emerald-400' :
                                   isDisabled ? 'text-gray-500' : 'text-white'
                                 }`}>
                                   {match.homeTeam}
                                 </span>
-                                <span className="text-gray-600 text-xs">vs</span>
-                                <span className={`text-sm font-medium truncate max-w-[38%] ${
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: '#1e293b60', color: '#475569' }}>VS</span>
+                                <span className={`text-[13px] font-bold truncate max-w-[38%] ${
                                   isFinished && rightResults.includes(match.resultCode || '') ? 'text-red-400' :
-                                  rightPredictions.includes(selection?.prediction || '') ? 'text-emerald-400' : 
+                                  rightPredictions.includes(selection?.prediction || '') ? 'text-emerald-400' :
                                   isDisabled ? 'text-gray-500' : 'text-white'
                                 }`}>
                                   {match.awayTeam}
@@ -1190,12 +1201,8 @@ export default function ProtoPage() {
                         </div>
 
                         {is2Way(match.matchType) ? (
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {/* 왼쪽 버튼: 승/언더/홀 */}
+                          <div className="grid grid-cols-2 gap-2">
                             {(() => {
-                              // 🔥 U/O: 왼쪽=언더(under), 오른쪽=오버(over)
-                              // SUM/홀짝: 왼쪽=홀(odd), 오른쪽=짝(even)
-                              // 핸디캡: 왼쪽=홈(home), 오른쪽=원정(away)
                               const leftResults = match.matchType === '언더오버' ? ['under'] :
                                                   match.matchType === 'SUM' || match.matchType === '홀짝' ? ['odd'] :
                                                   ['home']
@@ -1208,26 +1215,42 @@ export default function ProtoPage() {
                               const rightPredictions = match.matchType === '언더오버' ? ['over'] :
                                                       match.matchType === 'SUM' || match.matchType === '홀짝' ? ['even'] :
                                                       ['away']
-                              
+
                               return (
                                 <>
                                   <button
                                     onClick={() => !isDisabled && match.homeOdds && toggleSelection(match, getPrediction(match.matchType, 'home') as any)}
                                     disabled={!match.homeOdds || isDisabled}
-                                    className={`py-2 rounded-lg text-center transition-all ${
+                                    className={`py-2.5 rounded-xl text-center transition-all ${
                                       isFinished && leftResults.includes(match.resultCode || '')
-                                        ? 'bg-blue-500/30 text-blue-300 border border-blue-500/50'
+                                        ? ''
                                         : isDisabled
-                                          ? 'bg-gray-800/30 text-gray-500 cursor-not-allowed'
+                                          ? 'cursor-not-allowed'
                                           : leftPredictions.includes(selection?.prediction || '')
-                                            ? 'bg-emerald-600 text-white'
+                                            ? 'shadow-lg shadow-emerald-600/20'
                                             : match.homeOdds
-                                              ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                              : 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
+                                              ? 'hover:brightness-125'
+                                              : 'cursor-not-allowed'
                                     }`}
+                                    style={{
+                                      background: isFinished && leftResults.includes(match.resultCode || '')
+                                        ? '#1e40af20'
+                                        : isDisabled ? '#0f162340'
+                                        : leftPredictions.includes(selection?.prediction || '') ? 'linear-gradient(180deg, #059669 0%, #047857 100%)'
+                                        : match.homeOdds ? '#141824' : '#0f162340',
+                                      border: isFinished && leftResults.includes(match.resultCode || '')
+                                        ? '1px solid #3b82f650'
+                                        : leftPredictions.includes(selection?.prediction || '') ? '1px solid #10b98150'
+                                        : '1px solid #1e293b60',
+                                      color: isFinished && leftResults.includes(match.resultCode || '')
+                                        ? '#93c5fd'
+                                        : isDisabled ? '#475569'
+                                        : leftPredictions.includes(selection?.prediction || '') ? '#fff'
+                                        : match.homeOdds ? '#cbd5e1' : '#475569'
+                                    }}
                                   >
-                                    <p className="text-[10px] text-gray-400">{labels.home}</p>
-                                    <p className="font-bold text-base">
+                                    <p className="text-[10px] mb-0.5" style={{ color: leftPredictions.includes(selection?.prediction || '') ? '#a7f3d0' : '#64748b' }}>{labels.home}</p>
+                                    <p className="font-bold text-base tracking-tight">
                                       {match.homeOdds?.toFixed(2) || '-'}
                                       {isFinished && leftResults.includes(match.resultCode || '') && ' ✓'}
                                     </p>
@@ -1236,20 +1259,36 @@ export default function ProtoPage() {
                                   <button
                                     onClick={() => !isDisabled && match.awayOdds && toggleSelection(match, getPrediction(match.matchType, 'away') as any)}
                                     disabled={!match.awayOdds || isDisabled}
-                                    className={`py-2 rounded-lg text-center transition-all ${
+                                    className={`py-2.5 rounded-xl text-center transition-all ${
                                       isFinished && rightResults.includes(match.resultCode || '')
-                                        ? 'bg-red-500/30 text-red-300 border border-red-500/50'
+                                        ? ''
                                         : isDisabled
-                                          ? 'bg-gray-800/30 text-gray-500 cursor-not-allowed'
+                                          ? 'cursor-not-allowed'
                                           : rightPredictions.includes(selection?.prediction || '')
-                                            ? 'bg-emerald-600 text-white'
+                                            ? 'shadow-lg shadow-emerald-600/20'
                                             : match.awayOdds
-                                              ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                              : 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
+                                              ? 'hover:brightness-125'
+                                              : 'cursor-not-allowed'
                                     }`}
+                                    style={{
+                                      background: isFinished && rightResults.includes(match.resultCode || '')
+                                        ? '#dc262620'
+                                        : isDisabled ? '#0f162340'
+                                        : rightPredictions.includes(selection?.prediction || '') ? 'linear-gradient(180deg, #059669 0%, #047857 100%)'
+                                        : match.awayOdds ? '#141824' : '#0f162340',
+                                      border: isFinished && rightResults.includes(match.resultCode || '')
+                                        ? '1px solid #ef444450'
+                                        : rightPredictions.includes(selection?.prediction || '') ? '1px solid #10b98150'
+                                        : '1px solid #1e293b60',
+                                      color: isFinished && rightResults.includes(match.resultCode || '')
+                                        ? '#fca5a5'
+                                        : isDisabled ? '#475569'
+                                        : rightPredictions.includes(selection?.prediction || '') ? '#fff'
+                                        : match.awayOdds ? '#cbd5e1' : '#475569'
+                                    }}
                                   >
-                                    <p className="text-[10px] text-gray-400">{labels.away}</p>
-                                    <p className="font-bold text-base">
+                                    <p className="text-[10px] mb-0.5" style={{ color: rightPredictions.includes(selection?.prediction || '') ? '#a7f3d0' : '#64748b' }}>{labels.away}</p>
+                                    <p className="font-bold text-base tracking-tight">
                                       {match.awayOdds?.toFixed(2) || '-'}
                                       {isFinished && rightResults.includes(match.resultCode || '') && ' ✓'}
                                     </p>
@@ -1259,72 +1298,49 @@ export default function ProtoPage() {
                             })()}
                           </div>
                         ) : (
-                          <div className="grid grid-cols-3 gap-1.5">
-                            <button
-                              onClick={() => !isDisabled && match.homeOdds && toggleSelection(match, 'home')}
-                              disabled={!match.homeOdds || isDisabled}
-                              className={`py-2 rounded-lg text-center transition-all ${
-                                isFinished && match.resultCode === 'home'
-                                  ? 'bg-blue-500/30 text-blue-300 border border-blue-500/50'
-                                  : isDisabled
-                                    ? 'bg-gray-800/30 text-gray-500 cursor-not-allowed'
-                                    : selection?.prediction === 'home'
-                                      ? 'bg-emerald-600 text-white'
-                                      : match.homeOdds
-                                        ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                        : 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
-                              }`}
-                            >
-                              <p className="text-[10px] text-gray-400">{labels.home}</p>
-                              <p className="font-bold text-base">
-                                {match.homeOdds?.toFixed(2) || '-'}
-                                {isFinished && match.resultCode === 'home' && ' ✓'}
-                              </p>
-                            </button>
-
-                            <button
-                              onClick={() => !isDisabled && match.drawOdds && toggleSelection(match, 'draw')}
-                              disabled={!match.drawOdds || isDisabled}
-                              className={`py-2 rounded-lg text-center transition-all ${
-                                isFinished && match.resultCode === 'draw'
-                                  ? 'bg-gray-500/30 text-gray-300 border border-gray-500/50'
-                                  : isDisabled
-                                    ? 'bg-gray-800/30 text-gray-500 cursor-not-allowed'
-                                    : selection?.prediction === 'draw'
-                                      ? 'bg-emerald-600 text-white'
-                                      : match.drawOdds
-                                        ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                        : 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
-                              }`}
-                            >
-                              <p className="text-[10px] text-gray-400">{labels.draw}</p>
-                              <p className="font-bold text-base">
-                                {match.drawOdds?.toFixed(2) || '-'}
-                                {isFinished && match.resultCode === 'draw' && ' ✓'}
-                              </p>
-                            </button>
-
-                            <button
-                              onClick={() => !isDisabled && match.awayOdds && toggleSelection(match, 'away')}
-                              disabled={!match.awayOdds || isDisabled}
-                              className={`py-2 rounded-lg text-center transition-all ${
-                                isFinished && match.resultCode === 'away'
-                                  ? 'bg-red-500/30 text-red-300 border border-red-500/50'
-                                  : isDisabled
-                                    ? 'bg-gray-800/30 text-gray-500 cursor-not-allowed'
-                                    : selection?.prediction === 'away'
-                                      ? 'bg-emerald-600 text-white'
-                                      : match.awayOdds
-                                        ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                        : 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
-                              }`}
-                            >
-                              <p className="text-[10px] text-gray-400">{labels.away}</p>
-                              <p className="font-bold text-base">
-                                {match.awayOdds?.toFixed(2) || '-'}
-                                {isFinished && match.resultCode === 'away' && ' ✓'}
-                              </p>
-                            </button>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { key: 'home' as const, odds: match.homeOdds, label: labels.home },
+                              { key: 'draw' as const, odds: match.drawOdds, label: labels.draw },
+                              { key: 'away' as const, odds: match.awayOdds, label: labels.away },
+                            ].map(btn => {
+                              const isResult = isFinished && match.resultCode === btn.key
+                              const isPicked = selection?.prediction === btn.key
+                              const resultColors: Record<string, { bg: string; border: string; text: string }> = {
+                                home: { bg: '#1e40af20', border: '#3b82f650', text: '#93c5fd' },
+                                draw: { bg: '#64748b15', border: '#64748b40', text: '#94a3b8' },
+                                away: { bg: '#dc262620', border: '#ef444450', text: '#fca5a5' },
+                              }
+                              return (
+                                <button
+                                  key={btn.key}
+                                  onClick={() => !isDisabled && btn.odds && toggleSelection(match, btn.key)}
+                                  disabled={!btn.odds || isDisabled}
+                                  className={`py-2.5 rounded-xl text-center transition-all ${
+                                    isResult ? '' : isDisabled ? 'cursor-not-allowed' : isPicked ? 'shadow-lg shadow-emerald-600/20' : btn.odds ? 'hover:brightness-125' : 'cursor-not-allowed'
+                                  }`}
+                                  style={{
+                                    background: isResult ? resultColors[btn.key]?.bg
+                                      : isDisabled ? '#0f162340'
+                                      : isPicked ? 'linear-gradient(180deg, #059669 0%, #047857 100%)'
+                                      : btn.odds ? '#141824' : '#0f162340',
+                                    border: isResult ? `1px solid ${resultColors[btn.key]?.border}`
+                                      : isPicked ? '1px solid #10b98150'
+                                      : '1px solid #1e293b60',
+                                    color: isResult ? resultColors[btn.key]?.text
+                                      : isDisabled ? '#475569'
+                                      : isPicked ? '#fff'
+                                      : btn.odds ? '#cbd5e1' : '#475569'
+                                  }}
+                                >
+                                  <p className="text-[10px] mb-0.5" style={{ color: isPicked ? '#a7f3d0' : '#64748b' }}>{btn.label}</p>
+                                  <p className="font-bold text-base tracking-tight">
+                                    {btn.odds?.toFixed(2) || '-'}
+                                    {isResult && ' ✓'}
+                                  </p>
+                                </button>
+                              )
+                            })}
                           </div>
                         )}
                       </div>
@@ -1343,34 +1359,29 @@ export default function ProtoPage() {
           <div className="mt-0">
             {/* ✅ 요약 카드 - 컴팩트 한 줄 */}
             {savedSlips.length > 0 && (
-              <div className="mb-2 grid grid-cols-4 gap-1">
-                <div className="bg-gray-800/60 rounded-lg py-1.5 px-1 text-center">
-                  <p className="text-base font-bold text-white leading-tight">{historyCounts.all}</p>
-                  <p className="text-[9px] text-gray-500">전체</p>
-                </div>
-                <div className="bg-gray-800/60 rounded-lg py-1.5 px-1 text-center">
-                  <p className="text-base font-bold text-blue-400 leading-tight">{historyCounts.pending}</p>
-                  <p className="text-[9px] text-gray-500">대기</p>
-                </div>
-                <div className="bg-gray-800/60 rounded-lg py-1.5 px-1 text-center">
-                  <p className="text-base font-bold text-green-400 leading-tight">{historyCounts.won}</p>
-                  <p className="text-[9px] text-gray-500">적중</p>
-                </div>
-                <div className="bg-gray-800/60 rounded-lg py-1.5 px-1 text-center">
-                  <p className="text-base font-bold text-red-400 leading-tight">{historyCounts.lost}</p>
-                  <p className="text-[9px] text-gray-500">미적중</p>
-                </div>
+              <div className="mb-3 grid grid-cols-4 gap-1.5">
+                {[
+                  { value: historyCounts.all, label: '전체', color: '#94a3b8', bg: '#1e293b40' },
+                  { value: historyCounts.pending, label: '대기', color: '#60a5fa', bg: '#3b82f610' },
+                  { value: historyCounts.won, label: '적중', color: '#34d399', bg: '#10b98110' },
+                  { value: historyCounts.lost, label: '미적중', color: '#f87171', bg: '#ef444410' },
+                ].map((item, i) => (
+                  <div key={i} className="rounded-xl py-2 px-1 text-center" style={{ background: item.bg, border: `1px solid ${item.color}15` }}>
+                    <p className="text-lg font-bold leading-tight" style={{ color: item.color }}>{item.value}</p>
+                    <p className="text-[9px] mt-0.5" style={{ color: '#64748b' }}>{item.label}</p>
+                  </div>
+                ))}
               </div>
             )}
 
             {/* ✅ 필터 + 전체정리 */}
-            <div className="mb-2 flex items-center justify-between">
-              <div className="flex gap-1.5 overflow-x-auto">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex gap-1 p-0.5 rounded-xl overflow-x-auto" style={{ background: '#141824' }}>
                 {[
-                  { key: 'all' as const, label: '전체', color: 'emerald' },
-                  { key: 'pending' as const, label: '대기', color: 'blue' },
-                  { key: 'won' as const, label: '적중', color: 'green' },
-                  { key: 'lost' as const, label: '미적중', color: 'red' },
+                  { key: 'all' as const, label: '전체', activeColor: '#10b981', activeBg: '#059669' },
+                  { key: 'pending' as const, label: '대기', activeColor: '#3b82f6', activeBg: '#2563eb' },
+                  { key: 'won' as const, label: '적중', activeColor: '#22c55e', activeBg: '#16a34a' },
+                  { key: 'lost' as const, label: '미적중', activeColor: '#ef4444', activeBg: '#dc2626' },
                 ].map(f => (
                   <button
                     key={f.key}
@@ -1378,14 +1389,10 @@ export default function ProtoPage() {
                       setHistoryFilter(f.key)
                       setHistoryPage(1)
                     }}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all ${
-                      historyFilter === f.key
-                        ? f.color === 'emerald' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                        : f.color === 'blue' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
-                        : f.color === 'green' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20'
-                        : 'bg-red-500 text-white shadow-lg shadow-red-500/20'
-                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    className={`px-3 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
+                      historyFilter === f.key ? 'text-white shadow-lg' : 'text-gray-400 hover:text-gray-200'
                     }`}
+                    style={historyFilter === f.key ? { background: f.activeBg, boxShadow: `0 4px 12px ${f.activeColor}30` } : {}}
                   >
                     {f.label}
                   </button>
@@ -1395,7 +1402,8 @@ export default function ProtoPage() {
               {savedSlips.length > 0 && (
                 <button
                   onClick={deleteAllSlips}
-                  className="px-2.5 py-1 bg-gray-800 hover:bg-red-600/30 border border-gray-700 hover:border-red-500/50 rounded-lg text-[11px] text-gray-400 hover:text-red-400 whitespace-nowrap transition-all"
+                  className="px-2.5 py-1 rounded-lg text-[11px] whitespace-nowrap transition-all hover:text-red-400"
+                  style={{ background: '#141824', border: '1px solid #1e293b', color: '#64748b' }}
                   disabled={isLoading}
                 >
                   {isLoading ? '삭제 중...' : '전체 정리'}
@@ -1414,41 +1422,41 @@ export default function ProtoPage() {
                   return (
                     <div
                       key={slip.id}
-                      className="rounded-lg overflow-hidden bg-gray-800/40"
+                      className="rounded-xl overflow-hidden"
+                      style={{ background: '#0f1623', border: '1px solid #1e293b60' }}
                     >
                       {/* 상태 인디케이터 바 */}
-                      <div className={`h-[2px] ${
-                        slip.status === 'won' ? 'bg-green-500' :
-                        slip.status === 'lost' ? 'bg-red-500' :
-                        'bg-blue-500'
-                      }`} />
+                      <div className="h-[2px]" style={{
+                        background: slip.status === 'won' ? 'linear-gradient(90deg, #22c55e, #10b981)' :
+                          slip.status === 'lost' ? 'linear-gradient(90deg, #ef4444, #dc2626)' :
+                          'linear-gradient(90deg, #3b82f6, #2563eb)'
+                      }} />
 
                       {/* 헤더 */}
                       <div
                         onClick={() => toggleSlipExpand(slip.id)}
-                        className="px-3 py-2.5 cursor-pointer hover:bg-gray-700/20 transition-colors"
+                        className="px-3 py-2.5 cursor-pointer transition-colors"
+                        style={{ background: isExpanded ? '#141824' : 'transparent' }}
                       >
                         {/* 1행: 회차, 상태, 날짜 */}
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-mono px-1.5 py-0.5 bg-gray-700/80 rounded text-gray-300">
+                            <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-lg font-bold" style={{ background: '#1e293b60', color: '#94a3b8' }}>
                               {slip.round}회
                             </span>
-                            <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
-                              slip.status === 'won'
-                                ? 'bg-green-500/15 text-green-400 border border-green-500/30'
-                                : slip.status === 'lost'
-                                ? 'bg-red-500/15 text-red-400 border border-red-500/30'
-                                : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
-                            }`}>
+                            <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{
+                              background: slip.status === 'won' ? '#22c55e15' : slip.status === 'lost' ? '#ef444415' : '#3b82f615',
+                              color: slip.status === 'won' ? '#34d399' : slip.status === 'lost' ? '#f87171' : '#60a5fa',
+                              border: `1px solid ${slip.status === 'won' ? '#22c55e30' : slip.status === 'lost' ? '#ef444430' : '#3b82f630'}`
+                            }}>
                               {slip.status === 'won' ? '✅ 적중' : slip.status === 'lost' ? '❌ 미적중' : '⏳ 대기'}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] text-gray-500">
+                            <span className="text-[10px]" style={{ color: '#64748b' }}>
                               {new Date(slip.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                             </span>
-                            <svg className={`w-3 h-3 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} style={{ color: '#475569' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                           </div>
@@ -1456,12 +1464,12 @@ export default function ProtoPage() {
 
                         {/* 2행: 핵심 수치 - 가로 배열 */}
                         <div className="flex items-center gap-2 text-[12px]">
-                          <span className="text-white font-semibold">{slip.selections.length}폴더</span>
-                          <span className="text-gray-700">·</span>
-                          <span className="text-emerald-400 font-bold">{slip.totalOdds.toFixed(2)}배</span>
-                          <span className="text-gray-700">·</span>
-                          <span className="text-gray-400">{slip.amount.toLocaleString()}원</span>
-                          <span className="text-gray-600">→</span>
+                          <span className="text-white font-bold">{slip.selections.length}폴더</span>
+                          <span style={{ color: '#334155' }}>·</span>
+                          <span className="font-bold" style={{ color: '#34d399' }}>{slip.totalOdds.toFixed(2)}배</span>
+                          <span style={{ color: '#334155' }}>·</span>
+                          <span style={{ color: '#94a3b8' }}>{slip.amount.toLocaleString()}원</span>
+                          <span style={{ color: '#475569' }}>→</span>
                           <span className={`font-bold ${
                             slip.status === 'won' ? 'text-green-400' :
                             slip.status === 'lost' ? 'text-red-400/50 line-through' :
@@ -1470,29 +1478,27 @@ export default function ProtoPage() {
                             {expectedReturn.toLocaleString()}원
                           </span>
                           {slip.status === 'won' && (
-                            <span className="text-[10px] text-green-500 font-bold">+{(expectedReturn - slip.amount).toLocaleString()}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#22c55e15', color: '#34d399' }}>+{(expectedReturn - slip.amount).toLocaleString()}</span>
                           )}
                         </div>
                       </div>
 
                       {/* ✅ 상세 내역 (펼쳤을 때만) */}
                       {isExpanded && (
-                        <div className="border-t border-gray-700/30 px-3 py-2 space-y-1 bg-gray-900/40">
+                        <div className="px-3 py-2 space-y-1" style={{ borderTop: '1px solid #1e293b40', background: '#0a0e18' }}>
                           {slip.selections.map((sel, idx) => (
-                            <div key={idx} className="flex items-center justify-between py-1 px-2 bg-gray-800/40 rounded text-[11px]">
+                            <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 rounded-lg text-[11px]" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
                               <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                <span className="text-[9px] text-gray-600 shrink-0">#{idx + 1}</span>
-                                <span className="text-gray-300 truncate">{sel.homeTeam} vs {sel.awayTeam}</span>
+                                <span className="text-[9px] shrink-0 w-4 h-4 rounded flex items-center justify-center font-bold" style={{ background: '#1e293b', color: '#64748b' }}>{idx + 1}</span>
+                                <span className="truncate" style={{ color: '#cbd5e1' }}>{sel.homeTeam} vs {sel.awayTeam}</span>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                  sel.matchType === '승패' ? 'bg-emerald-500/15 text-emerald-400' :
-                                  sel.matchType === '핸디캡' ? 'bg-purple-500/15 text-purple-400' :
-                                  sel.matchType === '언더오버' ? 'bg-orange-500/15 text-orange-400' :
-                                  'bg-pink-500/15 text-pink-400'
-                                }`}>
+                                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{
+                                  background: sel.matchType === '승패' ? '#10b98115' : sel.matchType === '핸디캡' ? '#8b5cf615' : sel.matchType === '언더오버' ? '#f9731615' : '#ec489915',
+                                  color: sel.matchType === '승패' ? '#34d399' : sel.matchType === '핸디캡' ? '#a78bfa' : sel.matchType === '언더오버' ? '#fb923c' : '#f472b6'
+                                }}>
                                   {sel.matchType === '승패' && (
-                                    sel.prediction === 'home' ? '홈승' : 
+                                    sel.prediction === 'home' ? '홈승' :
                                     sel.prediction === 'draw' ? '무' : '원정승'
                                   )}
                                   {sel.matchType === '핸디캡' && (
@@ -1505,7 +1511,7 @@ export default function ProtoPage() {
                                     `${sel.prediction === 'under' ? 'U' : 'O'} ${sel.totalValue}`
                                   )}
                                 </span>
-                                <span className="text-emerald-400 font-mono font-semibold text-[11px]">{sel.odds.toFixed(2)}</span>
+                                <span className="font-mono font-bold text-[11px]" style={{ color: '#34d399' }}>{sel.odds.toFixed(2)}</span>
                               </div>
                             </div>
                           ))}
@@ -1515,7 +1521,8 @@ export default function ProtoPage() {
                               e.stopPropagation()
                               deleteSlip(slip.id)
                             }}
-                            className="w-full mt-0.5 py-1.5 bg-gray-800/50 hover:bg-red-600/20 rounded text-[10px] text-gray-500 hover:text-red-400 transition-colors"
+                            className="w-full mt-1 py-1.5 rounded-lg text-[10px] transition-colors hover:text-red-400"
+                            style={{ background: '#141824', color: '#475569', border: '1px solid #1e293b40' }}
                           >
                             삭제
                           </button>
@@ -1564,156 +1571,170 @@ export default function ProtoPage() {
             {slipStats && (slipStats.totalSlips > 0 || (slipStats.totalDeleted ?? 0) > 0) ? (
               <>
                 {/* ✅ 수익률 히어로 + 지표 통합 카드 */}
-                <div className="bg-gray-800/40 rounded-xl p-3 mb-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xs font-bold text-gray-400">누적 통계</h3>
+                <div className="rounded-2xl overflow-hidden mb-3" style={{ background: '#0f1623', border: '1px solid #1e293b60' }}>
+                  {/* 헤더 */}
+                  <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #1e293b40' }}>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-1 h-5 rounded-full bg-emerald-500" />
+                      <span className="text-white text-sm font-bold">누적 통계</span>
+                    </div>
                     {slipStats.lastUpdated && (
-                      <span className="text-[10px] text-gray-600">
+                      <span className="text-[10px]" style={{ color: '#475569' }}>
                         {new Date(slipStats.lastUpdated).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} 기준
                       </span>
                     )}
                   </div>
 
-                  {/* 수익률 */}
-                  <div className="text-center mb-3">
-                    <p className={`text-3xl font-bold tracking-tight leading-none ${
-                      slipStats.totalReturn >= slipStats.totalInvested ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {slipStats.totalInvested > 0 
-                        ? `${((slipStats.totalReturn - slipStats.totalInvested) / slipStats.totalInvested * 100) >= 0 ? '+' : ''}${((slipStats.totalReturn - slipStats.totalInvested) / slipStats.totalInvested * 100).toFixed(1)}%`
-                        : '0%'
-                      }
-                    </p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">수익률</p>
+                  <div className="p-4">
+                    {/* 수익률 */}
+                    <div className="text-center mb-4">
+                      <p className={`text-4xl font-black tracking-tight leading-none ${
+                        slipStats.totalReturn >= slipStats.totalInvested ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {slipStats.totalInvested > 0
+                          ? `${((slipStats.totalReturn - slipStats.totalInvested) / slipStats.totalInvested * 100) >= 0 ? '+' : ''}${((slipStats.totalReturn - slipStats.totalInvested) / slipStats.totalInvested * 100).toFixed(1)}%`
+                          : '0%'
+                        }
+                      </p>
+                      <p className="text-[11px] mt-1" style={{ color: '#64748b' }}>수익률</p>
+                    </div>
+
+                    {/* 수익률 바 */}
+                    <div className="mb-4">
+                      <div className="h-2.5 rounded-full overflow-hidden relative" style={{ background: '#1e293b' }}>
+                        <div className="absolute left-1/2 top-0 w-px h-full z-10" style={{ background: '#475569' }} />
+                        {slipStats.totalReturn >= slipStats.totalInvested ? (
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              background: 'linear-gradient(90deg, #059669, #10b981, #34d399)',
+                              marginLeft: '50%',
+                              width: `${Math.min(50, Math.abs((slipStats.totalReturn - slipStats.totalInvested) / Math.max(1, slipStats.totalInvested)) * 50)}%`
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              background: 'linear-gradient(90deg, #f87171, #ef4444, #dc2626)',
+                              marginLeft: `${50 - Math.min(50, Math.abs((slipStats.totalReturn - slipStats.totalInvested) / Math.max(1, slipStats.totalInvested)) * 50)}%`,
+                              width: `${Math.min(50, Math.abs((slipStats.totalReturn - slipStats.totalInvested) / Math.max(1, slipStats.totalInvested)) * 50)}%`
+                            }}
+                          />
+                        )}
+                      </div>
+                      <div className="flex justify-between mt-1 text-[9px]" style={{ color: '#475569' }}>
+                        <span>-100%</span>
+                        <span>0%</span>
+                        <span>+100%</span>
+                      </div>
+                    </div>
+
+                    {/* 4개 지표 그리드 */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-[10px]" style={{ color: '#64748b' }}>총 조합</span>
+                          <span className="text-lg font-black text-white leading-none">{slipStats.totalSlips}</span>
+                        </div>
+                        {(slipStats.totalDeleted ?? 0) > 0 && (
+                          <p className="text-[9px] text-right mt-0.5" style={{ color: '#475569' }}>삭제 {slipStats.totalDeleted}건 포함</p>
+                        )}
+                      </div>
+                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-[10px]" style={{ color: '#64748b' }}>적중률</span>
+                          <span className="text-lg font-black leading-none" style={{ color: '#34d399' }}>{slipStats.hitRate.toFixed(1)}%</span>
+                        </div>
+                        <p className="text-[9px] text-right mt-0.5" style={{ color: '#475569' }}>{slipStats.won}승 {slipStats.lost}패</p>
+                      </div>
+                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-[10px]" style={{ color: '#64748b' }}>총 투자</span>
+                          <span className="text-sm font-bold leading-none" style={{ color: '#60a5fa' }}>{slipStats.totalInvested.toLocaleString()}<span className="text-[9px] font-normal" style={{ color: '#475569' }}>원</span></span>
+                        </div>
+                      </div>
+                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-[10px]" style={{ color: '#64748b' }}>총 수익</span>
+                          <span className={`text-sm font-bold leading-none`} style={{ color: slipStats.totalReturn >= slipStats.totalInvested ? '#34d399' : '#f87171' }}>
+                            {slipStats.totalReturn.toLocaleString()}<span className="text-[9px] font-normal" style={{ color: '#475569' }}>원</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ✅ 승패 분포 */}
+                <div className="rounded-2xl overflow-hidden mb-3" style={{ background: '#0f1623', border: '1px solid #1e293b60' }}>
+                  <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid #1e293b40' }}>
+                    <div className="w-1 h-5 rounded-full bg-amber-500" />
+                    <span className="text-white text-sm font-bold">승패 분포</span>
                   </div>
 
-                  {/* 수익률 바 */}
-                  <div className="mb-3">
-                    <div className="h-2 bg-gray-700/80 rounded-full overflow-hidden relative">
-                      <div className="absolute left-1/2 top-0 w-px h-full bg-gray-500/50 z-10" />
-                      {slipStats.totalReturn >= slipStats.totalInvested ? (
-                        <div 
-                          className="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all"
-                          style={{ 
-                            marginLeft: '50%',
-                            width: `${Math.min(50, Math.abs((slipStats.totalReturn - slipStats.totalInvested) / Math.max(1, slipStats.totalInvested)) * 50)}%` 
-                          }}
-                        />
-                      ) : (
-                        <div 
-                          className="h-full bg-gradient-to-l from-red-600 to-red-400 rounded-full transition-all"
-                          style={{ 
-                            marginLeft: `${50 - Math.min(50, Math.abs((slipStats.totalReturn - slipStats.totalInvested) / Math.max(1, slipStats.totalInvested)) * 50)}%`,
-                            width: `${Math.min(50, Math.abs((slipStats.totalReturn - slipStats.totalInvested) / Math.max(1, slipStats.totalInvested)) * 50)}%` 
-                          }}
-                        />
+                  <div className="p-4">
+                    <div className="flex items-center gap-1 mb-2">
+                      {slipStats.won > 0 && (
+                        <div
+                          className="h-10 rounded-l-xl flex items-center justify-center text-sm font-bold text-white transition-all"
+                          style={{ background: 'linear-gradient(180deg, #22c55e, #16a34a)', width: `${slipStats.won / Math.max(1, slipStats.won + slipStats.lost) * 100}%`, minWidth: '40px' }}
+                        >
+                          {slipStats.won}
+                        </div>
+                      )}
+                      {slipStats.lost > 0 && (
+                        <div
+                          className="h-10 rounded-r-xl flex items-center justify-center text-sm font-bold text-white transition-all"
+                          style={{ background: 'linear-gradient(180deg, #ef4444, #dc2626)', width: `${slipStats.lost / Math.max(1, slipStats.won + slipStats.lost) * 100}%`, minWidth: '40px' }}
+                        >
+                          {slipStats.lost}
+                        </div>
+                      )}
+                      {slipStats.won === 0 && slipStats.lost === 0 && (
+                        <div className="h-10 rounded-xl w-full flex items-center justify-center text-[11px]" style={{ background: '#1e293b', color: '#64748b' }}>
+                          결과 대기 중
+                        </div>
                       )}
                     </div>
-                    <div className="flex justify-between mt-0.5 text-[9px] text-gray-600">
-                      <span>-100%</span>
-                      <span>0%</span>
-                      <span>+100%</span>
-                    </div>
-                  </div>
 
-                  {/* 4개 지표 그리드 - 컴팩트 */}
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <div className="bg-gray-900/50 rounded-lg py-2 px-2.5">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-[10px] text-gray-500">총 조합</span>
-                        <span className="text-base font-bold text-white leading-none">{slipStats.totalSlips}</span>
+                    <div className="flex justify-between text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded" style={{ background: '#22c55e' }} />
+                        <span style={{ color: '#94a3b8' }}>적중 {slipStats.won}건</span>
+                        <span className="font-bold" style={{ color: '#34d399' }}>
+                          ({(slipStats.won + slipStats.lost > 0 ? (slipStats.won / (slipStats.won + slipStats.lost) * 100) : 0).toFixed(0)}%)
+                        </span>
                       </div>
-                      {(slipStats.totalDeleted ?? 0) > 0 && (
-                        <p className="text-[9px] text-gray-600 text-right mt-0.5">삭제 {slipStats.totalDeleted}건 포함</p>
-                      )}
-                    </div>
-                    <div className="bg-gray-900/50 rounded-lg py-2 px-2.5">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-[10px] text-gray-500">적중률</span>
-                        <span className="text-base font-bold text-emerald-400 leading-none">{slipStats.hitRate.toFixed(1)}%</span>
-                      </div>
-                      <p className="text-[9px] text-gray-600 text-right mt-0.5">{slipStats.won}승 {slipStats.lost}패</p>
-                    </div>
-                    <div className="bg-gray-900/50 rounded-lg py-2 px-2.5">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-[10px] text-gray-500">총 투자</span>
-                        <span className="text-sm font-bold text-blue-400 leading-none">{slipStats.totalInvested.toLocaleString()}<span className="text-[9px] text-gray-600 font-normal">원</span></span>
-                      </div>
-                    </div>
-                    <div className="bg-gray-900/50 rounded-lg py-2 px-2.5">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-[10px] text-gray-500">총 수익</span>
-                        <span className={`text-sm font-bold leading-none ${slipStats.totalReturn >= slipStats.totalInvested ? 'text-green-400' : 'text-red-400'}`}>
-                          {slipStats.totalReturn.toLocaleString()}<span className="text-[9px] text-gray-600 font-normal">원</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded" style={{ background: '#ef4444' }} />
+                        <span style={{ color: '#94a3b8' }}>실패 {slipStats.lost}건</span>
+                        <span className="font-bold" style={{ color: '#f87171' }}>
+                          ({(slipStats.won + slipStats.lost > 0 ? (slipStats.lost / (slipStats.won + slipStats.lost) * 100) : 0).toFixed(0)}%)
                         </span>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* ✅ 승패 분포 - 컴팩트 */}
-                <div className="bg-gray-800/40 rounded-xl p-3 mb-2">
-                  <h3 className="text-xs font-bold text-gray-400 mb-2">승패 분포</h3>
-                  
-                  <div className="flex items-center gap-0.5 mb-1.5">
-                    {slipStats.won > 0 && (
-                      <div 
-                        className="h-8 bg-gradient-to-r from-green-600 to-green-500 rounded-l-lg flex items-center justify-center text-xs font-bold text-white transition-all"
-                        style={{ width: `${slipStats.won / Math.max(1, slipStats.won + slipStats.lost) * 100}%`, minWidth: '36px' }}
-                      >
-                        {slipStats.won}
-                      </div>
-                    )}
-                    {slipStats.lost > 0 && (
-                      <div 
-                        className="h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-r-lg flex items-center justify-center text-xs font-bold text-white transition-all"
-                        style={{ width: `${slipStats.lost / Math.max(1, slipStats.won + slipStats.lost) * 100}%`, minWidth: '36px' }}
-                      >
-                        {slipStats.lost}
-                      </div>
-                    )}
-                    {slipStats.won === 0 && slipStats.lost === 0 && (
-                      <div className="h-8 bg-gray-700 rounded-lg w-full flex items-center justify-center text-[11px] text-gray-500">
-                        결과 대기 중
+                    {slipStats.pending > 0 && (
+                      <div className="mt-2 flex items-center gap-1.5 text-[11px]">
+                        <span className="w-2.5 h-2.5 rounded" style={{ background: '#3b82f6' }} />
+                        <span style={{ color: '#94a3b8' }}>대기 {slipStats.pending}건</span>
                       </div>
                     )}
                   </div>
-                  
-                  <div className="flex justify-between text-[11px]">
-                    <div className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-sm bg-green-500" />
-                      <span className="text-gray-400">적중 {slipStats.won}건</span>
-                      <span className="text-green-400 font-semibold">
-                        ({(slipStats.won + slipStats.lost > 0 ? (slipStats.won / (slipStats.won + slipStats.lost) * 100) : 0).toFixed(0)}%)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-sm bg-red-500" />
-                      <span className="text-gray-400">실패 {slipStats.lost}건</span>
-                      <span className="text-red-400 font-semibold">
-                        ({(slipStats.won + slipStats.lost > 0 ? (slipStats.lost / (slipStats.won + slipStats.lost) * 100) : 0).toFixed(0)}%)
-                      </span>
-                    </div>
-                  </div>
-
-                  {slipStats.pending > 0 && (
-                    <div className="mt-1.5 flex items-center gap-1 text-[11px]">
-                      <span className="w-2 h-2 rounded-sm bg-blue-500" />
-                      <span className="text-gray-400">대기 {slipStats.pending}건</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* ✅ 전체 초기화 */}
-                <div className="mt-3">
+                <div className="mt-4">
                   <button
                     onClick={resetAllData}
-                    className="w-full py-2.5 bg-red-600/10 hover:bg-red-600/25 border border-red-500/30 hover:border-red-500/50 rounded-xl text-xs text-red-400/80 hover:text-red-400 transition-all"
+                    className="w-full py-2.5 rounded-xl text-xs transition-all"
+                    style={{ background: '#dc262610', border: '1px solid #ef444430', color: '#f8717180' }}
                     disabled={isLoading}
                   >
                     {isLoading ? '초기화 중...' : '⚠️ 내역 + 통계 전체 초기화'}
                   </button>
-                  <p className="text-[9px] text-gray-600 text-center mt-1.5">
+                  <p className="text-[9px] text-center mt-1.5" style={{ color: '#475569' }}>
                     ※ 내역만 정리하려면 &quot;기록&quot; 탭에서 &quot;전체 정리&quot; 사용
                   </p>
                 </div>
@@ -1730,21 +1751,21 @@ export default function ProtoPage() {
 
         {/* 면책 문구 */}
         <footer className="mt-4 mb-4">
-          <div className="bg-gray-800/30 rounded-lg border border-gray-700/30 p-3 space-y-2">
+          <div className="rounded-xl p-3 space-y-2" style={{ background: '#0f1623', border: '1px solid #1e293b40' }}>
             <div className="flex items-start gap-1.5">
-              <span className="text-yellow-500 text-[10px] mt-0.5">※</span>
-              <p className="text-[10px] text-gray-400 leading-relaxed">
-                본 서비스는 배당률 계산을 위한 참고용 도구입니다. 
-                실제 배당률 및 결과는 
-                <span className="text-emerald-400 font-medium"> 스포츠토토</span>에서 확인하세요.
+              <span className="text-[10px] mt-0.5" style={{ color: '#eab308' }}>※</span>
+              <p className="text-[10px] leading-relaxed" style={{ color: '#64748b' }}>
+                본 서비스는 배당률 계산을 위한 참고용 도구입니다.
+                실제 배당률 및 결과는
+                <span className="font-medium" style={{ color: '#34d399' }}> 스포츠토토</span>에서 확인하세요.
               </p>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-              <span className="text-gray-500">유형:</span>
-              <span className="text-purple-400">H</span><span className="text-gray-600">핸디</span>
-              <span className="text-orange-400">U/O</span><span className="text-gray-600">언오버</span>
-              <span className="text-pink-400">O/E</span><span className="text-gray-600">홀짝</span>
-              <span className="text-cyan-400">5P</span><span className="text-gray-600">승5패</span>
+              <span style={{ color: '#475569' }}>유형:</span>
+              <span style={{ color: '#a78bfa' }}>H</span><span style={{ color: '#475569' }}>핸디</span>
+              <span style={{ color: '#fb923c' }}>U/O</span><span style={{ color: '#475569' }}>언오버</span>
+              <span style={{ color: '#f472b6' }}>O/E</span><span style={{ color: '#475569' }}>홀짝</span>
+              <span style={{ color: '#22d3ee' }}>5P</span><span style={{ color: '#475569' }}>승5패</span>
             </div>
           </div>
         </footer>
@@ -1752,9 +1773,9 @@ export default function ProtoPage() {
 
       {/* 하단 고정 패널 */}
       {activeTab === 'calculator' && selections.length > 0 && (
-        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40 bg-[#09090b]">
-          <div className="border-t-2 border-emerald-500/50 shadow-[0_-8px_30px_rgba(0,0,0,0.9)]">
-            <div className="max-w-4xl mx-auto px-3 py-2 bg-[#09090b]">
+        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40" style={{ background: '#0a0a0f' }}>
+          <div className="shadow-[0_-8px_30px_rgba(0,0,0,0.9)]" style={{ borderTop: '2px solid #10b98160' }}>
+            <div className="max-w-4xl mx-auto px-3 py-2" style={{ background: '#0a0a0f' }}>
             <div 
               onClick={() => setShowSlipPanel(!showSlipPanel)}
               className="flex items-center justify-between cursor-pointer"
@@ -1806,34 +1827,36 @@ export default function ProtoPage() {
             </div>
 
             {showSlipPanel && (
-              <div className="mt-2 pt-2 border-t border-gray-800 bg-[#09090b]">
+              <div className="mt-2 pt-2" style={{ borderTop: '1px solid #1e293b40', background: '#0a0a0f' }}>
                 <div className="space-y-1 max-h-36 overflow-y-auto">
                   {selections.map((sel) => (
-                    <div 
+                    <div
                       key={sel.matchSeq}
-                      className="flex items-center justify-between py-1.5 px-2 bg-gray-800 rounded text-xs"
+                      className="flex items-center justify-between py-1.5 px-2.5 rounded-lg text-xs"
+                      style={{ background: '#141824', border: '1px solid #1e293b40' }}
                     >
-                      <span className="text-gray-400 truncate max-w-[55%]">
+                      <span className="truncate max-w-[55%]" style={{ color: '#94a3b8' }}>
                         #{String(sel.matchSeq).padStart(3, '0')} {sel.homeTeam} vs {sel.awayTeam}
                       </span>
                       <div className="flex items-center gap-1.5">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          sel.prediction === 'home' || sel.prediction === 'over' || sel.prediction === 'odd'
-                            ? 'bg-blue-500/20 text-blue-400' :
-                          sel.prediction === 'draw' ? 'bg-gray-500/20 text-gray-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
-                          {sel.prediction === 'home' ? '승' : 
-                           sel.prediction === 'draw' ? '무' : 
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{
+                          background: sel.prediction === 'home' || sel.prediction === 'over' || sel.prediction === 'odd'
+                            ? '#3b82f615' : sel.prediction === 'draw' ? '#64748b15' : '#ef444415',
+                          color: sel.prediction === 'home' || sel.prediction === 'over' || sel.prediction === 'odd'
+                            ? '#60a5fa' : sel.prediction === 'draw' ? '#94a3b8' : '#f87171'
+                        }}>
+                          {sel.prediction === 'home' ? '승' :
+                           sel.prediction === 'draw' ? '무' :
                            sel.prediction === 'away' ? '패' :
                            sel.prediction === 'over' ? 'O' :
                            sel.prediction === 'under' ? 'U' :
                            sel.prediction === 'odd' ? '홀' : '짝'}
                         </span>
-                        <span className="text-emerald-400 font-bold">{sel.odds.toFixed(2)}</span>
+                        <span className="font-bold" style={{ color: '#34d399' }}>{sel.odds.toFixed(2)}</span>
                         <button
                           onClick={() => setSelections(selections.filter(s => s.matchSeq !== sel.matchSeq))}
-                          className="text-gray-500 hover:text-red-400"
+                          className="hover:text-red-400 transition-colors"
+                          style={{ color: '#475569' }}
                         >
                           ✕
                         </button>
@@ -1841,17 +1864,18 @@ export default function ProtoPage() {
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="flex gap-1 mt-2">
                   {[5000, 10000, 30000, 50000, 100000].map(amt => (
                     <button
                       key={amt}
                       onClick={(e) => { e.stopPropagation(); setBetAmount(amt) }}
-                      className={`flex-1 py-1 rounded text-[10px] transition-colors ${
-                        betAmount === amt 
-                          ? 'bg-emerald-600 text-white' 
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-colors ${
+                        betAmount === amt
+                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                          : 'text-gray-400 hover:text-gray-200'
                       }`}
+                      style={betAmount !== amt ? { background: '#141824' } : {}}
                     >
                       {amt >= 10000 ? `${amt/10000}만` : `${amt/1000}천`}
                     </button>
