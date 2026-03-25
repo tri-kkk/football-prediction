@@ -280,6 +280,9 @@ export async function POST(request: Request) {
         } else if (['KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL'].includes(league.code)) {
           // 아시아/남미/북미 리그는 단일 연도 시즌
           season = currentYear
+        } else if (['AMATCH', 'UNL'].includes(league.code)) {
+          // 국제 A매치/네이션스리그는 연도 기준
+          season = currentYear
         } else {
           // 유럽 리그는 8월 이후면 현재 연도
           season = currentMonth >= 8 ? currentYear : currentYear - 1
