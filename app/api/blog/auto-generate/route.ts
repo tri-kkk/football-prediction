@@ -82,7 +82,7 @@ function detectSeasonContext(leagueCode: string, homeStats: any, awayStats: any)
   
   // K리그/J리그/MLS: 2~4월 개막
   if (['KL1', 'KL2', 'J1', 'J2', 'MLS'].includes(leagueCode)) {
-    if (totalGames <= 2 || (month >= 2 && month <= 3 && totalGames <= 4)) {
+    if (totalGames <= 2) {
       return {
         phaseKo: '시즌 개막',
         phaseEn: 'season opener',
@@ -909,7 +909,7 @@ function hasEnoughData(homeStats: any, awayStats: any, leagueCode?: string): boo
 // 시즌 개막기 판별
 function isLeagueInSeasonStart(leagueCode: string): boolean {
   const month = new Date().getMonth() + 1
-  // K리그/J리그/MLS: 2~4월이 개막기
+  // K리그/J리그/MLS: 2~4월이 개막기 (데이터 완화용 — 시즌 초반 경기 수 부족)
   if (['KL1', 'KL2', 'J1', 'J2', 'MLS'].includes(leagueCode) && month >= 2 && month <= 4) return true
   // 유럽: 8~9월이 개막기
   if (['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED'].includes(leagueCode) && month >= 8 && month <= 9) return true

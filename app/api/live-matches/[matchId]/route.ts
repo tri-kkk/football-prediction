@@ -98,6 +98,7 @@ export async function GET(
   39: 'PL', 140: 'PD', 78: 'BL1', 135: 'SA', 61: 'FL1',
   2: 'CL', 3: 'EL', 40: 'ELC', 94: 'PPL', 88: 'DED',
   292: 'KL1', 98: 'J1', 188: 'ALG',
+  10: 'AMATCH',                  // FIFA Friendlies (A매치)
   17: 'ACL', 18: 'ACL2',       // AFC Champions League
   848: 'UECL', 5: 'UNL',       // UEFA
   141: 'SD', 143: 'CDR',       // 스페인

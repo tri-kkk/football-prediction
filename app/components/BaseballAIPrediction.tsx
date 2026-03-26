@@ -88,8 +88,8 @@ export default function BaseballAIPrediction({
   const HN = homeTeamKo || homeTeam
   const AN = awayTeamKo || awayTeam
 
-  // 배당 라인: prop으로 받은 값 우선, 없으면 기본값 8.5
-  const ouLine = overUnderLine ?? 8.5
+  // 배당 라인: prop으로 받은 값만 사용, null이면 총점 섹션 숨김
+  const ouLine = overUnderLine ?? null
 
   const [pred, setPred] = useState<PredictionResult | null>(null)
   const [ins, setIns] = useState<AIInsights | null>(null)
@@ -224,7 +224,8 @@ export default function BaseballAIPrediction({
             </div>
           </Section>
 
-          {/* 총점 예측 */}
+          {/* 총점 예측 - 배당 기준선 있을 때만 표시 */}
+          {ouLine !== null && (
           <Section color="#f97316" label="총점 예측"
             badge={<span className="text-[10px]" style={{ color: '#64748b' }}>기준 {ouLine}</span>}>
             <div className="p-3">
@@ -253,6 +254,7 @@ export default function BaseballAIPrediction({
               </div>
             </div>
           </Section>
+          )}
 
           {ins && (
             <>

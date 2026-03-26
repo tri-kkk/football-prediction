@@ -244,9 +244,9 @@ export function MobileBottomBanner({
   if (isClosed || isAdsBlocked) return null  // 🆕 isPremium 제거
 
   return (
-    <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 p-2 flex justify-center ${className}`}>
-      <AdBanner 
-        slot="mobile_bottom" 
+    <div className={`lg:hidden fixed left-0 right-0 bg-black/90 p-2 flex justify-center ${className}`} style={{ bottom: '60px', zIndex: 51 }}>
+      <AdBanner
+        slot="mobile_bottom"
         onClose={() => {
           setIsClosed(true)
           onClose?.()
@@ -416,9 +416,9 @@ export function StaticMobileBottomBanner({
   if (isClosed || isAdsBlocked) return null  // 🆕 isPremium 제거
 
   return (
-    <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 p-2 flex justify-center safe-area-bottom ${className}`}>
-      <StaticAdBanner 
-        slot="mobile_bottom" 
+    <div className={`lg:hidden fixed left-0 right-0 bg-black/90 p-2 flex justify-center safe-area-bottom ${className}`} style={{ bottom: '60px', zIndex: 51 }}>
+      <StaticAdBanner
+        slot="mobile_bottom"
         onClose={() => {
           setIsClosed(true)
           onClose?.()
