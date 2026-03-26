@@ -706,46 +706,38 @@ export default function BaseballMainPage() {
                   <Link
                     key={match.id}
                     href={`/baseball/${match.id}`}
-                    className="flex items-center px-4 py-3 hover:bg-gray-800/60 transition-colors group"
+                    className="flex items-center px-3 py-3 hover:bg-gray-800/60 transition-colors group gap-2"
                     style={{ borderTop: idx > 0 ? '1px solid #1f2937' : 'none' }}
                   >
-                    {/* 날짜+시간 */}
-                    <div className="w-32 flex-shrink-0">
-                      <span className="text-[11px] font-medium text-blue-400 tabular-nums">
-                        {formatMatchDate(match.timestamp)} {formatMatchTime(match.timestamp)}
-                      </span>
-                    </div>
-
-                    {/* 리그 뱃지 */}
-                    <div className="w-12 flex-shrink-0">
-                      <span className={`text-[10px] font-bold text-white px-1.5 py-0.5 rounded ${LEAGUE_COLORS[match.league]}`}>
+                    {/* 리그+날짜+시간 2줄 */}
+                    <div className="flex-shrink-0 flex flex-col gap-0.5 w-[60px]">
+                      <span className={`text-[10px] font-bold text-white px-1.5 py-0.5 rounded self-start ${LEAGUE_COLORS[match.league]}`}>
                         {match.league}
                       </span>
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-[10px] text-gray-400 tabular-nums">{formatMatchDate(match.timestamp)}</span>
+                        <span className="text-[10px] text-blue-400 tabular-nums font-medium">{formatMatchTime(match.timestamp)}</span>
+                      </div>
                     </div>
 
-                    {/* 원정팀 */}
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      <TeamLogo src={match.awayLogo} team={match.awayTeamKo} size="sm" />
-                      <span className="text-sm font-medium truncate text-gray-300">
-                        {language === 'ko' ? (match.awayTeamKo || match.awayTeam) : match.awayTeam}
-                      </span>
-                    </div>
-
-                    {/* vs */}
-                    <div className="w-10 flex-shrink-0 text-center">
-                      <span className="text-xs font-bold text-gray-600">vs</span>
-                    </div>
-
-                    {/* 홈팀 */}
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-                      <span className="text-sm font-medium truncate text-gray-300">
-                        {language === 'ko' ? (match.homeTeamKo || match.homeTeam) : match.homeTeam}
-                      </span>
-                      <TeamLogo src={match.homeLogo} team={match.homeTeamKo} size="sm" />
+                    {/* 원정(위) + 홈(아래) 2줄 */}
+                    <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <TeamLogo src={match.awayLogo} team={match.awayTeamKo} size="sm" />
+                        <span className="text-sm font-medium text-gray-300 truncate">
+                          {language === 'ko' ? (match.awayTeamKo || match.awayTeam) : match.awayTeam}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <TeamLogo src={match.homeLogo} team={match.homeTeamKo} size="sm" />
+                        <span className="text-sm font-medium text-gray-400 truncate">
+                          {language === 'ko' ? (match.homeTeamKo || match.homeTeam) : match.homeTeam}
+                        </span>
+                      </div>
                     </div>
 
                     {/* 화살표 */}
-                    <span className="text-gray-600 group-hover:text-gray-300 transition-colors text-sm ml-3 flex-shrink-0">›</span>
+                    <span className="text-gray-600 group-hover:text-gray-300 transition-colors text-sm flex-shrink-0">›</span>
                   </Link>
                 ))}
               </div>
@@ -913,72 +905,64 @@ export default function BaseballMainPage() {
                   <Link
                     key={match.id}
                     href={`/baseball/${match.id}`}
-                    className="flex items-center px-4 py-3 hover:bg-gray-800/60 transition-colors group"
+                    className="flex items-center px-3 py-3 hover:bg-gray-800/60 transition-colors group gap-2"
                     style={{ borderTop: idx > 0 ? '1px solid #1f2937' : 'none' }}
                   >
-                    {/* 날짜+시간 or LIVE */}
-                    <div className="w-32 flex-shrink-0">
+                    {/* 리그+날짜+시간 2줄 */}
+                    <div className="flex-shrink-0 flex flex-col gap-0.5 w-[60px]">
+                      <span className={`text-[10px] font-bold text-white px-1.5 py-0.5 rounded self-start ${LEAGUE_COLORS[match.league]}`}>
+                        {match.league}
+                      </span>
                       {isLive ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="relative flex h-1.5 w-1.5">
+                        <div className="flex items-center gap-1">
+                          <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
                           </span>
-                          <span className="text-[11px] font-black text-red-400">
-                            LIVE {language === 'ko' ? `${inningNum}회` : `${inningNum}th`}
+                          <span className="text-[10px] font-black text-red-400">
+                            LIVE {inningNum}{language === 'ko' ? '회' : 'th'}
                           </span>
                         </div>
                       ) : match.status === 'FT' ? (
-                        <span className="text-[11px] font-bold text-gray-500">Final</span>
+                        <span className="text-[10px] text-gray-500">Final</span>
                       ) : (
-                        <span className="text-[11px] font-medium text-blue-400 tabular-nums">
-                          {formatMatchDate(match.timestamp)} {formatMatchTime(match.timestamp)}
-                        </span>
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-[10px] text-gray-400 tabular-nums">{formatMatchDate(match.timestamp)}</span>
+                          <span className="text-[10px] text-blue-400 tabular-nums font-medium">{formatMatchTime(match.timestamp)}</span>
+                        </div>
                       )}
                     </div>
 
-                    {/* 리그 뱃지 */}
-                    <div className="w-12 flex-shrink-0">
-                      <span className={`text-[10px] font-bold text-white px-1.5 py-0.5 rounded ${LEAGUE_COLORS[match.league]}`}>
-                        {match.league}
-                      </span>
-                    </div>
-
-                    {/* 원정팀 */}
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      <TeamLogo src={match.awayLogo} team={match.awayTeamKo} size="sm" />
-                      <span className={`text-sm font-medium truncate ${
-                        (isLive || match.status === 'FT') && (match.awayScore ?? 0) > (match.homeScore ?? 0)
-                          ? 'text-white font-bold' : 'text-gray-300'
-                      }`}>
-                        {language === 'ko' ? (match.awayTeamKo || match.awayTeam) : match.awayTeam}
-                      </span>
-                    </div>
-
-                    {/* 스코어 or VS */}
-                    <div className="w-16 flex-shrink-0 text-center">
-                      {isLive || match.status === 'FT' ? (
-                        <span className={`text-sm font-black tabular-nums ${isLive ? 'text-white' : 'text-white'}`}>
-                          {match.awayScore} - {match.homeScore}
+                    {/* 원정(위) + 홈(아래) 2줄 */}
+                    <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <TeamLogo src={match.awayLogo} team={match.awayTeamKo} size="sm" />
+                        <span className={`text-sm font-medium truncate ${
+                          (isLive || match.status === 'FT') && (match.awayScore ?? 0) > (match.homeScore ?? 0)
+                            ? 'text-white font-bold' : 'text-gray-300'
+                        }`}>
+                          {language === 'ko' ? (match.awayTeamKo || match.awayTeam) : match.awayTeam}
                         </span>
-                      ) : (
-                        <span className="text-xs font-bold text-gray-600">vs</span>
-                      )}
-                    </div>
-
-                    {/* 홈팀 */}
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-                      <span className={`text-sm font-medium truncate ${
-                        (isLive || match.status === 'FT') && (match.homeScore ?? 0) > (match.awayScore ?? 0)
-                          ? 'text-white font-bold' : 'text-gray-300'
-                      }`}>
-                        {language === 'ko' ? (match.homeTeamKo || match.homeTeam) : match.homeTeam}
-                      </span>
-                      <TeamLogo src={match.homeLogo} team={match.homeTeamKo} size="sm" />
+                        {(isLive || match.status === 'FT') && (
+                          <span className="ml-auto text-sm font-black tabular-nums text-white flex-shrink-0">{match.awayScore}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <TeamLogo src={match.homeLogo} team={match.homeTeamKo} size="sm" />
+                        <span className={`text-sm font-medium truncate ${
+                          (isLive || match.status === 'FT') && (match.homeScore ?? 0) > (match.awayScore ?? 0)
+                            ? 'text-white font-bold' : 'text-gray-400'
+                        }`}>
+                          {language === 'ko' ? (match.homeTeamKo || match.homeTeam) : match.homeTeam}
+                        </span>
+                        {(isLive || match.status === 'FT') && (
+                          <span className="ml-auto text-sm font-black tabular-nums text-white flex-shrink-0">{match.homeScore}</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* 화살표 */}
-                    <span className="ml-3 text-gray-700 group-hover:text-gray-400 transition-colors text-sm flex-shrink-0">›</span>
+                    <span className="text-gray-700 group-hover:text-gray-400 transition-colors text-sm flex-shrink-0">›</span>
                   </Link>
                 )}
               )}
