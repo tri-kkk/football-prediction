@@ -86,7 +86,12 @@ export default function SportSwitch() {
           {isBaseball && (
             <div className="absolute inset-0 bg-blue-400/20 blur-lg animate-pulse" />
           )}
-          <span className="relative text-base">⚾</span>
+          <span className="relative flex items-center gap-1 text-base">
+            ⚾
+            <span className="text-[8px] font-bold bg-blue-500 text-white px-1 py-0.5 rounded leading-none animate-pulse">
+              OPEN
+            </span>
+          </span>
         </button>
       </div>
 
