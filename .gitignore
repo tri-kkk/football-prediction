@@ -6,8 +6,6 @@ node_modules/
 .vercel
 *.tsbuildinfo
 
-# Baseball (개발 �?
-/app/baseball/
 
 # Backup files
 *.bak

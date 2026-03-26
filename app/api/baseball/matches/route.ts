@@ -227,8 +227,8 @@ export async function GET(request: NextRequest) {
       // (MLB가 limit을 독점하는 문제 방지)
       // =====================================================
       if (league === 'ALL' && !matchId) {
-        const LEAGUES = ['MLB', 'KBO', 'NPB']
-        const perLeagueLimit = Math.ceil(limit / LEAGUES.length)
+        const LEAGUES = ['MLB', 'KBO', 'NPB', 'CPBL']
+        const perLeagueLimit = Math.max(20, Math.ceil(limit / LEAGUES.length))
 
         const koreaOffset = 9 * 60
         const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
