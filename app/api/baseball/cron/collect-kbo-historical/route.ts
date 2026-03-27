@@ -58,12 +58,19 @@ export async function GET(request: NextRequest) {
               }
             }
 
+            // KST(+9) 기준 날짜/시간 계산
+            const utcDate = new Date(game.date)
+            const kstDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000)
+            const kstDateStr = kstDate.toISOString().split('T')[0]
+            const kstTimeStr = kstDate.toISOString().split('T')[1].slice(0, 8)
+
             const { error: insertError } = await supabase.from('baseball_matches').insert({
               api_match_id: game.id,
               league: leagueName,
               league_name: game.league.name,
               season,
-              match_date: game.date.split('T')[0],
+              match_date: kstDateStr,
+              match_time: kstTimeStr,
               match_timestamp: game.date,
               home_team: game.teams.home.name,
               home_team_id: game.teams.home.id,

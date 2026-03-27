@@ -39,7 +39,18 @@ function buildPitcherBlock(
   // KBO/NPB flat 구조
   const displayName = stats?.name ?? name
   if (!displayName) return `[${label}] 선발: 미정`
-  if (!stats || stats.era === null && stats.whip === null) return `[${label}] ${displayName} — 스탯 없음`
+
+  // 신인 태그 생성
+  const isRookie = stats?.is_rookie === true
+  const proYears = stats?.pro_years ?? null
+  const rookieTag = isRookie
+    ? ` (신인${proYears ? ` · 프로 ${proYears}년차` : ''})`
+    : ''
+
+  // 스탯 없는 경우 (신인 포함)
+  if (!stats || (stats.era === null && stats.whip === null)) {
+    return `[${label}] ${displayName}${rookieTag} — 스탯 없음`
+  }
 
   const g = stats.games ?? 0
   const k = stats.strikeouts ?? 0
@@ -47,7 +58,10 @@ function buildPitcherBlock(
   const kPerGame = g > 0 ? formatStat(k / g, 1) : '-'
   const kbb = bb > 0 ? formatStat(k / bb, 2) : '-'
 
-  return `[${label}] ${displayName} — ${stats.season ?? '2025'}시즌
+  // 샘플 경기 수 부족 여부 (신인이고 10경기 미만)
+  const smallSampleTag = isRookie && g < 10 ? ' [소량 샘플]' : ''
+
+  return `[${label}] ${displayName}${rookieTag}${smallSampleTag} — ${stats.season ?? '2025'}시즌
   ERA ${formatStat(stats.era)} | WHIP ${formatStat(stats.whip)} | 경기당 K ${kPerGame} | K/BB ${kbb}
   ${stats.wins ?? 0}승 ${stats.losses ?? 0}패 | ${g}경기 | ${k}K | BB ${bb} | HR ${stats.home_runs ?? '-'}`
 }
@@ -96,7 +110,9 @@ ${homeBlock}
 작성 규칙:
 - 200자 내외, 3~4문장
 - 반드시 위 스탯 수치를 직접 인용하여 분석 (ERA, WHIP, K 등 숫자 명시)
-- 스탯이 "스탯 없음"인 투수는 수치 언급 없이 이름만 사용
+- 스탯이 "스탯 없음"인 투수는 수치 언급 없이 이름만 사용하고 "데이터 미확보" 한 마디만 추가
+- "(신인)" 태그 투수는 프로 경험이 부족한 점을 짧게 언급하되 과도한 추측 금지
+- "[소량 샘플]" 태그 투수는 샘플이 적어 스탯 신뢰도가 낮음을 반드시 언급
 - 두 투수의 스탯 기반 강점/약점 비교 → 오늘 승부 포인트 → 주목 변수 순서로
 - 야구 전문 용어 자연스럽게 사용 (ERA, WHIP, 제구력, 탈삼진, 피홈런 등)
 - 스탯 데이터 없이 막연한 추측성 분석 절대 금지 ("~것으로 예상됩니다" 남발 금지)

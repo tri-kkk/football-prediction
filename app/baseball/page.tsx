@@ -324,8 +324,12 @@ export default function BaseballMainPage() {
     .sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime())
     .slice(0, 5)
 
-  // 적중률 계산
-  const predictionResults = finishedPicks.map(match => {
+  // 적중률 계산 - 오늘 날짜 종료 경기 전체 기준
+  const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0] // KST 오늘
+  const todayMonth = todayStr.slice(5, 7)
+  const todayDay = todayStr.slice(8, 10)
+  const todayFinished = scheduledMatches.filter(m => m.odds && m.status === 'FT')
+  const predictionResults = todayFinished.map(match => {
     const predictedHome = (match.odds?.homeWinProb || 0) > (match.odds?.awayWinProb || 0)
     const actualHome = (match.homeScore ?? 0) > (match.awayScore ?? 0)
     const isDraw = (match.homeScore ?? 0) === (match.awayScore ?? 0)
@@ -335,7 +339,7 @@ export default function BaseballMainPage() {
       isDraw,
     }
   })
-  
+
   const correctCount = predictionResults.filter(r => r.correct).length
   const totalCount = predictionResults.filter(r => !r.isDraw).length
   const accuracyRate = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0
@@ -520,7 +524,7 @@ export default function BaseballMainPage() {
                 </div>
                 <div>
                   <p className="text-xs text-blue-400 font-semibold tracking-wide mb-0.5">
-                    {language === 'ko' ? 'AI 예측 적중률' : 'AI Prediction Accuracy'}
+                    {language === 'ko' ? `${todayMonth}/${todayDay} AI 예측 적중률` : `${todayMonth}/${todayDay} AI Prediction Accuracy`}
                   </p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-black text-white tabular-nums">{accuracyRate}%</span>

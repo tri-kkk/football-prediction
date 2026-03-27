@@ -102,7 +102,9 @@ export async function GET(request: NextRequest) {
             api_match_id: g.id,
             league: leagueCode,
             match_date: today,
-            match_time: g.time || null,
+            match_time: g.timestamp
+              ? (() => { const k = new Date(g.timestamp * 1000 + 9 * 60 * 60 * 1000); return k.toISOString().split('T')[1].slice(0, 8) })()
+              : g.time || null,
             match_timestamp: g.timestamp ? new Date(g.timestamp * 1000).toISOString() : null,
             home_team: g.teams.home.name,
             home_team_ko: teamKoMap[g.teams.home.name] || null,
