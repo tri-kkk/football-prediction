@@ -149,17 +149,24 @@ function calculatePrediction(match: Match): PredictionResult['prediction'] {
 function formatDate(dateStr: string, lang: 'ko' | 'en'): string {
   const date = new Date(dateStr)
   if (lang === 'ko') {
-    return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' })
+    return date.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric', weekday: 'short' })
   }
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })
+  return date.toLocaleDateString('en-US', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric', weekday: 'short' })
 }
 
 function formatDateFull(dateStr: string, lang: 'ko' | 'en'): string {
   const date = new Date(dateStr)
   if (lang === 'ko') {
-    return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+    return date.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'short' })
   }
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', weekday: 'short' })
+  return date.toLocaleDateString('en-US', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'short' })
+}
+
+function formatTimeKST(timestamp: string): string {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  if (isNaN(date.getTime())) return ''
+  return date.toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).slice(0, 5)
 }
 
 // =====================================================
@@ -326,7 +333,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
             {match.league}
           </span>
           <span className="text-[11px] text-gray-500 tabular-nums">
-            {formatDate(match.date, language)} {match.time}
+            {formatDate(match.timestamp || match.date, language)} {formatTimeKST(match.timestamp)}
           </span>
         </div>
         <GradeBadge grade={prediction.grade} />
@@ -497,24 +504,36 @@ export default function BaseballPredictionsPage() {
         const data = await response.json()
 
         if (data.success && data.matches && data.matches.length > 0) {
-          const today = new Date().toISOString().split('T')[0]
+          // KST 기준 오늘 날짜
+          const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+          const today = kstNow.toISOString().split('T')[0]
+
+          // timestamp → KST 날짜 추출 헬퍼
+          const getKSTDate = (m: Match) => {
+            if (m.timestamp) {
+              const d = new Date(new Date(m.timestamp).getTime() + 9 * 60 * 60 * 1000)
+              return d.toISOString().split('T')[0]
+            }
+            return m.date
+          }
+
           // ✅ 오늘 이후 경기만 (aiPick, odds, mlPrediction 중 하나라도 있으면 포함)
-          const futureMatches = data.matches.filter((m: Match) => m.date >= today)
+          const futureMatches = data.matches.filter((m: Match) => getKSTDate(m) >= today)
           const matchesWithData = futureMatches.filter(
             (m: Match) => m.odds !== null || m.mlPrediction != null || m.aiPick != null
           )
 
           if (matchesWithData.length > 0) {
             matchesWithData.sort((a: Match, b: Match) =>
-              new Date(a.date).getTime() - new Date(b.date).getTime()
+              new Date(a.timestamp || a.date).getTime() - new Date(b.timestamp || b.date).getTime()
             )
 
-            // ✅ 전체 기준 가장 이른 날짜 하루치만 표시
-            const earliestDate = matchesWithData[0].date
+            // ✅ KST 기준 가장 이른 날짜 하루치만 표시
+            const earliestDate = getKSTDate(matchesWithData[0])
             setCurrentDate(earliestDate)
 
             const upcomingMatches = matchesWithData
-              .filter((m: Match) => m.date === earliestDate)
+              .filter((m: Match) => getKSTDate(m) === earliestDate)
               .slice(0, 30)
 
             setMatches(upcomingMatches)

@@ -1,9 +1,10 @@
 // app/api/baseball/sync-pitchers/route.ts
 // MLB Stats API에서 선발투수 정보를 가져와 baseball_matches 테이블에 업데이트
-// GET /api/baseball/sync-pitchers?date=2026-03-12  (날짜 지정)
-// GET /api/baseball/sync-pitchers  (오늘 날짜)
-// 
-// [v2] UTC 오프셋 문제 해결: MLB API를 전날/오늘/내일 3일치 조회 후 pool 합산
+// GET /api/baseball/sync-pitchers?date=2026-03-28  (KST 날짜 지정)
+// GET /api/baseball/sync-pitchers  (오늘 KST 날짜)
+//
+// [v4] 핵심 수정: match_timestamp(UTC) ↔ MLB gameDate(UTC) 직접 비교
+//      match_date(KST) vs officialDate(미국현지) 불일치 문제 완전 해결
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -31,18 +32,19 @@ function addDays(dateStr: string, days: number): string {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
+  // date 파라미터는 KST 기준 날짜 (사용자에게 보이는 날짜)
   const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
 
-  console.log(`🔍 Syncing pitchers for date: ${date}`)
+  console.log(`🔍 Syncing pitchers for KST date: ${date}`)
 
   try {
-    // 1. DB에서 전날 ~ 내일 MLB 정규시즌 경기 조회 (스프링트레이닝 제외)
+    // 1. DB에서 ±1일 범위 MLB 경기 조회
     const dateFrom = addDays(date, -1)
     const dateTo = addDays(date, 1)
 
     const { data: dbMatches, error: dbError } = await supabase
       .from('baseball_matches')
-      .select('id, api_match_id, home_team, away_team, match_date')
+      .select('id, api_match_id, home_team, away_team, match_date, match_time, match_timestamp')
       .eq('league', 'MLB')
       .eq('is_spring_training', false)
       .gte('match_date', dateFrom)
@@ -60,10 +62,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`📋 Found ${dbMatches.length} MLB matches in DB (${dateFrom} ~ ${dateTo})`)
 
-    // 2. MLB Stats API에서 전날/오늘/내일 3일치 조회 → 전체 pool 합산
-    // UTC 오프셋으로 날짜가 하루 엇갈리는 문제 방지
+    // 2. MLB Stats API에서 4일치 조회
+    // officialDate가 미국 현지시간 기준이므로 넉넉하게 fetch
     const mlbGamePool: any[] = []
-    const fetchDates = [addDays(date, -1), date, addDays(date, 1)]
+    const fetchDates = [addDays(date, -2), addDays(date, -1), date, addDays(date, 1)]
 
     for (const fetchDate of fetchDates) {
       try {
@@ -98,32 +100,76 @@ export async function GET(request: NextRequest) {
     if (uniqueGames.length === 0) {
       return NextResponse.json({
         success: true,
-        message: `No games from MLB API for ${dateFrom} ~ ${dateTo}`,
+        message: `No games from MLB API`,
         updated: 0,
       })
     }
 
     // 3. 매핑 & 업데이트
+    // ✅ [v4 핵심] match_timestamp(UTC) ↔ MLB gameDate(UTC) 시간 차이로 매칭
+    // 같은 경기라면 두 UTC 값의 차이가 30분 이내여야 함
     const results = []
     let updatedCount = 0
+    const usedGamePks = new Set<number>()
 
-    for (const dbMatch of dbMatches) {
+    // DB 매치를 시간순 정렬
+    const sortedDbMatches = [...dbMatches].sort((a, b) => {
+      const tsA = a.match_timestamp || (a.match_date + 'T' + (a.match_time || '00:00:00') + 'Z')
+      const tsB = b.match_timestamp || (b.match_date + 'T' + (b.match_time || '00:00:00') + 'Z')
+      return new Date(tsA).getTime() - new Date(tsB).getTime()
+    })
+
+    for (const dbMatch of sortedDbMatches) {
       const dbHome = normalizeName(dbMatch.home_team)
       const dbAway = normalizeName(dbMatch.away_team)
 
-      const mlbGame = uniqueGames.find((g: any) => {
-        const mlbHome = normalizeName(g.teams?.home?.team?.name || '')
-        const mlbAway = normalizeName(g.teams?.away?.team?.name || '')
-        return (
-          (mlbHome === dbHome && mlbAway === dbAway) ||
-          (mlbHome === dbAway && mlbAway === dbHome)
-        )
-      })
+      // DB match_timestamp → UTC milliseconds
+      const dbTimestamp = dbMatch.match_timestamp
+        ? new Date(dbMatch.match_timestamp).getTime()
+        : null
+
+      // ✅ 팀 이름 매칭 + UTC 시간 30분 이내 필터
+      const candidates = uniqueGames
+        .filter((g: any) => {
+          if (usedGamePks.has(g.gamePk)) return false
+
+          // 팀 이름 매칭
+          const mlbHome = normalizeName(g.teams?.home?.team?.name || '')
+          const mlbAway = normalizeName(g.teams?.away?.team?.name || '')
+          const teamMatch =
+            (mlbHome === dbHome && mlbAway === dbAway) ||
+            (mlbHome === dbAway && mlbAway === dbHome)
+          if (!teamMatch) return false
+
+          // UTC 시간 매칭: 30분 이내만 허용
+          if (dbTimestamp && g.gameDate) {
+            const mlbTimestamp = new Date(g.gameDate).getTime()
+            const diffMinutes = Math.abs(mlbTimestamp - dbTimestamp) / (1000 * 60)
+            if (diffMinutes > 30) {
+              console.log(
+                `⚠️ 시간 불일치 제외: DB ${new Date(dbTimestamp).toISOString()} vs MLB ${g.gameDate} (diff: ${Math.round(diffMinutes)}분) - ${dbMatch.home_team} vs ${dbMatch.away_team}`
+              )
+              return false
+            }
+          }
+
+          return true
+        })
+        .sort((a: any, b: any) => {
+          if (!dbTimestamp) return 0
+          const diffA = Math.abs(new Date(a.gameDate || 0).getTime() - dbTimestamp)
+          const diffB = Math.abs(new Date(b.gameDate || 0).getTime() - dbTimestamp)
+          return diffA - diffB
+        })
+
+      const mlbGame = candidates[0] || null
+      if (mlbGame) usedGamePks.add(mlbGame.gamePk)
 
       if (!mlbGame) {
         results.push({
           match: `${dbMatch.home_team} vs ${dbMatch.away_team}`,
           date: dbMatch.match_date,
+          dbTimestamp: dbMatch.match_timestamp,
           status: 'NOT_MATCHED',
         })
         continue
@@ -174,6 +220,8 @@ export async function GET(request: NextRequest) {
         results.push({
           match: `${dbMatch.home_team} vs ${dbMatch.away_team}`,
           date: dbMatch.match_date,
+          dbTimestamp: dbMatch.match_timestamp,
+          mlbGameDate: mlbGame.gameDate,
           status: 'UPDATED',
           homePitcher: homePitcher?.fullName || null,
           awayPitcher: awayPitcher?.fullName || null,

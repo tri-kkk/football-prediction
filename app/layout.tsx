@@ -19,9 +19,9 @@ import TermsGuard from './components/TermsGuard'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
-  title: '트랜드사커 - TrendSoccer 실시간 해외축구 경기 예측 & AI 분석',
-  description: '트랜드사커(TrendSoccer)는 6대 리그 4,800경기 이상의 데이터를 AI로 분석하여 승률 예측을 제공합니다. 실시간 해외축구 배당 분석, 프리미엄 경기 픽, 승무패 예측 정보를 확인하세요.',
-  keywords: '트랜드사커, TrendSoccer, 축구 예측, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, AI 축구 분석, 승무패 예측, Soccer Prediction, Football Analysis, EPL Predictions, Match Preview, Live Score',
+  title: '트랜드사커 - TrendSoccer 실시간 해외축구 AI 분석',
+  description: '트랜드사커(TrendSoccer)는 6대 리그 4,800경기 이상의 데이터를 AI로 분석하여 승률 정보를 제공합니다. 실시간 해외축구 배당 분석, 프리미엄 경기 픽, 승무패 분석 정보를 확인하세요.',
+  keywords: '트랜드사커, TrendSoccer, 축구 분석, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, AI 축구 분석, 승무패 분석, Soccer Analysis, Football Analysis, EPL Analysis, Match Preview, Live Score',
   authors: [{ name: '트랜드사커 (TrendSoccer)' }],
   robots: {
     index: true,
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     title: 'TrendSoccer',
   },
   openGraph: {
-    title: '트랜드사커 - 실시간 해외축구 AI 예측',
+    title: '트랜드사커 - 실시간 해외축구 AI 분석',
     description: '데이터가 증명하는 승률. 6대 리그 전 경기 분석 리포트 확인하기.',
     type: 'website',
     locale: 'ko_KR',
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: '트랜드사커 - AI 기반 축구 경기 예측 플랫폼',
+        alt: '트랜드사커 - AI 기반 축구 경기 분석 플랫폼',
       },
     ],
   },
