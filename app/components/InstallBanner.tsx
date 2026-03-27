@@ -13,7 +13,7 @@ export default function InstallBanner() {
   const texts = {
     ko: {
       title: '앱으로 더 빠르게! ⚡',
-      subtitle: '홈 화면에서 바로 경기 예측 확인',
+      subtitle: '홈 화면에서 바로 경기 분석 확인',
       tag1: '즉시 접속',
       tag2: '앱 느낌',
       tag3: '용량 0MB',

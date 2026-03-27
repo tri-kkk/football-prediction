@@ -11,7 +11,7 @@ interface MatchPollProps {
   matchDate?: string
   darkMode?: boolean
   language?: 'ko' | 'en'
-  // AI 예측 데이터 (기존 PICK 시스템)
+  // AI 분석 데이터 (기존 PICK 시스템)
   aiPrediction?: {
     homeWin: number
     draw: number
@@ -145,7 +145,7 @@ export default function MatchPoll({
     return (x - Math.floor(x)) * 2 - 1  // -1 ~ 1 범위
   }
   
-  // 🎭 시딩 투표를 AI 예측 기반 + 노이즈로 분배
+  // 🎭 시딩 투표를 AI 분석 기반 + 노이즈로 분배
   const getSeededVotes = () => {
     if (!aiPrediction) {
       const third = Math.floor(baseVotes / 3)
@@ -222,7 +222,7 @@ export default function MatchPoll({
         <div className="flex items-center gap-2">
           <span className="text-lg">🗳️</span>
           <span className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            {language === 'ko' ? '승부 예측' : 'Match Prediction'}
+            {language === 'ko' ? '승부 분석' : 'Match Prediction'}
           </span>
         </div>
         <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -230,15 +230,15 @@ export default function MatchPoll({
         </span>
       </div>
 
-      {/* AI 예측 + 커뮤니티 예측 비교 */}
+      {/* AI 분석 + 커뮤니티 예측 비교 */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        {/* AI 예측 */}
+        {/* AI 분석 */}
         {aiPrediction && (
           <div className={`rounded-lg p-3 ${darkMode ? 'bg-[#0d1f0d] border border-[#A3FF4C]/20' : 'bg-green-50 border border-green-200'}`}>
             <div className="flex items-center gap-1.5 mb-2">
               <span className="text-sm">🤖</span>
               <span className={`text-xs font-medium ${darkMode ? 'text-[#A3FF4C]' : 'text-green-700'}`}>
-                {language === 'ko' ? 'AI 예측' : 'AI Prediction'}
+                {language === 'ko' ? 'AI 분석' : 'AI Prediction'}
               </span>
             </div>
             <div className="space-y-1.5">
@@ -270,12 +270,12 @@ export default function MatchPoll({
           </div>
         )}
 
-        {/* 팬 예측 */}
+        {/* 팬 투표 */}
         <div className={`rounded-lg p-3 ${darkMode ? 'bg-[#1f1a0d] border border-orange-500/20' : 'bg-orange-50 border border-orange-200'}`}>
           <div className="flex items-center gap-1.5 mb-2">
             <span className="text-sm">👥</span>
             <span className={`text-xs font-medium ${darkMode ? 'text-orange-400' : 'text-orange-700'}`}>
-              {language === 'ko' ? '팬 예측' : 'Fan Pick'}
+              {language === 'ko' ? '팬 투표' : 'Fan Pick'}
             </span>
           </div>
           {showResults ? (
@@ -317,8 +317,8 @@ export default function MatchPoll({
       <div className="space-y-2">
         <div className={`text-xs font-medium mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           {hasVoted 
-            ? (language === 'ko' ? '내 예측 (변경 가능)' : 'My prediction (changeable)')
-            : (language === 'ko' ? '당신의 예측은?' : 'Your prediction?')
+            ? (language === 'ko' ? '내 선택 (변경 가능)' : 'My prediction (changeable)')
+            : (language === 'ko' ? '당신의 선택은?' : 'Your prediction?')
           }
         </div>
         
@@ -415,7 +415,7 @@ export default function MatchPoll({
         </div>
       </div>
 
-      {/* AI vs 팬 예측 일치 여부 */}
+      {/* AI vs 팬 투표 일치 여부 */}
       {aiPrediction && showResults && pollData.totalVotes >= 5 && (
         <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
           {(() => {
@@ -429,7 +429,7 @@ export default function MatchPoll({
                   <>
                     <span className="text-green-400">✓</span>
                     <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {language === 'ko' ? 'AI와 팬 예측 일치!' : 'AI & Fan Pick agree!'}
+                      {language === 'ko' ? 'AI와 팬 투표 일치!' : 'AI & Fan Pick agree!'}
                     </span>
                   </>
                 ) : (

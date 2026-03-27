@@ -524,7 +524,7 @@ export default function BaseballMainPage() {
                 </div>
                 <div>
                   <p className="text-xs text-blue-400 font-semibold tracking-wide mb-0.5">
-                    {language === 'ko' ? `${todayMonth}/${todayDay} AI 예측 적중률` : `${todayMonth}/${todayDay} AI Prediction Accuracy`}
+                    {language === 'ko' ? `${todayMonth}/${todayDay} AI 분석 정확도` : `${todayMonth}/${todayDay} AI Analysis Accuracy`}
                   </p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-black text-white tabular-nums">{accuracyRate}%</span>
@@ -534,12 +534,12 @@ export default function BaseballMainPage() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-[11px] text-gray-500 mb-1">{language === 'ko' ? '적중' : 'Hit'}</p>
+                  <p className="text-[11px] text-gray-500 mb-1">{language === 'ko' ? '일치' : 'Match'}</p>
                   <p className="text-lg font-bold text-blue-400 tabular-nums">{correctCount}</p>
                 </div>
                 <div className="w-px h-8 bg-gray-700" />
                 <div className="text-right">
-                  <p className="text-[11px] text-gray-500 mb-1">{language === 'ko' ? '실패' : 'Miss'}</p>
+                  <p className="text-[11px] text-gray-500 mb-1">{language === 'ko' ? '미일치' : 'Missed'}</p>
                   <p className="text-lg font-bold text-red-400 tabular-nums">{totalCount - correctCount}</p>
                 </div>
               </div>
@@ -816,8 +816,8 @@ export default function BaseballMainPage() {
                             {isDraw
                               ? (language === 'ko' ? '무승부' : 'DRAW')
                               : correct
-                                ? (language === 'ko' ? '적중' : 'HIT')
-                                : (language === 'ko' ? '실패' : 'MISS')
+                                ? (language === 'ko' ? '일치' : 'MATCH')
+                                : (language === 'ko' ? '미일치' : 'MISSED')
                             }
                           </span>
                         </div>

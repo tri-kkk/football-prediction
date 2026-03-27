@@ -157,7 +157,7 @@ export default function BaseballAIPrediction({
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
-          <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>AI 예측 분석</span>
+          <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>AI 전력 분석</span>
         </div>
         {pred && (
           <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full text-white tracking-wider"
@@ -186,8 +186,8 @@ export default function BaseballAIPrediction({
       {pred && (
         <div>
 
-          {/* 승부 예측 */}
-          <Section color="#3b82f6" label="승부 예측">
+          {/* 승부 지표 */}
+          <Section color="#3b82f6" label="승부 지표">
             <div className="px-4 pt-5 pb-4 flex items-center justify-between">
               {/* 원정 */}
               <div className="flex-1 flex flex-col items-center">
@@ -224,9 +224,9 @@ export default function BaseballAIPrediction({
             </div>
           </Section>
 
-          {/* 총점 예측 - 배당 기준선 있을 때만 표시 */}
+          {/* 총점 지표 - 배당 기준선 있을 때만 표시 */}
           {ouLine !== null && (
-          <Section color="#f97316" label="총점 예측"
+          <Section color="#f97316" label="총점 지표"
             badge={<span className="text-[10px]" style={{ color: '#64748b' }}>기준 {ouLine}</span>}>
             <div className="p-3">
               <div className="flex items-center justify-center mb-3">
@@ -302,7 +302,7 @@ export default function BaseballAIPrediction({
                   </div>
                   <div className="flex items-center justify-between rounded-xl px-4 py-3"
                     style={{ background: '#131920', border: '1px solid #243044' }}>
-                    <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>예측 신뢰도</span>
+                    <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>분석 신뢰도</span>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ background: confMap[pred.confidence]?.color ?? '#94a3b8',

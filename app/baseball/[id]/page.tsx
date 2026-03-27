@@ -1377,7 +1377,7 @@ export default function BaseballDetailPage() {
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
                       style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
-                    <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>{t('AI 야구 예측', 'AI Baseball Prediction')}</span>
+                    <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>{t('AI 야구 분석', 'AI Baseball Analysis')}</span>
                   </div>
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
                     style={{ background: '#7c3aed30', color: '#a78bfa', border: '1px solid #7c3aed50' }}>
@@ -1418,7 +1418,7 @@ export default function BaseballDetailPage() {
                     </div>
                     <div className="text-center px-6">
                       <p className="text-sm font-bold text-white mb-1">
-                        {t('AI 야구 예측은 프리미엄 전용입니다', 'AI Baseball Prediction is Premium only')}
+                        {t('AI 야구 분석은 프리미엄 전용입니다', 'AI Baseball Analysis is Premium only')}
                       </p>
                       <p className="text-xs" style={{ color: '#64748b' }}>
                         {t('승리 확률 · O/U 분석 · 투수 매치업 종합', 'Win probability · O/U analysis · Pitcher matchup')}

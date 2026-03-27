@@ -486,7 +486,7 @@ export default function MatchPrediction({
           
           setPrediction(fallbackPrediction)
           setDebugInfo(prev => ({ ...prev, predictionStatus: 'error' as any }))
-          setError('일부 예측 데이터를 사용할 수 없습니다')
+          setError('일부 분석 데이터를 사용할 수 없습니다')
         }
       } catch (err) {
         console.error('❌ Error fetching data:', err)
@@ -707,7 +707,7 @@ export default function MatchPrediction({
                 <div className={`text-[10px] uppercase tracking-widest mb-1 text-center ${
                   darkMode ? 'text-gray-600' : 'text-gray-400'
                 }`}>
-                  {language === 'ko' ? '예상 결과' : 'Prediction'}
+                  {language === 'ko' ? '예상 결과' : 'Expected Result'}
                 </div>
                 <div className={`text-sm font-bold mb-0.5 text-center ${
                   winnerInfo.side === 'home' 

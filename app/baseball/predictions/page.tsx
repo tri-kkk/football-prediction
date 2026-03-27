@@ -679,8 +679,8 @@ export default function BaseballPredictionsPage() {
         <div className="text-center py-6 mt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
           <p className="text-[11px] text-gray-600 leading-relaxed">
             {language === 'ko'
-              ? 'AI 예측은 참고용이며, 실제 결과와 다를 수 있습니다. 책임감 있는 이용을 권장합니다.'
-              : 'AI predictions are for reference only. Actual results may vary.'}
+              ? 'AI 분석은 참고용이며, 실제 결과와 다를 수 있습니다. 책임감 있는 이용을 권장합니다.'
+              : 'AI analysis is for reference only. Actual results may vary.'}
           </p>
         </div>
       </div>
