@@ -1,7 +1,7 @@
 // app/api/baseball/kbo-pitcher-stats/route.ts
 // KBO 선발 투수 이름으로 DB에서 스탯 조회
 //
-// GET /api/baseball/kbo-pitcher-stats?homePitcher=고영표&awayPitcher=원태인&season=2025
+// GET /api/baseball/kbo-pitcher-stats?homePitcher=고영표&awayPitcher=원태인&season=2025&homeTeam=한화 이글스&awayTeam=KT 위즈
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -33,6 +33,40 @@ export interface KboPitcherStat {
   strengths: string[]
   weakness: string[]
   summary: string
+}
+
+// DB 팀명으로 정규화 (풀네임 → DB 저장명)
+const KBO_TEAM_NORMALIZE: Record<string, string> = {
+  '한화 이글스': '한화',
+  'KT 위즈': 'KT',
+  'LG 트윈스': 'LG',
+  'SSG 랜더스': 'SSG',
+  '키움 히어로즈': '키움',
+  '롯데 자이언츠': '롯데',
+  '삼성 라이온즈': '삼성',
+  '두산 베어스': '두산',
+  'KIA 타이거즈': 'KIA',
+  'NC 다이노스': 'NC',
+}
+
+const NPB_TEAM_NORMALIZE: Record<string, string> = {
+  '요미우리 자이언츠': '요미우리',
+  '한신 타이거즈': '한신',
+  '히로시마 도요 카프': '히로시마',
+  '주니치 드래곤즈': '주니치',
+  '야쿠르트 스왈로즈': '야쿠르트',
+  '요코하마 DeNA 베이스타즈': '요코하마',
+  '후쿠오카 소프트뱅크 호크스': '소프트뱅크',
+  '오릭스 버팔로즈': '오릭스',
+  '지바 롯데 마린즈': '지바롯데',
+  '도호쿠 라쿠텐 골든이글스': '라쿠텐',
+  '사이타마 세이부 라이온즈': '세이부',
+  '홋카이도 닛폰햄 파이터즈': '니혼햄',
+}
+
+function normalizeTeam(team: string, league: string): string {
+  if (league === 'npb') return NPB_TEAM_NORMALIZE[team] ?? team
+  return KBO_TEAM_NORMALIZE[team] ?? team
 }
 
 function buildAnalysis(s: any): { strengths: string[]; weakness: string[]; summary: string } {
@@ -92,25 +126,38 @@ function buildAnalysis(s: any): { strengths: string[]; weakness: string[]; summa
   return { strengths, weakness, summary }
 }
 
-async function fetchKboPitcherStat(name: string, season: string, league: string = 'kbo'): Promise<KboPitcherStat | null> {
+async function fetchKboPitcherStat(
+  name: string,
+  season: string,
+  league: string = 'kbo',
+  team?: string
+): Promise<KboPitcherStat | null> {
   if (!name) return null
   const table = league === 'npb' ? 'npb_pitcher_stats' : 'kbo_pitcher_stats'
 
-  const { data, error } = await supabase
+  // 팀명 있으면 같이 조회 (동명이인 방지)
+  let query = supabase
     .from(table)
     .select('*')
     .eq('season', season)
     .ilike('name', name.trim())
-    .maybeSingle()
+
+  if (team) query = (query as any).ilike('team', team.trim())
+
+  const { data, error } = await (query as any).maybeSingle()
 
   if (error || !data) {
+    // fallback: 이름 앞 2글자로 조회
     const keyword = name.trim().slice(0, 2)
-    const { data: fallback } = await supabase
+    let fallbackQuery = supabase
       .from(table)
       .select('*')
       .eq('season', season)
       .ilike('name', `${keyword}%`)
-      .maybeSingle()
+
+    if (team) fallbackQuery = (fallbackQuery as any).ilike('team', team.trim())
+
+    const { data: fallback } = await (fallbackQuery as any).maybeSingle()
 
     if (!fallback) return null
 
@@ -128,6 +175,12 @@ export async function GET(request: NextRequest) {
   const awayPitcher = searchParams.get('awayPitcher') ?? ''
   const season      = searchParams.get('season') ?? '2025'
   const league      = searchParams.get('league') ?? 'kbo'
+  const homeTeamRaw = searchParams.get('homeTeam') ?? ''
+  const awayTeamRaw = searchParams.get('awayTeam') ?? ''
+
+  // 팀명 정규화 (한화 이글스 → 한화 등)
+  const homeTeam = homeTeamRaw ? normalizeTeam(homeTeamRaw, league) : ''
+  const awayTeam = awayTeamRaw ? normalizeTeam(awayTeamRaw, league) : ''
 
   if (!homePitcher && !awayPitcher) {
     return NextResponse.json(
@@ -138,8 +191,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const [homeStats, awayStats] = await Promise.all([
-      homePitcher ? fetchKboPitcherStat(homePitcher, season, league) : Promise.resolve(null),
-      awayPitcher ? fetchKboPitcherStat(awayPitcher, season, league) : Promise.resolve(null),
+      homePitcher ? fetchKboPitcherStat(homePitcher, season, league, homeTeam || undefined) : Promise.resolve(null),
+      awayPitcher ? fetchKboPitcherStat(awayPitcher, season, league, awayTeam || undefined) : Promise.resolve(null),
     ])
 
     return NextResponse.json({

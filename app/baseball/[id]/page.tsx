@@ -266,6 +266,7 @@ export default function BaseballDetailPage() {
   const [kboNpbPitcherLoading, setKboNpbPitcherLoading] = useState(false)
   const [kboHomePitcherStats, setKboHomePitcherStats] = useState<any>(null)
   const [kboAwayPitcherStats, setKboAwayPitcherStats] = useState<any>(null)
+  const [kboPitcherStatsFetched, setKboPitcherStatsFetched] = useState(false)
 
   // Claude AI 투수 분석
   const [pitcherAnalysis, setPitcherAnalysis] = useState<string | null>(null)
@@ -483,6 +484,8 @@ export default function BaseballDetailPage() {
       const params = new URLSearchParams({ season: '2025' })
       if (kboNpbHomePitcher) params.set('homePitcher', kboNpbHomePitcher)
       if (kboNpbAwayPitcher) params.set('awayPitcher', kboNpbAwayPitcher)
+      if (match!.home.teamKo) params.set('homeTeam', match!.home.teamKo)
+      if (match!.away.teamKo) params.set('awayTeam', match!.away.teamKo)
 
       try {
         const res = await fetch(`/api/baseball/kbo-pitcher-stats?${params}&league=${league}`)
@@ -492,7 +495,9 @@ export default function BaseballDetailPage() {
           setKboHomePitcherStats(data.homePitcher ?? null)
           setKboAwayPitcherStats(data.awayPitcher ?? null)
         }
-      } catch { /* 무시 */ }
+      } catch { /* 무시 */ } finally {
+        setKboPitcherStatsFetched(true)
+      }
     }
 
     fetchKboPitcherStats()
@@ -514,8 +519,8 @@ export default function BaseballDetailPage() {
     const homeName = isMLB ? match.homePitcher : kboNpbHomePitcher
     const awayName = isMLB ? match.awayPitcher : kboNpbAwayPitcher
 
-    // KBO/NPB: 투수 이름은 세팅됐는데 stats가 아직 로딩 중이면 대기
-    if (isKboNpb && (kboNpbHomePitcher || kboNpbAwayPitcher) && !pitcherHomeStats && !pitcherAwayStats) return
+    // KBO/NPB: 투수 이름은 세팅됐는데 stats fetch가 아직 완료되지 않았으면 대기
+    if (isKboNpb && (kboNpbHomePitcher || kboNpbAwayPitcher) && !kboPitcherStatsFetched) return
 
     // stats도 이름도 없으면 분석 불가
     if (!pitcherHomeStats && !pitcherAwayStats) return
@@ -554,7 +559,7 @@ export default function BaseballDetailPage() {
     }
 
     generateAnalysis()
-  }, [match?.league, homePitcherStats, awayPitcherStats, kboHomePitcherStats, kboAwayPitcherStats, kboNpbHomePitcher, kboNpbAwayPitcher])
+  }, [match?.league, homePitcherStats, awayPitcherStats, kboHomePitcherStats, kboAwayPitcherStats, kboNpbHomePitcher, kboNpbAwayPitcher, kboPitcherStatsFetched])
 
   const isFinished = match?.status === 'FT'
   const isLive = match?.status?.startsWith('IN') ?? false
@@ -1262,7 +1267,7 @@ export default function BaseballDetailPage() {
                           {name || t('선발 미정', 'Starter TBD')}
                         </p>
                       )}
-                      {stats?.season && (
+                      {stats?.season && match.league === 'MLB' && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600/30 text-blue-400 font-bold mt-1">
                           {stats.season}
                         </span>
@@ -1303,10 +1308,12 @@ export default function BaseballDetailPage() {
                           </div>
                         )}
                       </div>
-                    ) : name ? (
+                    ) : name && !kboPitcherStatsFetched ? (
                       <div className="flex justify-center py-4">
                         <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                       </div>
+                    ) : name ? (
+                      <p className="text-xs text-gray-500 text-center py-4">{t('이번 시즌 기록 집계 중', 'Stats being compiled')}</p>
                     ) : (
                       <p className="text-xs text-gray-600 text-center py-4">{t('선발 미정', 'Starter TBD')}</p>
                     )}
