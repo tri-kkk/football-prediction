@@ -19,9 +19,9 @@ import TermsGuard from './components/TermsGuard'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
-  title: '트랜드사커 - TrendSoccer 실시간 해외축구 AI 분석',
-  description: '트랜드사커(TrendSoccer)는 6대 리그 4,800경기 이상의 데이터를 AI로 분석하여 승률 정보를 제공합니다. 실시간 해외축구 배당 분석, 프리미엄 경기 픽, 승무패 분석 정보를 확인하세요.',
-  keywords: '트랜드사커, TrendSoccer, 축구 분석, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, AI 축구 분석, 승무패 분석, Soccer Analysis, Football Analysis, EPL Analysis, Match Preview, Live Score',
+  title: '트렌드사커 - 실시간 축구·야구 AI 데이터 분석 플랫폼',
+  description: '트렌드사커(TrendSoccer)는 축구 6대 리그 및 프로야구(KBO/MLB/NPB) 데이터를 AI로 정밀 분석하여 승률 정보를 제공합니다. 실시간 전력 분석과 적중 확률이 높은 프리미엄 경기 픽을 지금 확인하세요.',
+  keywords: '트랜드사커, TrendSoccer, 축구 분석, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, AI 축구 분석, 승무패 분석, Soccer Analysis, Football Analysis, EPL Analysis, Match Preview, Live Score, 야구 분석, KBO 예측, 프로야구 승률, MLB 분석, 세이버메트릭스, 경기 예측, KBO 프리뷰, 야구 데이터, NPB 예측, NPB 분석, NPB 프리뷰, MLB 프리뷰',
   authors: [{ name: '트랜드사커 (TrendSoccer)' }],
   robots: {
     index: true,
@@ -37,8 +37,8 @@ export const metadata: Metadata = {
     title: 'TrendSoccer',
   },
   openGraph: {
-    title: '트랜드사커 - 실시간 해외축구 AI 분석',
-    description: '데이터가 증명하는 승률. 6대 리그 전 경기 분석 리포트 확인하기.',
+    title: '트렌드사커 - 실시간 축구·야구 AI 데이터 분석 플랫폼',
+    description: '트렌드사커(TrendSoccer)는 축구 6대 리그 및 프로야구(KBO/MLB/NPB) 데이터를 AI로 정밀 분석하여 승률 정보를 제공합니다. 실시간 전력 분석과 적중 확률이 높은 프리미엄 경기 픽을 지금 확인하세요.',
     type: 'website',
     locale: 'ko_KR',
     alternateLocale: ['en_US'],
@@ -49,14 +49,14 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: '트랜드사커 - AI 기반 축구 경기 분석 플랫폼',
+        alt: '트렌드사커 - AI 기반 축구·야구 경기 분석 플랫폼',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '트랜드사커 - 실시간 해외축구 AI 예측',
-    description: '데이터가 증명하는 승률. 6대 리그 전 경기 분석 리포트 확인하기.',
+    title: '트렌드사커 - 실시간 축구·야구 AI 데이터 분석 플랫폼',
+    description: '트렌드사커(TrendSoccer)는 축구 6대 리그 및 프로야구(KBO/MLB/NPB) 데이터를 AI로 정밀 분석하여 승률 정보를 제공합니다.',
     images: ['/og-image.png'],
   },
   icons: {
@@ -112,6 +112,14 @@ const siteNavigationSchema = {
       "alternateName": "Latest Football News",
       "description": "최신 국내 및 해외 축구뉴스 | Latest domestic and international football news",
       "url": "https://www.trendsoccer.com/news"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "position": 5,
+      "name": "야구 AI 분석",
+      "alternateName": "Baseball AI Analysis",
+      "description": "KBO, NPB, MLB 프로야구 AI 승률 예측 | AI-powered baseball predictions",
+      "url": "https://www.trendsoccer.com/baseball"
     }
   ]
 }
@@ -122,7 +130,7 @@ const websiteSchema = {
   "name": "트랜드사커",
   "alternateName": ["TrendSoccer", "Trend Soccer"],
   "url": "https://www.trendsoccer.com",
-  "description": "AI 기반 실시간 축구 경기 예측 분석 플랫폼 | AI-powered real-time football match prediction platform",
+  "description": "AI 기반 실시간 축구·야구 경기 예측 분석 플랫폼 | AI-powered real-time football & baseball match prediction platform",
   "inLanguage": ["ko-KR", "en-US"],
   "potentialAction": {
     "@type": "SearchAction",

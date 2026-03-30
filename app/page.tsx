@@ -2194,12 +2194,12 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
       {/* SEO용 H1 태그 - 화면에서 숨김 */}
       <h1 className="sr-only">
-        실시간 해외축구 경기 예측 & 프리뷰 플랫폼 · Trend Soccer
+        Trend Soccer - 실시간 축구·야구 경기 예측 &amp; 프리뷰 플랫폼
       </h1>
       
       {/* 🔥 SEO용 정적 콘텐츠 - 애드센스/검색엔진 봇용 */}
       <section className="sr-only">
-        <h2>해외축구 실시간 배당 분석</h2>
+        <h2>프로야구 실시간 AI 전력 분석 및 추천 경기 확인</h2>
         <p>
           Trend Soccer는 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 
           챔피언스리그 등 주요 유럽 축구 리그의 실시간 배당 분석과 

@@ -1155,6 +1155,50 @@ export default function BaseballMainPage() {
         </div> {/* flex wrapper */}
       </main>
       
+      {/* SEO용 H1 태그 - 화면에서 숨김 */}
+      <h1 className="sr-only">
+        실시간 프로야구 AI 전력 분석 및 경기 예측 (KBO, NPB, MLB)
+      </h1>
+
+      {/* SEO용 정적 콘텐츠 - 검색엔진 봇용 */}
+      <section className="sr-only">
+        <h2>리그별 매치 리포트, 팀별 상대 전적 및 통계, 야구 승률 예측 픽</h2>
+        <p>
+          트렌드베이스볼은 KBO, NPB, MLB 프로야구 리그의 경기 데이터를 AI로 정밀 분석하여
+          승률 예측 정보를 제공하는 전문 플랫폼입니다. 세이버메트릭스 기반 투수/타자 스탯,
+          팀 상대 전적, 실시간 라인업 정보를 종합적으로 분석합니다.
+        </p>
+        <h3>KBO 분석</h3>
+        <p>
+          KBO 리그 전 경기 AI 승률 예측, 선발 투수 매치업 분석, 팀별 최근 폼 및 홈/원정 성적,
+          타자 주요 스탯 비교를 제공합니다.
+        </p>
+        <h3>NPB 분석</h3>
+        <p>
+          일본프로야구(NPB) 센트럴리그, 퍼시픽리그 전 경기 분석 및 승률 예측,
+          투수 세부 스탯 기반 매치업 리포트를 제공합니다.
+        </p>
+        <h3>MLB 분석</h3>
+        <p>
+          메이저리그(MLB) 아메리칸리그, 내셔널리그 전 경기 AI 예측, 세이버메트릭스 통계,
+          선발 투수 분석 및 팀 전력 비교 데이터를 제공합니다.
+        </p>
+      </section>
+      <section className="sr-only" lang="en">
+        <h2>Professional Baseball AI Analysis &amp; Match Predictions (KBO, NPB, MLB)</h2>
+        <p>
+          TrendBaseball provides AI-powered analysis and win probability predictions for KBO, NPB, and MLB
+          professional baseball leagues. Sabermetrics-based pitcher/batter stats, head-to-head records,
+          and real-time lineup information are comprehensively analyzed.
+        </p>
+        <h3>KBO Analysis</h3>
+        <p>AI win probability predictions, starting pitcher matchup analysis, and team form tracking for all KBO league games.</p>
+        <h3>NPB Analysis</h3>
+        <p>Full game analysis and predictions for Japan&apos;s NPB Central and Pacific leagues with detailed pitcher stats.</p>
+        <h3>MLB Analysis</h3>
+        <p>AI predictions, sabermetrics, starting pitcher analysis, and team comparison data for all MLB games.</p>
+      </section>
+
       {/* 하단 여백 (BottomNavigation 공간) */}
       <div className="h-20 md:h-0" />
 
