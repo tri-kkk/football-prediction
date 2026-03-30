@@ -595,19 +595,39 @@ export default function BaseballDetailPage() {
     return () => clearInterval(interval)
   }, [matchId, isLive])
 
-  // 사이드바: 오늘 경기 목록 fetch (skipML로 빠르게)
+  // 사이드바: 오늘 경기 + 현재 경기와 같은 날짜 경기 fetch
   useEffect(() => {
-    async function fetchToday() {
+    async function fetchSidebarMatches() {
       try {
-        const res = await fetch('/api/baseball/matches?status=today&skipML=true')
-        const data = await res.json()
-        if (data.success && data.matches) {
-          setTodayMatches(data.matches)
+        // 1) 오늘 경기
+        const todayRes = await fetch('/api/baseball/matches?status=today&skipML=true')
+        const todayData = await todayRes.json()
+        let matches = todayData.success && todayData.matches ? todayData.matches : []
+
+        // 2) 현재 경기 날짜가 오늘이 아니면 해당 날짜 경기도 추가
+        if (match?.date) {
+          const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+          const todayStr = kstNow.toISOString().split('T')[0]
+          const matchDateStr = match.date.split('T')[0]
+          if (matchDateStr !== todayStr) {
+            try {
+              const dateRes = await fetch(`/api/baseball/matches?date=${matchDateStr}&skipML=true`)
+              const dateData = await dateRes.json()
+              if (dateData.success && dateData.matches) {
+                // 중복 제거 후 병합
+                const existingIds = new Set(matches.map((m: any) => String(m.id)))
+                const newMatches = dateData.matches.filter((m: any) => !existingIds.has(String(m.id)))
+                matches = [...newMatches, ...matches]
+              }
+            } catch { /* 무시 */ }
+          }
         }
+
+        setTodayMatches(matches)
       } catch { /* 무시 */ }
     }
-    fetchToday()
-  }, [])
+    fetchSidebarMatches()
+  }, [match?.date])
 
   // 현재 경기 리그로 사이드바 탭 자동 선택
   useEffect(() => {
@@ -779,7 +799,7 @@ export default function BaseballDetailPage() {
         <aside className="hidden xl:block w-60 flex-shrink-0 sticky top-[72px] self-start">
           <div className="bg-[#1a1f2e] rounded-xl overflow-hidden">
             <div className="px-4 py-3 bg-[#141824]">
-              <span className="text-xs font-bold text-gray-400 tracking-wider uppercase">{t('오늘의 경기', "Today's Games")}</span>
+              <span className="text-xs font-bold text-gray-400 tracking-wider uppercase">{t('경기 목록', 'Match List')}</span>
               {/* 리그 탭 */}
               {(() => {
                 const leagues = ['ALL', ...Array.from(new Set(todayMatches.map((m: any) => m.league))).sort()]
