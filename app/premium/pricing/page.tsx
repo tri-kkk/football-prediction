@@ -72,9 +72,8 @@ export default function PricingPage() {
 
   const isPremium = (session?.user as any)?.tier === 'premium'
 
-  // 🎉 프로모션 기간 체크
-  const PROMO_END = new Date('2026-02-01T00:00:00+09:00')
-  const isPromoPeriod = new Date() < PROMO_END
+  // 🎉 프로모션 기간 체크 (현재 만료됨)
+  const isPromoPeriod = false
 
   const plans = {
     monthly: {
@@ -221,8 +220,13 @@ export default function PricingPage() {
               </h1>
               <p className="text-gray-400">
                 {language === 'ko'
-                  ? '매일 저녁 6시 갱신 · 확신 있을 때만'
-                  : 'Updated 6 PM daily · Only when confident'}
+                  ? '축구 6대 리그 + 야구 KBO·MLB·NPB AI 분석'
+                  : 'Football 6 Leagues + Baseball KBO·MLB·NPB AI Analysis'}
+              </p>
+              <p className="text-gray-500 text-sm mt-1">
+                {language === 'ko'
+                  ? '매일 갱신 · 확신 있을 때만 · 하나의 구독으로 모두 이용'
+                  : 'Updated daily · Only when confident · All-in-one subscription'}
               </p>
             </div>
 
@@ -336,21 +340,34 @@ export default function PricingPage() {
               <div className="bg-[#1a1a1a] rounded-xl p-6 space-y-4">
                 {[
                   {
-                    title: language === 'ko' ? '트렌드사커 픽' : 'TrendSoccer Picks',
-                    desc: language === 'ko' ? '엄선된 확신 경기만' : 'Curated confident matches only',
+                    icon: '⚽',
+                    title: language === 'ko' ? '축구 AI 프리미엄 픽' : 'Football AI Premium Picks',
+                    desc: language === 'ko' ? '6대 리그 엄선 경기 승률 예측' : 'Top 6 league curated match predictions',
                   },
                   {
+                    icon: '⚾',
+                    title: language === 'ko' ? '야구 AI 프리미엄 픽' : 'Baseball AI Premium Picks',
+                    desc: language === 'ko' ? 'KBO·MLB·NPB 경기 승률 예측' : 'KBO·MLB·NPB match predictions',
+                  },
+                  {
+                    icon: '⏰',
                     title: language === 'ko' ? '24시간 선공개' : '24h Early Access',
-                    desc: language === 'ko' ? '예측을 남들보다 먼저' : 'Get predictions before others',
+                    desc: language === 'ko' ? '예측을 남들보다 먼저 확인' : 'Get predictions before others',
                   },
                   {
+                    icon: '📊',
+                    title: language === 'ko' ? '상세 AI 분석 리포트' : 'Detailed AI Analysis Report',
+                    desc: language === 'ko' ? '팀 전력, 상대전적, 세이버메트릭스' : 'Team stats, H2H, sabermetrics',
+                  },
+                  {
+                    icon: '🚫',
                     title: language === 'ko' ? '광고 완전 제거' : 'Ad-free Experience',
-                    desc: language === 'ko' ? '깔끔한 화면으로 집중' : 'Clean interface, no distractions',
+                    desc: language === 'ko' ? '깔끔한 화면으로 분석에 집중' : 'Clean interface, no distractions',
                   },
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <span className="text-yellow-400 font-bold">{idx + 1}</span>
+                      <span className="text-lg">{item.icon}</span>
                     </div>
                     <div>
                       <div className="text-white font-medium">{item.title}</div>

@@ -45,11 +45,8 @@ export default function LoginPage() {
   // 네이버 로그인 활성화 여부 (검수 통과 후 true로 변경)
   const NAVER_ENABLED = true
 
-  // 🎉 프로모션 기간 체크 (2월 28일까지 연장)
-  const PROMO_END = new Date('2026-03-01T00:00:00+09:00')
-  const now = new Date()
-  const daysLeft = Math.ceil((PROMO_END.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  const isPromoPeriod = daysLeft > 0
+  // 🎉 프로모션 기간 체크 (현재 만료됨)
+  const isPromoPeriod = false
 
   // 이미 로그인된 경우 리다이렉트
   useEffect(() => {
@@ -125,31 +122,37 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        {/* 타이틀 + 기하학적 배경 */}
+        {/* 타이틀 + 스포츠 아이콘 */}
         <div className="text-center mb-8 relative">
-          {/* 기하학적 도형들 */}
-          <div className="absolute -top-12 left-0 w-10 h-10 border border-green-500/30 rotate-45 animate-float-slow" />
-          <div className="absolute -top-8 right-4 w-8 h-8 border border-cyan-500/25 rotate-12 animate-float-medium" />
-          <div className="absolute -top-4 left-1/4 w-5 h-5 border border-emerald-500/20 -rotate-12 animate-float-fast" />
-          <div className="absolute -top-14 right-1/4 w-6 h-6 border border-teal-500/25 rotate-45 animate-float-slow" />
-          
-          {/* 원형 점들 */}
-          <div className="absolute -top-6 left-8 w-2 h-2 bg-green-500/40 rounded-full animate-pulse-glow" />
-          <div className="absolute -top-2 right-12 w-2 h-2 bg-cyan-500/40 rounded-full animate-pulse-glow" style={{ animationDelay: '1s' }} />
-          <div className="absolute -top-10 left-1/2 w-2 h-2 bg-emerald-500/30 rounded-full animate-pulse-glow" style={{ animationDelay: '2s' }} />
-          
+          {/* 스포츠 아이콘 플로팅 */}
+          <div className="absolute -top-10 left-4 text-2xl animate-float-slow opacity-40">⚽</div>
+          <div className="absolute -top-6 right-6 text-xl animate-float-medium opacity-35">⚾</div>
+          <div className="absolute -top-12 left-1/3 text-lg animate-float-fast opacity-25">📊</div>
+          <div className="absolute -top-8 right-1/3 text-lg animate-float-slow opacity-30" style={{ animationDelay: '1.5s' }}>🤖</div>
+
+          {/* 기하학적 장식 */}
+          <div className="absolute -top-14 left-0 w-8 h-8 border border-green-500/20 rotate-45 animate-float-slow" />
+          <div className="absolute -top-10 right-2 w-6 h-6 border border-cyan-500/15 rotate-12 animate-float-medium" />
+
+          {/* 글로우 점들 */}
+          <div className="absolute -top-4 left-10 w-2 h-2 bg-green-500/40 rounded-full animate-pulse-glow" />
+          <div className="absolute -top-2 right-14 w-2 h-2 bg-cyan-500/40 rounded-full animate-pulse-glow" style={{ animationDelay: '1s' }} />
+
           <h1 className="text-2xl md:text-3xl font-bold leading-tight">
-            <span className="text-white">{language === 'ko' ? '데이터로 읽는' : 'Read with Data'}</span>
+            <span className="text-white">{language === 'ko' ? 'AI가 분석하는' : 'AI-Powered'}</span>
             <br />
-            <span style={{ 
-              background: 'linear-gradient(to right, #22d3ee, #2dd4bf, #34d399)', 
+            <span style={{
+              background: 'linear-gradient(to right, #22d3ee, #2dd4bf, #34d399)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text'
             }}>
-              {language === 'ko' ? '축구의 흐름' : 'Football Flow'}
+              {language === 'ko' ? '축구 · 야구 예측' : 'Football · Baseball Predictions'}
             </span>
           </h1>
+          <p className="text-gray-500 text-sm mt-2">
+            {language === 'ko' ? '6대 리그 + KBO · MLB · NPB 데이터 기반' : '6 Major Leagues + KBO · MLB · NPB Data-Driven'}
+          </p>
         </div>
 
         {/* 🔗 레퍼럴 배너 (ref 코드가 있을 때만) */}
@@ -179,7 +182,7 @@ export default function LoginPage() {
             <span className="text-2xl flex-shrink-0">🎁</span>
             <div>
               <p className="text-yellow-400 font-bold text-sm">
-                {language === 'ko' ? '신규 가입 시 48시간 프리미엄 무료 체험' : '48-Hour Free Premium Trial'}
+                {language === 'ko' ? '신규 가입 시 48시간 프리미엄 무료 체험 (축구+야구)' : '48-Hour Free Premium Trial (Football+Baseball)'}
               </p>
               
             </div>
@@ -237,47 +240,38 @@ export default function LoginPage() {
           {/* 프리미엄 혜택 안내 */}
           <div className="mt-6 pt-6 border-t border-gray-800">
               <div className="text-gray-500 text-xs mb-3 text-center tracking-wider">PREMIUM BENEFITS</div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex items-center gap-2 text-gray-400 bg-[#111] rounded-lg px-3 py-2">
-                  <span className="text-green-500">◆</span>
-                  {language === 'ko' ? '24시간 선공개' : '24h Early Access'}
+
+              {/* 스포츠별 카드 */}
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="bg-gradient-to-br from-green-900/30 to-green-900/10 border border-green-500/20 rounded-xl p-3 text-center">
+                  <span className="text-xl block mb-1">⚽</span>
+                  <span className="text-green-400 text-xs font-bold">{language === 'ko' ? '축구 AI 픽' : 'Football AI'}</span>
+                  <p className="text-gray-500 text-[10px] mt-0.5">{language === 'ko' ? '6대 리그 분석' : '6 Leagues'}</p>
                 </div>
-                <div className="flex items-center gap-2 text-gray-400 bg-[#111] rounded-lg px-3 py-2">
-                  <span className="text-green-500">◆</span>
-                  {language === 'ko' ? 'PICK 상세분석' : 'PICK Analysis'}
+                <div className="bg-gradient-to-br from-blue-900/30 to-blue-900/10 border border-blue-500/20 rounded-xl p-3 text-center">
+                  <span className="text-xl block mb-1">⚾</span>
+                  <span className="text-blue-400 text-xs font-bold">{language === 'ko' ? '야구 AI 픽' : 'Baseball AI'}</span>
+                  <p className="text-gray-500 text-[10px] mt-0.5">{language === 'ko' ? 'KBO·MLB·NPB' : 'KBO·MLB·NPB'}</p>
                 </div>
-                <div className="flex items-center gap-2 text-gray-400 bg-[#111] rounded-lg px-3 py-2">
-                  <span className="text-green-500">◆</span>
-                  {language === 'ko' ? '광고 제거' : 'Ad-free'}
+              </div>
+
+              {/* 공통 혜택 */}
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="flex flex-col items-center gap-1 text-gray-400 bg-[#111] rounded-lg px-2 py-2.5">
+                  <span className="text-green-500 text-sm">⏰</span>
+                  <span className="text-[10px] text-center">{language === 'ko' ? '24h 선공개' : '24h Early'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-400 bg-[#111] rounded-lg px-3 py-2">
-                  <span className="text-green-500">◆</span>
-                  {language === 'ko' ? '픽 알림' : 'Pick Alerts'}
+                <div className="flex flex-col items-center gap-1 text-gray-400 bg-[#111] rounded-lg px-2 py-2.5">
+                  <span className="text-green-500 text-sm">📊</span>
+                  <span className="text-[10px] text-center">{language === 'ko' ? '상세 리포트' : 'Reports'}</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 text-gray-400 bg-[#111] rounded-lg px-2 py-2.5">
+                  <span className="text-green-500 text-sm">🚫</span>
+                  <span className="text-[10px] text-center">{language === 'ko' ? '광고 제거' : 'No Ads'}</span>
                 </div>
               </div>
             </div>
 
-          {/* 🎫 프로토 계산기 배너 - 한국어만 */}
-          {language === 'ko' && (
-            <div className="mt-6 pt-6 border-t border-gray-800">
-              <div className="bg-gradient-to-r from-emerald-900/30 to-teal-900/30 border border-emerald-500/30 rounded-2xl p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <span className="text-2xl">🎫</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-white font-bold text-sm">프로토 계산기</span>
-                      <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded">NEW</span>
-                    </div>
-                    <p className="text-gray-400 text-xs">
-                      스포츠토토 배당 계산 & 조합 저장
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 홈으로 */}
