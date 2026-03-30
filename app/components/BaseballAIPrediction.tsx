@@ -333,7 +333,13 @@ export default function BaseballAIPrediction({
                           원정 · {AN}
                         </span>
                       </div>
-                      <p className="text-sm leading-7 font-medium" style={{ color: '#cbd5e1' }}>{awaySummary}</p>
+                      <div className="space-y-2">
+                        {awaySummary.split(/\n|(?<=[.다니요])\s+/).filter(Boolean).map((sentence, i) => (
+                          <p key={i} className="text-[13px] leading-relaxed" style={{ color: '#cbd5e1' }}>
+                            {sentence.trim()}
+                          </p>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {homeSummary && (
@@ -344,7 +350,13 @@ export default function BaseballAIPrediction({
                           홈 · {HN}
                         </span>
                       </div>
-                      <p className="text-sm leading-7 font-medium" style={{ color: '#cbd5e1' }}>{homeSummary}</p>
+                      <div className="space-y-2">
+                        {homeSummary.split(/\n|(?<=[.다니요])\s+/).filter(Boolean).map((sentence, i) => (
+                          <p key={i} className="text-[13px] leading-relaxed" style={{ color: '#cbd5e1' }}>
+                            {sentence.trim()}
+                          </p>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

@@ -1349,9 +1349,17 @@ export default function BaseballDetailPage() {
                         <span className="text-xs" style={{ color: '#64748b' }}>{t('투수 매치업 분석 중...', 'Analyzing pitcher matchup...')}</span>
                       </div>
                     ) : (
-                      <p className="text-sm leading-7" style={{ color: '#e2e8f0', letterSpacing: '0.01em' }}>
-                        {pitcherAnalysis}
-                      </p>
+                      <div className="space-y-3">
+                        {pitcherAnalysis?.split(/(?<=[.다니])\s+/).filter(Boolean).map((sentence: string, i: number) => (
+                          <p key={i} className="text-[13px] leading-relaxed" style={{ color: '#cbd5e1', letterSpacing: '0.01em' }}>
+                            {sentence.trim()}
+                          </p>
+                        )) || (
+                          <p className="text-[13px] leading-relaxed" style={{ color: '#cbd5e1' }}>
+                            {pitcherAnalysis}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
