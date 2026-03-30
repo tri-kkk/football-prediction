@@ -23,6 +23,16 @@ const nextConfig = {
       { protocol: 'https', hostname: 'baseball.yahoo.co.jp', pathname: '/**' },
     ],
   },
+  async redirects() {
+    return [
+      // 과거 존재했던 페이지 → 메인으로 301 영구 리디렉션
+      {
+        source: '/movement',
+        destination: '/',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {
