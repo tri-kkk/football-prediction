@@ -30,27 +30,43 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'API 키 없음' }, { status: 500 })
     }
 
-    // KST 오늘 날짜
+    // KST 오늘 + UTC 오늘 (미국 경기가 KST 기준 전날 시작되므로 두 날짜 모두 조회)
     const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
-    const today = kst.toISOString().split('T')[0]
+    const kstToday = kst.toISOString().split('T')[0]
+    const utcToday = new Date().toISOString().split('T')[0]
 
-    console.log(`🔴 야구 라이브 조회: ${today}`)
+    // 두 날짜가 같으면 하나만, 다르면 둘 다 조회
+    const datesToQuery = [kstToday]
+    if (utcToday !== kstToday) datesToQuery.push(utcToday)
 
-    // API-Sports Baseball - 오늘 전체 경기 조회
-    const res = await fetch(
-      `https://v1.baseball.api-sports.io/games?date=${today}`,
-      {
-        headers: { 'x-apisports-key': BASEBALL_API_KEY },
-        next: { revalidate: 0 },
-      }
+    console.log(`🔴 야구 라이브 조회: ${datesToQuery.join(', ')}`)
+
+    // API-Sports Baseball - 두 날짜 병렬 조회
+    const responses = await Promise.all(
+      datesToQuery.map(d =>
+        fetch(`https://v1.baseball.api-sports.io/games?date=${d}`, {
+          headers: { 'x-apisports-key': BASEBALL_API_KEY },
+          next: { revalidate: 0 },
+        })
+      )
     )
 
-    if (!res.ok) {
-      throw new Error(`API 요청 실패: ${res.status}`)
+    for (const res of responses) {
+      if (!res.ok) {
+        console.error(`API 요청 실패: ${res.status}`)
+      }
     }
 
-    const data = await res.json()
-    const allGames = data.response || []
+    const allGamesArrays = await Promise.all(
+      responses.filter(r => r.ok).map(r => r.json())
+    )
+    // 두 날짜 결과 합치고 ID 기준 중복 제거
+    const seenIds = new Set<number>()
+    const allGames = allGamesArrays.flatMap(d => d.response || []).filter((g: any) => {
+      if (seenIds.has(g.id)) return false
+      seenIds.add(g.id)
+      return true
+    })
 
     // 라이브 + 오늘 종료 경기 필터 (IN% + FT)
     const liveGames = allGames.filter((g: any) =>
@@ -101,7 +117,9 @@ export async function GET(request: NextRequest) {
           .upsert({
             api_match_id: g.id,
             league: leagueCode,
-            match_date: today,
+            match_date: g.timestamp
+              ? new Date(g.timestamp * 1000 + 9 * 60 * 60 * 1000).toISOString().split('T')[0]
+              : kstToday,
             match_time: g.timestamp
               ? (() => { const k = new Date(g.timestamp * 1000 + 9 * 60 * 60 * 1000); return k.toISOString().split('T')[1].slice(0, 8) })()
               : g.time || null,
@@ -137,7 +155,9 @@ export async function GET(request: NextRequest) {
           id: g.id,
           league: leagueCode,
           leagueName: g.league.name,
-          date: today,
+          date: g.timestamp
+            ? new Date(g.timestamp * 1000 + 9 * 60 * 60 * 1000).toISOString().split('T')[0]
+            : kstToday,
           timestamp: g.timestamp,
 
           homeTeam: g.teams.home.name,

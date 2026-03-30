@@ -213,7 +213,14 @@ export default function BaseballMainPage() {
             innings: m.innings,
             odds: null,
           }))
-          setLiveMatches(live)
+          // 라이브 경기가 있을 때만 업데이트 (빈 배열로 기존 DB 소스 라이브 덮어쓰기 방지)
+          if (live.length > 0) {
+            setLiveMatches(prev => {
+              const newIds = new Set(live.map(m => m.id))
+              const kept = prev.filter(m => !newIds.has(m.id) && m.status?.startsWith('IN'))
+              return [...live, ...kept]
+            })
+          }
         }
       } catch (err) {
         console.error('Failed to fetch live matches:', err)
