@@ -590,11 +590,11 @@ export default function BaseballDetailPage() {
     return () => clearInterval(interval)
   }, [matchId, isLive])
 
-  // 사이드바: 오늘 경기 목록 fetch
+  // 사이드바: 오늘 경기 목록 fetch (skipML로 빠르게)
   useEffect(() => {
     async function fetchToday() {
       try {
-        const res = await fetch('/api/baseball/matches?status=today')
+        const res = await fetch('/api/baseball/matches?status=today&skipML=true')
         const data = await res.json()
         if (data.success && data.matches) {
           setTodayMatches(data.matches)

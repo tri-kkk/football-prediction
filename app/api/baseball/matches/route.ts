@@ -169,8 +169,9 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status') || 'all'
   const limit = parseInt(searchParams.get('limit') || '50')
   const date = searchParams.get('date') || ''
+  const skipML = searchParams.get('skipML') === 'true'
 
-  console.log('📊 Baseball Matches API:', { matchId, league, status, limit, date })
+  console.log('📊 Baseball Matches API:', { matchId, league, status, limit, date, skipML })
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -288,7 +289,9 @@ export async function GET(request: NextRequest) {
         }
         const oddsMap = new Map(odds.map(o => [o.api_match_id, o]))
 
-        const mlPredictions = await Promise.all(
+        const mlPredictions = skipML
+          ? matches.map(() => null)
+          : await Promise.all(
           matches.map(m =>
             ['NS', 'SCHEDULED', 'TBD'].includes(m.status)
               ? fetchMLPrediction(supabase, m.home_team, m.away_team, m.match_date, {
@@ -399,7 +402,9 @@ export async function GET(request: NextRequest) {
     // =====================================================
     // ✅ MLB 경기만 ML 예측 병렬 호출 추가
     // =====================================================
-    const mlPredictions = await Promise.all(
+    const mlPredictions = skipML
+      ? (matches || []).map(() => null)
+      : await Promise.all(
       (matches || []).map(m =>
         ['NS', 'SCHEDULED', 'TBD'].includes(m.status)
           ? fetchMLPrediction(supabase, m.home_team, m.away_team, m.match_date, {

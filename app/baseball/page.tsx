@@ -230,37 +230,44 @@ export default function BaseballMainPage() {
     async function fetchMatches() {
       setLoading(true)
       try {
-        const response = await fetch('/api/baseball/matches?status=today&limit=50')
-        const data = await response.json()
-        if (data.success) {
-          const live = data.matches.filter((m: Match) => m.status?.startsWith('IN'))
-          const rest = data.matches.filter((m: Match) => !m.status?.startsWith('IN'))
+        // 1단계: 오늘 경기(skipML) + 예정 경기(ML포함) + 라이브 모두 병렬 호출
+        const [todayRes, scheduledRes] = await Promise.all([
+          fetch('/api/baseball/matches?status=today&limit=50&skipML=true'),
+          fetch('/api/baseball/matches?status=scheduled&limit=20'),
+        ])
+        const [todayData, scheduledData] = await Promise.all([
+          todayRes.json(),
+          scheduledRes.json(),
+        ])
+
+        // 오늘 경기 → 라이브/스케줄 분리
+        if (todayData.success) {
+          const live = todayData.matches.filter((m: Match) => m.status?.startsWith('IN'))
+          const rest = todayData.matches.filter((m: Match) => !m.status?.startsWith('IN'))
           setLiveMatches(live)
           setScheduledMatches(rest)
+        }
 
-          const hasPickable = data.matches.some((m: Match) => m.status === 'NS' && (m.odds || m.mlPrediction))
+        // AI 추천 경기 = scheduled(ML 포함) 우선, 없으면 today 데이터 사용
+        if (scheduledData.success && scheduledData.matches.length > 0) {
+          const hasPickable = scheduledData.matches.some((m: Match) => m.status === 'NS' && (m.odds || m.mlPrediction))
           if (hasPickable) {
-            setMatches(data.matches)
+            setMatches(scheduledData.matches)
           } else {
-            const nextRes = await fetch('/api/baseball/matches?status=scheduled&limit=20')
-            const nextData = await nextRes.json()
-            if (nextData.success && nextData.matches.length > 0) {
-              setMatches(nextData.matches)
-            } else {
-              setMatches(data.matches)
-            }
+            setMatches(todayData.success ? todayData.matches : [])
           }
+        } else {
+          setMatches(todayData.success ? todayData.matches : [])
         }
       } catch (err) {
         console.error('Failed to fetch matches:', err)
       } finally {
         setLoading(false)
       }
-      // DB 로드 직후 바로 live 상태 동기화
-      await fetchLive()
     }
 
-    fetchMatches()
+    // fetchMatches와 fetchLive 병렬 실행
+    Promise.all([fetchMatches(), fetchLive()])
     // 이후 30초마다 live 갱신
     const interval = setInterval(fetchLive, 30000)
     return () => clearInterval(interval)

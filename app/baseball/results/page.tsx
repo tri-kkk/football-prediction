@@ -563,8 +563,13 @@ export default function BaseballMatchesPage() {
         if (selectedLeague !== 'ALL') {
           params.append('league', selectedLeague)
         }
-        params.append('status', activeTab === 'scheduled' ? 'scheduled' : 'finished')
+        const currentStatus = activeTab === 'scheduled' ? 'scheduled' : 'finished'
+        params.append('status', currentStatus)
         params.append('limit', '30')
+        // 종료된 경기는 ML 예측 불필요 → skipML로 빠르게
+        if (currentStatus === 'finished') {
+          params.append('skipML', 'true')
+        }
         
         const response = await fetch(`/api/baseball/matches?${params}`)
         const data = await response.json()
