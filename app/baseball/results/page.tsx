@@ -516,7 +516,7 @@ function MatchCard({ match, language, isScheduled, isSample = false }: {
 // =====================================================
 export default function BaseballMatchesPage() {
   const { language } = useLanguage()
-  const [activeTab, setActiveTab] = useState<'scheduled' | 'finished'>('scheduled') // 탭 추가
+  const [activeTab, setActiveTab] = useState<'scheduled' | 'finished'>('finished') // 결과 페이지이므로 결과 먼저
   const [selectedLeague, setSelectedLeague] = useState('ALL')
   
   // 초기 날짜를 오늘로 설정
@@ -670,16 +670,6 @@ export default function BaseballMatchesPage() {
             {/* 예정/결과 탭 */}
             <div className="flex items-center justify-center gap-2 mb-3">
               <button
-                onClick={() => setActiveTab('scheduled')}
-                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
-                  activeTab === 'scheduled'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
-                }`}
-              >
-                {language === 'ko' ? '예정 경기' : 'Scheduled'}
-              </button>
-              <button
                 onClick={() => setActiveTab('finished')}
                 className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
                   activeTab === 'finished'
@@ -688,6 +678,16 @@ export default function BaseballMatchesPage() {
                 }`}
               >
                 {language === 'ko' ? '경기 결과' : 'Results'}
+              </button>
+              <button
+                onClick={() => setActiveTab('scheduled')}
+                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                  activeTab === 'scheduled'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                }`}
+              >
+                {language === 'ko' ? '예정 경기' : 'Scheduled'}
               </button>
             </div>
             
