@@ -42,7 +42,8 @@ async function summarizeNews(
   teamName: string,
   teamNameKo: string,
   articles: { title: string; description: string }[],
-  league: string
+  league: string,
+  uiLanguage: string = 'ko'
 ): Promise<string | null> {
   if (!ANTHROPIC_API_KEY || articles.length === 0) return null
 
@@ -52,7 +53,18 @@ async function summarizeNews(
 
   const leagueLabel = league === 'KBO' ? 'KBO' : league === 'NPB' ? 'NPB' : league === 'CPBL' ? 'CPBL' : 'MLB'
 
-  const prompt = `아래는 ${leagueLabel} 팀 "${teamName}"(${teamNameKo})의 최근 뉴스 기사 제목과 요약입니다.
+  const prompt = uiLanguage === 'en'
+    ? `Below are recent news article titles and summaries for ${leagueLabel} team "${teamName}".
+
+${articleText}
+
+Summarize the team's recent situation in English in 2-3 sentences.
+- Focus on injuries, player news, team morale, recent performance
+- No markdown, no numbered lists
+- Write in 100% English only
+- Separate each sentence with a newline(\\n)
+- If no relevant news, just write "No recent major news available."`
+    : `아래는 ${leagueLabel} 팀 "${teamName}"(${teamNameKo})의 최근 뉴스 기사 제목과 요약입니다.
 
 ${articleText}
 
@@ -91,6 +103,7 @@ export async function GET(request: NextRequest) {
   const homeTeamKo = searchParams.get('homeTeamKo') || homeTeam
   const awayTeamKo = searchParams.get('awayTeamKo') || awayTeam
   const league = searchParams.get('league') || 'MLB'
+  const uiLanguage = searchParams.get('language') || 'ko'
 
   if (!homeTeam || !awayTeam) {
     return NextResponse.json({ success: false, error: 'homeTeam, awayTeam required' }, { status: 400 })
@@ -132,8 +145,8 @@ export async function GET(request: NextRequest) {
 
   // Claude 요약 병렬
   const [homeSummary, awaySummary] = await Promise.all([
-    summarizeNews(homeTeam, homeTeamKo, homeArticles, league),
-    summarizeNews(awayTeam, awayTeamKo, awayArticles, league),
+    summarizeNews(homeTeam, homeTeamKo, homeArticles, league, uiLanguage),
+    summarizeNews(awayTeam, awayTeamKo, awayArticles, league, uiLanguage),
   ])
 
   return NextResponse.json({

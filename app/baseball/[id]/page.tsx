@@ -539,13 +539,14 @@ export default function BaseballDetailPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             matchId: match!.id,
-            homeTeam: match!.home.teamKo,
-            awayTeam: match!.away.teamKo,
+            homeTeam: language === 'ko' ? match!.home.teamKo : match!.home.team,
+            awayTeam: language === 'ko' ? match!.away.teamKo : match!.away.team,
             homePitcher: homeName,
             awayPitcher: awayName,
             homeStats: pitcherHomeStats,
             awayStats: pitcherAwayStats,
             league: match!.league,
+            language,
           }),
         })
         const data = await res.json()
@@ -559,7 +560,12 @@ export default function BaseballDetailPage() {
     }
 
     generateAnalysis()
-  }, [match?.league, homePitcherStats, awayPitcherStats, kboHomePitcherStats, kboAwayPitcherStats, kboNpbHomePitcher, kboNpbAwayPitcher, kboPitcherStatsFetched])
+  }, [match?.league, homePitcherStats, awayPitcherStats, kboHomePitcherStats, kboAwayPitcherStats, kboNpbHomePitcher, kboNpbAwayPitcher, kboPitcherStatsFetched, language])
+
+  // 언어 변경 시 투수 분석 재생성
+  useEffect(() => {
+    pitcherAnalysisGenerated.current = false
+  }, [language])
 
   const isFinished = match?.status === 'FT'
   const isLive = match?.status?.startsWith('IN') ?? false
@@ -727,8 +733,12 @@ export default function BaseballDetailPage() {
                 const isCurrent = String(m.id) === String(matchId)
                 const mIsLive = m.status?.startsWith('IN')
                 const mIsDone = m.status === 'FT'
-                const awayKo = m.awayTeamKo || m.away_team_ko || m.awayTeam || m.away_team || ''
-                const homeKo = m.homeTeamKo || m.home_team_ko || m.homeTeam || m.home_team || ''
+                const awayEn = m.awayTeam || m.away_team || ''
+                const homeEn = m.homeTeam || m.home_team || ''
+                const awayKo = m.awayTeamKo || m.away_team_ko || awayEn
+                const homeKo = m.homeTeamKo || m.home_team_ko || homeEn
+                const awayName = language === 'ko' ? awayKo : awayEn
+                const homeName = language === 'ko' ? homeKo : homeEn
                 const awayLogo = m.awayLogo || m.away_team_logo
                 const homeLogo = m.homeLogo || m.home_team_logo
                 const awayScore = m.awayScore ?? m.away_score ?? 0
@@ -766,9 +776,9 @@ export default function BaseballDetailPage() {
                       <div className="w-4 h-4 rounded-full bg-white/90 flex items-center justify-center flex-shrink-0 p-0.5">
                         {awayLogo
                           ? <img src={awayLogo} alt="" className="w-full h-full object-contain" />
-                          : <span className="text-[6px] text-gray-700 font-bold">{awayKo.slice(0, 2)}</span>}
+                          : <span className="text-[6px] text-gray-700 font-bold">{awayName.slice(0, 2)}</span>}
                       </div>
-                      <span className={`text-[11px] truncate flex-1 min-w-0 ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{awayKo}</span>
+                      <span className={`text-[11px] truncate flex-1 min-w-0 ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{awayName}</span>
                       {(mIsLive || mIsDone) && (
                         <span className={`text-xs font-bold tabular-nums ml-1 ${awayScore > homeScore ? 'text-white' : 'text-gray-600'}`}>{awayScore}</span>
                       )}
@@ -778,9 +788,9 @@ export default function BaseballDetailPage() {
                       <div className="w-4 h-4 rounded-full bg-white/90 flex items-center justify-center flex-shrink-0 p-0.5">
                         {homeLogo
                           ? <img src={homeLogo} alt="" className="w-full h-full object-contain" />
-                          : <span className="text-[6px] text-gray-700 font-bold">{homeKo.slice(0, 2)}</span>}
+                          : <span className="text-[6px] text-gray-700 font-bold">{homeName.slice(0, 2)}</span>}
                       </div>
-                      <span className={`text-[11px] truncate flex-1 min-w-0 ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{homeKo}</span>
+                      <span className={`text-[11px] truncate flex-1 min-w-0 ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{homeName}</span>
                       {(mIsLive || mIsDone) && (
                         <span className={`text-xs font-bold tabular-nums ml-1 ${homeScore > awayScore ? 'text-white' : 'text-gray-600'}`}>{homeScore}</span>
                       )}
@@ -831,8 +841,12 @@ export default function BaseballDetailPage() {
                 const isCurrent = String(m.id) === String(matchId)
                 const mIsLive = m.status?.startsWith('IN')
                 const mIsDone = m.status === 'FT'
-                const awayKo = m.awayTeamKo || m.away_team_ko || m.awayTeam || m.away_team || ''
-                const homeKo = m.homeTeamKo || m.home_team_ko || m.homeTeam || m.home_team || ''
+                const awayEn = m.awayTeam || m.away_team || ''
+                const homeEn = m.homeTeam || m.home_team || ''
+                const awayKo = m.awayTeamKo || m.away_team_ko || awayEn
+                const homeKo = m.homeTeamKo || m.home_team_ko || homeEn
+                const awayName = language === 'ko' ? awayKo : awayEn
+                const homeName = language === 'ko' ? homeKo : homeEn
                 const awayLogo = m.awayLogo || m.away_team_logo
                 const homeLogo = m.homeLogo || m.home_team_logo
                 const awayScore = m.awayScore ?? m.away_score ?? 0
@@ -866,9 +880,9 @@ export default function BaseballDetailPage() {
                       <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center flex-shrink-0 p-0.5">
                         {awayLogo
                           ? <img src={awayLogo} alt="" className="w-full h-full object-contain" />
-                          : <span className="text-[7px] text-gray-700 font-bold">{awayKo.slice(0, 2)}</span>}
+                          : <span className="text-[7px] text-gray-700 font-bold">{awayName.slice(0, 2)}</span>}
                       </div>
-                      <span className={`text-xs truncate flex-1 min-w-0 ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{awayKo}</span>
+                      <span className={`text-xs truncate flex-1 min-w-0 ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{awayName}</span>
                       {(mIsLive || mIsDone) && (
                         <span className={`text-xs font-bold tabular-nums flex-shrink-0 ${awayScore > homeScore ? 'text-white' : 'text-gray-500'}`}>{awayScore}</span>
                       )}
@@ -878,9 +892,9 @@ export default function BaseballDetailPage() {
                       <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center flex-shrink-0 p-0.5">
                         {homeLogo
                           ? <img src={homeLogo} alt="" className="w-full h-full object-contain" />
-                          : <span className="text-[7px] text-gray-700 font-bold">{homeKo.slice(0, 2)}</span>}
+                          : <span className="text-[7px] text-gray-700 font-bold">{homeName.slice(0, 2)}</span>}
                       </div>
-                      <span className={`text-xs truncate flex-1 min-w-0 ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{homeKo}</span>
+                      <span className={`text-xs truncate flex-1 min-w-0 ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{homeName}</span>
                       {(mIsLive || mIsDone) && (
                         <span className={`text-xs font-bold tabular-nums flex-shrink-0 ${homeScore > awayScore ? 'text-white' : 'text-gray-500'}`}>{homeScore}</span>
                       )}
@@ -1311,22 +1325,54 @@ export default function BaseballDetailPage() {
                         </div>
 
                         {/* 강점/약점 태그 */}
-                        {(stats.strengths?.length > 0 || stats.weakness?.length > 0) && (
+                        {(stats.strengths?.length > 0 || stats.weakness?.length > 0) && (() => {
+                          const badgeMap: Record<string, string> = {
+                            '에이스급 ERA': 'Ace-level ERA',
+                            '안정적인 ERA': 'Solid ERA',
+                            '높은 ERA': 'High ERA',
+                            '탈삼진 머신': 'Strikeout machine',
+                            '높은 삼진율': 'High K rate',
+                            '낮은 삼진율': 'Low K rate',
+                            '출루 억제 탁월': 'Excellent WHIP',
+                            '주자 허용 많음': 'High baserunners',
+                            '주자 허용 多': 'High baserunners',
+                            '제구력 우수': 'Good command',
+                            '볼넷 허용 잦음': 'Walk prone',
+                            '볼넷 주의': 'Walk prone',
+                            '홈런 허용 주의': 'HR prone',
+                            '탈삼진 능력 우수': 'High strikeout ability',
+                            '시즌 개막 전 (통계 집계 중)': 'Pre-season (stats pending)',
+                          }
+                          const translateBadge = (text: string) => {
+                            if (language === 'ko') return text
+                            // Match Korean prefix before parenthetical stats
+                            const m = text.match(/^([^(]+?)(?:\s*\((.+)\))?$/)
+                            if (m) {
+                              const koLabel = m[1].trim()
+                              let statPart = m[2] ? ` (${m[2]})` : ''
+                              // Translate "경기당" in stat parenthetical
+                              statPart = statPart.replace('경기당', '/G')
+                              return (badgeMap[koLabel] ?? koLabel) + statPart
+                            }
+                            return text
+                          }
+                          return (
                           <div className="mt-2 pt-2 border-t border-gray-800/50 flex flex-wrap gap-1">
                             {stats.strengths?.map((s: string, i: number) => (
                               <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
                                 style={{ background: '#05966920', color: '#34d399', border: '1px solid #05966940' }}>
-                                ✦ {s}
+                                ✦ {translateBadge(s)}
                               </span>
                             ))}
                             {stats.weakness?.map((w: string, i: number) => (
                               <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
                                 style={{ background: '#f9731620', color: '#fb923c', border: '1px solid #f9731640' }}>
-                                ▲ {w}
+                                ▲ {translateBadge(w)}
                               </span>
                             ))}
                           </div>
-                        )}
+                          )
+                        })()}
                       </div>
                     ) : name && !kboPitcherStatsFetched ? (
                       <div className="flex justify-center py-4">
@@ -1826,7 +1872,7 @@ export default function BaseballDetailPage() {
                                 </span>
                                 {isBest && (
                                   <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ background: '#3b82f620', color: '#60a5fa' }}>
-                                    기준
+                                    {t('기준', 'Line')}
                                   </span>
                                 )}
                                 {pushHit && (

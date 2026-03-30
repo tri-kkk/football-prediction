@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface PredictionProps {
   matchId: number
@@ -63,10 +64,10 @@ function Section({ color, label, badge, children }: {
 }
 
 
-const confMap: Record<string, { label: string; color: string }> = {
-  HIGH:   { label: '높음', color: '#34d399' },
-  MEDIUM: { label: '보통', color: '#fbbf24' },
-  LOW:    { label: '낮음', color: '#94a3b8' },
+const confMapData: Record<string, { ko: string; en: string; color: string }> = {
+  HIGH:   { ko: '높음', en: 'High',   color: '#34d399' },
+  MEDIUM: { ko: '보통', en: 'Medium', color: '#fbbf24' },
+  LOW:    { ko: '낮음', en: 'Low',    color: '#94a3b8' },
 }
 
 function LoadingDots({ color = '#3b82f6' }: { color?: string }) {
@@ -85,8 +86,10 @@ function LoadingDots({ color = '#3b82f6' }: { color?: string }) {
 export default function BaseballAIPrediction({
   matchId, homeTeam, awayTeam, homeTeamKo, awayTeamKo, season, league, overUnderLine
 }: PredictionProps) {
-  const HN = homeTeamKo || homeTeam
-  const AN = awayTeamKo || awayTeam
+  const { language } = useLanguage()
+  const t = (ko: string, en: string) => language === 'ko' ? ko : en
+  const HN = language === 'ko' ? (homeTeamKo || homeTeam) : homeTeam
+  const AN = language === 'ko' ? (awayTeamKo || awayTeam) : awayTeam
 
   // 배당 라인: prop으로 받은 값만 사용, null이면 총점 섹션 숨김
   const ouLine = overUnderLine ?? null
@@ -105,7 +108,7 @@ export default function BaseballAIPrediction({
 
   useEffect(() => {
     if (homeTeam && awayTeam) loadNews()
-  }, [homeTeam, awayTeam])
+  }, [homeTeam, awayTeam, language])
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -133,6 +136,7 @@ export default function BaseballAIPrediction({
         homeTeam, awayTeam,
         homeTeamKo: HN, awayTeamKo: AN,
         league: league || 'MLB',
+        language,
       })
       const r = await fetch(`/api/baseball/team-news?${params}`)
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -157,7 +161,7 @@ export default function BaseballAIPrediction({
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
-          <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>AI 전력 분석</span>
+          <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>{t('AI 전력 분석', 'AI Analysis')}</span>
         </div>
         {pred && (
           <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full text-white tracking-wider"
@@ -187,7 +191,7 @@ export default function BaseballAIPrediction({
         <div>
 
           {/* 승부 지표 */}
-          <Section color="#3b82f6" label="승부 지표">
+          <Section color="#3b82f6" label={t('승부 지표', 'Win Probability')}>
             <div className="px-4 pt-5 pb-4 flex items-center justify-between">
               {/* 원정 */}
               <div className="flex-1 flex flex-col items-center">
@@ -199,7 +203,7 @@ export default function BaseballAIPrediction({
                 </div>
                 <p className="text-sm font-bold mt-1 truncate max-w-[90px] text-center" style={{ color: '#e2e8f0' }}>{AN}</p>
                 <span className="text-[10px] font-bold mt-1 px-2 py-0.5 rounded-full"
-                  style={{ background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440' }}>원정</span>
+                  style={{ background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440' }}>{t('원정', 'Away')}</span>
               </div>
               {/* 중앙 */}
               <div className="flex flex-col items-center gap-3 px-3">
@@ -219,21 +223,21 @@ export default function BaseballAIPrediction({
                 </div>
                 <p className="text-sm font-bold mt-1 truncate max-w-[90px] text-center" style={{ color: '#e2e8f0' }}>{HN}</p>
                 <span className="text-[10px] font-bold mt-1 px-2 py-0.5 rounded-full"
-                  style={{ background: '#3b82f620', color: '#60a5fa', border: '1px solid #3b82f640' }}>홈</span>
+                  style={{ background: '#3b82f620', color: '#60a5fa', border: '1px solid #3b82f640' }}>{t('홈', 'Home')}</span>
               </div>
             </div>
           </Section>
 
           {/* 총점 지표 - 배당 기준선 있을 때만 표시 */}
           {ouLine !== null && (
-          <Section color="#f97316" label="총점 지표"
-            badge={<span className="text-[10px]" style={{ color: '#64748b' }}>기준 {ouLine}</span>}>
+          <Section color="#f97316" label={t('총점 지표', 'Over/Under')}
+            badge={<span className="text-[10px]" style={{ color: '#64748b' }}>{t('기준', 'Line')} {ouLine}</span>}>
             <div className="p-3">
               <div className="flex items-center justify-center mb-3">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
                   style={{ background: '#f9731618', border: '1px solid #f9731650' }}>
                   <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#f97316' }} />
-                  <span className="text-xs font-bold" style={{ color: '#f97316' }}>기준 {ouLine}</span>
+                  <span className="text-xs font-bold" style={{ color: '#f97316' }}>{t('기준', 'Line')} {ouLine}</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -245,7 +249,7 @@ export default function BaseballAIPrediction({
                     style={{ background: active ? c + '12' : '#131920', border: `1px solid ${active ? c + '50' : '#243044'}` }}>
                     {active && (
                       <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: c + '25', color: c }}>우세</span>
+                        style={{ background: c + '25', color: c }}>{t('우세', 'Favored')}</span>
                     )}
                     <p className="text-xs font-semibold mb-1" style={{ color: active ? c : '#64748b' }}>{label}</p>
                     <p className="text-3xl font-black" style={{ color: active ? c : '#475569' }}>{prob}%</p>
@@ -259,12 +263,12 @@ export default function BaseballAIPrediction({
           {ins && (
             <>
               {/* 홈/원정 전적 */}
-              <Section color="#f59e0b" label="최근 10경기 홈 / 원정 전적">
+              <Section color="#f59e0b" label={t('최근 10경기 홈 / 원정 전적', 'Last 10 Home/Away Record')}>
                 <div className="p-3">
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     {[
-                      { label: '원정 승률', val: ins.homeAdvantage.awayRecord, name: AN, c: '#ef4444' },
-                      { label: '홈 승률',   val: ins.homeAdvantage.homeRecord, name: HN, c: '#3b82f6' },
+                      { label: t('원정 승률', 'Away Win%'), val: ins.homeAdvantage.awayRecord, name: AN, c: '#ef4444' },
+                      { label: t('홈 승률', 'Home Win%'),   val: ins.homeAdvantage.homeRecord, name: HN, c: '#3b82f6' },
                     ].map(({ label, val, name, c }) => (
                       <div key={label} className="rounded-xl py-3.5 text-center"
                         style={{ background: c + '12', border: `1px solid ${c}30` }}>
@@ -278,7 +282,7 @@ export default function BaseballAIPrediction({
                     <div className="text-center py-2.5 rounded-xl"
                       style={{ background: '#3b82f610', border: '1px solid #3b82f625' }}>
                       <p className="text-xs font-semibold" style={{ color: '#60a5fa' }}>
-                        홈 어드밴티지 +{(ins.homeAdvantage.advantage * 100).toFixed(1)}%
+                        {t('홈 어드밴티지', 'Home Advantage')} +{(ins.homeAdvantage.advantage * 100).toFixed(1)}%
                       </p>
                     </div>
                   )}
@@ -286,7 +290,7 @@ export default function BaseballAIPrediction({
               </Section>
 
               {/* 최근 10경기 + 신뢰도 */}
-              <Section color="#06b6d4" label="최근 10경기 승률">
+              <Section color="#06b6d4" label={t('최근 10경기 승률', 'Last 10 Win Rate')}>
                 <div className="p-3">
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     {[
@@ -302,14 +306,14 @@ export default function BaseballAIPrediction({
                   </div>
                   <div className="flex items-center justify-between rounded-xl px-4 py-3"
                     style={{ background: '#131920', border: '1px solid #243044' }}>
-                    <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>분석 신뢰도</span>
+                    <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>{t('분석 신뢰도', 'Confidence')}</span>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ background: confMap[pred.confidence]?.color ?? '#94a3b8',
-                          boxShadow: `0 0 6px ${confMap[pred.confidence]?.color ?? '#94a3b8'}` }} />
+                        style={{ background: confMapData[pred.confidence]?.color ?? '#94a3b8',
+                          boxShadow: `0 0 6px ${confMapData[pred.confidence]?.color ?? '#94a3b8'}` }} />
                       <span className="text-sm font-bold"
-                        style={{ color: confMap[pred.confidence]?.color ?? '#94a3b8' }}>
-                        {confMap[pred.confidence]?.label ?? '-'}
+                        style={{ color: confMapData[pred.confidence]?.color ?? '#94a3b8' }}>
+                        {confMapData[pred.confidence] ? t(confMapData[pred.confidence].ko, confMapData[pred.confidence].en) : '-'}
                       </span>
                     </div>
                   </div>
@@ -320,7 +324,7 @@ export default function BaseballAIPrediction({
 
           {/* 팀 뉴스 요약 */}
           {(newsLoading || homeSummary || awaySummary) && (
-            <Section color="#a78bfa" label="팀 뉴스">
+            <Section color="#a78bfa" label={t('팀 뉴스', 'Team News')}>
               {newsLoading ? (
                 <LoadingDots color="#a78bfa" />
               ) : (
@@ -330,7 +334,7 @@ export default function BaseballAIPrediction({
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#ef4444' }} />
                         <span className="text-[11px] font-bold tracking-wide uppercase" style={{ color: '#ef4444' }}>
-                          원정 · {AN}
+                          {t('원정', 'Away')} · {AN}
                         </span>
                       </div>
                       <div className="space-y-2">
@@ -347,7 +351,7 @@ export default function BaseballAIPrediction({
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#60a5fa' }} />
                         <span className="text-[11px] font-bold tracking-wide uppercase" style={{ color: '#60a5fa' }}>
-                          홈 · {HN}
+                          {t('홈', 'Home')} · {HN}
                         </span>
                       </div>
                       <div className="space-y-2">

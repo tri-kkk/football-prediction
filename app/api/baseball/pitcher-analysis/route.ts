@@ -19,37 +19,34 @@ function buildPitcherBlock(
   name: string | null | undefined,
   stats: any | null
 ) {
-  if (!name && !stats) return `[${label}] 선발: 미정`
+  // Label is already localized ('Home'/'Away' or '홈'/'원정')
+  if (!name && !stats) return `[${label}] Starter: TBD`
 
-  // MLB: { fullName, pitchHand, current: {...}, prev: {...} }
-  // KBO/NPB: { name, era, whip, strikeouts, walks, wins, losses, games, ... } (flat)
   const isMLB = stats && ('current' in stats || 'prev' in stats)
 
   if (isMLB) {
     const displayName = stats?.fullName ?? name
-    if (!displayName) return `[${label}] 선발: 미정`
+    if (!displayName) return `[${label}] Starter: TBD`
     const s = stats?.current ?? stats?.prev
-    const season = stats?.current ? stats.current.season : (stats?.prev?.season ?? '전년도')
-    if (!s) return `[${label}] ${displayName} — 스탯 없음`
-    return `[${label}] ${displayName} — ${season}시즌
+    const season = stats?.current ? stats.current.season : (stats?.prev?.season ?? 'prev')
+    if (!s) return `[${label}] ${displayName} — No stats`
+    return `[${label}] ${displayName} — ${season} Season
   ERA ${formatStat(s.era)} | WHIP ${formatStat(s.whip)} | K/9 ${s.strikeoutsPer9Inn ? formatStat(s.strikeoutsPer9Inn, 1) : '-'} | BB/9 ${s.walksPer9Inn ? formatStat(s.walksPer9Inn, 1) : '-'} | K/BB ${s.strikeoutWalkRatio ? formatStat(s.strikeoutWalkRatio, 2) : '-'}
-  ${s.wins ?? 0}승 ${s.losses ?? 0}패 | ${s.gamesStarted ?? '-'}선발 | ${formatStat(s.inningsPitched, 1)}IP | ${s.strikeOuts ?? '-'}K | BB ${s.baseOnBalls ?? '-'} | HR ${s.homeRuns ?? '-'}`
+  ${s.wins ?? 0}W ${s.losses ?? 0}L | ${s.gamesStarted ?? '-'} GS | ${formatStat(s.inningsPitched, 1)}IP | ${s.strikeOuts ?? '-'}K | BB ${s.baseOnBalls ?? '-'} | HR ${s.homeRuns ?? '-'}`
   }
 
-  // KBO/NPB flat 구조
+  // KBO/NPB flat
   const displayName = stats?.name ?? name
-  if (!displayName) return `[${label}] 선발: 미정`
+  if (!displayName) return `[${label}] Starter: TBD`
 
-  // 신인 태그 생성
   const isRookie = stats?.is_rookie === true
   const proYears = stats?.pro_years ?? null
   const rookieTag = isRookie
-    ? ` (신인${proYears ? ` · 프로 ${proYears}년차` : ''})`
+    ? ` (Rookie${proYears ? ` · Pro Year ${proYears}` : ''})`
     : ''
 
-  // 스탯 없는 경우 (신인 포함)
   if (!stats || (stats.era === null && stats.whip === null)) {
-    return `[${label}] ${displayName}${rookieTag} — 스탯 없음`
+    return `[${label}] ${displayName}${rookieTag} — No stats`
   }
 
   const g = stats.games ?? 0
@@ -58,25 +55,25 @@ function buildPitcherBlock(
   const kPerGame = g > 0 ? formatStat(k / g, 1) : '-'
   const kbb = bb > 0 ? formatStat(k / bb, 2) : '-'
 
-  // 샘플 경기 수 부족 여부 (신인이고 10경기 미만)
-  const smallSampleTag = isRookie && g < 10 ? ' [소량 샘플]' : ''
+  const smallSampleTag = isRookie && g < 10 ? ' [Small Sample]' : ''
 
-  return `[${label}] ${displayName}${rookieTag}${smallSampleTag} — ${stats.season ?? '2025'}시즌
-  ERA ${formatStat(stats.era)} | WHIP ${formatStat(stats.whip)} | 경기당 K ${kPerGame} | K/BB ${kbb}
-  ${stats.wins ?? 0}승 ${stats.losses ?? 0}패 | ${g}경기 | ${k}K | BB ${bb} | HR ${stats.home_runs ?? '-'}`
+  return `[${label}] ${displayName}${rookieTag}${smallSampleTag} — ${stats.season ?? '2025'} Season
+  ERA ${formatStat(stats.era)} | WHIP ${formatStat(stats.whip)} | K/G ${kPerGame} | K/BB ${kbb}
+  ${stats.wins ?? 0}W ${stats.losses ?? 0}L | ${g}G | ${k}K | BB ${bb} | HR ${stats.home_runs ?? '-'}`
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { matchId, homeTeam, awayTeam, homePitcher, awayPitcher, homeStats, awayStats, league } = body
+    const { matchId, homeTeam, awayTeam, homePitcher, awayPitcher, homeStats, awayStats, league, language: uiLang } = body
+    const isEnglish = uiLang === 'en'
 
     if (!homeTeam || !awayTeam) {
       return NextResponse.json({ success: false, error: 'homeTeam, awayTeam required' }, { status: 400 })
     }
 
-    // 1. 캐시 확인
-    if (matchId) {
+    // 1. 캐시 확인 (한국어만 캐시 사용, 영어는 매번 생성)
+    if (matchId && !isEnglish) {
       const { data: cached } = await supabase
         .from('baseball_matches')
         .select('pitcher_analysis')
@@ -95,12 +92,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'ANTHROPIC_API_KEY not set' }, { status: 500 })
     }
 
-    const homeBlock = buildPitcherBlock('홈', homePitcher, homeStats)
-    const awayBlock = buildPitcherBlock('원정', awayPitcher, awayStats)
+    const homeLabel = isEnglish ? 'Home' : '홈'
+    const awayLabel = isEnglish ? 'Away' : '원정'
+    const homeBlock = buildPitcherBlock(homeLabel, homePitcher, homeStats)
+    const awayBlock = buildPitcherBlock(awayLabel, awayPitcher, awayStats)
 
-    const leagueLabel = league === 'KBO' ? 'KBO 한국프로야구' : league === 'NPB' ? 'NPB 일본프로야구' : 'MLB 메이저리그'
+    const leagueLabel = league === 'KBO' ? 'KBO Korean Baseball' : league === 'NPB' ? 'NPB Japanese Baseball' : 'MLB Major League Baseball'
+    const leagueLabelKo = league === 'KBO' ? 'KBO 한국프로야구' : league === 'NPB' ? 'NPB 일본프로야구' : 'MLB 메이저리그'
 
-    const prompt = `당신은 ${leagueLabel} 전문 분석가입니다. 아래 선발 투수 데이터를 바탕으로 오늘 경기 매치업 분석을 한국어로 작성하세요.
+    const prompt = isEnglish
+      ? `You are a ${leagueLabel} expert analyst. Based on the starting pitcher data below, write a matchup analysis for today's game in English.
+
+Game: ${awayTeam} @ ${homeTeam}
+
+${awayBlock}
+${homeBlock}
+
+Writing rules:
+- Around 200 words, 3-4 sentences
+- Directly cite stat numbers in analysis (ERA, WHIP, K, etc.)
+- If a pitcher has "no stats", only mention their name and add "data unavailable"
+- "(Rookie)" tagged pitchers: briefly mention limited pro experience, no excessive speculation
+- "[Small Sample]" tagged pitchers: must mention low stat reliability due to small sample size
+- Compare pitchers' stat-based strengths/weaknesses → today's key matchup factors → variables to watch
+- Use baseball terminology naturally (ERA, WHIP, command, strikeouts, home runs allowed, etc.)
+- No vague speculation without stat backing
+- Do not mention pitch hand (left/right) as data is unverified
+- No markdown (#, *, **, -) at all
+- Body text only, no titles, no numbering, write naturally flowing sentences`
+      : `당신은 ${leagueLabelKo} 전문 분석가입니다. 아래 선발 투수 데이터를 바탕으로 오늘 경기 매치업 분석을 한국어로 작성하세요.
 
 경기: ${awayTeam} @ ${homeTeam}
 
@@ -149,8 +169,8 @@ ${homeBlock}
       return NextResponse.json({ success: false, error: 'Empty response from Claude' }, { status: 500 })
     }
 
-    // 3. Supabase에 캐시 저장
-    if (matchId) {
+    // 3. Supabase에 캐시 저장 (한국어만)
+    if (matchId && !isEnglish) {
       await supabase
         .from('baseball_matches')
         .update({ pitcher_analysis: analysis })
