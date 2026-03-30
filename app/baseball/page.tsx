@@ -307,29 +307,49 @@ export default function BaseballMainPage() {
   const featuredNews = filteredNewsArticles.filter(a => a.imageUrl).slice(0, 2)
   const listNews = filteredNewsArticles.filter(a => !featuredNews.includes(a)).slice(0, 4)
 
-  // TOP PICKS 선정 (확률 차이 큰 상위 5개 경기)
-  // TOP PICKS - 확률 차이 큰 상위 경기들
-  const sortByDateThenProb = (a: any, b: any) => {
-    const dateA = new Date(a.timestamp || a.date || '').getTime()
-    const dateB = new Date(b.timestamp || b.date || '').getTime()
-    if (dateA !== dateB) return dateA - dateB
-    const probA = a.mlPrediction || a.odds
-    const probB = b.mlPrediction || b.odds
-    const diffA = Math.abs((probA?.homeWinProb || 50) - (probA?.awayWinProb || 50))
-    const diffB = Math.abs((probB?.homeWinProb || 50) - (probB?.awayWinProb || 50))
-    return diffB - diffA
+  // TOP PICKS 선정 - 등급(PICK>GOOD>PASS) → 신뢰도(HIGH>MEDIUM>LOW) → 확률차이 순
+  const getGradeScore = (m: any) => {
+    const grade = m.aiPick?.toUpperCase() || ''
+    if (grade === 'PICK') return 3
+    if (grade === 'GOOD') return 2
+    return 1 // PASS or no grade
+  }
+  const getConfidenceScore = (m: any) => {
+    const conf = (m.aiPickConfidence || '').toUpperCase()
+    if (conf === 'HIGH') return 3
+    if (conf === 'MEDIUM') return 2
+    return 1 // LOW or unknown
+  }
+  const getProbDiff = (m: any) => {
+    const prob = m.mlPrediction || m.odds
+    return Math.abs((prob?.homeWinProb || 50) - (prob?.awayWinProb || 50))
   }
 
-  const topPicks = matches.length > 0 
+  const sortByGradeThenProb = (a: any, b: any) => {
+    // 1차: 등급 (PICK > GOOD > PASS)
+    const gradeA = getGradeScore(a)
+    const gradeB = getGradeScore(b)
+    if (gradeA !== gradeB) return gradeB - gradeA
+
+    // 2차: 신뢰도 (HIGH > MEDIUM > LOW)
+    const confA = getConfidenceScore(a)
+    const confB = getConfidenceScore(b)
+    if (confA !== confB) return confB - confA
+
+    // 3차: 확률 차이 (큰 것 우선)
+    return getProbDiff(b) - getProbDiff(a)
+  }
+
+  const topPicks = matches.length > 0
     ? [...matches]
         .filter(m => m.status === 'NS' && (m.odds || m.mlPrediction))
-        .sort(sortByDateThenProb)
+        .sort(sortByGradeThenProb)
         .slice(0, 5)
     : []
 
   const upcomingPicks = matches
     .filter(m => m.status === 'NS' && (m.odds || m.mlPrediction))
-    .sort(sortByDateThenProb)
+    .sort(sortByGradeThenProb)
     .slice(0, 5)
 
   // 종료된 경기 (결과용) - scheduledMatches(오늘 경기 전체)에서 FT만
