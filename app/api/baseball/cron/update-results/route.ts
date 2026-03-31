@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // - 종료된 경기 중 이닝 데이터가 없는 경기 (FT인데 inning IS NULL)
     const { data: matches, error: fetchError } = await supabase
       .from('baseball_matches')
-      .select('api_match_id, home_team, away_team, match_date, status, inning')
+      .select('api_match_id, home_team, away_team, match_date, status, inning, updated_at')
       .gte('match_date', yesterdayStr)
       .lte('match_date', todayStr)
       .or(`status.in.(NS,LIVE,IN1,IN2,IN3,IN4,IN5,IN6,IN7,IN8,IN9,1H,2H,3H,4H,5H,6H,7H,8H,9H),and(status.eq.FT,inning.is.null)`)
@@ -86,10 +86,29 @@ export async function GET(request: NextRequest) {
         // 🔍 디버깅: API 응답 전체 출력
         console.log(`  🔎 API 전체 응답:`, JSON.stringify(game.scores, null, 2))
         
-        const newStatus = game.status.short
+        // 종료 상태 코드 매핑 (API-Football 야구)
+        const FINISHED_STATUSES = ['FT', 'AET', 'POST', 'CANC', 'ABD', 'AWD', 'WO']
+        let newStatus = game.status.short
         const homeScore = game.scores.home.total
         const awayScore = game.scores.away.total
-        
+
+        // API가 종료 상태를 반환하면 FT로 통일
+        if (FINISHED_STATUSES.includes(newStatus) && newStatus !== 'FT') {
+          console.log(`  🔄 상태 매핑: ${newStatus} → FT`)
+          newStatus = 'FT'
+        }
+
+        // 타임아웃 안전장치: IN7 이상 상태에서 3시간 이상 업데이트 없으면 자동 FT
+        const lateInnings = ['IN7', 'IN8', 'IN9']
+        if (lateInnings.includes(match.status) && match.updated_at) {
+          const lastUpdate = new Date(match.updated_at).getTime()
+          const hoursElapsed = (Date.now() - lastUpdate) / (1000 * 60 * 60)
+          if (hoursElapsed >= 3 && !FINISHED_STATUSES.includes(newStatus) && newStatus !== 'FT') {
+            console.log(`  ⏰ 타임아웃: ${match.status} 상태에서 ${hoursElapsed.toFixed(1)}시간 경과 → FT 자동 전환`)
+            newStatus = 'FT'
+          }
+        }
+
         console.log(`  📊 API 응답: status=${newStatus}, score=${homeScore}-${awayScore}, innings=${game.scores.home.innings ? 'O' : 'X'}`)
         
         // 이닝별 스코어 파싱
