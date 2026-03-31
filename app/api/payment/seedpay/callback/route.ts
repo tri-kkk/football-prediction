@@ -6,6 +6,27 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 )
 
+// 텔레그램 매출 알림
+async function sendTelegramNotification(message: string) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TELEGRAM_CHAT_ID
+  if (!botToken || !chatId) return
+
+  try {
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML',
+      }),
+    })
+  } catch (e) {
+    console.error('텔레그램 알림 실패:', e)
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 1️⃣ Form Data 파싱
@@ -133,7 +154,19 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', userData.id)
 
-    // 9️⃣ 성공 페이지로 리다이렉트
+    // 9️⃣ 텔레그램 매출 알림
+    const planLabel = months === 3 ? '3개월 (₩9,900)' : '1개월 (₩4,900)'
+    const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+    await sendTelegramNotification(
+      `💰 <b>매출 발생!</b>\n\n` +
+      `📋 상품: ${goodsName}\n` +
+      `💳 금액: ₩${planAmount.toLocaleString()}\n` +
+      `👤 이메일: ${userEmail}\n` +
+      `🆔 주문번호: ${ordNo}\n` +
+      `🕐 시간: ${now}`
+    )
+
+    // 🔟 성공 페이지로 리다이렉트
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trendsoccer.com'
     return new NextResponse(null, {
       status: 303,
