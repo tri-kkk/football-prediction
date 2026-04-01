@@ -73,13 +73,19 @@ const baseballMenuItems: MenuItem[] = [
     href: '/baseball/predictions', 
     icon: 'insights'
   },
-  { 
+  {
+    labelKo: '조합',
+    labelEn: 'Combo',
+    href: '/baseball/combo-picks',
+    icon: 'combo'
+  },
+  {
     labelKo: '결과',
     labelEn: 'Results',
-    href: '/baseball/results', 
+    href: '/baseball/results',
     icon: 'play'
   },
-  
+
 ]
 
 export default function Navigation() {
@@ -111,6 +117,24 @@ export default function Navigation() {
       )
     }
     
+    if (item.icon === 'combo') {
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className={isActive ? 'brightness-125' : ''}
+        >
+          <rect x="3" y="3" width="7" height="7" rx="1.5" stroke={isActive ? '#ffffff' : '#9ca3af'} strokeWidth="2"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5" stroke={isActive ? '#ffffff' : '#9ca3af'} strokeWidth="2"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5" stroke={isActive ? '#ffffff' : '#9ca3af'} strokeWidth="2"/>
+          <path d="M14 17.5h7M17.5 14v7" stroke={isActive ? '#ffffff' : '#9ca3af'} strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      )
+    }
+
     if (item.icon === 'insights') {
       return (
         <svg 

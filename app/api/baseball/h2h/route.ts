@@ -1,199 +1,135 @@
 // app/api/baseball/h2h/route.ts
+// 야구 상대 전적 - Supabase DB 기반 (완료된 경기만)
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  
+
   const homeTeam = searchParams.get('homeTeam')
   const awayTeam = searchParams.get('awayTeam')
   const homeTeamId = searchParams.get('homeTeamId')
   const awayTeamId = searchParams.get('awayTeamId')
-  
+
   if ((!homeTeam && !homeTeamId) || (!awayTeam && !awayTeamId)) {
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Team names or IDs required' 
+    return NextResponse.json({
+      success: false,
+      error: 'Team names or IDs required'
     }, { status: 400 })
   }
 
   try {
-    const API_KEY = process.env.API_FOOTBALL_KEY
-    const API_HOST = 'v1.baseball.api-sports.io'
-    
-    console.log('🔍 Fetching H2H:', { homeTeam, awayTeam, homeTeamId, awayTeamId })
-    
-    // 1. 팀 ID 찾기 (필요하면)
-    let finalHomeTeamId = homeTeamId
-    let finalAwayTeamId = awayTeamId
-    
-    if (!finalHomeTeamId && homeTeam) {
-      const searchUrl = `https://${API_HOST}/teams?search=${encodeURIComponent(homeTeam)}&league=1&season=2025`
-      console.log('  Searching home team:', homeTeam)
-      console.log('  URL:', searchUrl)
-      
-      const res = await fetch(searchUrl, {
-        headers: {
-          'x-apisports-key': API_KEY!,
-        }
-      })
-      
-      console.log('  Response status:', res.status)
-      
-      if (res.ok) {
-        const data = await res.json()
-        console.log('  Response data:', JSON.stringify(data, null, 2))
-        
-        if (data.response?.[0]) {
-          finalHomeTeamId = data.response[0].id.toString()
-          console.log(`  ✅ Found home team ID: ${finalHomeTeamId} (${data.response[0].name})`)
-        } else {
-          console.log('  ⚠️ No teams found in response')
-        }
-      } else {
-        console.log('  ❌ API error:', await res.text())
+    // DB에서 두 팀 간의 완료된 경기 조회 (홈/원정 양방향)
+    // home_team_id or away_team_id 기준 OR team name 기준
+    let query1, query2
+
+    if (homeTeamId && awayTeamId) {
+      // 팀 ID로 조회 (양방향)
+      query1 = supabase
+        .from('baseball_matches')
+        .select('id, api_match_id, match_date, home_team, away_team, home_team_ko, away_team_ko, home_team_id, away_team_id, home_team_logo, away_team_logo, home_score, away_score, league, season, status')
+        .eq('home_team_id', Number(homeTeamId))
+        .eq('away_team_id', Number(awayTeamId))
+        .eq('status', 'FT')
+        .order('match_date', { ascending: false })
+        .limit(10)
+
+      query2 = supabase
+        .from('baseball_matches')
+        .select('id, api_match_id, match_date, home_team, away_team, home_team_ko, away_team_ko, home_team_id, away_team_id, home_team_logo, away_team_logo, home_score, away_score, league, season, status')
+        .eq('home_team_id', Number(awayTeamId))
+        .eq('away_team_id', Number(homeTeamId))
+        .eq('status', 'FT')
+        .order('match_date', { ascending: false })
+        .limit(10)
+    } else {
+      // 팀 이름으로 조회 (양방향)
+      query1 = supabase
+        .from('baseball_matches')
+        .select('id, api_match_id, match_date, home_team, away_team, home_team_ko, away_team_ko, home_team_id, away_team_id, home_team_logo, away_team_logo, home_score, away_score, league, season, status')
+        .eq('home_team', homeTeam!)
+        .eq('away_team', awayTeam!)
+        .eq('status', 'FT')
+        .order('match_date', { ascending: false })
+        .limit(10)
+
+      query2 = supabase
+        .from('baseball_matches')
+        .select('id, api_match_id, match_date, home_team, away_team, home_team_ko, away_team_ko, home_team_id, away_team_id, home_team_logo, away_team_logo, home_score, away_score, league, season, status')
+        .eq('home_team', awayTeam!)
+        .eq('away_team', homeTeam!)
+        .eq('status', 'FT')
+        .order('match_date', { ascending: false })
+        .limit(10)
+    }
+
+    const [{ data: games1, error: err1 }, { data: games2, error: err2 }] = await Promise.all([query1, query2])
+
+    if (err1 || err2) {
+      console.error('❌ H2H DB query error:', err1 || err2)
+      return NextResponse.json({ success: false, error: (err1 || err2)!.message }, { status: 500 })
+    }
+
+    // 합쳐서 날짜순 정렬 (최신순)
+    const allMatches = [...(games1 || []), ...(games2 || [])]
+      .sort((a, b) => b.match_date.localeCompare(a.match_date))
+      .slice(0, 10)
+
+    console.log(`✅ H2H from DB: ${allMatches.length} completed matches`)
+
+    // 기존 응답 형식에 맞게 변환
+    const requestedHomeId = homeTeamId ? Number(homeTeamId) : null
+
+    const matches = allMatches.map((game) => {
+      const isHomeWin = game.home_score > game.away_score
+      const isAwayWin = game.away_score > game.home_score
+      return {
+        id: game.api_match_id || game.id,
+        date: game.match_date,
+        homeTeam: game.home_team,
+        homeTeamKo: game.home_team_ko,
+        homeTeamId: game.home_team_id,
+        homeTeamLogo: game.home_team_logo,
+        awayTeam: game.away_team,
+        awayTeamKo: game.away_team_ko,
+        awayTeamId: game.away_team_id,
+        awayTeamLogo: game.away_team_logo,
+        homeScore: game.home_score,
+        awayScore: game.away_score,
+        winner: isHomeWin ? 'home' : isAwayWin ? 'away' : 'draw',
+        league: game.league,
+        season: game.season,
+        status: game.status
       }
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-    
-    if (!finalAwayTeamId && awayTeam) {
-      const searchUrl = `https://${API_HOST}/teams?search=${encodeURIComponent(awayTeam)}&league=1&season=2025`
-      console.log('  Searching away team:', awayTeam)
-      console.log('  URL:', searchUrl)
-      
-      const res = await fetch(searchUrl, {
-        headers: {
-          'x-apisports-key': API_KEY!,
-        }
-      })
-      
-      console.log('  Response status:', res.status)
-      
-      if (res.ok) {
-        const data = await res.json()
-        console.log('  Response data:', JSON.stringify(data, null, 2))
-        
-        if (data.response?.[0]) {
-          finalAwayTeamId = data.response[0].id.toString()
-          console.log(`  ✅ Found away team ID: ${finalAwayTeamId} (${data.response[0].name})`)
-        } else {
-          console.log('  ⚠️ No teams found in response')
-        }
-      } else {
-        console.log('  ❌ API error:', await res.text())
-      }
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-    
-    if (!finalHomeTeamId || !finalAwayTeamId) {
-      console.error('  ❌ Could not find team IDs')
-      return NextResponse.json({
-        success: false,
-        error: 'Could not find team IDs',
-        matches: [],
-        summary: { total: 0, homeWins: 0, awayWins: 0, draws: 0 }
-      }, { status: 404 })
-    }
-    
-    // 2. H2H 조회 (올바른 형식: teamId-teamId)
-    const h2hParam = `${finalHomeTeamId}-${finalAwayTeamId}`
-    console.log(`  H2H param: ${h2hParam}`)
-    
-    // 여러 시즌 시도
-    const allMatches: any[] = []
-    const seasons = ['2025', '2024', '2023', '2022']
-    
-    for (const season of seasons) {
-      try {
-        const url = `https://${API_HOST}/games/h2h?h2h=${h2hParam}&season=${season}`
-        console.log(`  Trying: games/h2h?h2h=${h2hParam}&season=${season}`)
-        
-        const response = await fetch(url, {
-          headers: {
-            'x-apisports-key': API_KEY!,
-          }
-        })
+    })
 
-        if (response.ok) {
-          const data = await response.json()
-          console.log(`  ${season}: ${data.results || 0} results`)
-          
-          if (data.response && data.response.length > 0) {
-            console.log(`  ✅ Found ${data.response.length} matches in ${season}`)
-            allMatches.push(...data.response)
-          }
-        } else {
-          console.log(`  ❌ ${season}: HTTP ${response.status}`)
-        }
-        
-        // Rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-      } catch (seasonError: any) {
-        console.error(`  ❌ Error in season ${season}:`, seasonError.message)
-      }
-      
-      // 충분한 데이터 있으면 중단
-      if (allMatches.length >= 10) {
-        console.log(`  Stopping: Have enough data (${allMatches.length} matches)`)
-        break
-      }
-    }
-    
-    console.log(`✅ Total H2H matches found: ${allMatches.length}`)
-
-    if (allMatches.length === 0) {
-      return NextResponse.json({
-        success: true,
-        count: 0,
-        matches: [],
-        summary: {
-          total: 0,
-          homeWins: 0,
-          awayWins: 0,
-          draws: 0,
-          homeTeam: homeTeam || 'Home',
-          awayTeam: awayTeam || 'Away'
-        },
-        message: 'No H2H data found for these teams in recent seasons'
-      })
-    }
-
-    // 최근 경기부터 정렬
-    const sortedMatches = allMatches.sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    )
-
-    // 최근 10경기만
-    const matches = sortedMatches.slice(0, 10).map((game: any) => ({
-      id: game.id,
-      date: game.date,
-      homeTeam: game.teams.home.name,
-      homeTeamId: game.teams.home.id,
-      homeTeamLogo: game.teams.home.logo,
-      awayTeam: game.teams.away.name,
-      awayTeamId: game.teams.away.id,
-      awayTeamLogo: game.teams.away.logo,
-      homeScore: game.scores.home.total,
-      awayScore: game.scores.away.total,
-      winner: game.scores.home.total > game.scores.away.total 
-        ? 'home' 
-        : game.scores.home.total < game.scores.away.total 
-          ? 'away' 
-          : 'draw',
-      league: game.league.name,
-      season: game.league.season,
-      status: game.status.short
-    }))
-
-    // 통산 전적 계산
+    // 통산 전적 계산 (요청한 homeTeam 기준)
     let homeWins = 0
     let awayWins = 0
     let draws = 0
 
-    matches.forEach((match: any) => {
-      if (match.winner === 'home') homeWins++
-      else if (match.winner === 'away') awayWins++
-      else draws++
+    matches.forEach((match) => {
+      if (requestedHomeId) {
+        // homeTeamId 기준: 해당 팀이 홈일 때 홈 승 = homeWin, 원정일 때 원정 승 = homeWin
+        if (match.homeTeamId === requestedHomeId) {
+          if (match.winner === 'home') homeWins++
+          else if (match.winner === 'away') awayWins++
+          else draws++
+        } else {
+          if (match.winner === 'away') homeWins++
+          else if (match.winner === 'home') awayWins++
+          else draws++
+        }
+      } else {
+        if (match.winner === 'home') homeWins++
+        else if (match.winner === 'away') awayWins++
+        else draws++
+      }
     })
 
     return NextResponse.json({
@@ -205,23 +141,18 @@ export async function GET(request: NextRequest) {
         homeWins,
         awayWins,
         draws,
-        homeTeam: homeTeam || matches[0]?.homeTeam,
-        awayTeam: awayTeam || matches[0]?.awayTeam
+        homeTeam: homeTeam || matches[0]?.homeTeam || 'Home',
+        awayTeam: awayTeam || matches[0]?.awayTeam || 'Away'
       }
     })
 
   } catch (error: any) {
-    console.error('❌ H2H API error:', error)
-    return NextResponse.json({ 
-      success: false, 
+    console.error('❌ H2H error:', error)
+    return NextResponse.json({
+      success: false,
       error: error.message,
       matches: [],
-      summary: {
-        total: 0,
-        homeWins: 0,
-        awayWins: 0,
-        draws: 0
-      }
+      summary: { total: 0, homeWins: 0, awayWins: 0, draws: 0 }
     }, { status: 500 })
   }
 }

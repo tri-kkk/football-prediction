@@ -1,7 +1,133 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import * as XLSX from 'xlsx'
+
+// ==================== 검색형 선발투수 콤보박스 ====================
+function PitcherCombobox({
+  value,
+  onChange,
+  pitchers,
+  teamName,
+  teamMapName,
+  placeholder = '선발 미정',
+}: {
+  value: string
+  onChange: (val: string) => void
+  pitchers: { name: string; team: string; pitch_hand?: string }[]
+  teamName: string
+  teamMapName?: string
+  placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // 외부 클릭 시 닫기
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // 팀 선수 우선, 나머지 전체
+  const teamPitchers = pitchers.filter(p => p.team === teamName || p.team === teamMapName)
+  const otherPitchers = pitchers.filter(p => p.team !== teamName && p.team !== teamMapName)
+
+  // 검색 필터
+  const q = search.toLowerCase()
+  const filteredTeam = q ? teamPitchers.filter(p => p.name.toLowerCase().includes(q)) : teamPitchers
+  const filteredOther = q ? otherPitchers.filter(p => p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q)) : otherPitchers
+
+  const label = (p: { name: string; team: string; pitch_hand?: string }, showTeam: boolean) =>
+    `${p.name}${showTeam ? ` (${p.team})` : ''}${p.pitch_hand === '좌' ? ' 좌' : ''}`
+
+  return (
+    <div ref={ref} className="relative">
+      {/* 선택된 값 또는 입력 */}
+      <div
+        className="bg-gray-700 text-white rounded-lg px-2 py-1.5 text-sm border border-gray-600 focus-within:border-emerald-500 cursor-pointer flex items-center gap-1"
+        onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 0) }}
+      >
+        {open ? (
+          <input
+            ref={inputRef}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="선수 검색..."
+            className="bg-transparent outline-none flex-1 text-sm text-white placeholder-gray-400"
+            onKeyDown={e => {
+              if (e.key === 'Escape') { setOpen(false); setSearch('') }
+            }}
+          />
+        ) : (
+          <span className={`flex-1 truncate ${!value ? 'text-gray-400' : ''}`}>
+            {value || placeholder}
+          </span>
+        )}
+        {value && !open && (
+          <button
+            onClick={e => { e.stopPropagation(); onChange(''); setSearch('') }}
+            className="text-gray-400 hover:text-white text-xs ml-1"
+          >✕</button>
+        )}
+        <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={open ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
+        </svg>
+      </div>
+
+      {/* 드롭다운 목록 */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+          {/* 선발 미정 */}
+          <button
+            className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-700 ${!value ? 'text-emerald-400 font-bold' : 'text-gray-400'}`}
+            onClick={() => { onChange(''); setOpen(false); setSearch('') }}
+          >선발 미정</button>
+
+          {/* 팀 선수 */}
+          {filteredTeam.length > 0 && (
+            <>
+              <div className="px-3 py-1 text-[10px] font-bold text-emerald-500 bg-gray-750 border-t border-gray-700 sticky top-0">
+                {teamName}
+              </div>
+              {filteredTeam.map(p => (
+                <button
+                  key={`t-${p.name}`}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-700 ${value === p.name ? 'text-emerald-400 font-bold' : 'text-white'}`}
+                  onClick={() => { onChange(p.name); setOpen(false); setSearch('') }}
+                >{label(p, false)}</button>
+              ))}
+            </>
+          )}
+
+          {/* 전체 */}
+          {filteredOther.length > 0 && (
+            <>
+              <div className="px-3 py-1 text-[10px] font-bold text-gray-400 bg-gray-750 border-t border-gray-700 sticky top-0">
+                전체
+              </div>
+              {filteredOther.map(p => (
+                <button
+                  key={`a-${p.name}-${p.team}`}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-700 ${value === p.name ? 'text-emerald-400 font-bold' : 'text-white'}`}
+                  onClick={() => { onChange(p.name); setOpen(false); setSearch('') }}
+                >{label(p, true)}</button>
+              ))}
+            </>
+          )}
+
+          {filteredTeam.length === 0 && filteredOther.length === 0 && (
+            <div className="px-3 py-2 text-sm text-gray-500">검색 결과 없음</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ==================== 타입 정의 ====================
 
@@ -4862,27 +4988,16 @@ export default function AdminDashboard() {
                       <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-bold text-red-400">원정 — {awayName}</span>
                         {pitcherLeague !== 'CPBL' ? (
-                          <select
+                          <PitcherCombobox
                             value={edit.away}
-                            onChange={e => setPitcherEdits(prev => ({
+                            onChange={val => setPitcherEdits(prev => ({
                               ...prev,
-                              [match.id]: { ...prev[match.id], away: e.target.value }
+                              [match.id]: { ...prev[match.id], away: val }
                             }))}
-                            className="bg-gray-700 text-white rounded-lg px-2 py-1.5 text-sm border border-gray-600 focus:outline-none focus:border-emerald-500"
-                          >
-                            <option value="">선발 미정</option>
-                            {kboPitchers
-                              .filter(p => p.team === awayName || p.team === TEAM_MAP[match.away_team])
-                              .map(p => (
-                                <option key={`${p.name}-${p.team}`} value={p.name}>{p.name}{p.pitch_hand === '좌' ? ' (좌)' : ''}</option>
-                              ))
-                            }
-                            <optgroup label="전체">
-                              {kboPitchers.map(p => (
-                                <option key={`all-${p.name}-${p.team}`} value={p.name}>{p.name} ({p.team}){p.pitch_hand === '좌' ? ' 좌' : ''}</option>
-                              ))}
-                            </optgroup>
-                          </select>
+                            pitchers={kboPitchers}
+                            teamName={awayName}
+                            teamMapName={TEAM_MAP[match.away_team]}
+                          />
                         ) : (
                           <input
                             type="text"
@@ -4901,27 +5016,16 @@ export default function AdminDashboard() {
                       <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-bold text-blue-400">홈 — {homeName}</span>
                         {pitcherLeague !== 'CPBL' ? (
-                          <select
+                          <PitcherCombobox
                             value={edit.home}
-                            onChange={e => setPitcherEdits(prev => ({
+                            onChange={val => setPitcherEdits(prev => ({
                               ...prev,
-                              [match.id]: { ...prev[match.id], home: e.target.value }
+                              [match.id]: { ...prev[match.id], home: val }
                             }))}
-                            className="bg-gray-700 text-white rounded-lg px-2 py-1.5 text-sm border border-gray-600 focus:outline-none focus:border-emerald-500"
-                          >
-                            <option value="">선발 미정</option>
-                            {kboPitchers
-                              .filter(p => p.team === homeName || p.team === TEAM_MAP[match.home_team])
-                              .map(p => (
-                                <option key={`${p.name}-${p.team}`} value={p.name}>{p.name}{p.pitch_hand === '좌' ? ' (좌)' : ''}</option>
-                              ))
-                            }
-                            <optgroup label="전체">
-                              {kboPitchers.map(p => (
-                                <option key={`all-${p.name}-${p.team}`} value={p.name}>{p.name} ({p.team}){p.pitch_hand === '좌' ? ' 좌' : ''}</option>
-                              ))}
-                            </optgroup>
-                          </select>
+                            pitchers={kboPitchers}
+                            teamName={homeName}
+                            teamMapName={TEAM_MAP[match.home_team]}
+                          />
                         ) : (
                           <input
                             type="text"

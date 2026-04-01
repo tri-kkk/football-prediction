@@ -70,6 +70,13 @@ export default function MobileBottomNav() {
       hidden: false
     },
     {
+      href: '/baseball/combo-picks',
+      icon: 'combo',
+      labelKo: '조합',
+      labelEn: 'Combo',
+      hidden: false
+    },
+    {
       href: '/baseball/results',
       icon: 'play',
       labelKo: '결과',
@@ -120,12 +127,26 @@ export default function MobileBottomNav() {
                     <circle cx="6.18" cy="17.82" r="2.18" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
                     <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
                   </svg>
+                ) : item.icon === 'combo' ? (
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={isActive ? 'brightness-125' : ''}
+                  >
+                    <rect x="3" y="3" width="7" height="7" rx="1.5" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1.5" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1.5" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2"/>
+                    <path d="M14 17.5h7M17.5 14v7" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
                 ) : item.icon === 'insights' ? (
-                  <svg 
-                    width="24" 
-                    height="24" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                     className={isActive ? 'brightness-125' : ''}
                   >
