@@ -100,14 +100,23 @@ export async function GET(request: NextRequest) {
 
     const enriched = await enrichPicksWithLogos(data || [])
 
-    // 적중 통계 계산
+    // 적중 통계 계산 (기존 리그_폴드별)
     const stats: Record<string, { total: number; wins: number; rate: number }> = {}
+    // 안전형/고배당 분리 통계
+    const safeStats = { total: 0, wins: 0, rate: 0 }
+    const highStats = { total: 0, wins: 0, rate: 0 }
+
     for (const pick of enriched) {
       const key = `${pick.league}_${pick.fold_count}`
       if (!stats[key]) stats[key] = { total: 0, wins: 0, rate: 0 }
       if (pick.result === 'win' || pick.result === 'lose') {
         stats[key].total++
         if (pick.result === 'win') stats[key].wins++
+
+        // fold_count === 2 → 안전형, 나머지 → 고배당
+        const target = pick.fold_count === 2 ? safeStats : highStats
+        target.total++
+        if (pick.result === 'win') target.wins++
       }
     }
     for (const key in stats) {
@@ -115,10 +124,13 @@ export async function GET(request: NextRequest) {
         ? Math.round((stats[key].wins / stats[key].total) * 100)
         : 0
     }
+    safeStats.rate = safeStats.total > 0 ? Math.round((safeStats.wins / safeStats.total) * 100) : 0
+    highStats.rate = highStats.total > 0 ? Math.round((highStats.wins / highStats.total) * 100) : 0
 
     return NextResponse.json({
       picks: enriched,
       stats,
+      typeStats: { safe: safeStats, high: highStats },
       period: { from: startDate, to: today },
     })
   } catch (error: any) {

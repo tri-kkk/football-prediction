@@ -114,6 +114,7 @@ export default function ComboPicksPage() {
   const [league, setLeague] = useState('ALL')
   const [picks, setPicks] = useState<ComboPick[]>([])
   const [stats, setStats] = useState<Stats>({})
+  const [typeStats, setTypeStats] = useState<{ safe: { total: number; wins: number; rate: number }; high: { total: number; wins: number; rate: number } }>({ safe: { total: 0, wins: 0, rate: 0 }, high: { total: 0, wins: 0, rate: 0 } })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'today' | 'history'>('today')
   const cleanMd = (text: string) => text.replace(/\*\*/g, '')
@@ -138,7 +139,8 @@ export default function ComboPicksPage() {
       const res = await fetch(`/api/baseball/combo-picks?${params}`)
       const data = await res.json()
       setPicks(data.picks || [])
-      if (data.stats) setStats(data.stats)
+      setStats(data.stats || {})
+      setTypeStats(data.typeStats || { safe: { total: 0, wins: 0, rate: 0 }, high: { total: 0, wins: 0, rate: 0 } })
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -163,6 +165,23 @@ export default function ComboPicksPage() {
   const todayCount = picks.filter(p => p.pick_date === today).length
   const winRate = totalStats.total > 0 ? Math.round((totalStats.wins / totalStats.total) * 100) : 0
   const avgOdds = picks.length > 0 ? (picks.reduce((s, p) => s + (p.total_odds || 0), 0) / picks.length).toFixed(2) : '-'
+
+  // 안전형/고배당 분리 적중률 (오늘 탭은 API에서 안 내려오므로 picks에서 직접 계산)
+  const effectiveTypeStats = (() => {
+    if (typeStats.safe.total > 0 || typeStats.high.total > 0) return typeStats
+    const safe = { total: 0, wins: 0, rate: 0 }
+    const high = { total: 0, wins: 0, rate: 0 }
+    for (const p of picks) {
+      if (p.result === 'win' || p.result === 'lose') {
+        const target = p.fold_count === 2 ? safe : high
+        target.total++
+        if (p.result === 'win') target.wins++
+      }
+    }
+    safe.rate = safe.total > 0 ? Math.round((safe.wins / safe.total) * 100) : 0
+    high.rate = high.total > 0 ? Math.round((high.wins / high.total) * 100) : 0
+    return { safe, high }
+  })()
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, #0c1220 0%, #111827 100%)' }}>
@@ -192,7 +211,8 @@ export default function ComboPicksPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          {/* 1행: 전체 요약 */}
+          <div className="grid grid-cols-3 gap-3 mb-3">
             {[
               { label: t('오늘 조합', 'COMBOS'), value: String(todayCount), color: '#e2e8f0' },
               { label: t('적중률', 'WIN RATE'), value: totalStats.total > 0 ? `${winRate}%` : '-%', color: winRate > 0 ? '#10b981' : '#64748b' },
@@ -203,6 +223,37 @@ export default function ComboPicksPage() {
                 <div className="text-2xl font-black" style={{ color: item.color }}>{item.value}</div>
               </div>
             ))}
+          </div>
+          {/* 2행: 안전형/고배당 적중률 분리 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#10b981' }} />
+                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('안전형', 'SAFE')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-black" style={{ color: '#10b981' }}>
+                  {effectiveTypeStats.safe.total > 0 ? `${effectiveTypeStats.safe.rate}%` : '-%'}
+                </span>
+                <span className="text-[10px]" style={{ color: '#64748b' }}>
+                  {effectiveTypeStats.safe.total > 0 ? `${effectiveTypeStats.safe.wins}/${effectiveTypeStats.safe.total}` : ''}
+                </span>
+              </div>
+            </div>
+            <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#f59e0b' }} />
+                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('고배당', 'HIGH')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-black" style={{ color: '#f59e0b' }}>
+                  {effectiveTypeStats.high.total > 0 ? `${effectiveTypeStats.high.rate}%` : '-%'}
+                </span>
+                <span className="text-[10px]" style={{ color: '#64748b' }}>
+                  {effectiveTypeStats.high.total > 0 ? `${effectiveTypeStats.high.wins}/${effectiveTypeStats.high.total}` : ''}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
