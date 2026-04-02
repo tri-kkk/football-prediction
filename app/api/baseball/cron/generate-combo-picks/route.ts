@@ -287,15 +287,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const targetLeague = searchParams.get('league') // MLB, KBO, NPB 또는 전체
 
-  // 인증
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    // 개발 환경에서는 허용
-    if (process.env.NODE_ENV === 'production') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  // 인증 (Supabase pg_cron에서 net.http_get으로 호출하므로 로깅만 수행)
+  // 다른 크론 라우트들과 동일하게 open access 처리
 
   const leagues = targetLeague ? [targetLeague] : ['MLB', 'KBO', 'NPB']
   const results: Record<string, any> = {}

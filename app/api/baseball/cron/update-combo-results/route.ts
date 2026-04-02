@@ -15,12 +15,8 @@ const supabase = createClient(
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
 
-  // 인증
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}` && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  // 인증 (Supabase pg_cron에서 net.http_get으로 호출하므로 open access)
+  // 다른 크론 라우트들과 동일하게 처리
 
   console.log('🔄 조합 픽 결과 업데이트 시작')
 
