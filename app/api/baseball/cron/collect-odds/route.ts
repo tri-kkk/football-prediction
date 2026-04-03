@@ -1,5 +1,5 @@
 // app/api/baseball/cron/collect-odds/route.ts
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getKoreanTeamName } from '../../../../../lib/baseball_teams'
 
@@ -22,15 +22,9 @@ interface OULine {
   line: number
   over: number
   under: number
-  diff: number // |over - under| 작을수록 맞배당
+  diff: number
 }
 
-/**
- * ouBet에서 전체 라인 추출 + 맞배당 기준선 선택
- * 반환: { bestLine, ouLines }
- * - bestLine: 맞배당에 가장 가까운 단일 라인
- * - ouLines: 전체 라인 배열 (정렬됨), UI에서 3개 표시용
- */
 function extractAllOULines(ouBet: any): {
   bestLine: number | null
   bestOver: number | null
@@ -41,7 +35,6 @@ function extractAllOULines(ouBet: any): {
 
   const lines: OULine[] = []
 
-  // Over X.X 값 파싱
   for (const val of ouBet.values) {
     if (!val.value?.startsWith('Over ')) continue
     const lineStr = val.value.replace('Over ', '')
@@ -65,10 +58,7 @@ function extractAllOULines(ouBet: any): {
 
   if (lines.length === 0) return { bestLine: null, bestOver: null, bestUnder: null, ouLines: [] }
 
-  // 라인 오름차순 정렬
   lines.sort((a, b) => a.line - b.line)
-
-  // 맞배당 기준: diff가 가장 작은 라인
   const best = lines.reduce((prev, curr) => curr.diff < prev.diff ? curr : prev)
 
   return {
@@ -79,11 +69,6 @@ function extractAllOULines(ouBet: any): {
   }
 }
 
-/**
- * ouLines 배열에서 UI 표시용 3개 선택
- * - best 라인 기준으로 위아래 1개씩
- * - 없으면 best 포함 인접 라인들
- */
 export function selectDisplayLines(ouLines: OULine[], bestLine: number): OULine[] {
   if (ouLines.length === 0) return []
   if (ouLines.length === 1) return ouLines
@@ -93,14 +78,10 @@ export function selectDisplayLines(ouLines: OULine[], bestLine: number): OULine[
 
   const result: OULine[] = []
 
-  // 아래 라인
   if (bestIdx > 0) result.push(ouLines[bestIdx - 1])
-  // 기준 라인
   result.push(ouLines[bestIdx])
-  // 위 라인
   if (bestIdx < ouLines.length - 1) result.push(ouLines[bestIdx + 1])
 
-  // 2개밖에 없으면 추가
   if (result.length < 3) {
     if (bestIdx > 1) result.unshift(ouLines[bestIdx - 2])
     else if (bestIdx + 2 < ouLines.length) result.push(ouLines[bestIdx + 2])
@@ -109,8 +90,12 @@ export function selectDisplayLines(ouLines: OULine[], bestLine: number): OULine[
   return result.sort((a, b) => a.line - b.line).slice(0, 3)
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const startTime = Date.now()
+
+  // ✅ league 파라미터 지원: MLB / NPB_KBO / CPBL / 없으면 전체
+  const { searchParams } = new URL(request.url)
+  const leagueParam = searchParams.get('league') // 'MLB' | 'NPB_KBO' | 'CPBL' | null
 
   try {
     const apiKey = process.env.API_FOOTBALL_KEY
@@ -128,11 +113,22 @@ export async function GET() {
 
     console.log(`🗓️ Date: ${now.toISOString()}`)
     console.log(`📅 Collecting odds for: ${todayStr} ~ ${futureDateStr}`)
+    console.log(`🎯 League filter: ${leagueParam || 'ALL'}`)
 
-    const activeLeagues = leagues.filter(league => {
+    // ✅ 시즌 필터
+    let activeLeagues = leagues.filter(league => {
       if (league.isSpring) return currentMonth >= 2 && currentMonth <= 3
       return currentMonth >= 3 && currentMonth <= 11
     })
+
+    // ✅ league 파라미터로 추가 필터
+    if (leagueParam === 'MLB') {
+      activeLeagues = activeLeagues.filter(l => l.code === 'MLB')
+    } else if (leagueParam === 'NPB_KBO') {
+      activeLeagues = activeLeagues.filter(l => l.code === 'NPB' || l.code === 'KBO')
+    } else if (leagueParam === 'CPBL') {
+      activeLeagues = activeLeagues.filter(l => l.code === 'CPBL')
+    }
 
     console.log(`🔍 Active leagues:`, activeLeagues.map(l => `${l.name}(${l.id})`).join(', '))
 
@@ -189,7 +185,6 @@ export async function GET() {
 
           const bookmakers = oddsGame.bookmakers || []
 
-          // ✅ Home/Away: Bet365(2) → Pinnacle(4) → 10Bet(9) → Unibet(11) → 첫 번째
           const HOMEAWAY_PRIORITY = [2, 4, 9, 11, 13]
           let bookmaker: any = null
           for (const bmId of HOMEAWAY_PRIORITY) {
@@ -217,7 +212,6 @@ export async function GET() {
           const normalizedHome = parseFloat(((homeProb / total) * 100).toFixed(2))
           const normalizedAway = parseFloat(((awayProb / total) * 100).toFixed(2))
 
-          // ✅ O/U: Pinnacle(4) → Fonbet(27) → 10Bet(9) → Unibet(11) → Betfair(13) → 나머지
           const OU_PRIORITY = [4, 27, 9, 11, 13, 30, 2]
           let bestLine: number | null = null
           let bestOver: number | null = null
@@ -240,7 +234,6 @@ export async function GET() {
             }
           }
 
-          // fallback: 나머지 북메이커
           if (bestLine === null) {
             for (const bm of bookmakers) {
               const ouBet = bm.bets?.find((b: any) => b.id === 5)
@@ -258,7 +251,6 @@ export async function GET() {
             }
           }
 
-          // Runline (bet id: 2)
           const runlineBm = bookmakers.find((b: any) => b.id === 2) || bookmakers.find((b: any) => b.bets?.find((bet: any) => bet.id === 2))
           const runlineBet = runlineBm?.bets?.find((b: any) => b.id === 2)
           let runlineSpread: number | null = null
@@ -282,7 +274,6 @@ export async function GET() {
             }
           }
 
-          // UI 표시용 3개 라인 선택
           const displayLines = bestLine !== null ? selectDisplayLines(ouLines, bestLine) : []
 
           const oddsRecord = {
