@@ -345,7 +345,7 @@ export default function ComboPicksPage() {
           const leagueInfo: Record<string, { color: string; gradient: string; time: string; timeEn: string; logo: string }> = {
             KBO: {
               color: '#ef4444', gradient: 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(239,68,68,0.02) 100%)',
-              time: '오전 10시 자동 생성', timeEn: 'Daily at 10AM KST',
+              time: '오후 12시 자동 생성', timeEn: 'Daily at 12PM KST',
               logo: 'https://media.api-sports.io/baseball/leagues/5.png',
             },
             MLB: {
@@ -355,7 +355,7 @@ export default function ComboPicksPage() {
             },
             NPB: {
               color: '#f97316', gradient: 'linear-gradient(135deg, rgba(249,115,22,0.08) 0%, rgba(249,115,22,0.02) 100%)',
-              time: '오전 10시 자동 생성', timeEn: 'Daily at 10AM KST',
+              time: '오후 12시 자동 생성', timeEn: 'Daily at 12PM KST',
               logo: 'https://media.api-sports.io/baseball/leagues/2.png',
             },
           }
