@@ -2088,8 +2088,9 @@ export default function AdminDashboard() {
     const freeUsers = users.filter(u => u.tier === 'free').length
     const premiumUsers = users.filter(u => u.tier === 'premium').length
     
-    const today = getKSTDateString()
-    const todayUsers = users.filter(u => u.created_at.startsWith(today)).length
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0) // KST 기준 오늘 00:00
+    const todayUsers = users.filter(u => new Date(u.created_at) >= todayStart).length
     
     const activeSubscriptions = subscriptions.filter(s => s.status === 'active').length
     const monthlyRevenue = paymentStats?.totalRevenue || subscriptions
