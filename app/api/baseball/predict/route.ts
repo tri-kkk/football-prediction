@@ -155,13 +155,35 @@ export async function POST(request: NextRequest) {
     // 경기 날짜 + 투수 데이터 조회
     const { data: match, error } = await supabase
       .from('baseball_matches')
-      .select('match_date, league, home_pitcher_era, home_pitcher_whip, home_pitcher_k, away_pitcher_era, away_pitcher_whip, away_pitcher_k')
+      .select('api_match_id, match_date, league, home_pitcher_era, home_pitcher_whip, home_pitcher_k, away_pitcher_era, away_pitcher_whip, away_pitcher_k')
       .or(`id.eq.${matchId},api_match_id.eq.${matchId}`)
       .limit(1)
       .single()
 
     if (error || !match) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
+
+    // 배당 데이터 조회 → implied probability 계산
+    const { data: oddsData } = await supabase
+      .from('baseball_odds_latest')
+      .select('home_win_odds, away_win_odds')
+      .eq('api_match_id', match.api_match_id)
+      .limit(1)
+      .maybeSingle()
+
+    let oddsImpliedHome = 0.5
+    let oddsImpliedAway = 0.5
+    let hasOdds = false
+
+    if (oddsData?.home_win_odds && oddsData?.away_win_odds) {
+      hasOdds = true
+      const rawHome = 1 / oddsData.home_win_odds
+      const rawAway = 1 / oddsData.away_win_odds
+      // overround 제거 (정규화)
+      const total = rawHome + rawAway
+      oddsImpliedHome = rawHome / total
+      oddsImpliedAway = rawAway / total
     }
 
     // MLB만 AI 예측 지원 → 전체 리그 지원으로 변경
@@ -242,9 +264,29 @@ export async function POST(request: NextRequest) {
 
     const aiResult = await aiResponse.json()
 
-    // homeWinProb를 정수 %로 변환 (컴포넌트에서 * 100 하지 않도록)
-    const homeWinProb = Math.round(aiResult.home_win_prob * 100)
-    const awayWinProb = Math.round(aiResult.away_win_prob * 100)
+    // 배당 implied probability + Railway 모델 블렌딩
+    // 배당 데이터가 있으면: 배당 60% + 모델 40% (배당이 시장 평가라 더 신뢰)
+    // 배당 데이터가 없으면: 모델 100%
+    const ODDS_WEIGHT = 0.6
+    const MODEL_WEIGHT = 0.4
+
+    let blendedHome: number
+    let blendedAway: number
+
+    if (hasOdds) {
+      blendedHome = oddsImpliedHome * ODDS_WEIGHT + aiResult.home_win_prob * MODEL_WEIGHT
+      blendedAway = oddsImpliedAway * ODDS_WEIGHT + aiResult.away_win_prob * MODEL_WEIGHT
+      // 정규화
+      const blendTotal = blendedHome + blendedAway
+      blendedHome = blendedHome / blendTotal
+      blendedAway = blendedAway / blendTotal
+    } else {
+      blendedHome = aiResult.home_win_prob
+      blendedAway = aiResult.away_win_prob
+    }
+
+    const homeWinProb = Math.round(blendedHome * 100)
+    const awayWinProb = Math.round(blendedAway * 100)
     const overProb = Math.round(aiResult.over_prob * 100)
     const underProb = Math.round(aiResult.under_prob * 100)
 
