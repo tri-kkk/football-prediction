@@ -1,11 +1,6 @@
 // app/api/baseball/cron/generate-combo-picks/route.ts
 // 야구 조합 픽 자동 생성 크론
-// - 리그별 당일 경기 조회
-// - Railway ML 모델로 각 경기 승률 예측
-// - 배당 데이터 결합
-// - 승률 높은 경기 조합 생성 (2폴드, 3폴드)
-// - Claude AI로 분석 요약문 생성
-// - Supabase에 저장
+// v2: 배당 없으면 스킵, 배당 있으면 배당확률 70% + Railway 30% 가중 평균
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -84,7 +79,7 @@ async function getTeamStats(team: string, league: string) {
   }
 }
 
-// ==================== Railway ML 예측 ====================
+// ==================== Railway 예측 ====================
 async function predictMatch(match: any, league: string) {
   try {
     const [homeStats, awayStats] = await Promise.all([
@@ -162,7 +157,7 @@ async function predictMatch(match: any, league: string) {
       },
     }
   } catch (e) {
-    console.error(`  ❌ ML 예측 실패 (${match.api_match_id}):`, e)
+    console.error(`  ❌ Railway 예측 실패 (${match.api_match_id}):`, e)
     return null
   }
 }
@@ -188,8 +183,6 @@ interface MatchPrediction {
   awayStats: any
 }
 
-// 2조합: 안전형 (승률 최우선, 55% 이상)
-// 3조합: 고배당형 (배당 가중, 52% 이상 허용, 2조합과 다른 경기 조합)
 function generateSafeCombos(predictions: MatchPrediction[]): MatchPrediction[][] {
   const eligible = predictions.filter(p => p.winProb >= 55)
   if (eligible.length < 2) return []
@@ -201,7 +194,6 @@ function generateSafeCombos(predictions: MatchPrediction[]): MatchPrediction[][]
     for (let j = i + 1; j < Math.min(eligible.length, 6); j++) {
       const combo = [eligible[i], eligible[j]]
       const avgProb = combo.reduce((s, p) => s + p.winProb, 0) / 2
-      // 안전형: 승률 90% 가중
       combos.push({ combo, score: avgProb * 0.9 + Math.min(combo.reduce((s, p) => s * p.odds, 1) * 5, 15) * 0.1 })
     }
   }
@@ -210,7 +202,6 @@ function generateSafeCombos(predictions: MatchPrediction[]): MatchPrediction[][]
 }
 
 function generateHighOddsCombos(predictions: MatchPrediction[], usedMatchIds: Set<number>): MatchPrediction[][] {
-  // 3조합은 52% 이상으로 폭 넓히되, 2조합과 최대 1경기만 겹치도록
   const eligible = predictions.filter(p => p.winProb >= 52)
   if (eligible.length < 3) return []
 
@@ -219,13 +210,11 @@ function generateHighOddsCombos(predictions: MatchPrediction[], usedMatchIds: Se
     for (let j = i + 1; j < Math.min(eligible.length, 6); j++) {
       for (let k = j + 1; k < Math.min(eligible.length, 6); k++) {
         const combo = [eligible[i], eligible[j], eligible[k]]
-        // 2조합과 겹치는 경기 수 계산 — 최대 1경기까지만 허용
         const overlapCount = combo.filter(p => usedMatchIds.has(p.apiMatchId)).length
         if (usedMatchIds.size > 0 && overlapCount >= 2) continue
 
         const avgProb = combo.reduce((s, p) => s + p.winProb, 0) / 3
         const totalOdds = combo.reduce((s, p) => s * p.odds, 1)
-        // 고배당형: 배당 60% 가중
         combos.push({ combo, score: avgProb * 0.4 + Math.min(totalOdds * 8, 40) * 0.6 })
       }
     }
@@ -285,15 +274,11 @@ ${combo.length >= 3 ? '[3경기] 세번째 경기 핵심 포인트 한줄\n' : '
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
   const { searchParams } = new URL(request.url)
-  const targetLeague = searchParams.get('league') // MLB, KBO, NPB 또는 전체
-
-  // 인증 (Supabase pg_cron에서 net.http_get으로 호출하므로 로깅만 수행)
-  // 다른 크론 라우트들과 동일하게 open access 처리
+  const targetLeague = searchParams.get('league')
 
   const leagues = targetLeague ? [targetLeague] : ['MLB', 'KBO', 'NPB']
   const results: Record<string, any> = {}
 
-  // KST 오늘 날짜
   const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
   const today = kstNow.toISOString().split('T')[0]
 
@@ -331,11 +316,11 @@ export async function GET(request: NextRequest) {
 
     console.log(`  📋 경기 ${matches.length}개 발견`)
 
-    // 3. 각 경기에 대해 ML 예측 + 배당 조회
+    // 3. 각 경기에 대해 Railway 예측 + 배당 조회
     const predictions: MatchPrediction[] = []
 
     for (const match of matches) {
-      // ML 예측
+      // Railway 예측
       const prediction = await predictMatch(match, league)
       if (!prediction) continue
 
@@ -347,22 +332,43 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .maybeSingle()
 
-      const homeOdds = oddsData?.home_win_odds || 1.85
-      const awayOdds = oddsData?.away_win_odds || 1.85
+      // ✅ 배당 없으면 스킵 (배당 기반 픽만 생성)
+      if (!oddsData || !oddsData.home_win_odds || !oddsData.away_win_odds) {
+        console.log(`  ⚠️ 배당 없음 - 스킵: ${match.home_team} vs ${match.away_team}`)
+        continue
+      }
 
-      // 승리 확률이 더 높은 팀 선택
-      const pickHome = prediction.homeWinProb > prediction.awayWinProb
-      const winProb = pickHome ? prediction.homeWinProb : prediction.awayWinProb
+      const homeOdds = oddsData.home_win_odds
+      const awayOdds = oddsData.away_win_odds
+
+      // ✅ 배당 확률 계산 (노마진 정규화)
+      const homeBookProb = (1 / homeOdds)
+      const awayBookProb = (1 / awayOdds)
+      const bookTotal = homeBookProb + awayBookProb
+      const normalizedHomeBookProb = Math.round((homeBookProb / bookTotal) * 100)
+      const normalizedAwayBookProb = Math.round((awayBookProb / bookTotal) * 100)
+
+      // ✅ 가중 평균: 배당 70% + Railway 30%
+      const finalHomeProb = Math.round(normalizedHomeBookProb * 0.7 + prediction.homeWinProb * 0.3)
+      const finalAwayProb = Math.round(normalizedAwayBookProb * 0.7 + prediction.awayWinProb * 0.3)
+
+      // 가중 평균 기준으로 픽 결정
+      const pickHome = finalHomeProb > finalAwayProb
+      const winProb = pickHome ? finalHomeProb : finalAwayProb
       const pickTeam = pickHome ? match.home_team : match.away_team
       const pickTeamKo = pickHome
         ? (match.home_team_ko || TEAM_NAME_KO[match.home_team] || match.home_team)
         : (match.away_team_ko || TEAM_NAME_KO[match.away_team] || match.away_team)
 
-      // 승률 50% 이하 경기는 제외
-      if (winProb <= 50) continue
+      // 최종 승률 52% 이하 제외
+      if (winProb <= 52) {
+        console.log(`  ⚠️ 승률 낮음 제외: ${pickTeamKo} (${winProb}%)`)
+        continue
+      }
 
       // 근거 텍스트 생성
       const reasons: string[] = []
+      reasons.push(`배당 확률 ${pickHome ? normalizedHomeBookProb : normalizedAwayBookProb}%`)
       if (prediction.homeStats.recent_form > prediction.awayStats.recent_form && pickHome) {
         reasons.push('홈팀 최근 폼 우세')
       } else if (prediction.awayStats.recent_form > prediction.homeStats.recent_form && !pickHome) {
@@ -394,12 +400,12 @@ export async function GET(request: NextRequest) {
         pickTeamKo,
         winProb,
         odds: pickHome ? homeOdds : awayOdds,
-        reason: reasons.length > 0 ? reasons.join(', ') : 'AI 종합 분석',
+        reason: reasons.join(', '),
         homeStats: prediction.homeStats,
         awayStats: prediction.awayStats,
       })
 
-      console.log(`  ✅ ${match.home_team_ko || match.home_team} vs ${match.away_team_ko || match.away_team} → ${pickTeamKo} 승 (${winProb}%)`)
+      console.log(`  ✅ ${match.home_team_ko || match.home_team} vs ${match.away_team_ko || match.away_team} → ${pickTeamKo} 승 (배당${pickHome ? normalizedHomeBookProb : normalizedAwayBookProb}%+Railway${pickHome ? prediction.homeWinProb : prediction.awayWinProb}% = 최종${winProb}%)`)
     }
 
     if (predictions.length < 2) {
@@ -408,10 +414,10 @@ export async function GET(request: NextRequest) {
       continue
     }
 
-    // 4. 조합 생성 — 2 COMBO (안전형) + 3 COMBO (고배당형)
+    // 4. 조합 생성
     const combosToSave = []
 
-    // 2 COMBO: 안전형 (승률 최우선)
+    // 2 COMBO: 안전형
     const safeCombos = generateSafeCombos(predictions)
     const usedMatchIds = new Set<number>()
     for (const combo of safeCombos) {
@@ -448,7 +454,7 @@ export async function GET(request: NextRequest) {
       console.log(`  📦 2 COMBO 안전형: 평균 ${avgConf.toFixed(1)}% / 배당 ${totalOdds.toFixed(2)}`)
     }
 
-    // 3 COMBO: 고배당형 (배당 가중, 2조합과 다른 경기 포함)
+    // 3 COMBO: 고배당형
     if (predictions.length >= 3) {
       const highOddsCombos = generateHighOddsCombos(predictions, usedMatchIds)
       for (const combo of highOddsCombos) {
@@ -498,6 +504,9 @@ export async function GET(request: NextRequest) {
         console.log(`  💾 ${combosToSave.length}개 조합 저장 완료`)
         results[league] = { status: 'success', combos: combosToSave.length, predictions: predictions.length }
       }
+    } else {
+      console.log(`  ⚠️ 생성된 조합 없음`)
+      results[league] = { status: 'no_combos' }
     }
   }
 
