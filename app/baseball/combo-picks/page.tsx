@@ -117,6 +117,7 @@ export default function ComboPicksPage() {
   const [typeStats, setTypeStats] = useState<{ safe: { total: number; wins: number; rate: number }; high: { total: number; wins: number; rate: number } }>({ safe: { total: 0, wins: 0, rate: 0 }, high: { total: 0, wins: 0, rate: 0 } })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'today' | 'history'>('today')
+  const [weekOffset, setWeekOffset] = useState(0) // 0 = 이번주, -1 = 지난주 ...
   const cleanMd = (text: string) => text.replace(/\*\*/g, '')
 
   const isPremium = (session?.user as any)?.tier === 'premium'
@@ -127,15 +128,49 @@ export default function ComboPicksPage() {
   }
   const today = getKSTToday()
 
-  useEffect(() => { fetchPicks() }, [league, tab])
+  // 주간 날짜 범위 계산 (월~일 기준)
+  const getWeekRange = (offset: number) => {
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    const todayDate = new Date(kstNow.toISOString().split('T')[0] + 'T00:00:00')
+    const dayOfWeek = todayDate.getDay() // 0=일 1=월 ... 6=토
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    const monday = new Date(todayDate)
+    monday.setDate(todayDate.getDate() + mondayOffset + offset * 7)
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    const fmt = (d: Date) => d.toISOString().split('T')[0]
+    return { start: fmt(monday), end: fmt(sunday) }
+  }
+
+  const weekRange = getWeekRange(weekOffset)
+
+  const formatShortDate = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00')
+    if (language === 'en') return `${d.getMonth() + 1}/${d.getDate()}`
+    return `${d.getMonth() + 1}/${d.getDate()}`
+  }
+
+  const getWeekLabel = () => {
+    if (weekOffset === 0) return t('이번 주', 'This Week')
+    if (weekOffset === -1) return t('지난 주', 'Last Week')
+    return `${formatShortDate(weekRange.start)} ~ ${formatShortDate(weekRange.end)}`
+  }
+
+  useEffect(() => { fetchPicks() }, [league, tab, weekOffset])
 
   const fetchPicks = async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (league !== 'ALL') params.set('league', league)
-      if (tab === 'today') params.set('date', today)
-      else params.set('days', '30')
+      if (tab === 'today') {
+        params.set('date', today)
+      } else {
+        // 히스토리: 주간 범위로 조회 (start_date ~ end_date)
+        const range = getWeekRange(weekOffset)
+        params.set('start_date', range.start)
+        params.set('end_date', range.end)
+      }
       const res = await fetch(`/api/baseball/combo-picks?${params}`)
       const data = await res.json()
       setPicks(data.picks || [])
@@ -202,7 +237,7 @@ export default function ComboPicksPage() {
             </div>
             <div className="flex rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}>
               {(['today', 'history'] as const).map(v => (
-                <button key={v} onClick={() => setTab(v)}
+                <button key={v} onClick={() => { setTab(v); if (v === 'history') setWeekOffset(0) }}
                   className={`px-4 py-2 text-xs font-bold transition-all ${tab === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
                   style={tab === v ? { background: 'rgba(16,185,129,0.2)' } : {}}>
                   {v === 'today' ? t('오늘', 'Today') : t('히스토리', 'History')}
@@ -211,10 +246,34 @@ export default function ComboPicksPage() {
             </div>
           </div>
 
+          {/* 주간 네비게이션 (히스토리 탭) */}
+          {tab === 'history' && (
+            <div className="flex items-center justify-between rounded-xl px-4 py-3 mb-3"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <button onClick={() => setWeekOffset(prev => prev - 1)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:brightness-125 active:scale-95"
+                style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <div className="text-center">
+                <div className="text-[13px] font-bold text-white">
+                  {formatShortDate(weekRange.start)} ~ {formatShortDate(weekRange.end)}
+                </div>
+                <div className="text-[10px] mt-0.5" style={{ color: '#10b981' }}>{getWeekLabel()}</div>
+              </div>
+              <button onClick={() => setWeekOffset(prev => Math.min(prev + 1, 0))}
+                disabled={weekOffset >= 0}
+                className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${weekOffset >= 0 ? 'opacity-30 cursor-not-allowed' : 'hover:brightness-125 active:scale-95'}`}
+                style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            </div>
+          )}
+
           {/* 1행: 전체 요약 */}
           <div className="grid grid-cols-3 gap-3 mb-3">
             {[
-              { label: t('오늘 조합', 'COMBOS'), value: String(todayCount), color: '#e2e8f0' },
+              { label: tab === 'history' ? t('주간 조합', 'WEEKLY') : t('오늘 조합', 'COMBOS'), value: tab === 'history' ? String(picks.length) : String(todayCount), color: '#e2e8f0' },
               { label: t('적중률', 'WIN RATE'), value: totalStats.total > 0 ? `${winRate}%` : '-%', color: winRate > 0 ? '#10b981' : '#64748b' },
               { label: t('평균 배당', 'AVG ODDS'), value: String(avgOdds), color: '#fbbf24' },
             ].map((item, i) => (
@@ -382,20 +441,20 @@ export default function ComboPicksPage() {
                     const info = leagueInfo[lg]
                     if (!info) return null
                     return (
-                      <div key={lg} className="rounded-xl px-4 py-4 flex items-center gap-3"
+                      <div key={lg} className="rounded-xl px-3 py-3 flex flex-col items-center text-center gap-2"
                         style={{ background: info.gradient, border: `1px solid ${info.color}15` }}>
-                        <div className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden"
+                        <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden"
                           style={{ background: `${info.color}10`, border: `1px solid ${info.color}20` }}>
-                          <img src={info.logo} alt={lg} width={30} height={30} style={{ objectFit: 'contain' }} />
+                          <img src={info.logo} alt={lg} width={28} height={28} style={{ objectFit: 'contain' }} />
                         </div>
                         <div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center justify-center gap-1">
                             <span className="text-[13px] font-black" style={{ color: info.color }}>{lg}</span>
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${info.color}12`, color: `${info.color}99` }}>
+                            <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ background: `${info.color}12`, color: `${info.color}99` }}>
                               {t('준비중', 'SOON')}
                             </span>
                           </div>
-                          <p className="text-[11px] mt-1" style={{ color: '#64748b' }}>
+                          <p className="text-[10px] mt-1 whitespace-nowrap" style={{ color: '#64748b' }}>
                             {language === 'en' ? info.timeEn : info.time}
                           </p>
                         </div>

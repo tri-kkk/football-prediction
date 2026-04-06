@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const league = searchParams.get('league') // MLB, KBO, NPB
   const date = searchParams.get('date') // YYYY-MM-DD
+  const startDate = searchParams.get('start_date') // YYYY-MM-DD (주간 범위 시작)
+  const endDate = searchParams.get('end_date') // YYYY-MM-DD (주간 범위 끝)
   const days = parseInt(searchParams.get('days') || '7') // 최근 N일
 
   // 로고 없는 픽에 DB에서 로고 URL 보강
@@ -79,15 +81,63 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ picks: enriched })
     }
 
+    // 주간 범위 조회 (start_date ~ end_date)
+    if (startDate && endDate) {
+      let query = supabase
+        .from('baseball_combo_picks')
+        .select('*')
+        .gte('pick_date', startDate)
+        .lte('pick_date', endDate)
+        .order('pick_date', { ascending: false })
+        .order('fold_count', { ascending: true })
+
+      if (league) query = query.eq('league', league)
+
+      const { data, error } = await query
+      if (error) throw error
+
+      const enriched = await enrichPicksWithLogos(data || [])
+
+      // 적중 통계
+      const stats: Record<string, { total: number; wins: number; rate: number }> = {}
+      const safeStats = { total: 0, wins: 0, rate: 0 }
+      const highStats = { total: 0, wins: 0, rate: 0 }
+
+      for (const pick of enriched) {
+        const key = `${pick.league}_${pick.fold_count}`
+        if (!stats[key]) stats[key] = { total: 0, wins: 0, rate: 0 }
+        if (pick.result === 'win' || pick.result === 'lose') {
+          stats[key].total++
+          if (pick.result === 'win') stats[key].wins++
+          const target = pick.fold_count === 2 ? safeStats : highStats
+          target.total++
+          if (pick.result === 'win') target.wins++
+        }
+      }
+      for (const key in stats) {
+        stats[key].rate = stats[key].total > 0
+          ? Math.round((stats[key].wins / stats[key].total) * 100) : 0
+      }
+      safeStats.rate = safeStats.total > 0 ? Math.round((safeStats.wins / safeStats.total) * 100) : 0
+      highStats.rate = highStats.total > 0 ? Math.round((highStats.wins / highStats.total) * 100) : 0
+
+      return NextResponse.json({
+        picks: enriched,
+        stats,
+        typeStats: { safe: safeStats, high: highStats },
+        period: { from: startDate, to: endDate },
+      })
+    }
+
     // 최근 N일 조회
     const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
     const today = kstNow.toISOString().split('T')[0]
-    const startDate = new Date(kstNow.getTime() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const fromDate = new Date(kstNow.getTime() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     let query = supabase
       .from('baseball_combo_picks')
       .select('*')
-      .gte('pick_date', startDate)
+      .gte('pick_date', fromDate)
       .lte('pick_date', today)
       .order('pick_date', { ascending: false })
       .order('fold_count', { ascending: true })
@@ -131,7 +181,7 @@ export async function GET(request: NextRequest) {
       picks: enriched,
       stats,
       typeStats: { safe: safeStats, high: highStats },
-      period: { from: startDate, to: today },
+      period: { from: fromDate, to: today },
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

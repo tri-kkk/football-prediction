@@ -103,16 +103,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
     }
 
-    const now = new Date()
-    const currentMonth = now.getMonth() + 1
+    // ✅ KST 기준 날짜 계산 (Vercel은 UTC 서버)
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    const currentMonth = kstNow.getMonth() + 1
 
-    const todayStr = now.toISOString().split('T')[0]
-    const futureDate = new Date(now)
-    futureDate.setDate(futureDate.getDate() + 7)
+    const todayStr = kstNow.toISOString().split('T')[0]
+    // MLB는 7일 범위 (오즈가 1~2일 전부터 나옴), KBO/NPB/CPBL은 3일 범위 (당일만 나옴)
+    const futureDays = (leagueParam === 'NPB_KBO' || leagueParam === 'CPBL') ? 3 : 7
+    const futureDate = new Date(kstNow.getTime() + futureDays * 24 * 60 * 60 * 1000)
     const futureDateStr = futureDate.toISOString().split('T')[0]
 
-    console.log(`🗓️ Date: ${now.toISOString()}`)
-    console.log(`📅 Collecting odds for: ${todayStr} ~ ${futureDateStr}`)
+    console.log(`🗓️ KST Date: ${kstNow.toISOString()} (UTC: ${new Date().toISOString()})`)
+    console.log(`📅 Collecting odds for: ${todayStr} ~ ${futureDateStr} (${futureDays}일 범위)`)
     console.log(`🎯 League filter: ${leagueParam || 'ALL'}`)
 
     // ✅ 시즌 필터
