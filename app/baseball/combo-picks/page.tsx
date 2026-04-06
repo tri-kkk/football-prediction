@@ -164,7 +164,11 @@ export default function ComboPicksPage() {
       const params = new URLSearchParams()
       if (league !== 'ALL') params.set('league', league)
       if (tab === 'today') {
-        params.set('date', today)
+        // MLB는 전날 저녁에 다음날 픽을 생성하므로 오늘+내일 범위로 조회
+        const kstTomorrow = new Date(Date.now() + 9 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000)
+        const tomorrow = kstTomorrow.toISOString().split('T')[0]
+        params.set('start_date', today)
+        params.set('end_date', tomorrow)
       } else {
         // 히스토리: 주간 범위로 조회 (start_date ~ end_date)
         const range = getWeekRange(weekOffset)
@@ -197,7 +201,7 @@ export default function ComboPicksPage() {
   const totalStats = Object.values(stats).reduce(
     (acc, s) => ({ total: acc.total + s.total, wins: acc.wins + s.wins }), { total: 0, wins: 0 }
   )
-  const todayCount = picks.filter(p => p.pick_date === today).length
+  const todayCount = tab === 'today' ? picks.length : picks.filter(p => p.pick_date === today).length
   const winRate = totalStats.total > 0 ? Math.round((totalStats.wins / totalStats.total) * 100) : 0
   const avgOdds = picks.length > 0 ? (picks.reduce((s, p) => s + (p.total_odds || 0), 0) / picks.length).toFixed(2) : '-'
 
