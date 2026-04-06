@@ -266,6 +266,8 @@ export default function BaseballDetailPage() {
   const [kboNpbPitcherLoading, setKboNpbPitcherLoading] = useState(false)
   const [kboHomePitcherStats, setKboHomePitcherStats] = useState<any>(null)
   const [kboAwayPitcherStats, setKboAwayPitcherStats] = useState<any>(null)
+  const [kboHomePitcherPrevStats, setKboHomePitcherPrevStats] = useState<any>(null)
+  const [kboAwayPitcherPrevStats, setKboAwayPitcherPrevStats] = useState<any>(null)
   const [kboPitcherStatsFetched, setKboPitcherStatsFetched] = useState(false)
 
   // Claude AI 투수 분석
@@ -481,7 +483,8 @@ export default function BaseballDetailPage() {
 
     async function fetchKboPitcherStats() {
       const league = match!.league.toLowerCase()
-      const params = new URLSearchParams({ season: '2025' })
+      const currentYear = new Date().getFullYear().toString()
+      const params = new URLSearchParams({ season: currentYear })
       if (kboNpbHomePitcher) params.set('homePitcher', kboNpbHomePitcher)
       if (kboNpbAwayPitcher) params.set('awayPitcher', kboNpbAwayPitcher)
       if (match!.home.teamKo) params.set('homeTeam', match!.home.teamKo)
@@ -494,6 +497,8 @@ export default function BaseballDetailPage() {
         if (data.success) {
           setKboHomePitcherStats(data.homePitcher ?? null)
           setKboAwayPitcherStats(data.awayPitcher ?? null)
+          setKboHomePitcherPrevStats(data.homePitcherPrev ?? null)
+          setKboAwayPitcherPrevStats(data.awayPitcherPrev ?? null)
         }
       } catch { /* 무시 */ } finally {
         setKboPitcherStatsFetched(true)
@@ -1287,9 +1292,9 @@ export default function BaseballDetailPage() {
               </div>
               <div className="grid grid-cols-2 divide-x divide-gray-800/60">
                 {[
-                  { name: kboNpbAwayPitcher, stats: kboAwayPitcherStats, label: t('원정', 'Away'), accentColor: 'text-red-400' },
-                  { name: kboNpbHomePitcher, stats: kboHomePitcherStats, label: t('홈', 'Home'),   accentColor: 'text-blue-400' },
-                ].map(({ name, stats, label, accentColor }, idx) => (
+                  { name: kboNpbAwayPitcher, stats: kboAwayPitcherStats, prevStats: kboAwayPitcherPrevStats, label: t('원정', 'Away'), accentColor: 'text-red-400' },
+                  { name: kboNpbHomePitcher, stats: kboHomePitcherStats, prevStats: kboHomePitcherPrevStats, label: t('홈', 'Home'),   accentColor: 'text-blue-400' },
+                ].map(({ name, stats, prevStats, label, accentColor }, idx) => (
                   <div key={idx} className="px-4 py-4">
                     {/* 프로필 */}
                     <div className="flex flex-col items-center mb-4">
@@ -1301,7 +1306,7 @@ export default function BaseballDetailPage() {
                           {name || t('선발 미정', 'Starter TBD')}
                         </p>
                       )}
-                      {stats?.season && match.league === 'MLB' && (
+                      {stats?.season && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600/30 text-blue-400 font-bold mt-1">
                           {stats.season}
                         </span>
@@ -1373,6 +1378,24 @@ export default function BaseballDetailPage() {
                           </div>
                           )
                         })()}
+                        {/* 전년도 스탯 */}
+                        {prevStats && (
+                          <div className="mt-3 pt-2 border-t border-gray-700/40">
+                            <p className="text-[10px] text-gray-500 text-center mb-1.5">{prevStats.season} {t('시즌', 'Season')}</p>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {[
+                                { label: 'ERA', value: prevStats.era != null ? Number(prevStats.era).toFixed(2) : '-' },
+                                { label: 'WHIP', value: prevStats.whip != null ? Number(prevStats.whip).toFixed(2) : '-' },
+                                { label: 'K', value: prevStats.strikeouts ?? '-' },
+                              ].map(({ label, value }) => (
+                                <div key={label} className="bg-gray-900/40 rounded-lg py-1.5 text-center">
+                                  <p className="text-[10px] text-gray-500 mb-0.5">{label}</p>
+                                  <p className="text-xs text-gray-400">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : name && !kboPitcherStatsFetched ? (
                       <div className="flex justify-center py-4">

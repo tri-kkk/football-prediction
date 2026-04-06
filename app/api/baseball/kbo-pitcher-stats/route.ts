@@ -205,9 +205,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [homeStats, awayStats] = await Promise.all([
+    const prevSeason = String(parseInt(season) - 1)
+
+    const [homeStats, awayStats, homePrevStats, awayPrevStats] = await Promise.all([
       homePitcher ? fetchKboPitcherStat(homePitcher, season, league, homeTeam || undefined) : Promise.resolve(null),
       awayPitcher ? fetchKboPitcherStat(awayPitcher, season, league, awayTeam || undefined) : Promise.resolve(null),
+      homePitcher ? fetchKboPitcherStat(homePitcher, prevSeason, league, homeTeam || undefined) : Promise.resolve(null),
+      awayPitcher ? fetchKboPitcherStat(awayPitcher, prevSeason, league, awayTeam || undefined) : Promise.resolve(null),
     ])
 
     return NextResponse.json({
@@ -215,6 +219,8 @@ export async function GET(request: NextRequest) {
       season,
       homePitcher: homeStats,
       awayPitcher: awayStats,
+      homePitcherPrev: homePrevStats,
+      awayPitcherPrev: awayPrevStats,
     })
 
   } catch (error: any) {
