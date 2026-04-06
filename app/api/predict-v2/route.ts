@@ -181,10 +181,13 @@ const LEAGUE_DRAW_RATES: Record<string, number> = {
 // 유틸 함수
 // ============================================
 
-// P/A (득실비율) 계산 - 0 방지
+// P/A (득실비율) 계산 - 0 방지, 상한 3.0
+// ✅ v2.4: cap 추가 - 선제골 PA가 5~6까지 올라가면 power index 왜곡 발생
+// 예: Girona 홈 선제골 PA=5.4 → power 190 (비정상) → cap 3.0 적용으로 방지
 function calcPA(goals_for: number, goals_against: number): number {
   if (goals_against === 0) return goals_for > 0 ? 2.0 : 1.0
-  return goals_for / goals_against
+  const pa = goals_for / goals_against
+  return Math.min(pa, 3.0) // cap at 3.0 to prevent extreme power index
 }
 
 // 승률 계산
@@ -346,25 +349,28 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
     console.warn(`⚠️ Stats not found, using fallback: ${!homeStats ? homeTeam : ''} ${!awayStats ? awayTeam : ''}`)
   }
   
+  // ✅ v2.4: fallback을 중립값으로 변경 (기존: 홈 유리 → P/A 1.3, 선제골 75%)
+  // DB에 없는 팀이 홈일 때 잘못된 승리 예측이 나오는 버그 수정
+  // 중립값이면 상대팀의 실데이터가 결과를 결정하게 됨
   const fallbackStats: AggregatedStats = {
     team_name: '',
     team_id: 0,
     seasons_count: 0,
     total_played: 10,
-    home_goals_for: 13,
+    home_goals_for: 10,        // 중립 P/A = 1.0 (기존: 13 → 홈 P/A 1.3)
     home_goals_against: 10,
-    away_goals_for: 8,
-    away_goals_against: 12,
+    away_goals_for: 10,        // 중립 P/A = 1.0 (기존: 8/12 → 원정 P/A 0.67)
+    away_goals_against: 10,
     home_first_goal_games: 4,
-    home_first_goal_wins: 3,
-    home_concede_first_games: 3,
+    home_first_goal_wins: 2,   // 50% (기존: 3/4 = 75% → 과도한 홈 유리)
+    home_concede_first_games: 4,
     home_concede_first_wins: 1,
-    away_first_goal_games: 3,
-    away_first_goal_wins: 2,
+    away_first_goal_games: 4,
+    away_first_goal_wins: 2,   // 50% (기존: 2/3 = 67%)
     away_concede_first_games: 4,
     away_concede_first_wins: 1,
     form_home_5: 1.5,
-    form_away_5: 1.3,
+    form_away_5: 1.5,          // 동일 (기존: 1.3 → 원정 약하게)
     is_promoted: false,
     promotion_factor: 1.0,
   }
@@ -600,19 +606,21 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   const homeFormScore = (safeHomeStats.form_home_5 ?? 1.5) * 10
   const awayFormScore = (safeAwayStats.form_away_5 ?? 1.5) * 10
   
+  // ✅ v2.4: firstGoal 가중치 25→15로 축소, all/five 가중치 15→20으로 증가
+  // 이유: firstGoal PA가 cap 후에도 power index를 과도하게 좌우하는 문제 방지
   const homePower = Math.round(
-    (homePA_all * 15) + 
-    (homePA_five * 15) + 
-    (homePA_firstGoal * 25) +
+    (homePA_all * 20) +
+    (homePA_five * 20) +
+    (homePA_firstGoal * 15) +
     (homeComebackRate * 10) +
     homeFormScore +
     5
   )
-  
+
   const awayPower = Math.round(
-    (awayPA_all * 15) + 
-    (awayPA_five * 15) + 
-    (awayPA_firstGoal * 25) +
+    (awayPA_all * 20) +
+    (awayPA_five * 20) +
+    (awayPA_firstGoal * 15) +
     (awayComebackRate * 10) +
     awayFormScore
   )
