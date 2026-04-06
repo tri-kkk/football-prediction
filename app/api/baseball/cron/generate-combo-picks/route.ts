@@ -304,16 +304,20 @@ export async function GET(request: NextRequest) {
 
   const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
   const today = kstNow.toISOString().split('T')[0]
+  // MLB는 한국시간 기준 다음날 경기를 전날 저녁에 미리 생성
+  const kstTomorrow = new Date(kstNow.getTime() + 24 * 60 * 60 * 1000)
+  const tomorrow = kstTomorrow.toISOString().split('T')[0]
 
   for (const league of leagues) {
-    console.log(`\n🎯 [${league}] 조합 픽 생성 시작 - ${today} (force=${force})`)
+    const targetDate = league === 'MLB' ? tomorrow : today
+    console.log(`\n🎯 [${league}] 조합 픽 생성 시작 - ${targetDate} (force=${force})`)
 
     // 1. 이미 생성된 픽이 있으면 스킵 (force 모드에서는 기존 삭제 후 재생성)
     const { data: existing } = await supabase
       .from('baseball_combo_picks')
       .select('id')
       .eq('league', league)
-      .eq('pick_date', today)
+      .eq('pick_date', targetDate)
       .limit(1)
 
     if (existing && existing.length > 0) {
@@ -328,7 +332,7 @@ export async function GET(request: NextRequest) {
         .from('baseball_combo_picks')
         .delete()
         .eq('league', league)
-        .eq('pick_date', today)
+        .eq('pick_date', targetDate)
     }
 
     // 2. 오늘 예정 경기 조회
@@ -336,12 +340,12 @@ export async function GET(request: NextRequest) {
       .from('baseball_matches')
       .select('id, api_match_id, home_team, away_team, home_team_ko, away_team_ko, home_team_logo, away_team_logo, match_time, home_pitcher_era, home_pitcher_whip, home_pitcher_k, away_pitcher_era, away_pitcher_whip, away_pitcher_k, home_pitcher_ko, away_pitcher_ko')
       .eq('league', league)
-      .eq('match_date', today)
+      .eq('match_date', targetDate)
       .eq('status', 'NS')
       .order('match_time', { ascending: true })
 
     if (error || !matches || matches.length === 0) {
-      console.log(`  ⚠️ 오늘 경기 없음 (league=${league}, date=${today})`)
+      console.log(`  ⚠️ 경기 없음 (league=${league}, date=${targetDate})`)
       results[league] = { status: 'no_matches' }
       continue
     }
@@ -482,7 +486,7 @@ export async function GET(request: NextRequest) {
 
       combosToSave.push({
         league,
-        pick_date: today,
+        pick_date: targetDate,
         fold_count: 2,
         picks: combo.map(p => ({
           matchId: p.apiMatchId,
@@ -518,7 +522,7 @@ export async function GET(request: NextRequest) {
 
         combosToSave.push({
           league,
-          pick_date: today,
+          pick_date: targetDate,
           fold_count: 3,
           picks: combo.map(p => ({
             matchId: p.apiMatchId,
@@ -570,7 +574,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    date: today,
+    date: today, // KST 기준 오늘 (MLB는 내부적으로 tomorrow 사용)
     force,
     results,
     elapsed: `${elapsed}s`,
