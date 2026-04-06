@@ -270,11 +270,34 @@ ${combo.length >= 3 ? '[3경기] 세번째 경기 핵심 포인트 한줄\n' : '
   }
 }
 
+// ==================== 배당 수집 트리거 ====================
+async function triggerOddsCollection(league: string): Promise<boolean> {
+  try {
+    const oddsLeague = league === 'MLB' ? 'MLB' : 'NPB_KBO'
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}` : 'https://trendsoccer.com'
+    const url = `${baseUrl}/api/baseball/cron/collect-odds?league=${oddsLeague}`
+    console.log(`  🔄 배당 수집 트리거: ${oddsLeague}`)
+    const res = await fetch(url, { signal: AbortSignal.timeout(120000) })
+    if (!res.ok) {
+      console.log(`  ⚠️ 배당 수집 실패: ${res.status}`)
+      return false
+    }
+    const data = await res.json()
+    console.log(`  ✅ 배당 수집 완료:`, JSON.stringify(data).slice(0, 200))
+    return true
+  } catch (e) {
+    console.error(`  ❌ 배당 수집 트리거 에러:`, e)
+    return false
+  }
+}
+
 // ==================== 메인 핸들러 ====================
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
   const { searchParams } = new URL(request.url)
   const targetLeague = searchParams.get('league')
+  const force = searchParams.get('force') === 'true'
 
   const leagues = targetLeague ? [targetLeague] : ['MLB', 'KBO', 'NPB']
   const results: Record<string, any> = {}
@@ -283,9 +306,9 @@ export async function GET(request: NextRequest) {
   const today = kstNow.toISOString().split('T')[0]
 
   for (const league of leagues) {
-    console.log(`\n🎯 [${league}] 조합 픽 생성 시작 - ${today}`)
+    console.log(`\n🎯 [${league}] 조합 픽 생성 시작 - ${today} (force=${force})`)
 
-    // 1. 이미 생성된 픽이 있으면 스킵
+    // 1. 이미 생성된 픽이 있으면 스킵 (force 모드에서는 기존 삭제 후 재생성)
     const { data: existing } = await supabase
       .from('baseball_combo_picks')
       .select('id')
@@ -294,9 +317,18 @@ export async function GET(request: NextRequest) {
       .limit(1)
 
     if (existing && existing.length > 0) {
-      console.log(`  ⏭️ 이미 생성됨 - 스킵`)
-      results[league] = { status: 'skipped', reason: 'already_generated' }
-      continue
+      if (!force) {
+        console.log(`  ⏭️ 이미 생성됨 - 스킵 (force=true로 재생성 가능)`)
+        results[league] = { status: 'skipped', reason: 'already_generated' }
+        continue
+      }
+      // force 모드: 기존 픽 삭제 후 재생성
+      console.log(`  🔄 force 모드 - 기존 ${existing.length}개 삭제 후 재생성`)
+      await supabase
+        .from('baseball_combo_picks')
+        .delete()
+        .eq('league', league)
+        .eq('pick_date', today)
     }
 
     // 2. 오늘 예정 경기 조회
@@ -309,15 +341,36 @@ export async function GET(request: NextRequest) {
       .order('match_time', { ascending: true })
 
     if (error || !matches || matches.length === 0) {
-      console.log(`  ⚠️ 오늘 경기 없음`)
+      console.log(`  ⚠️ 오늘 경기 없음 (league=${league}, date=${today})`)
       results[league] = { status: 'no_matches' }
       continue
     }
 
     console.log(`  📋 경기 ${matches.length}개 발견`)
 
-    // 3. 각 경기에 대해 Railway 예측 + 배당 조회
+    // 3. 배당 데이터 사전 확인 - 없으면 수집 트리거
+    const matchIds = matches.map(m => m.api_match_id)
+    const { data: existingOdds } = await supabase
+      .from('baseball_odds_latest')
+      .select('api_match_id')
+      .in('api_match_id', matchIds)
+
+    const oddsCount = existingOdds?.length || 0
+    console.log(`  📊 배당 보유: ${oddsCount}/${matches.length}개`)
+
+    if (oddsCount < matches.length * 0.5) {
+      // 배당이 절반 미만이면 수집 먼저 트리거
+      console.log(`  ⚠️ 배당 부족 - 수집 트리거 시도`)
+      const collected = await triggerOddsCollection(league)
+      if (collected) {
+        // 수집 후 5초 대기
+        await new Promise(resolve => setTimeout(resolve, 5000))
+      }
+    }
+
+    // 4. 각 경기에 대해 Railway 예측 + 배당 조회
     const predictions: MatchPrediction[] = []
+    let skippedNoOdds = 0
 
     for (const match of matches) {
       // Railway 예측
@@ -332,9 +385,10 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .maybeSingle()
 
-      // ✅ 배당 없으면 스킵 (배당 기반 픽만 생성)
+      // 배당 없으면 스킵 (배당 기반 픽만 생성)
       if (!oddsData || !oddsData.home_win_odds || !oddsData.away_win_odds) {
-        console.log(`  ⚠️ 배당 없음 - 스킵: ${match.home_team} vs ${match.away_team}`)
+        skippedNoOdds++
+        console.log(`  ⚠️ 배당 없음 - 스킵: ${match.home_team} vs ${match.away_team} (matchId: ${match.api_match_id})`)
         continue
       }
 
@@ -409,8 +463,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (predictions.length < 2) {
-      console.log(`  ⚠️ 유효한 예측 ${predictions.length}개 - 조합 불가`)
-      results[league] = { status: 'insufficient', count: predictions.length }
+      console.log(`  ⚠️ 유효한 예측 ${predictions.length}개 - 조합 불가 (배당 없어서 스킵: ${skippedNoOdds}개)`)
+      results[league] = { status: 'insufficient', count: predictions.length, skippedNoOdds, totalMatches: matches.length }
       continue
     }
 
@@ -512,10 +566,12 @@ export async function GET(request: NextRequest) {
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
   console.log(`\n⏱️ 완료 (${elapsed}s)`)
+  console.log(`📊 결과 요약:`, JSON.stringify(results))
 
   return NextResponse.json({
     success: true,
     date: today,
+    force,
     results,
     elapsed: `${elapsed}s`,
   })
