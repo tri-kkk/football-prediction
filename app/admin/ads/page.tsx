@@ -798,7 +798,7 @@ export default function AdminDashboard() {
   const fetchKboPitchers = async () => {
     try {
       const table = pitcherLeague === 'NPB' ? 'npb' : 'kbo'
-      const res = await fetch(`/api/admin/pitcher?type=list&league=${table}&season=2025`)
+      const res = await fetch(`/api/admin/pitcher?type=list&league=${table}&season=2026`)
       const data = await res.json()
       setKboPitchers(data.pitchers || [])
     } catch (e) {
