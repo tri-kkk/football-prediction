@@ -730,7 +730,53 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`✅ KBO Sync Done — Pitchers: ${updatedPitchers}, Stats: ${updatedStats}`)
+    // ─────────────────────────────────────────
+    // Step 3: baseball_matches.{home,away}_pitcher_{era,whip,k} 갱신
+    // 프론트는 이 컬럼을 직접 읽으므로, records를 매치별로 매핑해서 써넣어야 한다
+    // ─────────────────────────────────────────
+    let updatedMatchStats = 0
+    if (!isDry && records.length > 0) {
+      const { data: kboMatches } = await supabase
+        .from('baseball_matches')
+        .select('id, home_team, away_team, home_pitcher_ko, away_pitcher_ko')
+        .eq('league', 'KBO')
+        .eq('match_date', date)
+
+      if (kboMatches && kboMatches.length > 0) {
+        const findRecord = (name: string | null, team: string | null) => {
+          if (!name) return null
+          // 1차: 이름+팀
+          let r = records.find((x) => x.name === name && (!team || teamMatchesDb(x.team, team) || teamMatchesDb(team, x.team)))
+          // 2차: 이름만
+          if (!r) r = records.find((x) => x.name === name)
+          return r || null
+        }
+        for (const m of kboMatches) {
+          const upd: Record<string, any> = {}
+          const hr = findRecord(m.home_pitcher_ko, m.home_team)
+          const ar = findRecord(m.away_pitcher_ko, m.away_team)
+          if (hr) {
+            upd.home_pitcher_era = typeof hr.era === 'number' ? hr.era : (parseFloat(hr.era as any) || null)
+            upd.home_pitcher_whip = typeof hr.whip === 'number' ? hr.whip : (parseFloat(hr.whip as any) || null)
+            upd.home_pitcher_k = hr.strikeouts ?? null
+          }
+          if (ar) {
+            upd.away_pitcher_era = typeof ar.era === 'number' ? ar.era : (parseFloat(ar.era as any) || null)
+            upd.away_pitcher_whip = typeof ar.whip === 'number' ? ar.whip : (parseFloat(ar.whip as any) || null)
+            upd.away_pitcher_k = ar.strikeouts ?? null
+          }
+          if (Object.keys(upd).length > 0) {
+            const { error: mErr } = await supabase
+              .from('baseball_matches')
+              .update(upd)
+              .eq('id', m.id)
+            if (!mErr) updatedMatchStats++
+          }
+        }
+      }
+    }
+
+    console.log(`✅ KBO Sync Done — Pitchers: ${updatedPitchers}, Stats: ${updatedStats}, MatchStats: ${updatedMatchStats}`)
 
     return NextResponse.json({
       success: true,
@@ -747,6 +793,7 @@ export async function GET(request: NextRequest) {
         updated: updatedStats,
         results: statsResults,
       },
+      matchStatsUpdated: updatedMatchStats,
     })
   } catch (error: any) {
     console.error('❌ KBO sync error:', error)

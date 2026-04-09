@@ -1576,13 +1576,30 @@ export async function GET(request: NextRequest) {
             console.log(`⚠️ 스탯 upsert 실패: ${pitcher.jpName} (npbId=${pitcher.npbId})${upsertErr ? ' err=' + upsertErr.message : ''}`)
           }
 
-          // baseball_matches의 home/away_pitcher_ko를 한글 이름으로 갱신
+          // baseball_matches의 home/away_pitcher_ko + 스탯 컬럼을 직접 갱신
           // 추적된 slots(matchId+side)로 직접 업데이트 → 이름 매칭 의존 제거
-          if (derivedKoreanName) {
-            for (const slot of pitcher.slots) {
-              const updateField = slot.side === 'home'
-                ? { home_pitcher_ko: derivedKoreanName }
-                : { away_pitcher_ko: derivedKoreanName }
+          // 프론트는 baseball_matches.{home,away}_pitcher_{era,whip,k}를 직접 읽으므로 여기에도 써야 함
+          for (const slot of pitcher.slots) {
+            const updateField: Record<string, any> = {}
+            if (derivedKoreanName) {
+              if (slot.side === 'home') updateField.home_pitcher_ko = derivedKoreanName
+              else updateField.away_pitcher_ko = derivedKoreanName
+            }
+            if (stats) {
+              const eraVal = parseFloat(stats.era)
+              const whipVal = stats.whip && stats.whip !== '-' ? parseFloat(stats.whip) : null
+              const kVal = stats.strikeouts ?? null
+              if (slot.side === 'home') {
+                updateField.home_pitcher_era = isNaN(eraVal) ? null : eraVal
+                updateField.home_pitcher_whip = whipVal
+                updateField.home_pitcher_k = kVal
+              } else {
+                updateField.away_pitcher_era = isNaN(eraVal) ? null : eraVal
+                updateField.away_pitcher_whip = whipVal
+                updateField.away_pitcher_k = kVal
+              }
+            }
+            if (Object.keys(updateField).length > 0) {
               await supabase
                 .from('baseball_matches')
                 .update(updateField)
