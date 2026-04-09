@@ -201,12 +201,21 @@ export async function POST(request: NextRequest) {
 
     // 투수 데이터 (null이면 리그 평균으로 대체)
     const PITCHER_DEFAULTS = { era: 4.20, whip: 1.30, k: 150 }
-    const homePitcherEra = match.home_pitcher_era ?? PITCHER_DEFAULTS.era
-    const homePitcherWhip = match.home_pitcher_whip ?? PITCHER_DEFAULTS.whip
-    const homePitcherK = match.home_pitcher_k ?? PITCHER_DEFAULTS.k
-    const awayPitcherEra = match.away_pitcher_era ?? PITCHER_DEFAULTS.era
-    const awayPitcherWhip = match.away_pitcher_whip ?? PITCHER_DEFAULTS.whip
-    const awayPitcherK = match.away_pitcher_k ?? PITCHER_DEFAULTS.k
+    const homePitcherEraReal = match.home_pitcher_era
+    const awayPitcherEraReal = match.away_pitcher_era
+    const homePitcherWhipReal = match.home_pitcher_whip
+    const awayPitcherWhipReal = match.away_pitcher_whip
+    const homePitcherKReal = match.home_pitcher_k
+    const awayPitcherKReal = match.away_pitcher_k
+    const homePitcherEra = homePitcherEraReal ?? PITCHER_DEFAULTS.era
+    const homePitcherWhip = homePitcherWhipReal ?? PITCHER_DEFAULTS.whip
+    const homePitcherK = homePitcherKReal ?? PITCHER_DEFAULTS.k
+    const awayPitcherEra = awayPitcherEraReal ?? PITCHER_DEFAULTS.era
+    const awayPitcherWhip = awayPitcherWhipReal ?? PITCHER_DEFAULTS.whip
+    const awayPitcherK = awayPitcherKReal ?? PITCHER_DEFAULTS.k
+    // 양팀 모두 실제 ERA 데이터가 있을 때만 매치업 신뢰
+    const hasPitcherData =
+      homePitcherEraReal != null && awayPitcherEraReal != null
 
     // Railway 모델 feature
     const features = {
@@ -285,6 +294,30 @@ export async function POST(request: NextRequest) {
       blendedAway = aiResult.away_win_prob
     }
 
+    // KBO/NPB 투수 매치업 휴리스틱 보정
+    // Railway 모델이 MLB 위주로 학습돼서 KBO/NPB 투수 피처를 무시하므로
+    // 양팀 모두 실제 ERA 데이터가 있을 때만 후보정 적용. cap ±8%p
+    const isMlb = match.league === 'MLB'
+    let pitcherAdjustment = 0
+    if (!isMlb && hasPitcherData) {
+      const eraDiff = awayPitcherEra - homePitcherEra // (+) → 홈 우세
+      // ERA 1.0 차 ≈ 4%p, cap ±8%p
+      const eraAdj = Math.max(-0.08, Math.min(0.08, eraDiff * 0.04))
+      // WHIP 0.20 차 ≈ 2%p, cap ±4%p (있을 때만)
+      let whipAdj = 0
+      if (homePitcherWhipReal != null && awayPitcherWhipReal != null) {
+        const whipDiff = awayPitcherWhip - homePitcherWhip
+        whipAdj = Math.max(-0.04, Math.min(0.04, whipDiff * 0.10))
+      }
+      pitcherAdjustment = Math.max(-0.08, Math.min(0.08, eraAdj + whipAdj))
+
+      blendedHome = Math.max(0.05, Math.min(0.95, blendedHome + pitcherAdjustment))
+      blendedAway = Math.max(0.05, Math.min(0.95, blendedAway - pitcherAdjustment))
+      const adjTotal = blendedHome + blendedAway
+      blendedHome = blendedHome / adjTotal
+      blendedAway = blendedAway / adjTotal
+    }
+
     const homeWinProb = Math.round(blendedHome * 100)
     const awayWinProb = Math.round(blendedAway * 100)
     const overProb = Math.round(aiResult.over_prob * 100)
@@ -294,23 +327,35 @@ export async function POST(request: NextRequest) {
     const winDiff = Math.abs(homeStats.win_pct - awayStats.win_pct)
     const formDiff = Math.abs(homeStats.recent_form - awayStats.recent_form)
 
-    const keyFactors = [
-      {
+    // ERA diff 기반 동적 impact (양팀 모두 실제 데이터 있을 때만)
+    const eraDiffAbs = hasPitcherData ? Math.abs(awayPitcherEra - homePitcherEra) : 0
+    // 1.0 ERA diff ≈ impact 25, cap 40
+    const eraImpact = Math.min(40, Math.round(eraDiffAbs * 25))
+
+    const keyFactors: Array<{ name: string; value: number; impact: number; description: string }> = []
+
+    // 선발투수 카드는 양팀 모두 실제 데이터 있을 때만 노출
+    if (hasPitcherData) {
+      const pitcherFavor = awayPitcherEra > homePitcherEra ? '홈' : (awayPitcherEra < homePitcherEra ? '원정' : '대등')
+      keyFactors.push({
         name: '선발투수 ERA',
         value: homePitcherEra,
-        impact: Math.round(9.29 * 100),
-        description: `원정 ERA ${awayPitcherEra.toFixed(2)} vs 홈 ERA ${homePitcherEra.toFixed(2)}`,
-      },
+        impact: eraImpact,
+        description: `원정 ${awayPitcherEra.toFixed(2)} vs 홈 ${homePitcherEra.toFixed(2)} (${pitcherFavor} 우세)`,
+      })
+    }
+
+    keyFactors.push(
       {
         name: '최근 10경기 안타',
         value: homeStats.avg_hits,
-        impact: Math.round(8.04 * 100),
+        impact: Math.round(8.04 * 100) / 100 * 10,
         description: `원정 ${awayStats.avg_hits.toFixed(1)}개 vs 홈 ${homeStats.avg_hits.toFixed(1)}개`,
       },
       {
         name: '득실점 차이',
         value: homeStats.run_diff,
-        impact: Math.round(7.25 * 100),
+        impact: Math.round(7.25 * 100) / 100 * 10,
         description: `원정 ${awayStats.run_diff > 0 ? '+' : ''}${awayStats.run_diff.toFixed(1)} vs 홈 ${homeStats.run_diff > 0 ? '+' : ''}${homeStats.run_diff.toFixed(1)}`,
       },
       {
@@ -319,12 +364,32 @@ export async function POST(request: NextRequest) {
         impact: Math.round(formDiff * 100),
         description: `원정 ${awayStats.recent_wins}/${awayStats.recent_total}승 vs 홈 ${homeStats.recent_wins}/${homeStats.recent_total}승`,
       },
-    ]
+    )
+
+    // impact 기준 내림차순 정렬해서 의미 있는 요인을 위로
+    keyFactors.sort((a, b) => b.impact - a.impact)
 
     const favoredTeam = homeWinProb >= awayWinProb ? homeTeam : awayTeam
     const favoredProb = Math.max(homeWinProb, awayWinProb)
+
+    // 선발 매치업 코멘트 (조사 없이 — 프론트에서 팀명 치환 시 받침 문제 회피)
+    let pitcherLine = ''
+    if (hasPitcherData) {
+      const eraDiff = awayPitcherEra - homePitcherEra
+      const absDiff = Math.abs(eraDiff)
+      const aceTeam = eraDiff > 0 ? homeTeam : awayTeam
+      const aceEra = Math.min(homePitcherEra, awayPitcherEra)
+      if (absDiff >= 1.5) {
+        pitcherLine = ` 선발 매치업은 ${aceTeam} 측 ERA ${aceEra.toFixed(2)}로 압도적 우세.`
+      } else if (absDiff >= 0.75) {
+        pitcherLine = ` 선발 매치업은 ${aceTeam} 측 ERA ${aceEra.toFixed(2)}로 우위.`
+      } else if (absDiff < 0.3) {
+        pitcherLine = ` 양팀 선발 ERA가 대등해 마운드 우열을 가리기 어려움.`
+      }
+    }
+
     const summary = dataReliable
-      ? `${favoredTeam}이 ${favoredProb}% 확률로 우세합니다. 최근 득실점 흐름과 안타 생산력이 주요 예측 근거입니다.`
+      ? `${favoredTeam} 측 ${favoredProb}% 확률로 우세.${pitcherLine || ' 최근 득실점 흐름과 안타 생산력이 주요 예측 근거.'}`
       : `데이터가 부족하여 예측 신뢰도가 낮습니다. (홈 ${homeStats.games_played}경기, 원정 ${awayStats.games_played}경기)`
 
     return NextResponse.json({
@@ -354,6 +419,8 @@ export async function POST(request: NextRequest) {
         homeGamesPlayed: homeStats.games_played,
         awayGamesPlayed: awayStats.games_played,
         reliable: dataReliable,
+        hasPitcherData,
+        pitcherAdjustment: Math.round(pitcherAdjustment * 1000) / 10, // %p
       },
     })
   } catch (err) {

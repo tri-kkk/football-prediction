@@ -30,6 +30,14 @@ interface AIInsights {
   summary: string
 }
 
+interface PredictDataQuality {
+  homeGamesPlayed: number
+  awayGamesPlayed: number
+  reliable: boolean
+  hasPitcherData?: boolean
+  pitcherAdjustment?: number
+}
+
 function SemiGauge({ pct, color, size = 110 }: { pct: number; color: string; size?: number }) {
   const r = 38
   const circumference = Math.PI * r
@@ -96,6 +104,7 @@ export default function BaseballAIPrediction({
 
   const [pred, setPred] = useState<PredictionResult | null>(null)
   const [ins, setIns] = useState<AIInsights | null>(null)
+  const [dq, setDq] = useState<PredictDataQuality | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [homeSummary, setHomeSummary] = useState<string | null>(null)
@@ -122,6 +131,7 @@ export default function BaseballAIPrediction({
       if (!d.success) throw new Error(d.error)
       setPred(d.prediction)
       setIns(d.insights)
+      setDq(d.dataQuality ?? null)
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -226,6 +236,19 @@ export default function BaseballAIPrediction({
                   style={{ background: '#3b82f620', color: '#60a5fa', border: '1px solid #3b82f640' }}>{t('홈', 'Home')}</span>
               </div>
             </div>
+            {/* 한 줄 요약 (선발 매치업 코멘트 포함) */}
+            {ins?.summary && (
+              <div className="px-4 pb-4">
+                <div className="rounded-xl px-3.5 py-2.5"
+                  style={{ background: '#1e293b60', border: '1px solid #334155' }}>
+                  <p className="text-[12px] leading-relaxed text-center break-keep" style={{ color: '#cbd5e1' }}>
+                    {ins.summary
+                      .split(homeTeam).join(HN)
+                      .split(awayTeam).join(AN)}
+                  </p>
+                </div>
+              </div>
+            )}
           </Section>
 
           {/* 총점 지표 - 배당 기준선 있을 때만 표시 */}
@@ -319,6 +342,76 @@ export default function BaseballAIPrediction({
                   </div>
                 </div>
               </Section>
+
+              {/* 선발투수 매치업 (실제 데이터 있을 때만) */}
+              {(() => {
+                const pitcherFactor = ins.keyFactors.find(f => f.name === '선발투수 ERA' || f.name === 'Starter ERA')
+                if (!pitcherFactor || !dq?.hasPitcherData) return null
+                // description: "원정 0.00 vs 홈 3.60 (원정 우세)"
+                const m = pitcherFactor.description.match(/원정\s*([\d.]+)\s*vs\s*홈\s*([\d.]+)/)
+                if (!m) return null
+                const awayEra = parseFloat(m[1])
+                const homeEra = parseFloat(m[2])
+                const eraDiff = Math.abs(awayEra - homeEra)
+                const awayBetter = awayEra < homeEra
+                const aceTeam = awayBetter ? AN : HN
+                const aceColor = awayBetter ? '#ef4444' : '#3b82f6'
+                const tier =
+                  eraDiff >= 1.5 ? { ko: '압도적 우위', en: 'Dominant edge' } :
+                  eraDiff >= 0.75 ? { ko: '뚜렷한 우위', en: 'Clear edge' } :
+                  eraDiff >= 0.3 ? { ko: '소폭 우위', en: 'Slight edge' } :
+                  { ko: '대등', en: 'Even' }
+                return (
+                  <Section color="#a78bfa" label={t('선발 투수 매치업', 'Starter Matchup')}
+                    badge={
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                        style={{ background: aceColor + '20', color: aceColor, border: `1px solid ${aceColor}40` }}>
+                        {t(tier.ko, tier.en)}
+                      </span>
+                    }>
+                    <div className="p-3">
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        {[
+                          { name: AN, era: awayEra, c: '#ef4444', isAce: awayBetter },
+                          { name: HN, era: homeEra, c: '#3b82f6', isAce: !awayBetter },
+                        ].map(({ name, era, c, isAce }) => {
+                          const showAce = isAce && eraDiff >= 0.3
+                          return (
+                            <div key={name} className="rounded-xl pt-2 pb-3 px-2 text-center"
+                              style={{ background: c + '12', border: `1px solid ${isAce ? c + '60' : c + '30'}` }}>
+                              <div className="h-[16px] flex items-center justify-center mb-1">
+                                {showAce ? (
+                                  <span className="text-[9px] font-black px-1.5 py-[1px] rounded-full tracking-wider"
+                                    style={{ background: c, color: '#fff' }}>ACE</span>
+                                ) : (
+                                  <span className="text-[10px] font-semibold" style={{ color: '#94a3b8' }}>ERA</span>
+                                )}
+                              </div>
+                              <p className="text-2xl font-black leading-none" style={{ color: c }}>{era.toFixed(2)}</p>
+                              <p className="text-[10px] mt-1.5 truncate font-medium" style={{ color: '#94a3b8' }}>{name}</p>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {eraDiff >= 0.3 && (
+                        <div className="text-center py-2 px-3 rounded-xl"
+                          style={{ background: aceColor + '10', border: `1px solid ${aceColor}25` }}>
+                          <p className="text-[11px] font-semibold leading-snug break-keep" style={{ color: aceColor }}>
+                            {t(`${aceTeam} 마운드 우세 (ERA ${Math.min(awayEra, homeEra).toFixed(2)})`,
+                               `${aceTeam} mound edge (ERA ${Math.min(awayEra, homeEra).toFixed(2)})`)}
+                          </p>
+                        </div>
+                      )}
+                      {dq.pitcherAdjustment != null && Math.abs(dq.pitcherAdjustment) >= 1 && (
+                        <p className="text-[10px] text-center mt-2 break-keep" style={{ color: '#64748b' }}>
+                          {t(`승률 보정 ${dq.pitcherAdjustment > 0 ? '+' : ''}${dq.pitcherAdjustment.toFixed(1)}%p`,
+                             `Win% adjustment ${dq.pitcherAdjustment > 0 ? '+' : ''}${dq.pitcherAdjustment.toFixed(1)}%p`)}
+                        </p>
+                      )}
+                    </div>
+                  </Section>
+                )
+              })()}
             </>
           )}
 
