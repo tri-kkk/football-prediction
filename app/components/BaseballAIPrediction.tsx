@@ -639,9 +639,10 @@ export default function BaseballAIPrediction({
                 const anyValue = metrics.some(m => m.awayVal != null || m.homeVal != null)
                 if (!anyValue) return null
 
+                const seasonStatsSource = league === 'MLB' ? 'MLB' : league === 'KBO' ? 'KBO' : (league || '')
                 return (
                   <Section color="#f59e0b" label={t('시즌 팀 스탯', 'Season Team Stats')}
-                    badge={<span className="text-[10px]" style={{ color: '#64748b' }}>{t('KBO 공식', 'KBO Official')}</span>}>
+                    badge={seasonStatsSource ? <span className="text-[10px]" style={{ color: '#64748b' }}>{seasonStatsSource}</span> : undefined}>
                     <div className="p-3">
                       <div className="grid grid-cols-2 gap-2">
                         {metrics.map(({ key, label, awayVal, homeVal, fmt, higherBetter, thresh }) => {

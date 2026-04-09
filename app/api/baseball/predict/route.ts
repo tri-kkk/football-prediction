@@ -196,11 +196,12 @@ export async function POST(request: NextRequest) {
       getTeamRollingStats(awayTeam, match.league),
     ])
 
-    // 시즌 팀 스탯 (KBO만 우선 지원 — sync-kbo-team-stats cron이 채움)
+    // 시즌 팀 스탯 (KBO: sync-kbo-team-stats / MLB: sync-mlb-team-stats cron이 채움)
     let homeSeason: any = null
     let awaySeason: any = null
-    if (match.league === 'KBO') {
+    if (match.league === 'KBO' || match.league === 'MLB') {
       const season = String(new Date(match.match_date).getFullYear())
+
       // 팀명 변형 대응: 풀네임/약어 모두로 조회
       const kboAliases: Record<string, string[]> = {
         'Hanwha Eagles': ['Hanwha Eagles', '한화', '한화 이글스'],
@@ -215,14 +216,23 @@ export async function POST(request: NextRequest) {
         'NC Dinos': ['NC Dinos', 'NC', 'NC 다이노스'],
         'SSG Landers': ['SSG Landers', 'SSG', 'SSG 랜더스'],
       }
-      const homeAliases = kboAliases[homeTeam] || [homeTeam]
-      const awayAliases = kboAliases[awayTeam] || [awayTeam]
+      // MLB: Athletics / Cleveland Guardians는 구 이름도 같이 검색
+      const mlbAliases: Record<string, string[]> = {
+        'Athletics': ['Athletics', 'Oakland Athletics'],
+        'Oakland Athletics': ['Athletics', 'Oakland Athletics'],
+        'Cleveland Guardians': ['Cleveland Guardians', 'Cleveland Indians'],
+        'Cleveland Indians': ['Cleveland Guardians', 'Cleveland Indians'],
+      }
+
+      const aliasMap = match.league === 'KBO' ? kboAliases : mlbAliases
+      const homeAliases = aliasMap[homeTeam] || [homeTeam]
+      const awayAliases = aliasMap[awayTeam] || [awayTeam]
 
       const [{ data: hSeason }, { data: aSeason }] = await Promise.all([
         supabase
           .from('baseball_team_season_stats')
           .select('team_avg, team_obp, team_slg, team_ops, team_hr, team_era_real, team_whip, team_opp_avg, team_k, team_bb')
-          .eq('league', 'KBO')
+          .eq('league', match.league)
           .eq('season', season)
           .in('team_name', homeAliases)
           .limit(1)
@@ -230,7 +240,7 @@ export async function POST(request: NextRequest) {
         supabase
           .from('baseball_team_season_stats')
           .select('team_avg, team_obp, team_slg, team_ops, team_hr, team_era_real, team_whip, team_opp_avg, team_k, team_bb')
-          .eq('league', 'KBO')
+          .eq('league', match.league)
           .eq('season', season)
           .in('team_name', awayAliases)
           .limit(1)
