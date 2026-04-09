@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 
 interface PredictionProps {
@@ -23,10 +23,31 @@ interface PredictionResult {
   grade: string
 }
 
+interface TeamFormStat {
+  scored: number
+  conceded: number
+  hits: number
+  runDiff: number
+  games: number
+}
+
+interface TeamSeasonStat {
+  avg: number | null
+  obp: number | null
+  slg: number | null
+  ops: number | null
+  hr: number | null
+  era: number | null
+  whip: number | null
+  oppAvg: number | null
+}
+
 interface AIInsights {
   keyFactors: Array<{ name: string; value: number; impact: number; description: string }>
   homeAdvantage: { homeRecord: string; awayRecord: string; advantage: number }
   recentForm: { home: string; away: string }
+  teamForm?: { home: TeamFormStat; away: TeamFormStat }
+  teamSeason?: { home: TeamSeasonStat | null; away: TeamSeasonStat | null }
   summary: string
 }
 
@@ -91,6 +112,55 @@ function LoadingDots({ color = '#3b82f6' }: { color?: string }) {
   )
 }
 
+// 미러 분할 바: away가 왼쪽(빨강), home이 오른쪽(파랑)
+// awayShare(0~100) = away가 차지하는 비율 — 강함에 따라 영역이 넓어짐
+function computeBarShare(
+  awayVal: number | null | undefined,
+  homeVal: number | null | undefined,
+  higherBetter: boolean
+): number {
+  if (awayVal == null || homeVal == null) return 50
+  const a = Math.max(awayVal, 0.0001)
+  const h = Math.max(homeVal, 0.0001)
+  // higher-is-better: 큰 값이 강함, lower-is-better: 작은 값이 강함 → 역수로 변환
+  const aS = higherBetter ? a : 1 / a
+  const hS = higherBetter ? h : 1 / h
+  const raw = aS / (aS + hS)
+  // 50% 기준 편차를 ~2.2배 증폭 (실측 KBO 격차에서 시각적으로 의미 있는 폭)
+  const dev = raw - 0.5
+  const amplified = 0.5 + dev * 2.2
+  // 양 끝 클램프 (한쪽이 완전히 사라지지 않게)
+  return Math.max(12, Math.min(88, amplified * 100))
+}
+
+// 미러 분할 바 컴포넌트
+function MirrorBar({ awayShare, height = 6 }: { awayShare: number; height?: number }) {
+  const homeShare = 100 - awayShare
+  return (
+    <div
+      className="mt-1.5 rounded-full overflow-hidden flex"
+      style={{ height, background: '#0b1118', border: '1px solid #1e2a3a' }}
+      role="img"
+      aria-label={`away ${awayShare.toFixed(0)}% / home ${homeShare.toFixed(0)}%`}
+    >
+      <div
+        style={{
+          width: `${awayShare}%`,
+          background: 'linear-gradient(90deg, #ef4444 0%, #f87171 100%)',
+          transition: 'width 0.6s ease-out',
+        }}
+      />
+      <div
+        style={{
+          width: `${homeShare}%`,
+          background: 'linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%)',
+          transition: 'width 0.6s ease-out',
+        }}
+      />
+    </div>
+  )
+}
+
 export default function BaseballAIPrediction({
   matchId, homeTeam, awayTeam, homeTeamKo, awayTeamKo, season, league, overUnderLine
 }: PredictionProps) {
@@ -111,35 +181,86 @@ export default function BaseballAIPrediction({
   const [awaySummary, setAwaySummary] = useState<string | null>(null)
   const [newsLoading, setNewsLoading] = useState(false)
 
-  useEffect(() => {
-    load()
-  }, [matchId])
+  // 중복 호출 방지 가드 — StrictMode 더블 마운트 / 동일 deps 재발화 차단
+  const predictKeyRef = useRef<string | null>(null)
+  const newsKeyRef = useRef<string | null>(null)
+  const predictAbortRef = useRef<AbortController | null>(null)
+  const newsAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    if (homeTeam && awayTeam) loadNews()
+    const key = `${matchId}|${homeTeam}|${awayTeam}|${season}`
+    if (predictKeyRef.current === key) return
+    predictKeyRef.current = key
+    predictAbortRef.current?.abort()
+    const ac = new AbortController()
+    predictAbortRef.current = ac
+    load(ac.signal)
+    return () => { /* keep ref so re-mount with same key skips */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, homeTeam, awayTeam, season])
+
+  useEffect(() => {
+    if (!homeTeam || !awayTeam) return
+    const key = `${homeTeam}|${awayTeam}|${language}`
+    if (newsKeyRef.current === key) return
+    newsKeyRef.current = key
+    newsAbortRef.current?.abort()
+    const ac = new AbortController()
+    newsAbortRef.current = ac
+    loadNews(ac.signal)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeTeam, awayTeam, language])
 
-  const load = async () => {
+  const load = async (signal?: AbortSignal) => {
     setLoading(true); setError(null)
     try {
-      const r = await fetch('/api/baseball/predict', {
+      // 1단계: quick=true → Railway ML 스킵, DB 기반 즉시 응답 (~300-500ms)
+      const quickRes = await fetch('/api/baseball/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ matchId, homeTeam, awayTeam, season })
+        body: JSON.stringify({ matchId, homeTeam, awayTeam, season, quick: true }),
+        signal,
       })
-      const d = await r.json()
-      if (!d.success) throw new Error(d.error)
-      setPred(d.prediction)
-      setIns(d.insights)
-      setDq(d.dataQuality ?? null)
+      const quickData = await quickRes.json()
+      if (signal?.aborted) return
+      if (quickData.success) {
+        setPred(quickData.prediction)
+        setIns(quickData.insights)
+        setDq(quickData.dataQuality ?? null)
+        setLoading(false)
+      } else if (!quickData.success) {
+        throw new Error(quickData.error || 'predict quick failed')
+      }
+
+      // 2단계: full predict → Railway ML 포함. 완료되면 prediction만 덮어씀
+      try {
+        const fullRes = await fetch('/api/baseball/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matchId, homeTeam, awayTeam, season }),
+          signal,
+        })
+        const fullData = await fullRes.json()
+        if (signal?.aborted) return
+        if (fullData.success) {
+          setPred(fullData.prediction)
+          setIns(fullData.insights)
+          setDq(fullData.dataQuality ?? null)
+        }
+      } catch (e: any) {
+        if (e.name !== 'AbortError') {
+          console.warn('full predict failed, quick result retained:', e)
+        }
+      }
     } catch (e: any) {
+      if (e.name === 'AbortError') return
       setError(e.message)
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }
 
-  const loadNews = async () => {
+  const loadNews = async (signal?: AbortSignal) => {
     setNewsLoading(true)
     try {
       const params = new URLSearchParams({
@@ -148,17 +269,19 @@ export default function BaseballAIPrediction({
         league: league || 'MLB',
         language,
       })
-      const r = await fetch(`/api/baseball/team-news?${params}`)
+      const r = await fetch(`/api/baseball/team-news?${params}`, { signal })
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
       const d = await r.json()
+      if (signal?.aborted) return
       if (d.success) {
         setHomeSummary(d.home ?? null)
         setAwaySummary(d.away ?? null)
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (e.name === 'AbortError') return
       console.error('loadNews error:', e)
     } finally {
-      setNewsLoading(false)
+      if (!signal?.aborted) setNewsLoading(false)
     }
   }
 
@@ -408,6 +531,148 @@ export default function BaseballAIPrediction({
                              `Win% adjustment ${dq.pitcherAdjustment > 0 ? '+' : ''}${dq.pitcherAdjustment.toFixed(1)}%p`)}
                         </p>
                       )}
+                    </div>
+                  </Section>
+                )
+              })()}
+
+              {/* 최근 10경기 팀 생산력 (득실점/안타) */}
+              {ins.teamForm && (ins.teamForm.home.games > 0 || ins.teamForm.away.games > 0) && (() => {
+                const tf = ins.teamForm!
+                const h = tf.home
+                const a = tf.away
+                const scoredDiff = a.scored - h.scored
+                const scoredLead = Math.abs(scoredDiff) >= 0.5
+                  ? (scoredDiff > 0 ? { side: 'away', c: '#ef4444', name: AN } : { side: 'home', c: '#3b82f6', name: HN })
+                  : null
+                const concededDiff = a.conceded - h.conceded
+                const concededLead = Math.abs(concededDiff) >= 0.5
+                  ? (concededDiff < 0 ? { side: 'away', c: '#ef4444', name: AN } : { side: 'home', c: '#3b82f6', name: HN })
+                  : null
+                return (
+                  <Section color="#10b981" label={t('최근 10경기 팀 생산력', 'Last 10 Team Production')}
+                    badge={<span className="text-[10px]" style={{ color: '#64748b' }}>{t('경기당', 'per game')}</span>}>
+                    <div className="p-3">
+                      {/* 3가지 지표 행: 득점 / 실점 / 안타 */}
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        {[
+                          { key: 'scored',   label: t('득점', 'Runs'),     awayVal: a.scored,   homeVal: h.scored,   higherBetter: true  },
+                          { key: 'conceded', label: t('실점', 'Allowed'),  awayVal: a.conceded, homeVal: h.conceded, higherBetter: false },
+                          { key: 'hits',     label: t('안타', 'Hits'),     awayVal: a.hits,     homeVal: h.hits,     higherBetter: true  },
+                        ].map(({ key, label, awayVal, homeVal, higherBetter }) => {
+                          const diff = awayVal - homeVal
+                          const meaningful = Math.abs(diff) >= (key === 'hits' ? 0.8 : 0.5)
+                          const awayBetter = meaningful && (higherBetter ? diff > 0 : diff < 0)
+                          const homeBetter = meaningful && (higherBetter ? diff < 0 : diff > 0)
+                          const awayShare = computeBarShare(awayVal, homeVal, higherBetter)
+                          return (
+                            <div key={key} className="rounded-xl py-2.5 px-2 text-center"
+                              style={{ background: '#131920', border: '1px solid #243044' }}>
+                              <p className="text-[10px] font-semibold mb-1.5" style={{ color: '#94a3b8' }}>{label}</p>
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[13px] font-black tabular-nums"
+                                  style={{ color: awayBetter ? '#ef4444' : '#64748b' }}>
+                                  {awayVal.toFixed(1)}
+                                </span>
+                                <span className="text-[9px]" style={{ color: '#334155' }}>vs</span>
+                                <span className="text-[13px] font-black tabular-nums"
+                                  style={{ color: homeBetter ? '#3b82f6' : '#64748b' }}>
+                                  {homeVal.toFixed(1)}
+                                </span>
+                              </div>
+                              <MirrorBar awayShare={awayShare} />
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {/* 득점 우위 하이라이트 */}
+                      {scoredLead && (
+                        <div className="text-center py-2 px-3 rounded-xl mb-2"
+                          style={{ background: scoredLead.c + '10', border: `1px solid ${scoredLead.c}25` }}>
+                          <p className="text-[11px] font-semibold break-keep" style={{ color: scoredLead.c }}>
+                            {t(`${scoredLead.name} 타선 우세 (${Math.max(a.scored, h.scored).toFixed(1)}점/경기)`,
+                               `${scoredLead.name} better offense (${Math.max(a.scored, h.scored).toFixed(1)} R/G)`)}
+                          </p>
+                        </div>
+                      )}
+                      {concededLead && (
+                        <div className="text-center py-2 px-3 rounded-xl"
+                          style={{ background: concededLead.c + '10', border: `1px solid ${concededLead.c}25` }}>
+                          <p className="text-[11px] font-semibold break-keep" style={{ color: concededLead.c }}>
+                            {t(`${concededLead.name} 수비 우세 (${Math.min(a.conceded, h.conceded).toFixed(1)}실점/경기)`,
+                               `${concededLead.name} better defense (${Math.min(a.conceded, h.conceded).toFixed(1)} RA/G)`)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </Section>
+                )
+              })()}
+
+              {/* 시즌 팀 스탯 (KBO: 타율/OPS/방어율/WHIP — 실측값) */}
+              {ins.teamSeason && (ins.teamSeason.home || ins.teamSeason.away) && (() => {
+                const ts = ins.teamSeason!
+                const hs = ts.home
+                const as = ts.away
+                if (!hs && !as) return null
+
+                // 의미 있는 차이 임계치
+                const bigger = (aVal: number | null, hVal: number | null, thresh: number, higherBetter: boolean) => {
+                  if (aVal == null || hVal == null) return null
+                  const diff = aVal - hVal
+                  if (Math.abs(diff) < thresh) return null
+                  return (higherBetter ? diff > 0 : diff < 0) ? 'away' : 'home'
+                }
+
+                // 4개 카드: 팀 타율, OPS, 팀 방어율, 팀 WHIP
+                const metrics: Array<{
+                  key: string; label: string; awayVal: number | null; homeVal: number | null
+                  fmt: (v: number) => string; higherBetter: boolean; thresh: number
+                }> = [
+                  { key: 'avg',  label: t('팀 타율', 'Team AVG'),  awayVal: as?.avg  ?? null, homeVal: hs?.avg  ?? null, fmt: v => v.toFixed(3), higherBetter: true,  thresh: 0.010 },
+                  { key: 'ops',  label: t('팀 OPS', 'Team OPS'),   awayVal: as?.ops  ?? null, homeVal: hs?.ops  ?? null, fmt: v => v.toFixed(3), higherBetter: true,  thresh: 0.020 },
+                  { key: 'era',  label: t('팀 방어율', 'Team ERA'), awayVal: as?.era  ?? null, homeVal: hs?.era  ?? null, fmt: v => v.toFixed(2), higherBetter: false, thresh: 0.30 },
+                  { key: 'whip', label: t('팀 WHIP', 'Team WHIP'),  awayVal: as?.whip ?? null, homeVal: hs?.whip ?? null, fmt: v => v.toFixed(2), higherBetter: false, thresh: 0.08 },
+                ]
+
+                // 값이 하나도 없으면 숨김
+                const anyValue = metrics.some(m => m.awayVal != null || m.homeVal != null)
+                if (!anyValue) return null
+
+                return (
+                  <Section color="#f59e0b" label={t('시즌 팀 스탯', 'Season Team Stats')}
+                    badge={<span className="text-[10px]" style={{ color: '#64748b' }}>{t('KBO 공식', 'KBO Official')}</span>}>
+                    <div className="p-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {metrics.map(({ key, label, awayVal, homeVal, fmt, higherBetter, thresh }) => {
+                          const winner = bigger(awayVal, homeVal, thresh, higherBetter)
+                          const hasBoth = awayVal != null && homeVal != null
+                          const awayShare = hasBoth ? computeBarShare(awayVal, homeVal, higherBetter) : 50
+                          return (
+                            <div key={key} className="rounded-xl py-2.5 px-2.5"
+                              style={{ background: '#131920', border: '1px solid #243044' }}>
+                              <p className="text-[10px] font-semibold mb-1.5 text-center" style={{ color: '#94a3b8' }}>{label}</p>
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[13px] font-black tabular-nums"
+                                  style={{ color: winner === 'away' ? '#ef4444' : '#64748b' }}>
+                                  {awayVal != null ? fmt(awayVal) : '-'}
+                                </span>
+                                <span className="text-[9px]" style={{ color: '#334155' }}>vs</span>
+                                <span className="text-[13px] font-black tabular-nums"
+                                  style={{ color: winner === 'home' ? '#3b82f6' : '#64748b' }}>
+                                  {homeVal != null ? fmt(homeVal) : '-'}
+                                </span>
+                              </div>
+                              {hasBoth && <MirrorBar awayShare={awayShare} />}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {/* 팀명 라벨 */}
+                      <div className="flex items-center justify-between mt-2 px-1">
+                        <span className="text-[10px] font-semibold" style={{ color: '#ef4444' }}>● {AN}</span>
+                        <span className="text-[10px] font-semibold" style={{ color: '#3b82f6' }}>{HN} ●</span>
+                      </div>
                     </div>
                   </Section>
                 )

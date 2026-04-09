@@ -42,6 +42,8 @@ interface Match {
     homeWinProb: number
     awayWinProb: number
   } | null
+  aiPick?: string | null
+  aiPickConfidence?: string | null
 }
 
 interface NewsArticle {
@@ -230,10 +232,11 @@ export default function BaseballMainPage() {
     async function fetchMatches() {
       setLoading(true)
       try {
-        // 1단계: 오늘 경기(skipML) + 예정 경기(ML포함) + 라이브 모두 병렬 호출
+        // ⚡ 리스트 페이지: 둘 다 skipML. mlPrediction은 fallback 표시용일 뿐이고
+        // 실제 AI 추천은 DB의 aiPick(combo-picks cron 생성)을 사용. Railway 병목 제거로 14s → <2s
         const [todayRes, scheduledRes] = await Promise.all([
           fetch('/api/baseball/matches?status=today&limit=50&skipML=true'),
-          fetch('/api/baseball/matches?status=scheduled&limit=20'),
+          fetch('/api/baseball/matches?status=scheduled&limit=20&skipML=true'),
         ])
         const [todayData, scheduledData] = await Promise.all([
           todayRes.json(),
@@ -248,9 +251,10 @@ export default function BaseballMainPage() {
           setScheduledMatches(rest)
         }
 
-        // AI 추천 경기 = scheduled(ML 포함) 우선, 없으면 today 데이터 사용
+        // AI 추천 경기 = scheduled 우선, 없으면 today 데이터 사용
+        // pickable 판정은 odds 또는 DB의 aiPick으로 (mlPrediction은 더 이상 의존 안 함)
         if (scheduledData.success && scheduledData.matches.length > 0) {
-          const hasPickable = scheduledData.matches.some((m: Match) => m.status === 'NS' && (m.odds || m.mlPrediction))
+          const hasPickable = scheduledData.matches.some((m: Match) => m.status === 'NS' && (m.odds || m.aiPick))
           if (hasPickable) {
             setMatches(scheduledData.matches)
           } else {

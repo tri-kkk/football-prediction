@@ -274,6 +274,7 @@ export default function BaseballDetailPage() {
   const [pitcherAnalysis, setPitcherAnalysis] = useState<string | null>(null)
   const [pitcherAnalysisLoading, setPitcherAnalysisLoading] = useState(false)
   const pitcherAnalysisGenerated = useRef(false)
+  const sidebarFetchedKeyRef = useRef<string | null>(null)
 
   // 라이브 폴링용 hits/errors (DB에서 갱신)
   const [liveHits, setLiveHits] = useState<{ home: number; away: number } | null>(null)
@@ -292,8 +293,8 @@ export default function BaseballDetailPage() {
       try {
         console.log('🔍 Fetching match:', matchId)
         
-        // Query parameter 방식으로 호출
-        const response = await fetch(`/api/baseball/matches?id=${matchId}`)
+        // Query parameter 방식으로 호출 (predict가 ML을 따로 처리하므로 여기선 skipML)
+        const response = await fetch(`/api/baseball/matches?id=${matchId}&skipML=true`)
         console.log('📡 API Response status:', response.status)
         
         const data = await response.json()
@@ -346,41 +347,34 @@ export default function BaseballDetailPage() {
           
           console.log('✅ Formatted match:', formattedMatch)
           setMatch(formattedMatch)
-          
-          // 경기 정보를 받은 후 H2H와 팀 통계 조회
+          // ⚡ Phase C: 여기서 loading 해제 - 메인 UI 즉시 렌더, H2H/팀스탯은 백그라운드
+          setLoading(false)
+
+          // 경기 정보를 받은 후 H2H와 팀 통계를 백그라운드로 조회 (await 안 함)
           const homeTeamId = formattedMatch.home.id
           const awayTeamId = formattedMatch.away.id
-          
-          console.log('🆔 Team IDs:', { homeTeamId, awayTeamId })
-          
+
           if (homeTeamId && awayTeamId && homeTeamId > 0 && awayTeamId > 0) {
-            // 병렬로 H2H, 홈팀 통계, 원정팀 통계 조회
-            console.log('📊 Fetching H2H and stats...')
-            
-            const [h2hRes, homeStatsRes, awayStatsRes] = await Promise.all([
-              fetch(`/api/baseball/h2h?homeTeamId=${homeTeamId}&awayTeamId=${awayTeamId}`),
-              fetch(`/api/baseball/team-stats?teamId=${homeTeamId}`),
-              fetch(`/api/baseball/team-stats?teamId=${awayTeamId}`)
-            ])
-            
-            const [h2h, homeS, awayS] = await Promise.all([
-              h2hRes.json(),
-              homeStatsRes.json(),
-              awayStatsRes.json()
-            ])
-            
-            console.log('📊 H2H:', h2h)
-            console.log('📊 Home stats:', homeS)
-            console.log('📊 Away stats:', awayS)
-            
-            if (h2h.success) setH2hData(h2h)
-            if (homeS.success) setHomeStats(homeS)
-            if (awayS.success) setAwayStats(awayS)
+            // fire-and-forget: 각자 resolve되는 대로 state 업데이트
+            fetch(`/api/baseball/h2h?homeTeamId=${homeTeamId}&awayTeamId=${awayTeamId}`)
+              .then(r => r.json())
+              .then(h2h => { if (h2h?.success) setH2hData(h2h) })
+              .catch(e => console.warn('h2h fetch failed:', e))
+
+            fetch(`/api/baseball/team-stats?teamId=${homeTeamId}`)
+              .then(r => r.json())
+              .then(homeS => { if (homeS?.success) setHomeStats(homeS) })
+              .catch(e => console.warn('home team-stats failed:', e))
+
+            fetch(`/api/baseball/team-stats?teamId=${awayTeamId}`)
+              .then(r => r.json())
+              .then(awayS => { if (awayS?.success) setAwayStats(awayS) })
+              .catch(e => console.warn('away team-stats failed:', e))
           } else {
             console.warn('⚠️ Team IDs not found or invalid (0), skipping H2H and stats')
-            console.warn('   H2H와 팀 통계는 표시되지 않지만 경기 정보는 정상 표시됩니다.')
           }
-          
+
+          return // finally의 setLoading(false) 중복 방지
         } else {
           console.error('❌ No match data:', data)
           setError(data.error || '경기 정보를 불러오는데 실패했습니다.')
@@ -607,33 +601,36 @@ export default function BaseballDetailPage() {
   }, [matchId, isLive])
 
   // 사이드바: 오늘 경기 + 현재 경기와 같은 날짜 경기 fetch
+  // match?.date가 정해진 후 1회만 발화. ref 가드로 동일 키 재실행 차단.
   useEffect(() => {
+    if (!match?.date) return
+    const matchDateStr = match.date.split('T')[0]
+    const key = matchDateStr
+    if (sidebarFetchedKeyRef.current === key) return
+    sidebarFetchedKeyRef.current = key
+
     async function fetchSidebarMatches() {
       try {
-        // 1) 오늘 경기
-        const todayRes = await fetch('/api/baseball/matches?status=today&skipML=true')
-        const todayData = await todayRes.json()
-        let matches = todayData.success && todayData.matches ? todayData.matches : []
+        const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+        const todayStr = kstNow.toISOString().split('T')[0]
+        const isToday = matchDateStr === todayStr
 
-        // 2) 현재 경기 날짜가 오늘이 아니면 해당 날짜 경기도 추가
-        if (match?.date) {
-          const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
-          const todayStr = kstNow.toISOString().split('T')[0]
-          const matchDateStr = match.date.split('T')[0]
-          if (matchDateStr !== todayStr) {
-            try {
-              const dateRes = await fetch(`/api/baseball/matches?date=${matchDateStr}&skipML=true`)
-              const dateData = await dateRes.json()
-              if (dateData.success && dateData.matches) {
-                // 중복 제거 후 병합
-                const existingIds = new Set(matches.map((m: any) => String(m.id)))
-                const newMatches = dateData.matches.filter((m: any) => !existingIds.has(String(m.id)))
-                matches = [...newMatches, ...matches]
-              }
-            } catch { /* 무시 */ }
-          }
+        // 오늘 경기와 (필요 시) 매치 날짜 경기를 병렬 fetch
+        const requests: Promise<Response>[] = [
+          fetch('/api/baseball/matches?status=today&skipML=true'),
+        ]
+        if (!isToday) {
+          requests.push(fetch(`/api/baseball/matches?date=${matchDateStr}&skipML=true`))
         }
+        const responses = await Promise.all(requests)
+        const [todayData, dateData] = await Promise.all(responses.map(r => r.json()))
 
+        let matches = todayData.success && todayData.matches ? todayData.matches : []
+        if (!isToday && dateData?.success && dateData.matches) {
+          const existingIds = new Set(matches.map((m: any) => String(m.id)))
+          const newMatches = dateData.matches.filter((m: any) => !existingIds.has(String(m.id)))
+          matches = [...newMatches, ...matches]
+        }
         setTodayMatches(matches)
       } catch { /* 무시 */ }
     }

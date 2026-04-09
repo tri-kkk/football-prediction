@@ -1,5 +1,5 @@
 // app/api/baseball/pitcher-analysis/route.ts
-// matchId 기준 Supabase 캐싱 - 있으면 재사용, 없을 때만 Claude 호출
+// matchId(api_match_id) 기준 baseball_ai_cache TTL 캐싱 - 있으면 재사용, 없을 때만 Claude 호출
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -8,6 +8,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY!
 )
+
+const PITCHER_ANALYSIS_TTL_HOURS = 24
 
 function formatStat(value: any, decimals = 2) {
   const n = parseFloat(value)
@@ -72,17 +74,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'homeTeam, awayTeam required' }, { status: 400 })
     }
 
-    // 1. 캐시 확인 (한국어만 캐시 사용, 영어는 매번 생성)
-    if (matchId && !isEnglish) {
-      const { data: cached } = await supabase
-        .from('baseball_matches')
-        .select('pitcher_analysis')
-        .eq('id', matchId)
-        .maybeSingle()
+    // 1. 캐시 확인 (baseball_ai_cache, TTL 24h, 언어별 분리)
+    const cacheLang = isEnglish ? 'en' : 'ko'
+    if (matchId) {
+      try {
+        const { data: cached } = await supabase
+          .from('baseball_ai_cache')
+          .select('payload, expires_at')
+          .eq('kind', 'pitcher_analysis')
+          .eq('match_key', String(matchId))
+          .eq('language', cacheLang)
+          .maybeSingle()
 
-      if (cached?.pitcher_analysis) {
-        console.log(`[pitcher-analysis] cache hit: ${matchId}`)
-        return NextResponse.json({ success: true, analysis: cached.pitcher_analysis, cached: true })
+        if (cached && new Date(cached.expires_at).getTime() > Date.now()) {
+          console.log(`[pitcher-analysis] cache hit: ${matchId} (${cacheLang})`)
+          return NextResponse.json({ success: true, analysis: cached.payload.analysis, cached: true })
+        }
+      } catch (e) {
+        console.warn('[pitcher-analysis] cache read failed:', e)
       }
     }
 
@@ -169,13 +178,21 @@ ${homeBlock}
       return NextResponse.json({ success: false, error: 'Empty response from Claude' }, { status: 500 })
     }
 
-    // 3. Supabase에 캐시 저장 (한국어만)
-    if (matchId && !isEnglish) {
-      await supabase
-        .from('baseball_matches')
-        .update({ pitcher_analysis: analysis })
-        .eq('id', matchId)
-      console.log(`[pitcher-analysis] cached: ${matchId}`)
+    // 3. baseball_ai_cache 에 저장 (언어별, TTL 24h)
+    if (matchId) {
+      try {
+        const expiresAt = new Date(Date.now() + PITCHER_ANALYSIS_TTL_HOURS * 60 * 60 * 1000).toISOString()
+        await supabase.from('baseball_ai_cache').upsert({
+          kind: 'pitcher_analysis',
+          match_key: String(matchId),
+          language: cacheLang,
+          payload: { analysis },
+          expires_at: expiresAt,
+        })
+        console.log(`[pitcher-analysis] cached: ${matchId} (${cacheLang})`)
+      } catch (e) {
+        console.warn('[pitcher-analysis] cache write failed:', e)
+      }
     }
 
     return NextResponse.json({ success: true, analysis, cached: false })

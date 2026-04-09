@@ -146,7 +146,8 @@ async function getTeamRollingStats(team: string, league: string = 'MLB') {
 
 export async function POST(request: NextRequest) {
   try {
-    const { matchId, homeTeam, awayTeam } = await request.json()
+    const { matchId, homeTeam, awayTeam, quick } = await request.json()
+    const quickMode = quick === true
 
     if (!matchId) {
       return NextResponse.json({ error: 'matchId required' }, { status: 400 })
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
     // 경기 날짜 + 투수 데이터 조회
     const { data: match, error } = await supabase
       .from('baseball_matches')
-      .select('api_match_id, match_date, league, home_pitcher_era, home_pitcher_whip, home_pitcher_k, away_pitcher_era, away_pitcher_whip, away_pitcher_k')
+      .select('api_match_id, match_date, league, season, home_pitcher_era, home_pitcher_whip, home_pitcher_k, away_pitcher_era, away_pitcher_whip, away_pitcher_k')
       .or(`id.eq.${matchId},api_match_id.eq.${matchId}`)
       .limit(1)
       .single()
@@ -194,6 +195,50 @@ export async function POST(request: NextRequest) {
       getTeamRollingStats(homeTeam, match.league),
       getTeamRollingStats(awayTeam, match.league),
     ])
+
+    // 시즌 팀 스탯 (KBO만 우선 지원 — sync-kbo-team-stats cron이 채움)
+    let homeSeason: any = null
+    let awaySeason: any = null
+    if (match.league === 'KBO') {
+      const season = String(new Date(match.match_date).getFullYear())
+      // 팀명 변형 대응: 풀네임/약어 모두로 조회
+      const kboAliases: Record<string, string[]> = {
+        'Hanwha Eagles': ['Hanwha Eagles', '한화', '한화 이글스'],
+        'LG Twins': ['LG Twins', 'LG', 'LG 트윈스'],
+        'Kiwoom Heroes': ['Kiwoom Heroes', '키움', '키움 히어로즈'],
+        'Lotte Giants': ['Lotte Giants', '롯데', '롯데 자이언츠'],
+        'Samsung Lions': ['Samsung Lions', '삼성', '삼성 라이온즈'],
+        'Doosan Bears': ['Doosan Bears', '두산', '두산 베어스'],
+        'KT Wiz': ['KT Wiz', 'KT', 'KT 위즈'],
+        'KT Wiz Suwon': ['KT Wiz Suwon', 'KT Wiz', 'KT', 'KT 위즈'],
+        'KIA Tigers': ['KIA Tigers', 'KIA', 'KIA 타이거즈'],
+        'NC Dinos': ['NC Dinos', 'NC', 'NC 다이노스'],
+        'SSG Landers': ['SSG Landers', 'SSG', 'SSG 랜더스'],
+      }
+      const homeAliases = kboAliases[homeTeam] || [homeTeam]
+      const awayAliases = kboAliases[awayTeam] || [awayTeam]
+
+      const [{ data: hSeason }, { data: aSeason }] = await Promise.all([
+        supabase
+          .from('baseball_team_season_stats')
+          .select('team_avg, team_obp, team_slg, team_ops, team_hr, team_era_real, team_whip, team_opp_avg, team_k, team_bb')
+          .eq('league', 'KBO')
+          .eq('season', season)
+          .in('team_name', homeAliases)
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('baseball_team_season_stats')
+          .select('team_avg, team_obp, team_slg, team_ops, team_hr, team_era_real, team_whip, team_opp_avg, team_k, team_bb')
+          .eq('league', 'KBO')
+          .eq('season', season)
+          .in('team_name', awayAliases)
+          .limit(1)
+          .maybeSingle(),
+      ])
+      homeSeason = hSeason
+      awaySeason = aSeason
+    }
 
     // 데이터 부족 경고
     const dataReliable =
@@ -259,19 +304,32 @@ export async function POST(request: NextRequest) {
       pitcher_k_diff: homePitcherK - awayPitcherK,
     }
 
-    // Railway API 호출
-    const aiResponse = await fetch(`${RAILWAY_URL}/predict`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ features, league: match.league, match_id: matchId }),
-      signal: AbortSignal.timeout(5000),
-    })
+    // Railway API 호출 (quickMode에서는 스킵)
+    let aiResult: any
+    if (quickMode) {
+      // quick mode: ML 없이 배당 또는 균등 분포로 placeholder
+      aiResult = {
+        home_win_prob: hasOdds ? oddsImpliedHome : 0.5,
+        away_win_prob: hasOdds ? oddsImpliedAway : 0.5,
+        over_prob: 0.5,
+        under_prob: 0.5,
+        confidence: 0,
+        grade: 'pending',
+      }
+    } else {
+      const aiResponse = await fetch(`${RAILWAY_URL}/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ features, league: match.league, match_id: matchId }),
+        signal: AbortSignal.timeout(5000),
+      })
 
-    if (!aiResponse.ok) {
-      throw new Error(`Railway API error: ${aiResponse.status}`)
+      if (!aiResponse.ok) {
+        throw new Error(`Railway API error: ${aiResponse.status}`)
+      }
+
+      aiResult = await aiResponse.json()
     }
-
-    const aiResult = await aiResponse.json()
 
     // 배당 implied probability + Railway 모델 블렌딩
     // 배당 데이터가 있으면: 배당 60% + 모델 40% (배당이 시장 평가라 더 신뢰)
@@ -394,6 +452,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      quick: quickMode,
       prediction: {
         homeWinProb,
         awayWinProb,
@@ -413,6 +472,44 @@ export async function POST(request: NextRequest) {
           home: `${(homeStats.recent_form * 100).toFixed(0)}%`,
           away: `${(awayStats.recent_form * 100).toFixed(0)}%`,
         },
+        teamForm: {
+          home: {
+            scored: Math.round(homeStats.avg_scored * 100) / 100,
+            conceded: Math.round(homeStats.avg_conceded * 100) / 100,
+            hits: Math.round(homeStats.avg_hits * 100) / 100,
+            runDiff: Math.round(homeStats.run_diff * 100) / 100,
+            games: homeStats.games_played,
+          },
+          away: {
+            scored: Math.round(awayStats.avg_scored * 100) / 100,
+            conceded: Math.round(awayStats.avg_conceded * 100) / 100,
+            hits: Math.round(awayStats.avg_hits * 100) / 100,
+            runDiff: Math.round(awayStats.run_diff * 100) / 100,
+            games: awayStats.games_played,
+          },
+        },
+        teamSeason: (homeSeason || awaySeason) ? {
+          home: homeSeason ? {
+            avg: homeSeason.team_avg,
+            obp: homeSeason.team_obp,
+            slg: homeSeason.team_slg,
+            ops: homeSeason.team_ops,
+            hr: homeSeason.team_hr,
+            era: homeSeason.team_era_real,
+            whip: homeSeason.team_whip,
+            oppAvg: homeSeason.team_opp_avg,
+          } : null,
+          away: awaySeason ? {
+            avg: awaySeason.team_avg,
+            obp: awaySeason.team_obp,
+            slg: awaySeason.team_slg,
+            ops: awaySeason.team_ops,
+            hr: awaySeason.team_hr,
+            era: awaySeason.team_era_real,
+            whip: awaySeason.team_whip,
+            oppAvg: awaySeason.team_opp_avg,
+          } : null,
+        } : undefined,
         summary,
       },
       dataQuality: {

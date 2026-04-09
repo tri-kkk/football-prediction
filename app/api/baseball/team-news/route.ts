@@ -1,10 +1,18 @@
 // app/api/baseball/team-news/route.ts
-// 경기 상세 페이지 - 팀별 뉴스 요약 (TheNewsAPI 직접 호출 + 캐시 제거)
+// 경기 상세 페이지 - 팀별 뉴스 요약 (TheNewsAPI + baseball_ai_cache TTL 캐시)
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 const NEWS_API_TOKEN = process.env.NEWS_API_TOKEN || ''
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || ''
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+)
+
+const TEAM_NEWS_TTL_HOURS = 6
 
 async function fetchTeamNews(teamName: string, language: 'en' | 'ko' | 'ja' = 'en'): Promise<{ title: string; description: string; publishedAt: string }[]> {
   if (!NEWS_API_TOKEN) return []
@@ -129,6 +137,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'homeTeam, awayTeam required' }, { status: 400 })
   }
 
+  const nocache = searchParams.get('nocache') === 'true'
+  const cacheKey = `${homeTeam}|${awayTeam}`
+
+  // 0. 캐시 확인 (TTL 6h)
+  if (!nocache) {
+    try {
+      const { data: cached } = await supabase
+        .from('baseball_ai_cache')
+        .select('payload, expires_at')
+        .eq('kind', 'team_news')
+        .eq('match_key', cacheKey)
+        .eq('language', uiLanguage)
+        .maybeSingle()
+      if (cached && new Date(cached.expires_at).getTime() > Date.now()) {
+        return NextResponse.json({ ...cached.payload, cached: true })
+      }
+    } catch (e) {
+      console.warn('[team-news] cache read failed:', e)
+    }
+  }
+
   // KBO → 한글 검색, NPB → 일본어 검색, 나머지 → 영어
   const isKBO = league === 'KBO'
   const isNPB = league === 'NPB'
@@ -203,6 +232,22 @@ export async function GET(request: NextRequest) {
   if (debug) {
     result.debugHomeArticles = homeArticles
     result.debugAwayArticles = awayArticles
+  }
+
+  // 캐시 저장 (요약이 하나라도 있을 때만)
+  if (!nocache && (homeSummary || awaySummary)) {
+    try {
+      const expiresAt = new Date(Date.now() + TEAM_NEWS_TTL_HOURS * 60 * 60 * 1000).toISOString()
+      await supabase.from('baseball_ai_cache').upsert({
+        kind: 'team_news',
+        match_key: cacheKey,
+        language: uiLanguage,
+        payload: result,
+        expires_at: expiresAt,
+      })
+    } catch (e) {
+      console.warn('[team-news] cache write failed:', e)
+    }
   }
 
   return NextResponse.json(result)
