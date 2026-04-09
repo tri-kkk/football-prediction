@@ -236,8 +236,14 @@ async function scrapeKboPitcherRecords(season?: string): Promise<KboPitcherRecor
 
   if (!initRes.ok) throw new Error(`Records fetch failed: ${initRes.status}`)
   const initHtml = await initRes.text()
+  // ASP.NET 세션 쿠키 추출 — 팀 postback에 동봉해야 EventValidation 통과
+  const setCookieHeaders: string[] = (initRes.headers as any).getSetCookie?.() ?? []
+  const sessionCookie = setCookieHeaders
+    .map((c: string) => c.split(';')[0])
+    .filter(Boolean)
+    .join('; ')
 
-  console.log(`📊 Records page initial HTML length: ${initHtml.length}`)
+  console.log(`📊 Records page initial HTML length: ${initHtml.length}, cookies=${sessionCookie ? 'OK' : 'NONE'}`)
 
   // 1단계: 디폴트(상위 24명, 규정이닝 기준) 파싱
   const allByKey = new Map<string, KboPitcherRecord>()
@@ -249,8 +255,6 @@ async function scrapeKboPitcherRecords(season?: string): Promise<KboPitcherRecor
 
   // 2단계: 팀별로 ASP.NET 포스트백 시도하여 전체 투수 수집
   const viewState = extractHiddenInput(initHtml, '__VIEWSTATE')
-  const viewStateGen = extractHiddenInput(initHtml, '__VIEWSTATEGENERATOR')
-  const eventValidation = extractHiddenInput(initHtml, '__EVENTVALIDATION')
   const teamCtrl = findDdlTeamControlName(initHtml)
   const seasonCtrl = findDdlControlName(initHtml, 'ddlSeason')
   const seriesCtrl = findDdlControlName(initHtml, 'ddlSeries')
@@ -258,18 +262,36 @@ async function scrapeKboPitcherRecords(season?: string): Promise<KboPitcherRecor
 
   console.log(`📊 Form fields: viewState=${viewState ? 'OK' : 'MISSING'}, teamCtrl=${teamCtrl}, seasonCtrl=${seasonCtrl}, seriesCtrl=${seriesCtrl}`)
 
+  // 모든 hidden 필드를 한 번에 추출 (개별 필드 누락 방지)
+  const baseFormData = new URLSearchParams()
+  const hiddenRegex = /<input[^>]*type="hidden"[^>]*>/gi
+  let hm: RegExpExecArray | null
+  while ((hm = hiddenRegex.exec(initHtml)) !== null) {
+    const tag = hm[0]
+    const nameMatch = tag.match(/name="([^"]+)"/)
+    const valueMatch = tag.match(/value="([^"]*)"/)
+    if (nameMatch) baseFormData.set(nameMatch[1], valueMatch ? valueMatch[1] : '')
+  }
+  // 드롭다운 디폴트 selected option 값을 추출
+  const setSelectDefault = (ctrl: string | null) => {
+    if (!ctrl) return
+    const re = new RegExp(`<select[^>]*name="${ctrl.replace(/\$/g, '\\$')}"[\\s\\S]*?</select>`, 'i')
+    const sm = initHtml.match(re)
+    if (!sm) return
+    const selectedMatch = sm[0].match(/<option[^>]*selected[^>]*value="([^"]*)"/i) || sm[0].match(/<option[^>]*value="([^"]*)"[^>]*selected/i)
+    if (selectedMatch) baseFormData.set(ctrl, selectedMatch[1])
+  }
+  setSelectDefault(seasonCtrl)
+  setSelectDefault(seriesCtrl)
+  setSelectDefault(sortCtrl)
+
   if (viewState && teamCtrl) {
     for (const teamCode of KBO_TEAM_CODES) {
       try {
-        const formData = new URLSearchParams()
+        // baseFormData 복사 후 팀별 override
+        const formData = new URLSearchParams(baseFormData.toString())
         formData.set('__EVENTTARGET', teamCtrl)
         formData.set('__EVENTARGUMENT', '')
-        formData.set('__VIEWSTATE', viewState)
-        if (viewStateGen) formData.set('__VIEWSTATEGENERATOR', viewStateGen)
-        if (eventValidation) formData.set('__EVENTVALIDATION', eventValidation)
-        if (seasonCtrl && season) formData.set(seasonCtrl, season)
-        if (seriesCtrl) formData.set(seriesCtrl, '0,9,6')
-        if (sortCtrl) formData.set(sortCtrl, 'ERA_RT')
         formData.set(teamCtrl, teamCode)
 
         const teamRes = await fetch(url, {
@@ -280,6 +302,7 @@ async function scrapeKboPitcherRecords(season?: string): Promise<KboPitcherRecor
             'Accept': 'text/html,application/xhtml+xml',
             'Accept-Language': 'ko-KR,ko;q=0.9',
             'Referer': url,
+            ...(sessionCookie ? { 'Cookie': sessionCookie } : {}),
           },
           body: formData.toString(),
           signal: AbortSignal.timeout(15000),
@@ -359,6 +382,177 @@ export async function GET(request: NextRequest) {
   const date = dateParam || getKSTDateString()
   const season = date.substring(0, 4)
   const debug = searchParams.get('debug') === 'true'
+  const debugTeam = searchParams.get('debugTeam')  // 단일 팀 코드 dump
+
+  // ─────────────────────────────────────────
+  // DEBUG: 특정 팀 페이지 raw 파싱 결과 dump
+  // ─────────────────────────────────────────
+  if (searchParams.get('debugTeamOptions') === 'true') {
+    try {
+      const url = 'https://www.koreabaseball.com/Record/Player/PitcherBasic/Basic1.aspx'
+      const initRes = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+        },
+        signal: AbortSignal.timeout(15000),
+      })
+      const html = await initRes.text()
+      const teamCtrl = findDdlTeamControlName(html)
+      // ddlTeam <select> 안의 옵션 추출
+      let optionsHtml = ''
+      if (teamCtrl) {
+        const reSelect = new RegExp(`<select[^>]*name="${teamCtrl.replace(/\$/g, '\\$')}"[\\s\\S]*?<\\/select>`, 'i')
+        const m = html.match(reSelect)
+        if (m) optionsHtml = m[0]
+      }
+      const optionPattern = /<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/gi
+      const options: Array<{ value: string; label: string }> = []
+      let om
+      while ((om = optionPattern.exec(optionsHtml)) !== null) {
+        options.push({ value: om[1], label: om[2] })
+      }
+      // 다른 dropdown들도 함께
+      const seasonCtrl = findDdlControlName(html, 'ddlSeason')
+      const seriesCtrl = findDdlControlName(html, 'ddlSeries')
+      const sortCtrl = findDdlControlName(html, 'ddlSort')
+      return NextResponse.json({
+        success: true,
+        teamCtrl,
+        seasonCtrl,
+        seriesCtrl,
+        sortCtrl,
+        teamOptions: options,
+        htmlLen: html.length,
+      })
+    } catch (e: any) {
+      return NextResponse.json({ success: false, error: e.message }, { status: 500 })
+    }
+  }
+
+  if (debugTeam) {
+    try {
+      const url = 'https://www.koreabaseball.com/Record/Player/PitcherBasic/Basic1.aspx'
+      const initRes = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+        },
+        signal: AbortSignal.timeout(15000),
+      })
+      const initHtml = await initRes.text()
+      const setCookieHeaders: string[] = (initRes.headers as any).getSetCookie?.() ?? []
+      const sessionCookie = setCookieHeaders
+        .map((c: string) => c.split(';')[0])
+        .filter(Boolean)
+        .join('; ')
+      const viewState = extractHiddenInput(initHtml, '__VIEWSTATE')
+      const viewStateGen = extractHiddenInput(initHtml, '__VIEWSTATEGENERATOR')
+      const eventValidation = extractHiddenInput(initHtml, '__EVENTVALIDATION')
+      const teamCtrl = findDdlTeamControlName(initHtml)
+      const seasonCtrl = findDdlControlName(initHtml, 'ddlSeason')
+      const seriesCtrl = findDdlControlName(initHtml, 'ddlSeries')
+      const sortCtrl = findDdlControlName(initHtml, 'ddlSort')
+
+      // 초기 페이지의 모든 hidden + dropdown 값을 그대로 동봉 (생략 시 EventValidation 실패)
+      const formData = new URLSearchParams()
+      // hidden 필드 자동 추출 (모든 hidden input)
+      const hiddenRegex = /<input[^>]*type="hidden"[^>]*>/gi
+      let hm: RegExpExecArray | null
+      while ((hm = hiddenRegex.exec(initHtml)) !== null) {
+        const tag = hm[0]
+        const nameMatch = tag.match(/name="([^"]+)"/)
+        const valueMatch = tag.match(/value="([^"]*)"/)
+        if (nameMatch) formData.set(nameMatch[1], valueMatch ? valueMatch[1] : '')
+      }
+      // 드롭다운 디폴트 값을 추출해서 동봉
+      const setSelectDefault = (ctrl: string | null) => {
+        if (!ctrl) return
+        const re = new RegExp(`<select[^>]*name="${ctrl.replace(/\$/g, '\\$')}"[\\s\\S]*?</select>`, 'i')
+        const sm = initHtml.match(re)
+        if (!sm) return
+        // selected option 또는 첫 번째 옵션
+        const selectedMatch = sm[0].match(/<option[^>]*selected[^>]*value="([^"]*)"/i) || sm[0].match(/<option[^>]*value="([^"]*)"[^>]*selected/i)
+        if (selectedMatch) {
+          formData.set(ctrl, selectedMatch[1])
+        }
+      }
+      setSelectDefault(seasonCtrl)
+      setSelectDefault(seriesCtrl)
+      setSelectDefault(sortCtrl)
+      // 팀 변경 → __EVENTTARGET 으로 명시 + 팀 코드
+      formData.set('__EVENTTARGET', teamCtrl || '')
+      formData.set('__EVENTARGUMENT', '')
+      if (teamCtrl) formData.set(teamCtrl, debugTeam)
+
+      const teamRes = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+          'Referer': url,
+          ...(sessionCookie ? { 'Cookie': sessionCookie } : {}),
+        },
+        body: formData.toString(),
+        signal: AbortSignal.timeout(15000),
+      })
+      const teamHtml = await teamRes.text()
+      const records = parseRecordRows(teamHtml)
+
+      // tbody 안의 모든 tr cells 덤프 (행 수가 안 맞는 케이스 확인)
+      const tbodyStart = teamHtml.indexOf('<tbody>')
+      const tbodyEnd = teamHtml.indexOf('</tbody>', tbodyStart)
+      const tbody = tbodyStart > -1 ? teamHtml.substring(tbodyStart, tbodyEnd > 0 ? tbodyEnd : tbodyStart + 80000) : ''
+      const allRows: Array<{ cellCount: number; cells: string[] }> = []
+      const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
+      let trMatch
+      while ((trMatch = trRegex.exec(tbody)) !== null) {
+        const cells = extractCells(trMatch[1])
+        if (cells.length > 0) allRows.push({ cellCount: cells.length, cells })
+      }
+
+      // 진단: 쿠키 추출 결과
+      const allHeaders: Record<string, string> = {}
+      initRes.headers.forEach((v, k) => { allHeaders[k] = v })
+      const setCookieRaw = initRes.headers.get('set-cookie')
+      return NextResponse.json({
+        success: true,
+        debugTeam,
+        season,
+        htmlLen: teamHtml.length,
+        teamCtrl,
+        cookieExtracted: sessionCookie || '(empty)',
+        cookieMethodAvailable: typeof (initRes.headers as any).getSetCookie === 'function',
+        setCookieGet: setCookieRaw,
+        initHeaders: allHeaders,
+        parsedCount: records.length,
+        parsedRecords: records,
+        rawRowCount: allRows.length,
+        rawRows: allRows,
+        startsWith: teamHtml.slice(0, 50).replace(/[^\x20-\x7e]/g, '?'),
+        hasDoctype: teamHtml.includes('<!DOCTYPE'),
+        hasHtml: teamHtml.includes('<html'),
+        hasTbody: teamHtml.includes('<tbody'),
+        hasTable: teamHtml.includes('<table'),
+        hasErrorPage: teamHtml.includes('서버') || teamHtml.includes('error') || teamHtml.includes('Error'),
+        firstTagPositions: {
+          html: teamHtml.indexOf('<html'),
+          body: teamHtml.indexOf('<body'),
+          table: teamHtml.indexOf('<table'),
+          tbody: teamHtml.indexOf('<tbody'),
+          치리노스: teamHtml.indexOf('치리노스'),
+          웰스: teamHtml.indexOf('웰스'),
+        },
+        contentType: teamRes.headers.get('content-type'),
+        statusCode: teamRes.status,
+      })
+    } catch (e: any) {
+      return NextResponse.json({ success: false, error: e.message }, { status: 500 })
+    }
+  }
 
   console.log(`\n🏟️ ===== KBO Pitcher Sync: ${date} (dry=${isDry}) =====`)
 
