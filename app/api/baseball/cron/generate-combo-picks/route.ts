@@ -399,16 +399,53 @@ export async function GET(request: NextRequest) {
       const homeOdds = oddsData.home_win_odds
       const awayOdds = oddsData.away_win_odds
 
-      // ✅ 배당 확률 계산 (노마진 정규화)
+      // ✅ 배당 확률 계산 (노마진 정규화) - 실수(0~1) 유지
       const homeBookProb = (1 / homeOdds)
       const awayBookProb = (1 / awayOdds)
       const bookTotal = homeBookProb + awayBookProb
-      const normalizedHomeBookProb = Math.round((homeBookProb / bookTotal) * 100)
-      const normalizedAwayBookProb = Math.round((awayBookProb / bookTotal) * 100)
+      const normHome = homeBookProb / bookTotal
+      const normAway = awayBookProb / bookTotal
 
-      // ✅ 가중 평균: 배당 70% + Railway 30%
-      const finalHomeProb = Math.round(normalizedHomeBookProb * 0.7 + prediction.homeWinProb * 0.3)
-      const finalAwayProb = Math.round(normalizedAwayBookProb * 0.7 + prediction.awayWinProb * 0.3)
+      // ✅ 블렌딩: predict API와 동일하게 배당 60% + Railway 40% (실수 연산 후 정규화)
+      const ODDS_WEIGHT = 0.6
+      const MODEL_WEIGHT = 0.4
+      let blendedHome = normHome * ODDS_WEIGHT + (prediction.homeWinProb / 100) * MODEL_WEIGHT
+      let blendedAway = normAway * ODDS_WEIGHT + (prediction.awayWinProb / 100) * MODEL_WEIGHT
+      const blendTotal = blendedHome + blendedAway
+      blendedHome = blendedHome / blendTotal
+      blendedAway = blendedAway / blendTotal
+
+      // ✅ KBO/NPB 투수 매치업 휴리스틱 보정 (predict API와 동일)
+      // Railway 모델이 MLB 위주로 학습돼서 KBO/NPB 투수 피처를 무시하므로
+      // 양팀 모두 실제 ERA 데이터가 있을 때만 후보정 적용. cap ±8%p
+      const isMlb = league === 'MLB'
+      const homeEraReal = match.home_pitcher_era
+      const awayEraReal = match.away_pitcher_era
+      const homeWhipReal = match.home_pitcher_whip
+      const awayWhipReal = match.away_pitcher_whip
+      const hasRealPitcher = homeEraReal != null && awayEraReal != null
+      let pitcherAdjustment = 0
+      if (!isMlb && hasRealPitcher) {
+        const eraDiff = awayEraReal - homeEraReal // (+) → 홈 우세
+        const eraAdj = Math.max(-0.08, Math.min(0.08, eraDiff * 0.04))
+        let whipAdj = 0
+        if (homeWhipReal != null && awayWhipReal != null) {
+          const whipDiff = awayWhipReal - homeWhipReal
+          whipAdj = Math.max(-0.04, Math.min(0.04, whipDiff * 0.10))
+        }
+        pitcherAdjustment = Math.max(-0.08, Math.min(0.08, eraAdj + whipAdj))
+
+        blendedHome = Math.max(0.05, Math.min(0.95, blendedHome + pitcherAdjustment))
+        blendedAway = Math.max(0.05, Math.min(0.95, blendedAway - pitcherAdjustment))
+        const adjTotal = blendedHome + blendedAway
+        blendedHome = blendedHome / adjTotal
+        blendedAway = blendedAway / adjTotal
+      }
+
+      const finalHomeProb = Math.round(blendedHome * 100)
+      const finalAwayProb = Math.round(blendedAway * 100)
+      const normalizedHomeBookProb = Math.round(normHome * 100)
+      const normalizedAwayBookProb = Math.round(normAway * 100)
 
       // 가중 평균 기준으로 픽 결정
       const pickHome = finalHomeProb > finalAwayProb
@@ -463,7 +500,10 @@ export async function GET(request: NextRequest) {
         awayStats: prediction.awayStats,
       })
 
-      console.log(`  ✅ ${match.home_team_ko || match.home_team} vs ${match.away_team_ko || match.away_team} → ${pickTeamKo} 승 (배당${pickHome ? normalizedHomeBookProb : normalizedAwayBookProb}%+Railway${pickHome ? prediction.homeWinProb : prediction.awayWinProb}% = 최종${winProb}%)`)
+      const adjLabel = !isMlb && hasRealPitcher
+        ? ` +투수보정${pitcherAdjustment >= 0 ? '+' : ''}${(pitcherAdjustment * 100).toFixed(1)}%p`
+        : ''
+      console.log(`  ✅ ${match.home_team_ko || match.home_team} vs ${match.away_team_ko || match.away_team} → ${pickTeamKo} 승 (배당${pickHome ? normalizedHomeBookProb : normalizedAwayBookProb}%×0.6 + Railway${pickHome ? prediction.homeWinProb : prediction.awayWinProb}%×0.4${adjLabel} = 최종${winProb}%)`)
     }
 
     if (predictions.length < 2) {
