@@ -102,13 +102,171 @@ const NPB_TEAM_NORMALIZE: Record<string, string> = {
   'Nippon Ham Fighters': '니혼햄',
 }
 
+// ===================================================================
+// 가타카나 → 한글 음역 (직역, 음차)
+// ===================================================================
+// 외국인 투수 이름은 보통 가타카나로 표기됨
+// 매칭 실패 시 한국어 표기 규칙에 따라 직접 음역
+//
+// 예: ジャクソン → 잭슨, エスピノーザ → 에스피노자
+//
+// 한자(漢字)는 한국식 음독을 쓰지 않음(사용자 요구사항).
+// 한자가 섞여 있으면 변환 안 하고 원본 그대로 반환.
+
+const KATAKANA_TO_HANGUL_BASE: Record<string, string> = {
+  // 청음
+  'ア':'아','イ':'이','ウ':'우','エ':'에','オ':'오',
+  'カ':'카','キ':'키','ク':'쿠','ケ':'케','コ':'코',
+  'サ':'사','シ':'시','ス':'스','セ':'세','ソ':'소',
+  'タ':'타','チ':'치','ツ':'쓰','テ':'테','ト':'토',
+  'ナ':'나','ニ':'니','ヌ':'누','ネ':'네','ノ':'노',
+  'ハ':'하','ヒ':'히','フ':'후','ヘ':'헤','ホ':'호',
+  'マ':'마','ミ':'미','ム':'무','メ':'메','モ':'모',
+  'ヤ':'야','ユ':'유','ヨ':'요',
+  'ラ':'라','リ':'리','ル':'루','レ':'레','ロ':'로',
+  'ワ':'와','ヰ':'이','ヱ':'에','ヲ':'오','ン':'ㄴ',
+  // 탁음
+  'ガ':'가','ギ':'기','グ':'구','ゲ':'게','ゴ':'고',
+  'ザ':'자','ジ':'지','ズ':'즈','ゼ':'제','ゾ':'조',
+  'ダ':'다','ヂ':'지','ヅ':'즈','デ':'데','ド':'도',
+  'バ':'바','ビ':'비','ブ':'부','ベ':'베','ボ':'보',
+  // 반탁음
+  'パ':'파','ピ':'피','プ':'푸','ペ':'페','ポ':'포',
+}
+
+const KATAKANA_DIGRAPHS: Record<string, string> = {
+  // 요음
+  'キャ':'캬','キュ':'큐','キョ':'쿄',
+  'ギャ':'갸','ギュ':'규','ギョ':'교',
+  'シャ':'샤','シュ':'슈','ショ':'쇼','シェ':'셰',
+  'ジャ':'자','ジュ':'주','ジョ':'조','ジェ':'제',
+  'チャ':'차','チュ':'추','チョ':'초','チェ':'체',
+  'ニャ':'냐','ニュ':'뉴','ニョ':'뇨',
+  'ヒャ':'햐','ヒュ':'휴','ヒョ':'효',
+  'ビャ':'뱌','ビュ':'뷰','ビョ':'뵤',
+  'ピャ':'퍄','ピュ':'퓨','ピョ':'표',
+  'ミャ':'먀','ミュ':'뮤','ミョ':'묘',
+  'リャ':'랴','リュ':'류','リョ':'료',
+  // 외래어 표기 추가 음
+  'ファ':'파','フィ':'피','フェ':'페','フォ':'포','フュ':'퓨',
+  'ヴァ':'바','ヴィ':'비','ヴ':'부','ヴェ':'베','ヴォ':'보',
+  'ティ':'티','トゥ':'투','テュ':'튜',
+  'ディ':'디','ドゥ':'두','デュ':'듀',
+  'ウィ':'위','ウェ':'웨','ウォ':'워',
+  'クァ':'콰','クィ':'퀴','クェ':'퀘','クォ':'쿼',
+  'グァ':'과','グィ':'귀','グェ':'궤','グォ':'궈',
+  'ツァ':'차','ツィ':'치','ツェ':'체','ツォ':'초',
+}
+
+// 한글 음절 분해/조합 (받침 부착용)
+const HANGUL_BASE = 0xAC00
+const HANGUL_END = 0xD7A3
+function combineWithBatchim(syllable: string, batchim: number): string {
+  if (!syllable) return syllable
+  const code = syllable.charCodeAt(syllable.length - 1)
+  if (code < HANGUL_BASE || code > HANGUL_END) return syllable
+  const idx = code - HANGUL_BASE
+  // 이미 받침이 있으면 추가 안 함
+  if (idx % 28 !== 0) return syllable
+  const newCode = code + batchim
+  return syllable.slice(0, -1) + String.fromCharCode(newCode)
+}
+
+// 받침 인덱스: ㄱ=1, ㄴ=4, ㅁ=16, ㅂ=17, ㅅ=19, ㅇ=21, ㄹ=8
+const BATCHIM_KIYEOK = 1
+const BATCHIM_NIEUN = 4
+const BATCHIM_RIEUL = 8
+const BATCHIM_MIEUM = 16
+const BATCHIM_BIEUP = 17
+const BATCHIM_SIOT = 19
+
+function transliterateKatakanaToKorean(input: string): string {
+  if (!input) return input
+  // 한자(CJK Unified Ideographs)가 포함되면 그대로 반환 (사용자 요구사항: 음독 금지)
+  if (/[\u4E00-\u9FFF]/.test(input)) return input
+
+  // 가타카나가 전혀 없으면 원본 반환
+  if (!/[\u30A0-\u30FF]/.test(input)) return input
+
+  const out: string[] = []
+  const chars = Array.from(input)
+  let i = 0
+
+  while (i < chars.length) {
+    const c = chars[i]
+    const next = chars[i + 1] || ''
+
+    // 비-가타카나 문자(라틴, 점, 공백 등)는 그대로 통과
+    if (!/[\u30A0-\u30FF]/.test(c)) {
+      out.push(c)
+      i++
+      continue
+    }
+
+    // 장음 ー: 직전 음절에 길이 표시 없음 (한국어는 보통 장음 표기 안 함) → skip
+    if (c === 'ー') { i++; continue }
+
+    // 촉음 ッ: 다음 자음을 받침으로 부착
+    if (c === 'ッ') {
+      const di = KATAKANA_DIGRAPHS[next + (chars[i + 2] || '')]
+      const nextSound = di || KATAKANA_TO_HANGUL_BASE[next] || ''
+      if (out.length > 0 && nextSound) {
+        // 다음 음절의 초성에 따라 받침 결정
+        const first = nextSound.charAt(0)
+        let batchim = BATCHIM_KIYEOK
+        if ('사시스세소자지즈제조차치추체초'.includes(first)) batchim = BATCHIM_SIOT
+        else if ('파피푸페포바비부베보'.includes(first)) batchim = BATCHIM_BIEUP
+        else if ('타티투테토다디두데도'.includes(first)) batchim = BATCHIM_SIOT
+        else if ('카키쿠케코가기구게고'.includes(first)) batchim = BATCHIM_KIYEOK
+        else batchim = BATCHIM_SIOT
+        out[out.length - 1] = combineWithBatchim(out[out.length - 1], batchim)
+      }
+      i++
+      continue
+    }
+
+    // 撥音 ン: 받침 ㄴ
+    if (c === 'ン') {
+      if (out.length > 0) {
+        out[out.length - 1] = combineWithBatchim(out[out.length - 1], BATCHIM_NIEUN)
+      } else {
+        out.push('ㄴ')
+      }
+      i++
+      continue
+    }
+
+    // 2글자 요음 시도
+    const digraph = c + next
+    if (KATAKANA_DIGRAPHS[digraph]) {
+      out.push(KATAKANA_DIGRAPHS[digraph])
+      i += 2
+      continue
+    }
+
+    // 단일 가나
+    const single = KATAKANA_TO_HANGUL_BASE[c]
+    if (single) {
+      out.push(single)
+      i++
+      continue
+    }
+
+    // 매핑 없음 → 원본 유지
+    out.push(c)
+    i++
+  }
+
+  return out.join('').trim()
+}
+
 /**
  * 일본어 투수명 → 한글 이름 매칭 (npb_pitcher_stats.name_jp 활용)
  *
  * 매칭 순서:
  * 1. name_jp 컬럼에서 정확 매칭
  * 2. name_jp 컬럼에서 공백 제거 후 매칭 (半角/全角 스페이스 차이 대응)
- * 3. 매칭 실패 시 null → 일본어 이름 그대로 저장 + name_jp 자동 등록
+ * 3. 매칭 실패 시 null → 가타카나 음역으로 폴백
  */
 async function findKoreanPitcherName(
   jpPitcherName: string,
@@ -172,11 +330,15 @@ async function findKoreanPitcherName(
 }
 
 /**
- * DB에 없는 새 투수 자동 등록 + name_jp 매핑
+ * 매칭 안 된 새 투수에 대한 처리.
  *
- * 1. name_jp가 이미 등록된 투수 → 스킵
- * 2. DB에 아예 없는 새 투수 → 자동 INSERT (일본어 이름으로 name + name_jp 동시 등록)
- * 3. name_jp가 NULL인 기존 투수 → name_jp 업데이트 시도
+ * ※ 이전에 있던 "name_jp NULL인 1명에 자동 매핑" 로직은 제거됨.
+ *    동명이인 / 라인업 변경 / 같은 팀에 비어있는 슬롯 1개를 잘못 채워넣는
+ *    실수가 누적되어 데이터를 오염시켰음.
+ *
+ * 이 함수는 더 이상 추정 매핑을 시도하지 않고, 단순히 디버그 로그만 남긴다.
+ * 실제 등록은 후처리 단계(Step 4)에서 NPB 선수 상세 페이지의 후리가나를
+ * 기반으로 처리한다.
  */
 async function autoRegisterNameJp(
   jpPitcherName: string,
@@ -184,69 +346,8 @@ async function autoRegisterNameJp(
   season: string
 ): Promise<void> {
   if (!jpPitcherName) return
-
   const normalizedTeam = NPB_TEAM_NORMALIZE[dbTeamName] ?? dbTeamName
-
-  // 이미 name_jp가 등록된 투수가 있으면 스킵
-  const { data: existing } = await supabase
-    .from('npb_pitcher_stats')
-    .select('id, name_jp')
-    .eq('season', season)
-    .ilike('team', normalizedTeam)
-    .eq('name_jp', jpPitcherName)
-    .maybeSingle()
-
-  if (existing) return // 이미 등록됨
-
-  // 같은 팀에서 name_jp가 NULL인 투수 확인
-  const { data: unmatched } = await supabase
-    .from('npb_pitcher_stats')
-    .select('id, name')
-    .eq('season', season)
-    .ilike('team', normalizedTeam)
-    .is('name_jp', null)
-
-  // name_jp 미등록 투수가 1명이면 자동 매핑 (안전)
-  if (unmatched && unmatched.length === 1) {
-    const { error } = await supabase
-      .from('npb_pitcher_stats')
-      .update({ name_jp: jpPitcherName })
-      .eq('id', unmatched[0].id)
-
-    if (!error) {
-      console.log(`✅ name_jp 자동 매핑: ${jpPitcherName} → ${unmatched[0].name} (id=${unmatched[0].id})`)
-    }
-    return
-  }
-
-  // DB에 이 팀의 투수가 하나도 없거나, 미등록 투수가 여러 명이면
-  // → 새 투수로 자동 INSERT (일본어 이름으로 저장, 한글 이름은 나중에 수동 업데이트)
-  // 같은 팀에 같은 name_jp로 중복 INSERT 방지는 위에서 이미 체크함
-  const { data: anyTeamPitcher } = await supabase
-    .from('npb_pitcher_stats')
-    .select('id')
-    .eq('season', season)
-    .ilike('team', normalizedTeam)
-    .eq('name', jpPitcherName)
-    .maybeSingle()
-
-  if (anyTeamPitcher) return // 이미 일본어 이름으로 등록됨
-
-  const { error: insertError } = await supabase
-    .from('npb_pitcher_stats')
-    .insert({
-      name: jpPitcherName,        // 한글 이름이 없으니 일본어로 임시 저장
-      name_jp: jpPitcherName,     // 일본어 이름
-      team: normalizedTeam,
-      season,
-    })
-
-  if (!insertError) {
-    console.log(`🆕 새 투수 자동 등록: ${jpPitcherName} (${normalizedTeam}, ${season})`)
-    console.log(`   → 한글 이름 수동 업데이트: UPDATE npb_pitcher_stats SET name = '한글이름' WHERE name_jp = '${jpPitcherName}' AND team = '${normalizedTeam}' AND season = '${season}';`)
-  } else {
-    console.error(`❌ 투수 등록 실패: ${jpPitcherName} (${normalizedTeam})`, insertError.message)
-  }
+  console.log(`ℹ️ 매칭 실패(추정 안 함): ${jpPitcherName} (${normalizedTeam}, ${season}) — 후리가나 단계에서 처리`)
 }
 
 // ===================================================================
@@ -292,10 +393,105 @@ interface NpbPitcherStats {
  *   </tbody>
  * </table>
  */
+/**
+ * NPB 선수 페이지에서 한자 이름 + 후리가나(가타카나) 추출
+ *
+ * 일반적인 npb.jp 페이지 구조:
+ *   <li id="pc_v1_nm"><h1>大津 亮介</h1></li>
+ *   <li id="pc_v1_ruby">オオツ　リョウスケ</li>
+ * 또는 table 형태:
+ *   <td>登録名</td><td>大津 亮介</td>
+ *   <td>フリガナ</td><td>オオツ　リョウスケ</td>
+ *
+ * 외국인 선수는 후리가나가 비어있고 한자 칸이 가타카나로 나옴 (예: A.ジャクソン).
+ * 그 경우 furigana 자리에 kanji 그대로 반환.
+ */
+function parseNpbPlayerProfile(html: string): { kanji: string; furigana: string } {
+  let kanji = ''
+  let furigana = ''
+
+  // 패턴 0 (실제 npb.jp/bis/players/{id}.html 구조):
+  //   <li id="pc_v_name">奥川 恭伸 </li>
+  //   <li id="pc_v_kana">おくがわ・やすのぶ</li>
+  // 주의: 같은 id="pc_v_name"이 div와 li 양쪽에 쓰여있음 → <li ...> 매칭으로 한정
+  const liNameMatch = html.match(/<li\s+id="pc_v_name"[^>]*>([\s\S]*?)<\/li>/i)
+  if (liNameMatch) kanji = stripTags(liNameMatch[1])
+  const liKanaMatch = html.match(/<li\s+id="pc_v_kana"[^>]*>([\s\S]*?)<\/li>/i)
+  if (liKanaMatch) {
+    // 히라가나, `・`(姓名 구분자) 포함 — 가타카나 변환 + `・` → 공백
+    // 외국인 선수는 "ホセ ウレーニャ (JOSE URENA)" 형태 → 영문 괄호 제거
+    let raw = stripTags(liKanaMatch[1])
+    raw = raw.replace(/\s*[（(][^)）]*[)）]\s*/g, ' ').trim()
+    raw = raw.replace(/[・·]/g, ' ')
+    furigana = hiraganaToKatakana(raw).replace(/\s+/g, ' ').trim()
+  }
+
+  // 폴백: img title (외국인 선수 등에서 활용)
+  if (!kanji) {
+    const m = html.match(/<img[^>]+src="[^"]*players_photo[^"]*"[^>]+title="([^"]+)"/i)
+    if (m) kanji = stripTags(m[1])
+  }
+
+  // 폴백: pc_v_name div 전체 (li 매칭이 실패한 경우)
+  if (!kanji) {
+    const m = html.match(/id="pc_v_name"[^>]*>[\s\S]*?<li\s+id="pc_v_name"[^>]*>([\s\S]*?)</i)
+    if (m) kanji = stripTags(m[1])
+  }
+
+  // 폴백: meta og:title (예: "奥川 恭伸（東京ヤクルトスワローズ） | 個人年度別成績")
+  if (!kanji) {
+    const m = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i)
+    if (m) {
+      let raw = m[1].split(/\s*[|\-–]\s*/)[0].trim()
+      // 「선수명（팀명）」 형식 → 괄호 앞만
+      raw = raw.replace(/[（(].*?[)）]/g, '').trim()
+      kanji = raw
+    }
+  }
+
+  // 한자 칸에 팀명이 괄호로 붙어있으면 제거 (예: "奥川 恭伸（東京ヤクルトスワローズ）")
+  if (kanji) {
+    kanji = kanji.replace(/[（(][^)）]*[)）]/g, '').trim()
+  }
+
+  // 외국인 선수: 한자 칸이 가타카나/라틴인 경우 furigana 칸이 비어있으면 그대로 사용
+  if (!furigana && kanji && /^[\u30A0-\u30FF\u3040-\u309F\sA-Za-z\.\uFF21-\uFF5A\uFF0E]+$/.test(kanji)) {
+    furigana = hiraganaToKatakana(kanji)
+  }
+
+  return { kanji, furigana }
+}
+
+/**
+ * 히라가나 → 가타카나 변환
+ * U+3041..U+3096 (ぁ..ゖ) → U+30A1..U+30F6 (ァ..ヶ)
+ */
+function hiraganaToKatakana(s: string): string {
+  let out = ''
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i)
+    if (code >= 0x3041 && code <= 0x3096) {
+      out += String.fromCharCode(code + 0x60)
+    } else {
+      out += s[i]
+    }
+  }
+  return out
+}
+
+function stripTags(s: string): string {
+  return s
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/[\u3000\s]+/g, ' ')
+    .trim()
+}
+
 async function scrapeNpbPlayerStats(
   npbPlayerId: string,
   targetSeason?: string
-): Promise<{ stats: NpbPitcherStats | null; error?: string }> {
+): Promise<{ stats: NpbPitcherStats | null; profile?: { kanji: string; furigana: string }; error?: string }> {
   const url = `https://npb.jp/bis/players/${npbPlayerId}.html`
 
   try {
@@ -313,6 +509,9 @@ async function scrapeNpbPlayerStats(
     const html = await res.text()
     const season = targetSeason || String(new Date().getFullYear())
 
+    // 한자 이름 + 후리가나 추출 (실패해도 stats 파싱은 계속)
+    const profile = parseNpbPlayerProfile(html)
+
     // 디버그: tablefix_p 존재 여부 확인
     const hasTable = html.includes('tablefix_p')
     const hasRegisterStats = html.includes('registerStats')
@@ -328,11 +527,12 @@ async function scrapeNpbPlayerStats(
       const tbodyEndIdx = html.indexOf('</tbody>', tbodyIdx > -1 ? tbodyIdx : 0)
       return {
         stats: null,
-        error: `파싱실패v2 (len=${htmlLen}, tblIdx=${tbStart}, tbodyIdx=${tbodyIdx}, tbodyEndIdx=${tbodyEndIdx}, table=${hasTable}, reg=${hasRegisterStats}, yr=${hasSeason})`,
+        profile,
+        error: `파싱실패v2 (len=${htmlLen}, tblIdx=${tbStart}, tbodyIdx=${tbodyIdx}, tbodyEndIdx=${tbodyEndIdx}, table=${hasTable}, reg=${hasRegisterStats}, yr=${hasSeason}, kanji=${profile.kanji}, furi=${profile.furigana})`,
       }
     }
 
-    return { stats: result }
+    return { stats: result, profile }
   } catch (e: any) {
     return { stats: null, error: e.message }
   }
@@ -891,9 +1091,94 @@ export async function GET(request: NextRequest) {
   const dateParam = searchParams.get('date')  // 수동 지정 날짜 (있으면 이걸 우선 사용)
   const dryRun = searchParams.get('dry') === 'true'
   const force = searchParams.get('force') === 'true' // 이미 설정된 투수도 덮어쓰기
+  const reset = searchParams.get('reset') === 'true'  // 시즌 데이터 초기화 후 재구축
   const season = searchParams.get('season') || String(new Date().getFullYear())
+  const debugProfileId = searchParams.get('debugProfile')  // 단일 npbPlayerId의 raw HTML 일부 반환
 
-  console.log(`🏟️ NPB 선발투수 동기화 시작 (dry=${dryRun}, force=${force})`)
+  console.log(`🏟️ NPB 선발투수 동기화 시작 (dry=${dryRun}, force=${force}, reset=${reset})`)
+
+  // ─────────────────────────────────────────
+  // DEBUG: 특정 선수 프로필 페이지 raw HTML 일부 반환
+  // 사용: ?debugProfile=31735151
+  // ─────────────────────────────────────────
+  if (debugProfileId) {
+    try {
+      const url = `https://npb.jp/bis/players/${debugProfileId}.html`
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'ja,en;q=0.5',
+        },
+        signal: AbortSignal.timeout(10000),
+      })
+      const html = await res.text()
+      const profile = parseNpbPlayerProfile(html)
+      // 이름 / 후리가나 후보가 들어있을 만한 영역만 추려서 반환
+      const headIdx = html.indexOf('<head')
+      const headEnd = html.indexOf('</head>')
+      const headSnippet = headIdx > -1 && headEnd > -1 ? html.slice(headIdx, headEnd + 7) : ''
+      // 본문에서 한자/후리가나 후보 키워드가 처음 나오는 위치 주변을 잘라서 반환
+      const bodyStart = html.indexOf('<body')
+      const bodyHtml = bodyStart > -1 ? html.slice(bodyStart) : html
+      const keywordHits: Record<string, string> = {}
+      const KEYWORDS = ['pc_v_name', 'pc_v_team', 'pc_v_no', 'pc_v_furi', 'pc_v_kana', 'pc_v', 'players_photo']
+      for (const kw of KEYWORDS) {
+        const i = bodyHtml.indexOf(kw)
+        if (i !== -1) {
+          keywordHits[kw] = bodyHtml.slice(Math.max(0, i - 80), Math.min(bodyHtml.length, i + 800))
+        }
+      }
+      return NextResponse.json({
+        success: true,
+        debugProfile: debugProfileId,
+        url,
+        htmlLen: html.length,
+        parsed: profile,
+        headSnippet: headSnippet.slice(0, 4000),
+        keywordHits,
+      })
+    } catch (e: any) {
+      return NextResponse.json({ success: false, error: e.message }, { status: 500 })
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // RESET 모드: 시즌 데이터 정리
+  // ─────────────────────────────────────────
+  // - npb_pitcher_stats: 시즌 데이터 전부 삭제
+  // - baseball_matches: NPB 시즌 경기의 home/away_pitcher_ko를 NULL로
+  // 이후 sync 흐름이 후리가나 기반으로 다시 채움
+  let resetReport: { stats: number; matches: number } | null = null
+  if (reset) {
+    if (dryRun) {
+      const { count: statsCount } = await supabase
+        .from('npb_pitcher_stats')
+        .select('id', { count: 'exact', head: true })
+        .eq('season', season)
+      const { count: matchCount } = await supabase
+        .from('baseball_matches')
+        .select('id', { count: 'exact', head: true })
+        .eq('league', 'NPB')
+        .gte('match_date', `${season}-01-01`)
+        .lte('match_date', `${season}-12-31`)
+      resetReport = { stats: statsCount || 0, matches: matchCount || 0 }
+      console.log(`🧹 RESET (dry): npb_pitcher_stats=${resetReport.stats}, baseball_matches=${resetReport.matches}`)
+    } else {
+      const { error: delStatsErr, count: delStats } = await supabase
+        .from('npb_pitcher_stats')
+        .delete({ count: 'exact' })
+        .eq('season', season)
+      const { error: clrMatchErr, count: clrMatch } = await supabase
+        .from('baseball_matches')
+        .update({ home_pitcher_ko: null, away_pitcher_ko: null }, { count: 'exact' })
+        .eq('league', 'NPB')
+        .gte('match_date', `${season}-01-01`)
+        .lte('match_date', `${season}-12-31`)
+      resetReport = { stats: delStats || 0, matches: clrMatch || 0 }
+      console.log(`🧹 RESET 완료: npb_pitcher_stats deleted=${resetReport.stats}, baseball_matches cleared=${resetReport.matches}, errors=${delStatsErr?.message || ''} ${clrMatchErr?.message || ''}`)
+    }
+  }
 
   try {
     // Step 1: NPB 공식 사이트에서 예고선발 스크래핑
@@ -1075,9 +1360,17 @@ export async function GET(request: NextRequest) {
           : Promise.resolve(null),
       ])
 
-      // 한글 이름이 없으면 일본어 이름 그대로 저장
-      const finalHomePitcher = homePitcherKo || matchedGame.homePitcherJp || null
-      const finalAwayPitcher = awayPitcherKo || matchedGame.awayPitcherJp || null
+      // 한글 이름이 없으면 가타카나 음역 폴백, 그것도 안 되면 일본어 원본
+      const finalHomePitcher =
+        homePitcherKo ||
+        (matchedGame.homePitcherJp ? transliterateKatakanaToKorean(matchedGame.homePitcherJp) : null) ||
+        matchedGame.homePitcherJp ||
+        null
+      const finalAwayPitcher =
+        awayPitcherKo ||
+        (matchedGame.awayPitcherJp ? transliterateKatakanaToKorean(matchedGame.awayPitcherJp) : null) ||
+        matchedGame.awayPitcherJp ||
+        null
 
       // 매칭 안 된 투수는 name_jp 수동 등록 가이드 로그 출력
       if (!dryRun) {
@@ -1144,80 +1437,165 @@ export async function GET(request: NextRequest) {
     const statsResults: Array<{ pitcher: string; npbId: string; stats: NpbPitcherStats | null; updated: boolean; error?: string }> = []
 
     // NPB ID가 있는 투수들의 스탯 가져오기
-    const pitchersToScrape: Array<{ jpName: string; npbId: string; dbTeam: string }> = []
+    // matchSlots: 어떤 매치의 home/away 칸에 이 투수가 들어가는지 추적
+    type PitcherSlot = { matchId: number; side: 'home' | 'away' }
+    const pitchersToScrape: Array<{ jpName: string; npbId: string; dbTeam: string; slots: PitcherSlot[] }> = []
     for (const sg of scrapedGames) {
       if (sg.homePitcherNpbId && sg.homePitcherJp) {
-        const dbTeam = results.find(r => r.homePitcherJp === sg.homePitcherJp)?.homeTeam
-        if (dbTeam) pitchersToScrape.push({ jpName: sg.homePitcherJp, npbId: sg.homePitcherNpbId, dbTeam })
+        const matched = results.find(r => r.homePitcherJp === sg.homePitcherJp)
+        const dbTeam = matched?.homeTeam
+        if (dbTeam && matched) pitchersToScrape.push({
+          jpName: sg.homePitcherJp,
+          npbId: sg.homePitcherNpbId,
+          dbTeam,
+          slots: [{ matchId: matched.matchId, side: 'home' }],
+        })
       }
       if (sg.awayPitcherNpbId && sg.awayPitcherJp) {
-        const dbTeam = results.find(r => r.awayPitcherJp === sg.awayPitcherJp)?.awayTeam
-        if (dbTeam) pitchersToScrape.push({ jpName: sg.awayPitcherJp, npbId: sg.awayPitcherNpbId, dbTeam })
+        const matched = results.find(r => r.awayPitcherJp === sg.awayPitcherJp)
+        const dbTeam = matched?.awayTeam
+        if (dbTeam && matched) pitchersToScrape.push({
+          jpName: sg.awayPitcherJp,
+          npbId: sg.awayPitcherNpbId,
+          dbTeam,
+          slots: [{ matchId: matched.matchId, side: 'away' }],
+        })
       }
     }
 
-    // 중복 제거 (같은 NPB ID)
-    const uniquePitchers = pitchersToScrape.filter(
-      (p, i, arr) => arr.findIndex(x => x.npbId === p.npbId) === i
-    )
+    // 중복 제거 (같은 NPB ID) — slots는 합침
+    const uniquePitchers: typeof pitchersToScrape = []
+    for (const p of pitchersToScrape) {
+      const exist = uniquePitchers.find(x => x.npbId === p.npbId)
+      if (exist) {
+        exist.slots.push(...p.slots)
+      } else {
+        uniquePitchers.push({ ...p, slots: [...p.slots] })
+      }
+    }
 
     if (uniquePitchers.length > 0) {
       console.log(`📊 투수 성적 스크래핑 시작: ${uniquePitchers.length}명`)
 
       for (const pitcher of uniquePitchers) {
-        const { stats, error: statsError } = await scrapeNpbPlayerStats(pitcher.npbId, season)
+        const { stats, profile, error: statsError } = await scrapeNpbPlayerStats(pitcher.npbId, season)
 
-        if (stats && !dryRun) {
-          // npb_pitcher_stats 테이블 업데이트
-          const normalizedTeam = NPB_TEAM_NORMALIZE[pitcher.dbTeam] ?? pitcher.dbTeam
-          const updatePayload: Record<string, any> = {
-            era: parseFloat(stats.era) || 0,
-            whip: stats.whip && stats.whip !== '-' ? parseFloat(stats.whip) : null,
-            innings_pitched: stats.inningsPitched,
-            wins: stats.wins,
-            losses: stats.losses,
-            saves: stats.saves,
-            holds: stats.holds,
-            games: stats.games,
-            strikeouts: stats.strikeouts,
-            walks: stats.walks,
-            hits_allowed: stats.hits,
-            home_runs_allowed: stats.homeRuns,
-            earned_runs: stats.earnedRuns,
-            k_per_9: stats.kPer9 && stats.kPer9 !== '-' ? parseFloat(stats.kPer9) : null,
-            bb_per_9: stats.bbPer9 && stats.bbPer9 !== '-' ? parseFloat(stats.bbPer9) : null,
+        // 후리가나 → 한글 음역 (가타카나 음역기 재사용)
+        // profile.furigana가 가타카나라 그대로 통과, 외국인 선수면 가타카나 이름 그대로
+        let derivedKoreanName: string | null = null
+        let kanjiName: string | null = null
+        if (profile) {
+          kanjiName = profile.kanji || null
+          if (profile.furigana) {
+            const t = transliterateKatakanaToKorean(profile.furigana)
+            // 변환 결과에 가타카나가 남아있으면 실패로 간주
+            if (t && !/[\u30A0-\u30FF\u3040-\u309F]/.test(t)) {
+              derivedKoreanName = t
+            }
+          }
+        }
+
+        const normalizedTeam = NPB_TEAM_NORMALIZE[pitcher.dbTeam] ?? pitcher.dbTeam
+
+        if (!dryRun) {
+          // npb_pitcher_stats UPSERT (npb_player_id 기준 — name_jp 의존 제거)
+          // stats가 없어도 이름 정보는 저장해서 매칭 풀을 만든다
+          const upsertPayload: Record<string, any> = {
             npb_player_id: pitcher.npbId,
+            season,
+            team: normalizedTeam,
+          }
+          if (derivedKoreanName) upsertPayload.name = derivedKoreanName
+          if (kanjiName) upsertPayload.name_jp = kanjiName
+
+          if (stats) {
+            upsertPayload.era = parseFloat(stats.era) || 0
+            upsertPayload.whip = stats.whip && stats.whip !== '-' ? parseFloat(stats.whip) : null
+            upsertPayload.innings_pitched = stats.inningsPitched
+            upsertPayload.wins = stats.wins
+            upsertPayload.losses = stats.losses
+            upsertPayload.saves = stats.saves
+            upsertPayload.holds = stats.holds
+            upsertPayload.games = stats.games
+            upsertPayload.strikeouts = stats.strikeouts
+            upsertPayload.walks = stats.walks
+            upsertPayload.hits_allowed = stats.hits
+            upsertPayload.home_runs_allowed = stats.homeRuns
+            upsertPayload.earned_runs = stats.earnedRuns
+            upsertPayload.k_per_9 = stats.kPer9 && stats.kPer9 !== '-' ? parseFloat(stats.kPer9) : null
+            upsertPayload.bb_per_9 = stats.bbPer9 && stats.bbPer9 !== '-' ? parseFloat(stats.bbPer9) : null
           }
 
-          // name_jp로 매칭해서 업데이트 (select로 업데이트 결과 확인)
-          const { data: updateData, error: updateErr } = await supabase
+          // npb_pitcher_stats에 (npb_player_id, season) unique constraint가 없어서
+          // upsert 대신 select-then-insert/update로 처리
+          const { data: existingRows } = await supabase
             .from('npb_pitcher_stats')
-            .update(updatePayload)
+            .select('id, name, name_jp')
+            .eq('npb_player_id', pitcher.npbId)
             .eq('season', season)
-            .ilike('team', normalizedTeam)
-            .eq('name_jp', pitcher.jpName)
-            .select('id, name')
+            .limit(1)
 
-          const didUpdate = !updateErr && updateData && updateData.length > 0
+          let upserted: Array<{ id: number; name: string | null; name_jp: string | null }> | null = null
+          let upsertErr: { message: string } | null = null
+
+          if (existingRows && existingRows.length > 0) {
+            const existingId = existingRows[0].id
+            const { data: updated, error: updErr } = await supabase
+              .from('npb_pitcher_stats')
+              .update(upsertPayload)
+              .eq('id', existingId)
+              .select('id, name, name_jp')
+            upserted = updated as any
+            upsertErr = updErr as any
+          } else {
+            const { data: inserted, error: insErr } = await supabase
+              .from('npb_pitcher_stats')
+              .insert(upsertPayload)
+              .select('id, name, name_jp')
+            upserted = inserted as any
+            upsertErr = insErr as any
+          }
+
+          const didUpdate = !upsertErr && upserted && upserted.length > 0
 
           statsResults.push({
             pitcher: pitcher.jpName,
             npbId: pitcher.npbId,
+            kanji: kanjiName,
+            furigana: profile?.furigana || null,
+            koreanName: derivedKoreanName,
             stats,
             updated: didUpdate,
-            matchedRow: updateData?.[0] || null,
-            error: updateErr?.message,
+            matchedRow: upserted?.[0] || null,
+            error: upsertErr?.message,
           })
 
           if (didUpdate) {
-            console.log(`📊 ${pitcher.jpName}: ERA ${stats.era}, ${stats.inningsPitched}IP, ${stats.strikeouts}K, WHIP ${stats.whip} → ${updateData[0].name}`)
+            console.log(`📊 ${pitcher.jpName} → ${derivedKoreanName || upserted[0].name || '?'} (ERA ${stats?.era || 'n/a'}, ${stats?.inningsPitched || 'n/a'}IP)`)
           } else {
-            console.log(`⚠️ 스탯 업데이트 매칭 실패: ${pitcher.jpName} (team=${normalizedTeam}, season=${season})${updateErr ? ' err=' + updateErr.message : ''}`)
+            console.log(`⚠️ 스탯 upsert 실패: ${pitcher.jpName} (npbId=${pitcher.npbId})${upsertErr ? ' err=' + upsertErr.message : ''}`)
+          }
+
+          // baseball_matches의 home/away_pitcher_ko를 한글 이름으로 갱신
+          // 추적된 slots(matchId+side)로 직접 업데이트 → 이름 매칭 의존 제거
+          if (derivedKoreanName) {
+            for (const slot of pitcher.slots) {
+              const updateField = slot.side === 'home'
+                ? { home_pitcher_ko: derivedKoreanName }
+                : { away_pitcher_ko: derivedKoreanName }
+              await supabase
+                .from('baseball_matches')
+                .update(updateField)
+                .eq('id', slot.matchId)
+            }
           }
         } else {
           statsResults.push({
             pitcher: pitcher.jpName,
             npbId: pitcher.npbId,
+            kanji: kanjiName,
+            furigana: profile?.furigana || null,
+            koreanName: derivedKoreanName,
             stats,
             updated: false,
             error: statsError,
@@ -1231,6 +1609,7 @@ export async function GET(request: NextRequest) {
       date,
       scrapedDate: scrapedDate || null,
       dryRun,
+      reset: resetReport,
       scrapedGames: scrapedGames.length,
       dbMatches: dbMatches.length,
       updated: updatedCount,

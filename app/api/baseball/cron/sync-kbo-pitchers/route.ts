@@ -143,37 +143,15 @@ interface KboPitcherRecord {
   whip: number | null
 }
 
-async function scrapeKboPitcherRecords(): Promise<KboPitcherRecord[]> {
-  const url = 'https://www.koreabaseball.com/Record/Player/PitcherBasic/Basic1.aspx'
-
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Accept': 'text/html,application/xhtml+xml',
-      'Accept-Language': 'ko-KR,ko;q=0.9',
-    },
-    signal: AbortSignal.timeout(15000),
-  })
-
-  if (!res.ok) throw new Error(`Records fetch failed: ${res.status}`)
-  const html = await res.text()
-
-  console.log(`📊 Records page HTML length: ${html.length}`)
-
-  // 테이블 파싱: <tbody> 안의 <tr> 추출
-  // 헤더: 순위, 선수명, 팀명, ERA, G, W, L, SV, HLD, WPCT, IP, H, HR, BB, HBP, SO, R, ER, WHIP
+// Basic1.aspx 한 페이지의 <tbody> 행을 파싱
+function parseRecordRows(html: string): KboPitcherRecord[] {
   const records: KboPitcherRecord[] = []
 
-  // <tbody> 찾기
   const tbodyStart = html.indexOf('<tbody>')
-  if (tbodyStart < 0) {
-    console.log('⚠️ No <tbody> found in records page')
-    return records
-  }
+  if (tbodyStart < 0) return records
   const tbodyEnd = html.indexOf('</tbody>', tbodyStart)
   const tbody = html.substring(tbodyStart, tbodyEnd > 0 ? tbodyEnd : tbodyStart + 50000)
 
-  // 각 <tr> 파싱
   const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
   let trMatch: RegExpExecArray | null
 
@@ -188,6 +166,8 @@ async function scrapeKboPitcherRecords(): Promise<KboPitcherRecord[]> {
       _rank, name, team, era, g, w, l, sv, hld, wpct,
       ip, h, hr, bb, hbp, so, r, er, whip
     ] = cells
+
+    if (!name.trim()) continue
 
     records.push({
       name: name.trim(),
@@ -211,7 +191,127 @@ async function scrapeKboPitcherRecords(): Promise<KboPitcherRecord[]> {
     })
   }
 
-  console.log(`📊 Parsed ${records.length} pitcher records`)
+  return records
+}
+
+// HTML에서 <input name="..." value="..."> 추출 (ASP.NET hidden 필드용)
+function extractHiddenInput(html: string, name: string): string {
+  // name="X" value="Y" 또는 value="Y" name="X" 모두 매칭
+  const re1 = new RegExp(`<input[^>]*name="${name}"[^>]*value="([^"]*)"`, 'i')
+  const re2 = new RegExp(`<input[^>]*value="([^"]*)"[^>]*name="${name}"`, 'i')
+  const m1 = html.match(re1)
+  if (m1) return m1[1]
+  const m2 = html.match(re2)
+  if (m2) return m2[1]
+  return ''
+}
+
+// HTML에서 ddlTeam 류 dropdown 컨트롤의 정확한 name 속성 추출
+function findDdlTeamControlName(html: string): string | null {
+  // <select name="ctl00$...$ddlTeam_ID" id="...">
+  const m = html.match(/<select[^>]*name="([^"]*ddlTeam[^"]*)"/i)
+  return m ? m[1] : null
+}
+
+// HTML에서 ddlSeries 류 dropdown 컨트롤의 정확한 name 속성 추출
+function findDdlControlName(html: string, keyword: string): string | null {
+  const re = new RegExp(`<select[^>]*name="([^"]*${keyword}[^"]*)"`, 'i')
+  const m = html.match(re)
+  return m ? m[1] : null
+}
+
+const KBO_TEAM_CODES = ['HH', 'KT', 'LG', 'SK', 'WO', 'LT', 'SS', 'OB', 'HT', 'NC']
+
+async function scrapeKboPitcherRecords(season?: string): Promise<KboPitcherRecord[]> {
+  const url = 'https://www.koreabaseball.com/Record/Player/PitcherBasic/Basic1.aspx'
+
+  const initRes = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'ko-KR,ko;q=0.9',
+    },
+    signal: AbortSignal.timeout(15000),
+  })
+
+  if (!initRes.ok) throw new Error(`Records fetch failed: ${initRes.status}`)
+  const initHtml = await initRes.text()
+
+  console.log(`📊 Records page initial HTML length: ${initHtml.length}`)
+
+  // 1단계: 디폴트(상위 24명, 규정이닝 기준) 파싱
+  const allByKey = new Map<string, KboPitcherRecord>()
+  const defaultRecords = parseRecordRows(initHtml)
+  for (const r of defaultRecords) {
+    allByKey.set(`${r.name}|${r.team}`, r)
+  }
+  console.log(`📊 Default page parsed: ${defaultRecords.length} records`)
+
+  // 2단계: 팀별로 ASP.NET 포스트백 시도하여 전체 투수 수집
+  const viewState = extractHiddenInput(initHtml, '__VIEWSTATE')
+  const viewStateGen = extractHiddenInput(initHtml, '__VIEWSTATEGENERATOR')
+  const eventValidation = extractHiddenInput(initHtml, '__EVENTVALIDATION')
+  const teamCtrl = findDdlTeamControlName(initHtml)
+  const seasonCtrl = findDdlControlName(initHtml, 'ddlSeason')
+  const seriesCtrl = findDdlControlName(initHtml, 'ddlSeries')
+  const sortCtrl = findDdlControlName(initHtml, 'ddlSort')
+
+  console.log(`📊 Form fields: viewState=${viewState ? 'OK' : 'MISSING'}, teamCtrl=${teamCtrl}, seasonCtrl=${seasonCtrl}, seriesCtrl=${seriesCtrl}`)
+
+  if (viewState && teamCtrl) {
+    for (const teamCode of KBO_TEAM_CODES) {
+      try {
+        const formData = new URLSearchParams()
+        formData.set('__EVENTTARGET', teamCtrl)
+        formData.set('__EVENTARGUMENT', '')
+        formData.set('__VIEWSTATE', viewState)
+        if (viewStateGen) formData.set('__VIEWSTATEGENERATOR', viewStateGen)
+        if (eventValidation) formData.set('__EVENTVALIDATION', eventValidation)
+        if (seasonCtrl && season) formData.set(seasonCtrl, season)
+        if (seriesCtrl) formData.set(seriesCtrl, '0,9,6')
+        if (sortCtrl) formData.set(sortCtrl, 'ERA_RT')
+        formData.set(teamCtrl, teamCode)
+
+        const teamRes = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'text/html,application/xhtml+xml',
+            'Accept-Language': 'ko-KR,ko;q=0.9',
+            'Referer': url,
+          },
+          body: formData.toString(),
+          signal: AbortSignal.timeout(15000),
+        })
+
+        if (!teamRes.ok) {
+          console.warn(`⚠️ Team ${teamCode}: HTTP ${teamRes.status}`)
+          continue
+        }
+
+        const teamHtml = await teamRes.text()
+        const teamRecords = parseRecordRows(teamHtml)
+
+        let added = 0
+        for (const r of teamRecords) {
+          const key = `${r.name}|${r.team}`
+          if (!allByKey.has(key)) {
+            allByKey.set(key, r)
+            added++
+          }
+        }
+        console.log(`📊 Team ${teamCode}: ${teamRecords.length} parsed (+${added} new)`)
+      } catch (e: any) {
+        console.warn(`⚠️ Team ${teamCode} fetch error: ${e.message}`)
+      }
+    }
+  } else {
+    console.warn(`⚠️ Cannot do team postback (missing viewState or teamCtrl) — only top-24 records collected`)
+  }
+
+  const records = Array.from(allByKey.values())
+  console.log(`📊 Total parsed ${records.length} pitcher records (across all teams)`)
   return records
 }
 
@@ -374,7 +474,7 @@ export async function GET(request: NextRequest) {
     // ─────────────────────────────────────────
     // Step 2: 투수 기록 동기화 (Records → kbo_pitcher_stats)
     // ─────────────────────────────────────────
-    const records = await scrapeKboPitcherRecords()
+    const records = await scrapeKboPitcherRecords(season)
 
     if (records.length > 0) {
       for (const record of records) {
