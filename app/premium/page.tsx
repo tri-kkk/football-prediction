@@ -676,7 +676,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
   const isPremiumUser = (session?.user as any)?.tier === 'premium'
   const { prediction, loading, error } = match
   const [timeLeft, setTimeLeft] = useState<string>('')
-  const [isFree, setIsFree] = useState(false) // 12시간 이내 = 무료회원 공개
+  const [isFree, setIsFree] = useState(false) // 2시간 이내 = 무료회원 공개
   const [isOpen, setIsOpen] = useState(false) // 24시간 이내 = 프리미엄 공개
   const [isGuestOpen, setIsGuestOpen] = useState(false) // 3시간 이내 = 비회원도 공개
   const [isExpanded, setIsExpanded] = useState(true) // 펼침/접기 상태
@@ -798,53 +798,44 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
       
       // 열람 기준:
       // - 프리미엄: 24시간 전
-      // - 무료회원: 12시간 전
-      // - 비회원: 3시간 전
-      
+      // - 무료회원: 2시간 전
+      // - 비회원: 1시간 전
+
       // 현재 유저 티어 확인
       const isFreeUser = session && !isPremiumUser
       const isGuest = !session
-      
+
       // 각 티어별 오픈 시간
       const premiumOpenHours = 24
-      const freeOpenHours = 12
+      const freeOpenHours = 2
       const guestOpenHours = 1
-      
+
       // 현재 유저의 오픈 기준 시간
       const userOpenHours = isPremiumUser ? premiumOpenHours : (isFreeUser ? freeOpenHours : guestOpenHours)
-      
-      if (hours < 3) {
-        // 3시간 이내 = 모든 유저 열람 가능
+
+      if (hours < 1) {
+        // 1시간 이내 = 모든 유저 열람 가능
         setIsOpen(true)
         setIsFree(true)
         setIsGuestOpen(true)
         if (language === 'ko') {
-          if (hours < 1) {
-            setTimeLeft(`${minutes}분 후 시작`)
-          } else {
-            setTimeLeft(`${hours}시간 ${minutes}분 후 시작`)
-          }
+          setTimeLeft(`${minutes}분 후 시작`)
         } else {
-          if (hours < 1) {
-            setTimeLeft(`${minutes}m to start`)
-          } else {
-            setTimeLeft(`${hours}h ${minutes}m to start`)
-          }
+          setTimeLeft(`${minutes}m to start`)
         }
-      } else if (hours < 12) {
-        // 3~12시간 = 무료회원 이상 열람 가능
+      } else if (hours < 2) {
+        // 1~2시간 = 무료회원 이상 열람 가능
         setIsOpen(true)
         setIsFree(true)
         setIsGuestOpen(false)
-        
+
         // 비회원에게는 오픈까지 남은 시간 표시
         if (isGuest) {
-          const openInHours = hours - guestOpenHours
-          const openInMinutes = minutes
+          const openInMinutes = (hours - guestOpenHours) * 60 + minutes
           if (language === 'ko') {
-            setTimeLeft(`${openInHours}시간 ${openInMinutes}분 후 오픈`)
+            setTimeLeft(`${openInMinutes}분 후 오픈`)
           } else {
-            setTimeLeft(`Opens in ${openInHours}h ${openInMinutes}m`)
+            setTimeLeft(`Opens in ${openInMinutes}m`)
           }
         } else {
           if (language === 'ko') {
@@ -854,11 +845,11 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
           }
         }
       } else if (hours < 24) {
-        // 12~24시간 = 프리미엄만 열람 가능
+        // 2~24시간 = 프리미엄만 열람 가능
         setIsOpen(true)
         setIsFree(false)
         setIsGuestOpen(false)
-        
+
         // 프리미엄 아닌 유저에게는 오픈까지 남은 시간 표시
         if (!isPremiumUser) {
           const openInHours = hours - userOpenHours
@@ -992,11 +983,11 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                   {language === 'ko' ? '첫 분석은 무료였어요!' : 'First analysis was free!'}
                 </div>
                 <div className="text-gray-300 text-sm mb-4">
-                  {language === 'ko' 
-                    ? '더 많은 분석을 보려면 무료 가입하세요' 
+                  {language === 'ko'
+                    ? '더 많은 분석을 보려면 무료 가입하세요'
                     : 'Sign up free to see more'}
                 </div>
-                <Link 
+                <Link
                   href="/login"
                   className="inline-block px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors"
                 >
@@ -1012,8 +1003,8 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
           <div className="space-y-3">
           {/* 요약 결과 - 항상 표시 */}
           <div className={`rounded-lg p-4 border ${
-            prediction.recommendation.pick === 'HOME' 
-              ? 'bg-blue-900/20 border-blue-500/30' 
+            prediction.recommendation.pick === 'HOME'
+              ? 'bg-blue-900/20 border-blue-500/30'
               : prediction.recommendation.pick === 'AWAY'
               ? 'bg-red-900/20 border-red-500/30'
               : prediction.recommendation.pick === 'DRAW'
@@ -1028,8 +1019,8 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                 <span className="text-white font-medium text-sm">{t.analysisResult}</span>
               </div>
               <div className={`px-3 py-1.5 rounded font-bold text-sm ${
-                prediction.recommendation.pick === 'HOME' 
-                  ? 'bg-blue-600 text-white' 
+                prediction.recommendation.pick === 'HOME'
+                  ? 'bg-blue-600 text-white'
                   : prediction.recommendation.pick === 'AWAY'
                   ? 'bg-red-600 text-white'
                   : prediction.recommendation.pick === 'DRAW'
@@ -1042,13 +1033,13 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                 {prediction.recommendation.pick === 'SKIP' && t.skip}
               </div>
             </div>
-            
+
             {/* 핵심 수치 */}
             <div className="grid grid-cols-3 gap-2 mb-3">
               <div className="bg-[#0f1623] rounded p-2 text-center">
                 <div className="text-[10px] text-gray-500 mb-1">{t.winRate}</div>
                 <div className={`text-base font-bold ${
-                  prediction.recommendation.pick === 'HOME' ? 'text-blue-400' 
+                  prediction.recommendation.pick === 'HOME' ? 'text-blue-400'
                   : prediction.recommendation.pick === 'AWAY' ? 'text-red-400'
                   : 'text-gray-400'
                 }`}>
@@ -1065,7 +1056,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                 </div>
               </div>
               <div className={`rounded p-2 text-center flex items-center justify-center ${
-                prediction.recommendation.grade === 'PICK' 
+                prediction.recommendation.grade === 'PICK'
                   ? 'bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50'
                   : prediction.recommendation.grade === 'GOOD'
                   ? 'bg-emerald-500/20 border border-emerald-500/50'
@@ -1074,7 +1065,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                 <GradeBadge grade={prediction.recommendation.grade} language={language} />
               </div>
             </div>
-            
+
             {/* 근거 */}
             {prediction.recommendation.reasons.length > 0 && (
               <div className="bg-[#0a0e17] rounded p-1.5">
@@ -1089,7 +1080,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                 </div>
               </div>
             )}
-            
+
             {/* 배당 */}
             {match.home_odds && match.draw_odds && match.away_odds && (
               <div className="bg-[#0a0e17] rounded p-3 mt-2">
@@ -1135,7 +1126,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               </>
             )}
           </button>
-          
+
           {/* 상세 정보 - 펼침 상태일 때만 */}
           {isExpanded && (
             <>
@@ -2761,7 +2752,7 @@ export default function PremiumPredictPage() {
                             <div className="space-y-2.5 md:space-y-3">
                               <div className="flex items-center justify-center gap-2">
                                 <span className="text-gray-600 text-sm md:text-base">⏰</span>
-                                <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '12시간 전 공개' : '12h before'}</span>
+                                <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '2시간 전 공개' : '2h before'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
                                 <span className="text-gray-600 text-sm md:text-base">📊</span>

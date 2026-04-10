@@ -3281,8 +3281,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                                 setLineupModalOpen(true)
                                               }}
                                               className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xs font-semibold transition-all border ${
-                                                darkMode 
-                                                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20' 
+                                                darkMode
+                                                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
                                                   : 'bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-100'
                                               }`}
                                             >

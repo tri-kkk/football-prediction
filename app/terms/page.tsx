@@ -123,7 +123,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
         </p>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
           <li><strong>{isKo ? '비회원:' : 'Guest:'}</strong> {isKo ? '경기 1시간 전 예측 열람 (제한적)' : 'View predictions 1 hour before match (limited)'}</li>
-          <li><strong>{isKo ? '무료회원:' : 'Free Member:'}</strong> {isKo ? '경기 3시간 전 예측 열람' : 'View predictions 3 hours before match'}</li>
+          <li><strong>{isKo ? '무료회원:' : 'Free Member:'}</strong> {isKo ? '경기 2시간 전 예측 열람' : 'View predictions 2 hours before match'}</li>
           <li><strong>{isKo ? '프리미엄:' : 'Premium:'}</strong> {isKo ? '이용권 구매를 통해 프리미엄 혜택 이용' : 'Access premium benefits through access pass purchase'}</li>
         </ul>
 
