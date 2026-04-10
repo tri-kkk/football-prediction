@@ -311,7 +311,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
   const pickedTeam = prediction.recommendedBet === 'HOME' ? homeTeamName : awayTeamName
   const isPick = prediction.grade === 'PICK'
 
-  const isLocked = isPick && !isPremium
+  const isLocked = !isPremium
   const leagueColor = LEAGUE_COLOR_HEX[match.league] || '#6b7280'
 
   return (
@@ -387,79 +387,85 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
           </div>
         )}
 
-        {/* 확률 바 */}
-        <ConfidenceBar
-          homeProb={prediction.homeWinProb}
-          awayProb={prediction.awayWinProb}
-          language={language}
-        />
-      </div>
-
-      {/* 예측 영역 */}
-      {isLocked ? (
-        <div className="mx-4 mb-3 relative rounded-xl overflow-hidden"
-          style={{ border: '1px solid rgba(245,158,11,0.12)', minHeight: '56px' }}>
-          <div className="px-3 py-2.5 blur-sm pointer-events-none select-none" aria-hidden="true"
-            style={{ background: 'rgba(6,78,59,0.12)' }}>
-            <div className="flex items-center gap-2">
-              <span className="text-emerald-400 font-bold text-sm">██████</span>
-              <span className="text-[10px] text-gray-500">{language === 'ko' ? '승' : 'Win'}</span>
-              <span className="text-emerald-300 font-black text-sm tabular-nums">●●%</span>
+        {/* 확률 바 + 예측 — PICK 잠금 시 통합 블러 */}
+        {isLocked ? (
+          <div className="relative rounded-xl overflow-hidden mt-1"
+            style={{ border: '1px solid rgba(245,158,11,0.12)' }}>
+            {/* 블러 배경 콘텐츠 */}
+            <div className="blur-md pointer-events-none select-none px-3 py-3" aria-hidden="true">
+              <ConfidenceBar homeProb={50} awayProb={50} language={language} />
+              <div className="flex items-center gap-2 mt-3" style={{ background: 'rgba(6,78,59,0.12)', padding: '8px 12px', borderRadius: '8px' }}>
+                <span className="text-emerald-400 font-bold text-sm">██████</span>
+                <span className="text-[10px] text-gray-500">{language === 'ko' ? '승' : 'Win'}</span>
+                <span className="text-emerald-300 font-black text-sm tabular-nums">●●%</span>
+              </div>
             </div>
-          </div>
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
-            style={{ background: 'rgba(10,10,15,0.94)' }}>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm">🔒</span>
-              <span className="text-[11px] font-bold" style={{ color: '#fbbf24' }}>
-                PICK {language === 'ko' ? '프리미엄 전용' : 'Premium Only'}
-              </span>
-            </div>
-            {isLoggedIn ? (
-              <button
-                onClick={() => router.push('/premium/pricing')}
-                className="px-4 py-1.5 rounded-full text-[11px] font-bold text-white transition-all active:scale-95"
-                style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}>
-                {language === 'ko' ? '업그레이드 →' : 'Upgrade →'}
-              </button>
-            ) : (
-              <div className="flex gap-1.5">
-                <button
-                  onClick={() => router.push('/login')}
-                  className="px-3 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95"
-                  style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #334155' }}>
-                  {language === 'ko' ? '로그인' : 'Sign in'}
-                </button>
+            {/* 잠금 오버레이 */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+              style={{ background: 'rgba(10,10,15,0.92)' }}>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm">🔒</span>
+                <span className="text-[12px] font-bold" style={{ color: '#fbbf24' }}>
+                  PICK {language === 'ko' ? '프리미엄 전용' : 'Premium Only'}
+                </span>
+              </div>
+              {isLoggedIn ? (
                 <button
                   onClick={() => router.push('/premium/pricing')}
-                  className="px-3 py-1.5 rounded-full text-[11px] font-bold text-white transition-all active:scale-95"
+                  className="px-5 py-1.5 rounded-full text-[11px] font-bold text-white transition-all active:scale-95"
                   style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}>
-                  {language === 'ko' ? '프리미엄 →' : 'Premium →'}
+                  {language === 'ko' ? '프리미엄 →' : 'Upgrade →'}
                 </button>
-              </div>
-            )}
+              ) : (
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => router.push('/login')}
+                    className="px-3 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95"
+                    style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #334155' }}>
+                    {language === 'ko' ? '로그인' : 'Sign in'}
+                  </button>
+                  <button
+                    onClick={() => router.push('/premium/pricing')}
+                    className="px-3 py-1.5 rounded-full text-[11px] font-bold text-white transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}>
+                    {language === 'ko' ? '프리미엄 →' : 'Premium →'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ) : prediction.recommendedBet !== 'NONE' ? (
-        <div className="mx-4 mb-3 px-3 py-2.5 rounded-xl"
-          style={{ background: 'rgba(6,78,59,0.12)', border: '1px solid rgba(16,185,129,0.08)' }}>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-            <span className="text-emerald-400 font-bold text-[13px]">{pickedTeam}</span>
-            <span className="text-[10px] text-gray-500">{language === 'ko' ? '승' : 'Win'}</span>
-            <span className="text-emerald-300 font-black text-[13px] ml-auto tabular-nums">{prediction.confidence}%</span>
+        ) : (
+          <ConfidenceBar
+            homeProb={prediction.homeWinProb}
+            awayProb={prediction.awayWinProb}
+            language={language}
+          />
+        )}
+      </div>
+
+      {/* 예측 영역 — 잠금이 아닌 경우만 */}
+      {!isLocked && (
+        prediction.recommendedBet !== 'NONE' ? (
+          <div className="mx-4 mb-3 px-3 py-2.5 rounded-xl"
+            style={{ background: 'rgba(6,78,59,0.12)', border: '1px solid rgba(16,185,129,0.08)' }}>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+              <span className="text-emerald-400 font-bold text-[13px]">{pickedTeam}</span>
+              <span className="text-[10px] text-gray-500">{language === 'ko' ? '승' : 'Win'}</span>
+              <span className="text-emerald-300 font-black text-[13px] ml-auto tabular-nums">{prediction.confidence}%</span>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-1 pl-3.5">
+              {language === 'ko' ? prediction.reason : prediction.reasonEn}
+            </p>
           </div>
-          <p className="text-[11px] text-gray-500 mt-1 pl-3.5">
-            {language === 'ko' ? prediction.reason : prediction.reasonEn}
-          </p>
-        </div>
-      ) : (
-        <div className="mx-4 mb-3 px-3 py-2.5 rounded-xl text-center"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <p className="text-xs text-gray-500">
-            {language === 'ko' ? prediction.reason : prediction.reasonEn}
-          </p>
-        </div>
+        ) : (
+          <div className="mx-4 mb-3 px-3 py-2.5 rounded-xl text-center"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <p className="text-xs text-gray-500">
+              {language === 'ko' ? prediction.reason : prediction.reasonEn}
+            </p>
+          </div>
+        )
       )}
 
       {/* 상세 분석 링크 */}
