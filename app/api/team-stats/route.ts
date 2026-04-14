@@ -243,17 +243,21 @@ export async function GET(request: NextRequest) {
     // 컵대회는 league_code 필터 스킵 (자국 리그 데이터로 fallback)
     const CUP_CODES = ['CL', 'EL', 'UECL', 'FAC', 'DFB', 'CDR', 'CDF', 'EFL']
     const isCup = leagueCode && CUP_CODES.includes(leagueCode)
-    if (leagueCode && !isCup) {
-      statsQuery = statsQuery.eq('league_code', leagueCode)
+    // 리그 코드 매핑 (API 요청 코드 → DB 코드)
+    const LEAGUE_CODE_MAP: Record<string, string> = { 'KL1': 'K1', 'JL1': 'J1' }
+    const dbLeagueCode = leagueCode ? (LEAGUE_CODE_MAP[leagueCode] || leagueCode) : null
+    if (dbLeagueCode && !isCup) {
+      statsQuery = statsQuery.eq('league_code', dbLeagueCode)
     }
-    
+
     const { data: allSeasonStats, error: statsError } = await statsQuery.limit(5)
-    
-    // 최적 시즌 선택: 20경기 이상인 가장 최신 시즌 우선, 없으면 경기수 가장 많은 시즌
+
+    // 최적 시즌 선택: 최신 시즌(1경기 이상) 우선, 시즌 초반에도 최신 데이터 표시
     let statsData: any = null
     if (allSeasonStats && allSeasonStats.length > 0) {
-      statsData = allSeasonStats.find((s: any) => (s.total_played || 0) >= 20)
-        || allSeasonStats.reduce((a: any, b: any) => (a.total_played || 0) >= (b.total_played || 0) ? a : b)
+      // 최신 시즌 중 경기가 1개 이상인 것을 우선 선택
+      statsData = allSeasonStats.find((s: any) => (s.total_played || 0) >= 1)
+        || allSeasonStats[0]
     }
     
     // 1-2. fg_team_stats에 없으면 API-Football에서 직접 가져오기

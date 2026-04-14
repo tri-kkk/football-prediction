@@ -36,9 +36,9 @@ const LEAGUES = [
   { id: 253, code: 'MLS', name: 'Major League Soccer', country: 'USA', region: 'americas' },
 ]
 
-// 수집할 시즌 (유럽: 2022-23 ~ 2025-26, 아시아: 2022 ~ 2025, 아메리카: 2022 ~ 2026)
+// 수집할 시즌 (유럽: 2022-23 ~ 2025-26, 아시아: 2022 ~ 2026, 아메리카: 2022 ~ 2026)
 const EUROPE_SEASONS = [2022, 2023, 2024, 2025]
-const ASIA_SEASONS = [2022, 2023, 2024, 2025]
+const ASIA_SEASONS = [2022, 2023, 2024, 2025, 2026]
 const AMERICAS_SEASONS = [2022, 2023, 2024, 2025, 2026]
 
 // ============================================
