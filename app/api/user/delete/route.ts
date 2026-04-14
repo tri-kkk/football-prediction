@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '이메일이 필요합니다.' }, { status: 400 })
     }
 
-    // 2️⃣ 유저 존재 확인 + trial_used, trial_started_at, promo_code 함께 조회
+    // 2️⃣ 유저 존재 확인 + 프리미엄 관련 정보 전체 조회
     const { data: userData, error: fetchError } = await supabase
       .from('users')
-      .select('id, promo_code, trial_used, trial_started_at')
+      .select('id, promo_code, trial_used, trial_started_at, tier, premium_expires_at')
       .eq('email', email.toLowerCase())
       .single()
 
@@ -40,8 +40,26 @@ export async function POST(request: NextRequest) {
     const userId = userData.id
     console.log('✅ 유저 찾음:', userId)
 
-    // 3️⃣ deleted_users에 기록 (재가입 시 프로모/체험판 중복 방지)
+    // 3️⃣ deleted_users에 기록 (재가입 시 프로모/체험판/프리미엄 중복 방지)
     const emailHash = hashEmail(email)
+
+    // 결제 횟수 조회
+    const { count: paymentCount } = await supabase
+      .from('payments')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'success')
+
+    // 마지막 결제일 조회
+    const { data: lastPayment } = await supabase
+      .from('payments')
+      .select('order_date')
+      .eq('user_id', userId)
+      .eq('status', 'success')
+      .order('order_date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
     const { error: deletedInsertError } = await supabase
       .from('deleted_users')
       .upsert({
@@ -49,13 +67,22 @@ export async function POST(request: NextRequest) {
         promo_code: userData.promo_code || null,
         trial_used: userData.trial_used || false,
         had_trial: userData.trial_started_at !== null,  // ✅ 체험판 받은 적 있으면 true
+        subscription_tier: userData.tier || 'free',     // ✅ 탈퇴 시점 tier 기록
+        last_premium_expiry: userData.premium_expires_at || null, // ✅ 프리미엄 만료일
+        total_payments: paymentCount || 0,              // ✅ 총 결제 횟수
+        last_payment_date: lastPayment?.order_date || null, // ✅ 마지막 결제일
         deleted_at: new Date().toISOString(),
       }, { onConflict: 'email_hash' })
 
     if (deletedInsertError) {
       console.warn('⚠️ deleted_users 저장 실패 (계속 진행):', deletedInsertError.message)
     } else {
-      console.log('✅ deleted_users 저장 완료 (trial_used:', userData.trial_used, ', had_trial:', userData.trial_started_at !== null, ')')
+      console.log('✅ deleted_users 저장 완료:', {
+        trial_used: userData.trial_used,
+        had_trial: userData.trial_started_at !== null,
+        tier: userData.tier,
+        payments: paymentCount,
+      })
     }
 
     // 4️⃣ 관련 테이블 삭제 (Foreign Key 순서)

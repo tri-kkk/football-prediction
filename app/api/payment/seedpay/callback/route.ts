@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
     const userEmail = sessionData.user_email
     const { data: userData, error: userSelectError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, created_at')
       .ilike('email', userEmail)
       .single()
 
@@ -101,6 +102,26 @@ export async function POST(request: NextRequest) {
           Location: `${baseUrl}/premium/pricing/result?status=failed&message=${encodeURIComponent('사용자 조회 실패')}`
         }
       })
+    }
+
+    // 5.5️⃣ 탈퇴 재가입 유저 결제 시 텔레그램 경고 알림
+    const emailHash = crypto.createHash('sha256').update(userEmail.toLowerCase()).digest('hex')
+    const { data: deletedRecord } = await supabase
+      .from('deleted_users')
+      .select('deleted_at, subscription_tier, total_payments')
+      .eq('email_hash', emailHash)
+      .maybeSingle()
+
+    if (deletedRecord) {
+      const alertMsg =
+        `⚠️ <b>탈퇴 재가입 유저 결제!</b>\n\n` +
+        `👤 이메일: ${userEmail}\n` +
+        `📅 이전 탈퇴일: ${deletedRecord.deleted_at}\n` +
+        `💎 이전 티어: ${deletedRecord.subscription_tier || 'unknown'}\n` +
+        `💰 이전 결제 횟수: ${deletedRecord.total_payments || 0}회\n` +
+        `🆔 주문번호: ${ordNo}`
+      await sendTelegramNotification(alertMsg)
+      console.log('⚠️ 탈퇴 재가입 유저 결제 감지:', userEmail)
     }
 
     // 6️⃣ 결제 정보 저장

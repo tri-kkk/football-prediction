@@ -148,9 +148,20 @@ const handler = NextAuth({
         const emailHash = hashEmail(user.email)
         const { data: deletedUser } = await supabase
           .from('deleted_users')
-          .select('promo_code')
+          .select('promo_code, deleted_at, subscription_tier')
           .eq('email_hash', emailHash)
           .single()
+
+        // ✅ 재가입 쿨다운: 탈퇴 후 7일 이내 재가입 차단
+        if (deletedUser?.deleted_at) {
+          const deletedAt = new Date(deletedUser.deleted_at)
+          const cooldownEnd = new Date(deletedAt.getTime() + 7 * 24 * 60 * 60 * 1000)
+          if (new Date() < cooldownEnd) {
+            const daysLeft = Math.ceil((cooldownEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+            console.log(`🚫 재가입 쿨다운 중: ${user.email}, ${daysLeft}일 남음`)
+            return `/login?error=cooldown&days=${daysLeft}`
+          }
+        }
 
         const hadPromo = deletedUser?.promo_code ? true : false
         const canGetPromo = isPromoPeriod && !hadPromo

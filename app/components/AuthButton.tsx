@@ -543,9 +543,15 @@ function DeleteAccountModal({
             </li>
             <li className="flex items-start gap-2">
               <span>•</span>
-              {language === 'ko' 
-                ? '재가입 시 프로모션 혜택이 적용되지 않습니다.' 
+              {language === 'ko'
+                ? '재가입 시 프로모션 혜택이 적용되지 않습니다.'
                 : 'Promo benefits will not apply on re-signup.'}
+            </li>
+            <li className="flex items-start gap-2">
+              <span>•</span>
+              {language === 'ko'
+                ? '탈퇴 후 7일간 재가입이 제한됩니다.'
+                : 'Re-registration is restricted for 7 days after deletion.'}
             </li>
           </ul>
         </div>

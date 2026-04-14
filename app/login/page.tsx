@@ -15,16 +15,27 @@ export default function LoginPage() {
   // 🔗 레퍼럴 코드 파라미터 처리 (URL 또는 sessionStorage)
   const [refCode, setRefCode] = useState<string | null>(null)
 
+  // 🚫 재가입 쿨다운 에러 처리
+  const [cooldownDays, setCooldownDays] = useState<number | null>(null)
+
   useEffect(() => {
     console.log('🔍 레퍼럴 체크 시작')
-    
+
     if (typeof window === 'undefined') return
-    
+
     // 1. URL 파라미터 우선
     const urlParams = new URLSearchParams(window.location.search)
     const urlRef = urlParams.get('ref')
     console.log('🔍 URL ref:', urlRef)
-    
+
+    // 🚫 쿨다운 에러 체크
+    const errorType = urlParams.get('error')
+    const days = urlParams.get('days')
+    if (errorType === 'cooldown' && days) {
+      setCooldownDays(parseInt(days))
+      console.log('🚫 재가입 쿨다운:', days, '일 남음')
+    }
+
     if (urlRef) {
       const code = urlRef.toUpperCase()
       sessionStorage.setItem('referral_code', code)
@@ -32,7 +43,7 @@ export default function LoginPage() {
       console.log('📌 레퍼럴 코드 저장 (URL):', code)
       return
     }
-    
+
     // 2. sessionStorage에서 가져오기
     const storedRef = sessionStorage.getItem('referral_code')
     console.log('🔍 Storage ref:', storedRef)
@@ -79,7 +90,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-center justify-center px-4 py-10 overflow-auto">
+    <div className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-start justify-center px-4 py-10 overflow-y-auto">
       {/* 그라데이션 배경 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-green-500/10 rounded-full blur-3xl" />
@@ -110,7 +121,7 @@ export default function LoginPage() {
         .animate-pulse-glow { animation: pulse-glow 5s ease-in-out infinite; }
       `}</style>
 
-      <div className="w-full relative z-10" style={{ maxWidth: '420px' }}>
+      <div className="w-full relative z-10 my-auto" style={{ maxWidth: '420px' }}>
         {/* 로고 */}
         <div className="text-center mb-6">
           <Link href="/" className="inline-block">
@@ -154,6 +165,27 @@ export default function LoginPage() {
             {language === 'ko' ? '6대 리그 + KBO · MLB · NPB 데이터 기반' : '6 Major Leagues + KBO · MLB · NPB Data-Driven'}
           </p>
         </div>
+
+        {/* 🚫 재가입 쿨다운 안내 */}
+        {cooldownDays !== null && (
+          <div className="border border-red-500/30 rounded-2xl p-4 mb-4" style={{ background: 'rgba(239,68,68,0.08)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-xl">⏳</span>
+              </div>
+              <div>
+                <p className="text-red-400 text-sm font-bold">
+                  {language === 'ko' ? '재가입 대기 기간입니다' : 'Re-registration Cooldown'}
+                </p>
+                <p className="text-gray-400 text-xs mt-0.5">
+                  {language === 'ko'
+                    ? `회원 탈퇴 후 ${cooldownDays}일 후에 재가입이 가능합니다.`
+                    : `You can re-register in ${cooldownDays} day(s) after account deletion.`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 🔗 레퍼럴 배너 (ref 코드가 있을 때만) */}
         {refCode && (
@@ -202,7 +234,7 @@ export default function LoginPage() {
             {/* Google 로그인 */}
             <button
               onClick={() => handleSignIn('google')}
-              disabled={isLoading !== null}
+              disabled={isLoading !== null || cooldownDays !== null}
               className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 active:scale-[0.98] text-gray-800 font-semibold py-4 px-6 rounded-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-white/10"
             >
               {isLoading === 'google' ? (
@@ -222,7 +254,7 @@ export default function LoginPage() {
             {NAVER_ENABLED && (
               <button
                 onClick={() => handleSignIn('naver')}
-                disabled={isLoading !== null}
+                disabled={isLoading !== null || cooldownDays !== null}
                 className="w-full flex items-center justify-center gap-3 bg-[#03C75A] hover:bg-[#02b351] active:scale-[0.98] text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-500/20"
               >
                 {isLoading === 'naver' ? (

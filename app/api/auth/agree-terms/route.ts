@@ -105,15 +105,18 @@ export async function POST(request: NextRequest) {
     const emailHash = crypto.createHash('sha256').update(emailLower).digest('hex')
     const { data: deletedUser } = await supabase
       .from('deleted_users')
-      .select('trial_used, had_trial, promo_code')  // ✅ had_trial 추가
+      .select('trial_used, had_trial, promo_code, subscription_tier, total_payments')  // ✅ 프리미엄 이력 전체 확인
       .eq('email_hash', emailHash)
       .limit(1)
       .maybeSingle()
 
     const hasDeleteHistory = deletedUser !== null
-    // ✅ trial_used OR had_trial 둘 중 하나라도 true면 체험판 받은 것으로 처리
+    // ✅ 이전에 프리미엄을 어떤 형태로든 받은 적 있으면 차단
+    // trial_used, had_trial, subscription_tier=premium, promo_code 존재, 결제 이력 모두 체크
     const hadTrial = deletedUser?.trial_used === true || deletedUser?.had_trial === true
-    console.log('🔍 탈퇴 이력:', { hasDeleteHistory, hadTrial, deletedUser })
+    const hadPremium = deletedUser?.subscription_tier === 'premium' || !!deletedUser?.promo_code || (deletedUser?.total_payments ?? 0) > 0
+    const shouldBlockTrial = hadTrial || hadPremium
+    console.log('🔍 탈퇴 이력:', { hasDeleteHistory, hadTrial, hadPremium, shouldBlockTrial, deletedUser })
 
     let tier = 'premium'
     let premiumExpiresAt: string
@@ -128,18 +131,24 @@ export async function POST(request: NextRequest) {
       trialStartedAt = null
       trialUsed = false // 프로모 유저는 trial 소진 안 함
       console.log('🎉 프로모션 적용')
-    } else if (hasDeleteHistory && hadTrial) {
-      // ✅ 재가입 + 체험판 받은 적 있으면 → free로 시작
+    } else if (hasDeleteHistory && shouldBlockTrial) {
+      // ✅ 재가입 + 이전에 프리미엄 혜택을 어떤 형태로든 받은 적 있으면 → free로 시작
+      // (체험판, 프로모션, 유료 결제 모두 포함)
       tier = 'free'
       premiumExpiresAt = null as any
       trialStartedAt = null
       trialUsed = false
-      console.log('🚫 탈퇴 이력 + trial 사용됨 → free 시작')
-    } else {
-      // ✅ 일반 신규 가입 OR 탈퇴 이력 있지만 trial 미사용 → 48시간 체험판
+      console.log('🚫 탈퇴 이력 + 프리미엄 사용 이력 → free 시작 (trial:', hadTrial, ', premium:', hadPremium, ')')
+    } else if (hasDeleteHistory && !shouldBlockTrial) {
+      // ✅ 탈퇴 이력은 있지만 프리미엄 혜택을 전혀 못 받은 경우 → 48시간 체험판 허용
       const trialEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000)
       premiumExpiresAt = trialEnd.toISOString()
-      console.log('🎁 48시간 체험판 적용, 만료:', trialEnd.toISOString())
+      console.log('🎁 탈퇴 재가입 + 프리미엄 미사용 → 48시간 체험판 적용')
+    } else {
+      // ✅ 완전 신규 가입 (탈퇴 이력 없음) → 48시간 체험판
+      const trialEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+      premiumExpiresAt = trialEnd.toISOString()
+      console.log('🎁 신규 가입 48시간 체험판 적용, 만료:', trialEnd.toISOString())
     }
 
     // ✅ users 테이블에 INSERT
