@@ -44,10 +44,24 @@ export default function AuthButton() {
     const userName = session.user.name || userEmail.split('@')[0]
     const premiumExpiresAt = (session.user as any).premium_expires_at
     const promoCode = (session.user as any).promo_code
-    
+
     return (
       <>
-        <div className="relative z-[100]" ref={dropdownRef}>
+        <div className="relative z-[100] flex items-center gap-1.5 md:gap-2" ref={dropdownRef}>
+          {/* 🔥 무료 회원 전용: 프리미엄 구독 버튼 (헤더에 바로 노출) */}
+          {!isPremium && (
+            <Link
+              href="/premium/pricing"
+              className="flex items-center gap-1 px-2.5 md:px-3.5 py-1.5 md:py-2 rounded-lg font-bold text-[11px] md:text-xs text-white transition-all shadow-md hover:shadow-lg"
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+              }}
+            >
+              <span className="hidden md:inline">💎</span>
+              <span>{language === 'ko' ? '프리미엄 구독' : 'Go Premium'}</span>
+            </Link>
+          )}
+
           {/* 프로필 버튼 - 모바일 최적화 */}
           <button
             onClick={() => setShowDropdown(!showDropdown)}
@@ -55,18 +69,18 @@ export default function AuthButton() {
           >
             {/* 티어 배지 */}
             <span className={`px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-bold rounded ${
-              isPremium 
-                ? 'bg-yellow-500 text-black' 
+              isPremium
+                ? 'bg-yellow-500 text-black'
                 : 'bg-gray-600 text-gray-200'
             }`}>
               {isPremium ? 'PRO' : 'FREE'}
             </span>
-            
+
             {/* 화살표 */}
-            <svg 
+            <svg
               className={`w-3 h-3 md:w-4 md:h-4 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
-              fill="none" 
-              stroke="currentColor" 
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -170,12 +184,14 @@ export default function AuthButton() {
 
   // 비로그인 상태 - 모바일 최적화
   return (
-    <Link
-      href="/login"
-      className="flex items-center justify-center px-2.5 md:px-4 py-1 md:py-1.5 text-xs md:text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium whitespace-nowrap"
-    >
-      {language === 'ko' ? '로그인' : 'Login'}
-    </Link>
+    <div className="flex items-center gap-1.5 md:gap-2">
+      <Link
+        href="/login"
+        className="flex items-center justify-center px-2.5 md:px-4 py-1.5 md:py-2 text-xs md:text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium whitespace-nowrap"
+      >
+        {language === 'ko' ? '로그인' : 'Login'}
+      </Link>
+    </div>
   )
 }
 
