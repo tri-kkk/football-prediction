@@ -7,7 +7,7 @@ export default function LanguageToggle() {
   const { language, setLanguage } = useLanguage()
 
   return (
-    <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-0.5">
+    <div className="hidden md:flex items-center gap-1 bg-gray-800/50 rounded-lg p-0.5">
       <button
         onClick={() => setLanguage('ko')}
         className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${

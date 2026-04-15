@@ -47,49 +47,49 @@ export default function AuthButton() {
 
     return (
       <>
-        <div className="relative z-[100] flex items-center gap-1.5 md:gap-2" ref={dropdownRef}>
+        <div className="flex items-center gap-1.5 md:gap-2" ref={dropdownRef}>
           {/* 🔥 무료 회원 전용: 프리미엄 구독 버튼 (헤더에 바로 노출) */}
           {!isPremium && (
             <Link
               href="/premium/pricing"
-              className="flex items-center gap-1 px-2.5 md:px-3.5 py-1.5 md:py-2 rounded-lg font-bold text-[11px] md:text-xs text-white transition-all shadow-md hover:shadow-lg"
+              className="hidden md:flex items-center gap-1 px-3.5 py-2 rounded-lg font-bold text-xs text-white transition-all shadow-md hover:shadow-lg whitespace-nowrap"
               style={{
                 background: 'linear-gradient(135deg, #f59e0b, #f97316)',
               }}
             >
-              <span className="hidden md:inline">💎</span>
-              <span>{language === 'ko' ? '프리미엄 구독' : 'Go Premium'}</span>
+              💎 {language === 'ko' ? '프리미엄 구독' : 'Go Premium'}
             </Link>
           )}
 
-          {/* 프로필 버튼 - 모바일 최적화 */}
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            {/* 티어 배지 */}
-            <span className={`px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-bold rounded ${
-              isPremium
-                ? 'bg-yellow-500 text-black'
-                : 'bg-gray-600 text-gray-200'
-            }`}>
-              {isPremium ? 'PRO' : 'FREE'}
-            </span>
-
-            {/* 화살표 */}
-            <svg
-              className={`w-3 h-3 md:w-4 md:h-4 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          {/* 프로필 버튼 + 드롭다운 래퍼 */}
+          <div className="relative z-[100]">
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+              {/* 티어 배지 */}
+              <span className={`px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-bold rounded ${
+                isPremium
+                  ? 'bg-yellow-500 text-black'
+                  : 'bg-gray-600 text-gray-200'
+              }`}>
+                {isPremium ? 'PRO' : 'FREE'}
+              </span>
 
-          {/* 드롭다운 메뉴 */}
-          {showDropdown && (
-            <div className="absolute right-0 mt-2 w-44 md:w-48 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-xl z-[100] overflow-hidden">
+              {/* 화살표 */}
+              <svg
+                className={`w-3 h-3 md:w-4 md:h-4 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* 드롭다운 메뉴 */}
+            {showDropdown && (
+              <div className="absolute right-0 top-full mt-2 w-44 md:w-48 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-xl z-[100] overflow-hidden">
               {/* 유저 정보 */}
               <div className="px-3 md:px-4 py-2.5 md:py-3 border-b border-gray-700">
                 <div className="text-white text-xs md:text-sm font-medium truncate">{userName}</div>
@@ -155,8 +155,9 @@ export default function AuthButton() {
                   {language === 'ko' ? '회원 탈퇴' : 'Delete Account'}
                 </button>
               </div>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 구독 관리 모달 */}

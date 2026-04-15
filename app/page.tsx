@@ -2497,53 +2497,58 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             </div>
 
         {/* 🔥 트렌드 PICK CTA 배너 (모바일 + PC 통합) */}
-        <Link 
-          href={session ? "/premium" : "/login?callbackUrl=/premium"}
-          className="block mt-2 mb-3 active:scale-[0.99] transition-transform"
-        >
-          <div className="relative rounded-2xl overflow-hidden" style={{background: 'linear-gradient(135deg, #0c1222 0%, #162033 40%, #1a2740 100%)'}}>
-            <div className="absolute -top-6 -right-6 w-28 h-28 lg:w-40 lg:h-40 bg-orange-500/20 rounded-full blur-2xl" />
-            
-            <div className="relative flex items-center">
-              {/* 좌측: 텍스트 */}
-              <div className="flex-1 px-4 py-3.5 lg:px-6 lg:py-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-white font-black text-[18px] lg:text-[22px] leading-none tracking-tight">TREND ANALYSIS</span>
-                  <div className="flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/25 rounded px-1.5 py-[2px]">
-                    <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
-                    <span className="text-emerald-400 text-[8px] lg:text-[9px] font-bold tracking-wider">LIVE</span>
+        {/* 무료 회원 & 비로그인: 구독 유도 배너 (심플) */}
+        {!isPremium ? (
+          <Link
+            href={session ? "/premium/pricing" : "/login?callbackUrl=/premium/pricing"}
+            className="block mt-2 mb-3 active:scale-[0.99] transition-transform"
+          >
+            <div className="flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4 rounded-2xl border border-yellow-500/20 bg-[#1a1a1a]">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl lg:text-3xl">💎</span>
+                <div>
+                  <div className="text-white font-bold text-[13px] lg:text-[16px]">
+                    {currentLanguage === 'ko' ? '프리미엄 구독하기' : 'Go Premium'}
                   </div>
-                </div>
-                <div className="flex items-center gap-1.5 mb-3">
-                  <span className="text-white font-extrabold text-[13px] lg:text-[15px] leading-none">10,000+</span>
-                  <span className="text-gray-400 text-[11px] lg:text-[13px] leading-none">{currentLanguage === 'ko' ? '경기 데이터 트렌드 분석' : 'Match Data Trend Analysis'}</span>
-                </div>
-                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg px-3.5 py-1.5 lg:px-5 lg:py-2 shadow-lg shadow-orange-500/25">
-                  <span className="text-white font-bold text-[11px] lg:text-[13px]">{currentLanguage === 'ko' ? '오늘의 트렌드 확인' : "Today's Trends"}</span>
-                  <svg className="w-3 h-3 lg:w-4 lg:h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                  <div className="text-gray-400 text-[11px] lg:text-[13px]">
+                    {currentLanguage === 'ko' ? 'AI 경기 분석 · 매일 PICK 제공 · 커피 한 잔 가격으로' : 'AI Match Analysis · Daily PICKs · Less than a coffee'}
+                  </div>
                 </div>
               </div>
+              <svg className="w-5 h-5 lg:w-6 lg:h-6 text-yellow-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+            </div>
+          </Link>
+        ) : (
+          /* 프리미엄 회원: 기존 트렌드 분석 배너 */
+          <Link
+            href="/premium"
+            className="block mt-2 mb-3 active:scale-[0.99] transition-transform"
+          >
+            <div className="relative rounded-2xl overflow-hidden" style={{background: 'linear-gradient(135deg, #0c1222 0%, #162033 40%, #1a2740 100%)'}}>
+              <div className="absolute -top-6 -right-6 w-28 h-28 lg:w-40 lg:h-40 bg-orange-500/20 rounded-full blur-2xl" />
 
-              {/* 우측: 블러된 픽 카드 */}
-              {!isPremium && (
-                <div className="w-[110px] lg:w-[220px] relative flex flex-col lg:flex-row justify-center gap-1 lg:gap-2 pr-3 lg:pr-5 py-3">
-                  <div className="absolute inset-0 z-10 backdrop-blur-[2px]" />
-                  {(premiumPreview.length > 0 ? premiumPreview.slice(0, 3) : [{home_team:'???', away_team:'???'},{home_team:'???', away_team:'???'},{home_team:'???', away_team:'???'}]).map((pick, idx) => (
-                    <div key={idx} className="flex-1 min-w-0 bg-white/[0.07] border border-white/[0.08] rounded px-1.5 py-1 lg:px-2.5 lg:py-2">
-                      <div className="text-white/40 text-[8px] lg:text-[10px] font-medium truncate">{pick.home_team}</div>
-                      <div className="text-white/40 text-[8px] lg:text-[10px] font-medium truncate">{pick.away_team}</div>
-                    </div>
-                  ))}
-                  <div className="absolute inset-0 z-20 flex items-center justify-center">
-                    <div className="bg-black/50 backdrop-blur-sm rounded-full w-7 h-7 lg:w-9 lg:h-9 flex items-center justify-center border border-orange-500/30">
-                      <svg className="w-3 h-3 lg:w-4 lg:h-4 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+              <div className="relative flex items-center">
+                <div className="flex-1 px-4 py-3.5 lg:px-6 lg:py-4">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-white font-black text-[18px] lg:text-[22px] leading-none tracking-tight">TREND ANALYSIS</span>
+                    <div className="flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/25 rounded px-1.5 py-[2px]">
+                      <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
+                      <span className="text-emerald-400 text-[8px] lg:text-[9px] font-bold tracking-wider">LIVE</span>
                     </div>
                   </div>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className="text-white font-extrabold text-[13px] lg:text-[15px] leading-none">10,000+</span>
+                    <span className="text-gray-400 text-[11px] lg:text-[13px] leading-none">{currentLanguage === 'ko' ? '경기 데이터 트렌드 분석' : 'Match Data Trend Analysis'}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg px-3.5 py-1.5 lg:px-5 lg:py-2 shadow-lg shadow-orange-500/25">
+                    <span className="text-white font-bold text-[11px] lg:text-[13px]">{currentLanguage === 'ko' ? '오늘의 트렌드 확인' : "Today's Trends"}</span>
+                    <svg className="w-3 h-3 lg:w-4 lg:h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        )}
 
 
         {/* 🎁 48시간 무료 체험 배너 - 비로그인 유저만 */}
