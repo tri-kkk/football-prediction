@@ -347,8 +347,8 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
             <TeamLogo src={match.awayLogo} team={match.awayTeam} size="lg" />
             <div className="text-center">
               <p className="font-bold text-white text-[13px] leading-tight truncate max-w-[100px]">{awayTeamName}</p>
-              <span className="inline-block text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>
+              <span className="inline-block text-[10px] font-bold mt-1.5 px-2.5 py-[3px] rounded-full"
+                style={{ background: '#ef4444', color: '#ffffff' }}>
                 {language === 'ko' ? '원정' : 'Away'}
               </span>
             </div>
@@ -364,8 +364,8 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
             <TeamLogo src={match.homeLogo} team={match.homeTeam} size="lg" />
             <div className="text-center">
               <p className="font-bold text-white text-[13px] leading-tight truncate max-w-[100px]">{homeTeamName}</p>
-              <span className="inline-block text-[10px] font-semibold mt-1 px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(16,185,129,0.1)', color: '#34d399' }}>
+              <span className="inline-block text-[10px] font-bold mt-1.5 px-2.5 py-[3px] rounded-full"
+                style={{ background: '#3b82f6', color: '#ffffff' }}>
                 {language === 'ko' ? '홈' : 'Home'}
               </span>
             </div>

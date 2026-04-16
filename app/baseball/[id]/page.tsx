@@ -960,7 +960,10 @@ export default function BaseballDetailPage() {
                   <p className="font-bold text-white text-sm leading-snug">
                     {language === 'ko' ? match.away.teamKo : match.away.team}
                   </p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">{t('원정', 'Away')}</p>
+                  <span className="inline-block text-[10px] font-bold mt-1 px-2.5 py-[3px] rounded-full"
+                    style={{ background: '#ef4444', color: '#ffffff' }}>
+                    {t('원정', 'Away')}
+                  </span>
                 </div>
                 {(isFinished || isLive) && (
                   <span className={`text-4xl font-black tabular-nums ${
@@ -1013,7 +1016,10 @@ export default function BaseballDetailPage() {
                   <p className="font-bold text-white text-sm leading-snug">
                     {language === 'ko' ? match.home.teamKo : match.home.team}
                   </p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">{t('홈', 'Home')}</p>
+                  <span className="inline-block text-[10px] font-bold mt-1 px-2.5 py-[3px] rounded-full"
+                    style={{ background: '#3b82f6', color: '#ffffff' }}>
+                    {t('홈', 'Home')}
+                  </span>
                 </div>
                 {(isFinished || isLive) && (
                   <span className={`text-4xl font-black tabular-nums ${

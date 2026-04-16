@@ -296,7 +296,7 @@ export default function BaseballAIPrediction({
             style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
           <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>{t('AI 전력 분석', 'AI Analysis')}</span>
         </div>
-        {pred && (
+        {pred && (dq?.hasPitcherData || league === 'MLB') ? (
           <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full text-white tracking-wider"
             style={{
               background: pred.grade === 'PICK' ? '#ef4444' : pred.grade === 'GOOD' ? '#2563eb' : '#475569',
@@ -304,7 +304,12 @@ export default function BaseballAIPrediction({
             }}>
             {pred.grade}
           </span>
-        )}
+        ) : pred ? (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: '#334155', color: '#94a3b8' }}>
+            {t('분석 중', 'Updating')}
+          </span>
+        ) : null}
       </div>
 
       {loading && !pred && (
@@ -323,8 +328,74 @@ export default function BaseballAIPrediction({
       {pred && (
         <div>
 
+          {/* 🔔 투수 미발표 안내 (KBO/NPB만) */}
+          {dq && !dq.hasPitcherData && league && league !== 'MLB' && (
+            <div className="mx-4 mt-3 mb-1 px-4 py-3 rounded-lg text-center"
+              style={{ background: '#1e293b', border: '1px solid #334155' }}>
+              <p className="text-[13px] font-bold" style={{ color: '#e2e8f0' }}>
+                {t('선발투수 데이터 반영 중', 'Calculating pitcher matchup')}
+              </p>
+              <p className="text-[11px] mt-1" style={{ color: '#64748b' }}>
+                {t(
+                  league === 'KBO' ? '승률 업데이트 오전 11시 / 오후 3시' :
+                  league === 'NPB' ? '승률 업데이트 오전 11시 / 오후 2시' :
+                  '업데이트 예정',
+                  league === 'KBO' ? 'Win rate update 11 AM / 3 PM KST' :
+                  league === 'NPB' ? 'Win rate update 11 AM / 2 PM KST' :
+                  'Update scheduled'
+                )}
+              </p>
+            </div>
+          )}
+
           {/* 승부 지표 */}
-          <Section color="#3b82f6" label={t('승부 지표', 'Win Probability')}>
+          <Section color="#3b82f6" label={t('승부 지표', 'Win Probability')}
+            badge={dq && !dq.hasPitcherData && league !== 'MLB' ? (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                style={{ background: '#f59e0b20', color: '#fbbf24', border: '1px solid #f59e0b40' }}>
+                {t('투수 미반영', 'No Pitcher')}
+              </span>
+            ) : undefined}>
+            {/* 투수 미반영 시 블러 오버레이 (KBO/NPB) */}
+            {dq && !dq.hasPitcherData && league !== 'MLB' ? (
+              <div className="relative">
+                {/* 블러 처리된 게이지 */}
+                <div style={{ filter: 'blur(8px)', opacity: 0.4, pointerEvents: 'none' }}>
+                  <div className="px-4 pt-5 pb-4 flex items-center justify-between">
+                    <div className="flex-1 flex flex-col items-center">
+                      <div className="relative">
+                        <SemiGauge pct={pred.awayWinProb} color="#ef4444" />
+                        <div className="absolute inset-0 flex items-center justify-center" style={{ paddingTop: '14px' }}>
+                          <span className="text-2xl font-black text-white">{pred.awayWinProb}%</span>
+                        </div>
+                      </div>
+                      <p className="text-sm font-bold mt-1" style={{ color: '#e2e8f0' }}>{AN}</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-3 px-3">
+                      <span className="text-sm font-black" style={{ color: '#334155' }}>VS</span>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center">
+                      <div className="relative">
+                        <SemiGauge pct={pred.homeWinProb} color="#3b82f6" />
+                        <div className="absolute inset-0 flex items-center justify-center" style={{ paddingTop: '14px' }}>
+                          <span className="text-2xl font-black text-white">{pred.homeWinProb}%</span>
+                        </div>
+                      </div>
+                      <p className="text-sm font-bold mt-1" style={{ color: '#e2e8f0' }}>{HN}</p>
+                    </div>
+                  </div>
+                </div>
+                {/* 오버레이 메시지 */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center px-4">
+                    <p className="text-[14px] font-bold" style={{ color: '#e2e8f0' }}>
+                      {t('선발투수 데이터 반영 후 공개', 'Available after pitcher data update')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
             <div className="px-4 pt-5 pb-4 flex items-center justify-between">
               {/* 원정 */}
               <div className="flex-1 flex flex-col items-center">
@@ -372,37 +443,69 @@ export default function BaseballAIPrediction({
                 </div>
               </div>
             )}
+              </>
+            )}
           </Section>
 
           {/* 총점 지표 - 배당 기준선 있을 때만 표시 */}
           {ouLine !== null && (
           <Section color="#f97316" label={t('총점 지표', 'Over/Under')}
-            badge={<span className="text-[10px]" style={{ color: '#64748b' }}>{t('기준', 'Line')} {ouLine}</span>}>
-            <div className="p-3">
-              <div className="flex items-center justify-center mb-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-                  style={{ background: '#f9731618', border: '1px solid #f9731650' }}>
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#f97316' }} />
-                  <span className="text-xs font-bold" style={{ color: '#f97316' }}>{t('기준', 'Line')} {ouLine}</span>
+            badge={dq && !dq.hasPitcherData && league !== 'MLB' ? (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                style={{ background: '#f59e0b20', color: '#fbbf24', border: '1px solid #f59e0b40' }}>
+                {t('투수 미반영', 'No Pitcher')}
+              </span>
+            ) : (
+              <span className="text-[10px]" style={{ color: '#64748b' }}>{t('기준', 'Line')} {ouLine}</span>
+            )}>
+            {dq && !dq.hasPitcherData && league !== 'MLB' ? (
+              <div className="relative">
+                <div style={{ filter: 'blur(8px)', opacity: 0.4, pointerEvents: 'none' }}>
+                  <div className="p-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      {['OVER', 'UNDER'].map(label => (
+                        <div key={label} className="rounded-xl py-4 text-center"
+                          style={{ background: '#131920', border: '1px solid #243044' }}>
+                          <p className="text-xs font-semibold mb-1" style={{ color: '#64748b' }}>{label}</p>
+                          <p className="text-3xl font-black" style={{ color: '#475569' }}>50%</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <p className="text-[14px] font-bold" style={{ color: '#e2e8f0' }}>
+                    {t('선발투수 데이터 반영 후 공개', 'Available after pitcher data update')}
+                  </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: 'OVER',  prob: pred.overProb,  active: pred.overProb >= pred.underProb, c: '#f97316' },
-                  { label: 'UNDER', prob: pred.underProb, active: pred.underProb > pred.overProb,  c: '#8b5cf6' },
-                ].map(({ label, prob, active, c }) => (
-                  <div key={label} className="rounded-xl py-4 text-center relative overflow-hidden"
-                    style={{ background: active ? c + '12' : '#131920', border: `1px solid ${active ? c + '50' : '#243044'}` }}>
-                    {active && (
-                      <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: c + '25', color: c }}>{t('우세', 'Favored')}</span>
-                    )}
-                    <p className="text-xs font-semibold mb-1" style={{ color: active ? c : '#64748b' }}>{label}</p>
-                    <p className="text-3xl font-black" style={{ color: active ? c : '#475569' }}>{prob}%</p>
+            ) : (
+              <div className="p-3">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                    style={{ background: '#f9731618', border: '1px solid #f9731650' }}>
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#f97316' }} />
+                    <span className="text-xs font-bold" style={{ color: '#f97316' }}>{t('기준', 'Line')} {ouLine}</span>
                   </div>
-                ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'OVER',  prob: pred.overProb,  active: pred.overProb >= pred.underProb, c: '#f97316' },
+                    { label: 'UNDER', prob: pred.underProb, active: pred.underProb > pred.overProb,  c: '#8b5cf6' },
+                  ].map(({ label, prob, active, c }) => (
+                    <div key={label} className="rounded-xl py-4 text-center relative overflow-hidden"
+                      style={{ background: active ? c + '12' : '#131920', border: `1px solid ${active ? c + '50' : '#243044'}` }}>
+                      {active && (
+                        <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                          style={{ background: c + '25', color: c }}>{t('우세', 'Favored')}</span>
+                      )}
+                      <p className="text-xs font-semibold mb-1" style={{ color: active ? c : '#64748b' }}>{label}</p>
+                      <p className="text-3xl font-black" style={{ color: active ? c : '#475569' }}>{prob}%</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </Section>
           )}
 
@@ -453,15 +556,21 @@ export default function BaseballAIPrediction({
                   <div className="flex items-center justify-between rounded-xl px-4 py-3"
                     style={{ background: '#131920', border: '1px solid #243044' }}>
                     <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>{t('분석 신뢰도', 'Confidence')}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ background: confMapData[pred.confidence]?.color ?? '#94a3b8',
-                          boxShadow: `0 0 6px ${confMapData[pred.confidence]?.color ?? '#94a3b8'}` }} />
-                      <span className="text-sm font-bold"
-                        style={{ color: confMapData[pred.confidence]?.color ?? '#94a3b8' }}>
-                        {confMapData[pred.confidence] ? t(confMapData[pred.confidence].ko, confMapData[pred.confidence].en) : '-'}
+                    {dq?.hasPitcherData || league === 'MLB' ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ background: confMapData[pred.confidence]?.color ?? '#94a3b8',
+                            boxShadow: `0 0 6px ${confMapData[pred.confidence]?.color ?? '#94a3b8'}` }} />
+                        <span className="text-sm font-bold"
+                          style={{ color: confMapData[pred.confidence]?.color ?? '#94a3b8' }}>
+                          {confMapData[pred.confidence] ? t(confMapData[pred.confidence].ko, confMapData[pred.confidence].en) : '-'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-semibold" style={{ color: '#64748b' }}>
+                        {t('투수 반영 후 확정', 'Pending pitcher data')}
                       </span>
-                    </div>
+                    )}
                   </div>
                 </div>
               </Section>

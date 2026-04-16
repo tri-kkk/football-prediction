@@ -388,8 +388,45 @@ export async function POST(request: NextRequest) {
 
     const homeWinProb = Math.round(blendedHome * 100)
     const awayWinProb = Math.round(blendedAway * 100)
-    const overProb = Math.round(aiResult.over_prob * 100)
-    const underProb = Math.round(aiResult.under_prob * 100)
+
+    // Over/Under: 팀 득실점 + 투수 ERA 기반 보정
+    let overRaw = aiResult.over_prob
+    let underRaw = aiResult.under_prob
+
+    // Over/Under 기준선 조회
+    const { data: ouData } = await supabase
+      .from('baseball_odds_latest')
+      .select('over_under_line')
+      .eq('api_match_id', match.api_match_id)
+      .limit(1)
+      .maybeSingle()
+    const ouLine = ouData?.over_under_line ?? 0
+
+    // 팀 평균 득점 합산 기반 보정
+    const totalAvgScored = homeStats.avg_scored + awayStats.avg_scored
+    if (ouLine > 0) {
+      // 양팀 평균 합산이 기준선보다 높으면 OVER 쪽으로, 낮으면 UNDER 쪽으로
+      const scoreDiff = totalAvgScored - ouLine
+      const scoreAdj = Math.max(-0.08, Math.min(0.08, scoreDiff * 0.04))
+      overRaw = overRaw + scoreAdj
+      underRaw = underRaw - scoreAdj
+    }
+
+    // 투수 ERA 기반 보정 (양팀 투수 데이터 있을 때)
+    if (hasPitcherData && ouLine > 0) {
+      const avgPitcherEra = (homePitcherEra + awayPitcherEra) / 2
+      const LEAGUE_AVG_ERA = 4.20
+      // 양팀 평균 ERA가 리그 평균보다 높으면 → OVER, 낮으면 → UNDER
+      const eraDiff = avgPitcherEra - LEAGUE_AVG_ERA
+      const pitcherOuAdj = Math.max(-0.06, Math.min(0.06, eraDiff * 0.05))
+      overRaw = overRaw + pitcherOuAdj
+      underRaw = underRaw - pitcherOuAdj
+    }
+
+    // 정규화
+    const ouTotal = overRaw + underRaw
+    const overProb = Math.round(Math.max(0.05, Math.min(0.95, overRaw / ouTotal)) * 100)
+    const underProb = 100 - overProb
 
     // 인사이트 생성
     const winDiff = Math.abs(homeStats.win_pct - awayStats.win_pct)
