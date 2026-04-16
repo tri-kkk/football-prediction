@@ -21,6 +21,7 @@ const leagueIdMap: Record<string, number> = {
   'PPL': 94,
   'CL': 2,
   'EL': 3,
+  'WC': 1,
   // 아시아 리그 추가
   'KL1': 292,
   'K1': 292,

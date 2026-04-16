@@ -13,7 +13,8 @@ const API_FOOTBALL_HOST = 'v3.football.api-sports.io'
 // 🔥 리그 설정 (52개 - ACL 추가!)
 // ============================================================
 const LEAGUES = [
-  // ===== 🏆 국제 대회 (7개) =====
+  // ===== 🏆 국제 대회 =====
+  { code: 'WC', apiId: 1, name: 'World Cup' },
   { code: 'CL', apiId: 2, name: 'Champions League' },
   { code: 'EL', apiId: 3, name: 'Europa League' },
   { code: 'UECL', apiId: 848, name: 'Conference League' },
@@ -524,7 +525,7 @@ function getCurrentSeason(leagueCode: string): number {
 
   // 아시아/남미/북미 리그는 단일 연도 시즌
   // 🔥 LMX 제거! - 멕시코는 Apertura/Clausura 시스템 (유럽식 시즌)
-  const singleYearLeagues = ['KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL']
+  const singleYearLeagues = ['WC', 'KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL']
   if (singleYearLeagues.includes(leagueCode)) {
     return year
   }

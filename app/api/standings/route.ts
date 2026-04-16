@@ -7,7 +7,8 @@ const BASE_URL = 'https://v3.football.api-sports.io'
 // 🔥 API-Football 리그 ID 매핑 (50개 리그 - 아프리카 추가!)
 // ============================================================
 const LEAGUES: { [key: string]: number } = {
-  // ===== 🏆 국제대회 (7개) =====
+  // ===== 🏆 국제대회 =====
+  'WC': 1,       // World Cup 2026
   'CL': 2,       // Champions League
   'EL': 3,       // Europa League
   'UECL': 848,   // Conference League
@@ -176,6 +177,7 @@ const LEAGUE_NAMES: { [key: string]: string } = {
 // 리그 로고 매핑
 const LEAGUE_LOGOS: { [key: string]: string } = {
   // 국제대회
+  'WC': 'https://media.api-sports.io/football/leagues/1.png',
   'CL': 'https://media.api-sports.io/football/leagues/2.png',
   'EL': 'https://media.api-sports.io/football/leagues/3.png',
   'UECL': 'https://media.api-sports.io/football/leagues/848.png',

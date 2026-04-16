@@ -4,12 +4,20 @@ export const dynamic = 'force-dynamic'
 
 // ===== 전체 리그 정보 매핑 =====
 const LEAGUE_INFO: Record<string, { name: string; nameEn: string; priority: number; logo: string }> = {
+  // ===== 월드컵 =====
+  'WC': {
+    name: '월드컵 2026',
+    nameEn: 'World Cup 2026',
+    priority: 0,
+    logo: 'https://media.api-sports.io/football/leagues/1.png'
+  },
+
   // ===== 유럽 대회 =====
-  'CL': { 
-    name: '챔피언스리그', 
-    nameEn: 'Champions League', 
-    priority: 1, 
-    logo: 'https://media.api-sports.io/football/leagues/2.png' 
+  'CL': {
+    name: '챔피언스리그',
+    nameEn: 'Champions League',
+    priority: 1,
+    logo: 'https://media.api-sports.io/football/leagues/2.png'
   },
   'EL': { 
     name: '유로파리그', 

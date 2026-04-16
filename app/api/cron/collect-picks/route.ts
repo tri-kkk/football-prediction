@@ -20,6 +20,7 @@ const LEAGUES_TO_ANALYZE = [
   { code: 'FL1', leagueId: 61 },
   { code: 'CL', leagueId: 2 },
   { code: 'EL', leagueId: 3 },
+  { code: 'WC', leagueId: 1 },
   { code: 'PPL', leagueId: 94 },
   { code: 'DED', leagueId: 88 },
 ]

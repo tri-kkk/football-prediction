@@ -5,7 +5,8 @@ import { TEAM_NAME_KR } from '../../teamLogos'
 // 🔥 리그 ID 매핑 (50개 - Cron과 동일!)
 // ============================================================
 const LEAGUE_IDS: Record<string, number> = {
-  // ===== 🏆 국제 대회 (5개) =====
+  // ===== 🏆 국제 대회 =====
+  'WC': 1,      // World Cup 2026
   'CL': 2,      // Champions League
   'EL': 3,      // Europa League
   'UECL': 848,  // UEFA Conference League

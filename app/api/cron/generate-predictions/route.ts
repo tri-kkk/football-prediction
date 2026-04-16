@@ -8,7 +8,8 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 // 🔥 리그 코드 매핑 (50개 - 아프리카 추가!)
 // ============================================================
 const LEAGUE_IDS: { [key: string]: number } = {
-  // ===== 🏆 국제 대회 (5개) =====
+  // ===== 🏆 국제 대회 =====
+  'WC': 1,      // World Cup 2026
   'CL': 2,      // Champions League
   'EL': 3,      // Europa League
   'UECL': 848,  // Conference League

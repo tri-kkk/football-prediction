@@ -15,7 +15,8 @@ const API_FOOTBALL_HOST = 'v3.football.api-sports.io'
 
 // 리그 코드 → API-Football 리그 ID 매핑
 const LEAGUE_ID_MAP: Record<string, number> = {
-  // 유럽 대항전
+  // 국제대회
+  'WC': 1,     // World Cup 2026
   'CL': 2,     // Champions League
   'EL': 3,     // Europa League
   'UECL': 848, // Conference League

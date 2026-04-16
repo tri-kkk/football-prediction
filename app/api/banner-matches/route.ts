@@ -16,6 +16,7 @@ const LEAGUE_IDS: Record<string, number> = {
   'FL1': 61,   // 리그1
   'CL': 2,     // 챔피언스리그
   'EL': 3,     // 유로파리그
+  'WC': 1,     // 월드컵 2026
   'PPL': 94,   // 프리메이라리가
   'DED': 88,   // 에레디비시
   'ELC': 40,   // 챔피언십
@@ -30,6 +31,7 @@ const LEAGUE_NAMES_KR: Record<string, string> = {
   'FL1': '리그1',
   'CL': '챔피언스리그',
   'EL': '유로파리그',
+  'WC': '월드컵 2026',
   'PPL': '프리메이라리가',
   'DED': '에레디비시',
   'ELC': '챔피언십',
@@ -44,6 +46,7 @@ const LEAGUE_NAMES_EN: Record<string, string> = {
   'FL1': 'Ligue 1',
   'CL': 'Champions League',
   'EL': 'Europa League',
+  'WC': 'World Cup 2026',
   'PPL': 'Primeira Liga',
   'DED': 'Eredivisie',
   'ELC': 'Championship',

@@ -14,7 +14,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 // 🔥 리그 설정 (50개 - 아프리카 추가!)
 // ============================================================
 const LEAGUES = [
-  // ===== 🏆 국제 대회 (5개) =====
+  // ===== 🏆 국제 대회 =====
+  { code: 'WC', id: 1, name: 'World Cup', season: 2026 },
   { code: 'CL', id: 2, name: 'Champions League' },
   { code: 'EL', id: 3, name: 'Europa League' },
   { code: 'UECL', id: 848, name: 'UEFA Conference League' },

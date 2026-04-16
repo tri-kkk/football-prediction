@@ -23,6 +23,7 @@ const LEAGUE_IDS: Record<string, number> = {
   'PPL': 94,   // Primeira Liga
   'CL': 2,     // Champions League
   'EL': 3,     // Europa League
+  'WC': 1,     // World Cup 2026
   'ELC': 40,   // Championship
   'UECL': 848, // Conference League
   'UNL': 5,    // Nations League

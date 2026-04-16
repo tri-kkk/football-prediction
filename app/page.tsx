@@ -736,6 +736,7 @@ const CUP_COMPETITIONS = [
   'ACL',    // AFC 챔피언스리그
   'ACL2',   // AFC 챔피언스리그2
   'AMATCH', // 국제 A매치 (Friendlies)
+  'WC',     // 월드컵 2026 (토너먼트)
 ]
 const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes(l.code))
 

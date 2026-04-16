@@ -10,7 +10,8 @@ export const LEAGUES = [
     isEmoji: true
   },
   
-  // ===== 🏆 국제대회 (7개) =====
+  // ===== 🏆 국제대회 =====
+  { code: 'WC', name: '월드컵 2026', nameEn: 'World Cup 2026', flag: 'https://flagcdn.com/w40/us.png', logo: 'https://media.api-sports.io/football/leagues/1.png', isEmoji: false },
   { code: 'CL', name: '챔피언스리그', nameEn: 'Champions League', flag: 'https://flagcdn.com/w40/eu.png', logo: 'https://media.api-sports.io/football/leagues/2.png', isEmoji: false },
   { code: 'EL', name: '유로파리그', nameEn: 'Europa League', flag: 'https://flagcdn.com/w40/eu.png', logo: 'https://media.api-sports.io/football/leagues/3.png', isEmoji: false },
   { code: 'UECL', name: 'UEFA 컨퍼런스리그', nameEn: 'UEFA Conference League', flag: 'https://flagcdn.com/w40/eu.png', logo: 'https://media.api-sports.io/football/leagues/848.png', isEmoji: false },
@@ -134,6 +135,7 @@ export const LEAGUE_GROUPS = [
     regionEn: 'International',
     flag: '',
     leagues: [
+      { code: 'WC', name: '월드컵 2026', nameEn: 'World Cup 2026', logo: 'https://media.api-sports.io/football/leagues/1.png' },
       { code: 'CL', name: '챔피언스리그', nameEn: 'Champions League', logo: 'https://media.api-sports.io/football/leagues/2.png' },
       { code: 'EL', name: '유로파리그', nameEn: 'Europa League', logo: 'https://media.api-sports.io/football/leagues/3.png' },
       { code: 'UECL', name: '컨퍼런스리그', nameEn: 'Conference League', logo: 'https://media.api-sports.io/football/leagues/848.png' },
@@ -283,7 +285,7 @@ export const LEAGUE_GROUPS = [
 export const LEAGUES_WITH_ODDS = [
   'ALL',
   // 국제대회
-  'CL', 'EL', 'UECL', 'UNL', 'COP', 'COS', 'AFCON', 'ACL', 'ACL2', 'AMATCH',
+  'WC', 'CL', 'EL', 'UECL', 'UNL', 'COP', 'COS', 'AFCON', 'ACL', 'ACL2', 'AMATCH',
   // 아프리카
   'EGY', 'RSA', 'MAR', 'DZA', 'TUN',
   // 잉글랜드

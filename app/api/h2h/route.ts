@@ -11,6 +11,7 @@ const LEAGUE_IDS: Record<string, number> = {
   'DED': 88,   // Eredivisie
   'CL': 2,     // Champions League
   'EL': 3,     // Europa League
+  'WC': 1,     // World Cup 2026
   'ELC': 40,   // Championship
 }
 
