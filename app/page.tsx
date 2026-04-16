@@ -2522,26 +2522,24 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             </div>
 
         {/* 🔥 트렌드 PICK CTA 배너 (모바일 + PC 통합) */}
-        {/* 무료 회원 & 비로그인: 구독 유도 배너 (심플) */}
+        {/* 무료 회원 & 비로그인: 프리미엄 이미지 배너 */}
         {!isPremium ? (
           <Link
             href={session ? "/premium/pricing" : "/login?callbackUrl=/premium/pricing"}
             className="block mt-2 mb-3 active:scale-[0.99] transition-transform"
           >
-            <div className="flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4 rounded-2xl border border-yellow-500/20 bg-[#1a1a1a]">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl lg:text-3xl">💎</span>
-                <div>
-                  <div className="text-white font-bold text-[13px] lg:text-[16px]">
-                    {currentLanguage === 'ko' ? '프리미엄 구독하기' : 'Go Premium'}
-                  </div>
-                  <div className="text-gray-400 text-[11px] lg:text-[13px]">
-                    {currentLanguage === 'ko' ? 'AI 경기 분석 · 매일 PICK 제공 · 커피 한 잔 가격으로' : 'AI Match Analysis · Daily PICKs · Less than a coffee'}
-                  </div>
-                </div>
-              </div>
-              <svg className="w-5 h-5 lg:w-6 lg:h-6 text-yellow-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-            </div>
+            {/* 데스크톱 배너 (1200x200) */}
+            <img
+              src="/1200x200.png"
+              alt={currentLanguage === 'ko' ? '48시간 무료 프리미엄 분석 체험' : '48-Hour Free Premium Analysis Trial'}
+              className="hidden lg:block w-full rounded-2xl"
+            />
+            {/* 모바일 배너 (720x200) */}
+            <img
+              src="/720x200.png"
+              alt={currentLanguage === 'ko' ? '48시간 무료 프리미엄 분석 체험' : '48-Hour Free Premium Analysis Trial'}
+              className="block lg:hidden w-full rounded-2xl"
+            />
           </Link>
         ) : (
           /* 프리미엄 회원: 기존 트렌드 분석 배너 */
@@ -2576,23 +2574,6 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         )}
 
 
-        {/* 🎁 48시간 무료 체험 배너 - 비로그인 유저만 */}
-        {!session && (
-          <Link href="/login" className="block mb-3 active:scale-[0.99] transition-transform">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-yellow-500/25" style={{ background: 'rgba(234,179,8,0.06)' }}>
-              <span className="text-xl flex-shrink-0">🎁</span>
-              <div className="flex-1 min-w-0">
-                <span className="text-yellow-400 font-bold text-sm">
-                  {currentLanguage === 'ko' ? '가입만 해도 48시간 프리미엄 무료 체험' : '48-Hour Free Premium Trial on Sign Up'}
-                </span>
-                
-              </div>
-              <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </Link>
-        )}
 
         {/* 🆕 날짜 네비게이션 - 좌우 화살표 스타일 */}
         <div className="mb-4 md:mb-8">
