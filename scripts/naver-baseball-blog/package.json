@@ -1,0 +1,18 @@
+{
+  "name": "naver-baseball-blog",
+  "version": "1.0.0",
+  "description": "야구 블로그 자동화 - Claude API + 네이버 블로그 자동 발행",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node index.js --test",
+    "preview": "node index.js --preview",
+    "list": "node index.js --list-only"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "dotenv": "^16.4.0",
+    "puppeteer-core": "^24.41.0"
+  }
+}

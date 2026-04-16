@@ -78,6 +78,12 @@ export default function AdminBlogPage() {
             <h1 className="text-2xl font-bold">📝 블로그 관리</h1>
             <div className="flex items-center gap-3">
               <Link
+                href="/admin/blog/baseball"
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg transition font-medium"
+              >
+                ⚾ 야구 블로그
+              </Link>
+              <Link
                 href="/admin/blog/new"
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition font-medium"
               >
