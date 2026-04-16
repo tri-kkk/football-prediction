@@ -229,22 +229,34 @@ function getMatchStatus(match: Match): MatchStatus {
     return 'HALFTIME'
   }
   
-  // 4️⃣ 시간 기반 판별 (API status가 부정확할 때)
+  // 4️⃣ 스코어가 존재하면 종료된 경기로 판단
+  if (match.homeScore !== null && match.homeScore !== undefined &&
+      match.awayScore !== null && match.awayScore !== undefined) {
+    const matchTime = new Date(match.utcDate || match.date).getTime()
+    const now = Date.now()
+    const minutesSinceStart = (now - matchTime) / (1000 * 60)
+    // 경기 시작 후 100분 이상 + 스코어 있으면 종료
+    if (minutesSinceStart > 100) {
+      return 'FINISHED'
+    }
+  }
+
+  // 5️⃣ 시간 기반 판별 (API status가 부정확할 때)
   const matchTime = new Date(match.utcDate || match.date).getTime()
   const now = Date.now()
   const minutesSinceStart = (now - matchTime) / (1000 * 60)
-  
+
   // 경기 시작 후 2시간(120분) 이상 지났으면 종료
   if (minutesSinceStart > 120) {
     return 'FINISHED'
   }
-  
+
   // 경기 시작 시간이 지났으면 라이브 (0분 이상)
   if (minutesSinceStart >= 0) {
     console.log(`🔴 시간 기반 LIVE 판정: ${match.homeTeam} vs ${match.awayTeam} (${Math.round(minutesSinceStart)}분 경과)`)
     return 'LIVE'
   }
-  
+
   // 아직 시작 전
   return 'SCHEDULED'
 }
@@ -962,9 +974,9 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             status: m.status || 'LIVE'
           }
         })
-        
+
         setLiveScores(scores)
-        setLiveCount(data.matches.length)
+        // liveCount는 별도로 세지 않음 — 아래 useEffect에서 matches + liveScores 기준으로 계산
         
         console.log(`🔴 라이브 스코어 갱신: ${data.matches.length}경기`)
       } catch (error) {
@@ -980,6 +992,18 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
     
     return () => clearInterval(interval)
   }, [])
+
+  // 🔴 liveCount: 화면에 표시된 경기 중 실제 라이브인 것만 카운트
+  useEffect(() => {
+    if (Object.keys(liveScores).length === 0) return
+    const finishedStatuses = ['FINISHED', 'FT', 'AET', 'PEN']
+    const count = matches.filter(m => {
+      const live = liveScores[m.id]
+      if (!live) return false
+      return !finishedStatuses.includes((live.status || '').toUpperCase())
+    }).length
+    setLiveCount(count)
+  }, [matches, liveScores])
 
   // 📊 배너 자동 롤링 타이머 (5초마다)
   useEffect(() => {
