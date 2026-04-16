@@ -331,6 +331,9 @@ export async function GET(request: NextRequest) {
             aiPickConfidence: matchOdds?.ai_pick_confidence ?? null,
             homePitcher: match.home_pitcher ?? null, homePitcherId: match.home_pitcher_id ?? null, homePitcherKo: match.home_pitcher_ko ?? null,
             awayPitcher: match.away_pitcher ?? null, awayPitcherId: match.away_pitcher_id ?? null, awayPitcherKo: match.away_pitcher_ko ?? null,
+            hasPitcherData: (match.league === 'MLB' || match.league === 'CPBL')
+              ? true
+              : (match.home_pitcher_era != null && match.away_pitcher_era != null),
           }
         })
 
@@ -477,6 +480,11 @@ export async function GET(request: NextRequest) {
         awayPitcher: match.away_pitcher ?? null,
         awayPitcherId: match.away_pitcher_id ?? null,
         awayPitcherKo: match.away_pitcher_ko ?? null,
+
+        // ✅ 투수 데이터 반영 여부 (KBO/NPB는 투수 ERA 있어야 true)
+        hasPitcherData: match.league === 'MLB'
+          ? true
+          : (match.home_pitcher_era != null && match.away_pitcher_era != null),
       }
     }) || []
 

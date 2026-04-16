@@ -44,6 +44,7 @@ interface Match {
   homePitcherId?: number | null
   awayPitcher?: string | null
   awayPitcherId?: number | null
+  hasPitcherData?: boolean
 }
 
 interface PredictionResult {
@@ -191,7 +192,18 @@ function TeamLogo({ src, team, size = 'md' }: { src?: string; team: string; size
   )
 }
 
-function GradeBadge({ grade, size = 'sm' }: { grade: 'PICK' | 'GOOD' | 'PASS'; size?: 'sm' | 'lg' }) {
+function GradeBadge({ grade, size = 'sm', analyzing = false, language = 'ko' }: { grade: 'PICK' | 'GOOD' | 'PASS'; size?: 'sm' | 'lg'; analyzing?: boolean; language?: 'ko' | 'en' }) {
+  if (analyzing) {
+    const sizeClass = size === 'lg' ? 'px-3 py-1 text-xs' : 'px-2 py-0.5 text-[10px]'
+    return (
+      <span
+        className={`${sizeClass} rounded font-bold`}
+        style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', letterSpacing: '0.04em' }}
+      >
+        {language === 'ko' ? '분석 중' : 'Analyzing'}
+      </span>
+    )
+  }
   const styles = {
     PICK: { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', shadow: '0 0 10px rgba(245,158,11,0.3)' },
     GOOD: { bg: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', shadow: 'none' },
@@ -244,7 +256,7 @@ function ConfidenceBar({ homeProb, awayProb, language }: {
 }
 
 function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
-  stats: { total: number; pick: number; good: number; pass: number }
+  stats: { total: number; pick: number; good: number; pass: number; analyzing: number }
   dateStr: string
   language: 'ko' | 'en'
   onPrev?: () => void
@@ -265,7 +277,13 @@ function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
             {dateStr ? formatDateFull(dateStr, language) : (language === 'ko' ? '날짜 없음' : 'No date')}
           </p>
           <p className="text-gray-500 text-xs mt-0.5">
-            {language === 'ko' ? `${stats.total}경기 분석 완료` : `${stats.total} matches analyzed`}
+            {stats.analyzing > 0
+              ? (language === 'ko'
+                ? `${stats.total}경기 중 ${stats.analyzing}경기 분석 중`
+                : `${stats.analyzing} of ${stats.total} still analyzing`)
+              : (language === 'ko'
+                ? `${stats.total}경기 분석 완료`
+                : `${stats.total} matches analyzed`)}
           </p>
         </div>
         <button
@@ -277,7 +295,7 @@ function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
       </div>
 
       {/* 등급별 통계 카드 */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className={`grid gap-3 ${stats.analyzing > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.12)' }}>
           <GradeBadge grade="PICK" size="lg" />
           <p className="text-2xl font-black text-white mt-2">{stats.pick}</p>
@@ -293,6 +311,13 @@ function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
           <p className="text-2xl font-black text-white mt-2">{stats.pass}</p>
           <p className="text-[10px] text-gray-500 mt-0.5">{language === 'ko' ? '확률차 10%↓' : 'Diff 10%↓'}</p>
         </div>
+        {stats.analyzing > 0 && (
+          <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(148,163,184,0.04)', border: '1px solid rgba(148,163,184,0.12)' }}>
+            <GradeBadge grade="PASS" size="lg" analyzing={true} language={language} />
+            <p className="text-2xl font-black text-white mt-2">{stats.analyzing}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">{language === 'ko' ? '투수 반영 대기' : 'Awaiting pitchers'}</p>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -310,6 +335,9 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
   const awayTeamName = language === 'ko' ? match.awayTeamKo || match.awayTeam : match.awayTeam
   const pickedTeam = prediction.recommendedBet === 'HOME' ? homeTeamName : awayTeamName
   const isPick = prediction.grade === 'PICK'
+
+  // KBO/NPB만 투수 데이터 미반영 체크 (MLB, CPBL은 예외)
+  const isAnalyzing = match.league !== 'MLB' && match.league !== 'CPBL' && match.hasPitcherData === false
 
   const isLocked = !isPremium
   const leagueColor = LEAGUE_COLOR_HEX[match.league] || '#6b7280'
@@ -336,7 +364,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
             {formatDate(match.timestamp || match.date, language)} {formatTimeKST(match.timestamp)}
           </span>
         </div>
-        <GradeBadge grade={prediction.grade} />
+        <GradeBadge grade={prediction.grade} analyzing={isAnalyzing} language={language} />
       </div>
 
       {/* 팀 매치업 */}
@@ -372,8 +400,8 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
           </div>
         </div>
 
-        {/* 선발투수 - MLB만 표시 */}
-        {match.league === 'MLB' && (
+        {/* 선발투수 - 투수 데이터가 있는 경기만 표시 */}
+        {(match.league === 'MLB' || (match.hasPitcherData && match.homePitcher)) && (
           <div className="flex items-center justify-between mb-3 px-1 py-2 rounded-lg" style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.04)' }}>
             <div className="flex-1 text-center">
               <p className="text-[9px] text-gray-600 mb-0.5">{language === 'ko' ? '선발' : 'SP'}</p>
@@ -387,8 +415,41 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
           </div>
         )}
 
+        {/* 투수 데이터 분석 중 안내 (KBO/NPB) */}
+        {isAnalyzing && (
+          <div className="px-3 py-2.5 rounded-lg text-center mb-3"
+            style={{ background: '#1e293b', border: '1px solid #334155' }}>
+            <p className="text-[12px] font-bold" style={{ color: '#e2e8f0' }}>
+              {language === 'ko' ? '선발투수 데이터 반영 중' : 'Calculating pitcher matchup'}
+            </p>
+            <p className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>
+              {match.league === 'KBO'
+                ? (language === 'ko' ? '오전 11시 / 오후 3시 업데이트' : 'Updates at 11AM / 3PM KST')
+                : (language === 'ko' ? '오전 11시 / 오후 2시 업데이트' : 'Updates at 11AM / 2PM KST')}
+            </p>
+          </div>
+        )}
+
         {/* 확률 바 + 예측 — PICK 잠금 시 통합 블러 */}
-        {isLocked ? (
+        {isAnalyzing ? (
+          <div className="relative rounded-xl overflow-hidden mt-1"
+            style={{ border: '1px solid #334155' }}>
+            <div className="blur-md pointer-events-none select-none px-3 py-3" aria-hidden="true">
+              <ConfidenceBar homeProb={50} awayProb={50} language={language} />
+              <div className="flex items-center gap-2 mt-3" style={{ background: 'rgba(30,41,59,0.5)', padding: '8px 12px', borderRadius: '8px' }}>
+                <span className="text-gray-500 font-bold text-sm">██████</span>
+                <span className="text-[10px] text-gray-600">—</span>
+                <span className="text-gray-500 font-black text-sm tabular-nums">●●%</span>
+              </div>
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center"
+              style={{ background: 'rgba(10,10,15,0.85)' }}>
+              <p className="text-[12px] font-semibold" style={{ color: '#94a3b8' }}>
+                {language === 'ko' ? '투수 반영 후 확정' : 'Finalized after pitcher data'}
+              </p>
+            </div>
+          </div>
+        ) : isLocked ? (
           <div className="relative rounded-xl overflow-hidden mt-1"
             style={{ border: '1px solid rgba(245,158,11,0.12)' }}>
             {/* 블러 배경 콘텐츠 */}
@@ -443,8 +504,8 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
         )}
       </div>
 
-      {/* 예측 영역 — 잠금이 아닌 경우만 */}
-      {!isLocked && (
+      {/* 예측 영역 — 잠금/분석중이 아닌 경우만 */}
+      {!isLocked && !isAnalyzing && (
         prediction.recommendedBet !== 'NONE' ? (
           <div className="mx-4 mb-3 px-3 py-2.5 rounded-xl"
             style={{ background: 'rgba(6,78,59,0.12)', border: '1px solid rgba(16,185,129,0.08)' }}>
@@ -575,11 +636,19 @@ export default function BaseballPredictionsPage() {
     fetchMatches()
   }, [selectedLeague])
 
+  // 분석 중인 경기 (KBO/NPB 투수 미반영)
+  const analyzingCount = predictions.filter(p =>
+    p.match.league !== 'MLB' && p.match.league !== 'CPBL' && p.match.hasPitcherData === false
+  ).length
+  const confirmedPredictions = predictions.filter(p =>
+    p.match.league === 'MLB' || p.match.league === 'CPBL' || p.match.hasPitcherData !== false
+  )
   const stats = {
     total: predictions.length,
-    pick: predictions.filter(p => p.prediction.grade === 'PICK').length,
-    good: predictions.filter(p => p.prediction.grade === 'GOOD').length,
-    pass: predictions.filter(p => p.prediction.grade === 'PASS').length,
+    pick: confirmedPredictions.filter(p => p.prediction.grade === 'PICK').length,
+    good: confirmedPredictions.filter(p => p.prediction.grade === 'GOOD').length,
+    pass: confirmedPredictions.filter(p => p.prediction.grade === 'PASS').length,
+    analyzing: analyzingCount,
   }
 
   return (
