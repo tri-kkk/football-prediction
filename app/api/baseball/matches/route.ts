@@ -333,7 +333,7 @@ export async function GET(request: NextRequest) {
             awayPitcher: match.away_pitcher ?? null, awayPitcherId: match.away_pitcher_id ?? null, awayPitcherKo: match.away_pitcher_ko ?? null,
             hasPitcherData: (match.league === 'MLB' || match.league === 'CPBL')
               ? true
-              : (match.home_pitcher_era != null && match.away_pitcher_era != null),
+              : ((match.home_pitcher_ko != null || match.home_pitcher_era != null) && (match.away_pitcher_ko != null || match.away_pitcher_era != null)),
           }
         })
 
@@ -481,10 +481,10 @@ export async function GET(request: NextRequest) {
         awayPitcherId: match.away_pitcher_id ?? null,
         awayPitcherKo: match.away_pitcher_ko ?? null,
 
-        // ✅ 투수 데이터 반영 여부 (KBO/NPB는 투수 ERA 있어야 true)
-        hasPitcherData: match.league === 'MLB'
+        // ✅ 투수 데이터 반영 여부 (KBO/NPB는 투수 이름 또는 ERA 있으면 true)
+        hasPitcherData: (match.league === 'MLB' || match.league === 'CPBL')
           ? true
-          : (match.home_pitcher_era != null && match.away_pitcher_era != null),
+          : ((match.home_pitcher_ko != null || match.home_pitcher_era != null) && (match.away_pitcher_ko != null || match.away_pitcher_era != null)),
       }
     }) || []
 

@@ -322,40 +322,40 @@ function buildNaverHTML(parsed: any, data: any) {
   const homeProb = odds?.home_win_prob || 50
   const awayProb = odds?.away_win_prob || 50
 
-  // 승률 바 (table 기반)
+  // 승률 바 (table 기반, 모바일 대응 — 팀명을 바 위에 배치)
   const probBar = odds ? `
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0;border-collapse:collapse;">
-  <tr><td colspan="3" style="text-align:center;padding:8px 0;font-weight:bold;font-size:16px;color:#333;">AI 승률 분석</td></tr>
-  <tr>
-    <td width="20%" style="text-align:center;padding:8px;font-weight:bold;color:#d63031;font-size:14px;">${homeTeam}</td>
-    <td width="60%" style="padding:4px 0;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-        <tr>
-          <td width="${homeProb}%" style="background-color:#d63031;color:#fff;text-align:center;padding:8px 4px;font-weight:bold;font-size:13px;">${homeProb}%</td>
-          <td width="${awayProb}%" style="background-color:#0984e3;color:#fff;text-align:center;padding:8px 4px;font-weight:bold;font-size:13px;">${awayProb}%</td>
-        </tr>
-      </table>
-    </td>
-    <td width="20%" style="text-align:center;padding:8px;font-weight:bold;color:#0984e3;font-size:14px;">${awayTeam}</td>
-  </tr>
-  ${odds.over_under_line ? `<tr><td colspan="3" style="text-align:center;padding:8px 0;font-size:13px;color:#888;">오버/언더: ${odds.over_under_line}</td></tr>` : ''}
+  <tr><td style="text-align:center;padding:8px 0;font-weight:bold;font-size:16px;color:#333;">AI 승률 분석</td></tr>
+  <tr><td style="padding:0 0 4px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td width="${homeProb}%" style="text-align:left;padding:0 0 3px 0;font-weight:bold;color:#d63031;font-size:12px;">${homeTeam}</td>
+        <td width="${awayProb}%" style="text-align:right;padding:0 0 3px 0;font-weight:bold;color:#0984e3;font-size:12px;">${awayTeam}</td>
+      </tr>
+      <tr>
+        <td width="${homeProb}%" style="background-color:#d63031;color:#fff;text-align:center;padding:8px 2px;font-weight:bold;font-size:13px;">${homeProb}%</td>
+        <td width="${awayProb}%" style="background-color:#0984e3;color:#fff;text-align:center;padding:8px 2px;font-weight:bold;font-size:13px;">${awayProb}%</td>
+      </tr>
+    </table>
+  </td></tr>
+  ${odds.over_under_line ? `<tr><td style="text-align:center;padding:6px 0;font-size:13px;color:#888;">오버/언더: ${odds.over_under_line}</td></tr>` : ''}
 </table>` : ''
 
-  // 선발 투수 카드 (table 기반)
+  // 선발 투수 카드 (table 기반, 모바일 대응 — VS를 줄여 양쪽 공간 확보)
   const pitcherCard = `
-<table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0;border:1px solid #ddd;border-collapse:collapse;">
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0;border:1px solid #ddd;border-collapse:collapse;table-layout:fixed;">
   <tr><td colspan="3" style="text-align:center;padding:10px;font-weight:bold;font-size:16px;background-color:#f5f5f5;border-bottom:1px solid #ddd;">⚾ 선발 투수 매치업</td></tr>
   <tr>
-    <td width="42%" style="text-align:center;padding:16px 8px;background-color:#fff5f5;border-right:1px solid #eee;">
-      <p style="margin:0 0 6px 0;font-weight:bold;color:#d63031;font-size:14px;">${homeTeam}</p>
-      <p style="margin:0 0 6px 0;font-size:18px;font-weight:bold;">${pitcher.home.name}</p>
-      <p style="margin:0;font-size:12px;color:#888;">ERA ${pitcher.home.era??'-'} | WHIP ${pitcher.home.whip??'-'} | K ${pitcher.home.k??'-'}</p>
+    <td width="44%" style="text-align:center;padding:12px 6px;background-color:#fff5f5;border-right:1px solid #eee;word-break:keep-all;">
+      <p style="margin:0 0 4px 0;font-weight:bold;color:#d63031;font-size:13px;">${homeTeam}</p>
+      <p style="margin:0 0 4px 0;font-size:16px;font-weight:bold;">${pitcher.home.name}</p>
+      <p style="margin:0;font-size:11px;color:#888;">ERA ${pitcher.home.era??'-'} | WHIP ${pitcher.home.whip??'-'} | K ${pitcher.home.k??'-'}</p>
     </td>
-    <td width="16%" style="text-align:center;font-size:22px;font-weight:bold;color:#ccc;">VS</td>
-    <td width="42%" style="text-align:center;padding:16px 8px;background-color:#f0f8ff;border-left:1px solid #eee;">
-      <p style="margin:0 0 6px 0;font-weight:bold;color:#0984e3;font-size:14px;">${awayTeam}</p>
-      <p style="margin:0 0 6px 0;font-size:18px;font-weight:bold;">${pitcher.away.name}</p>
-      <p style="margin:0;font-size:12px;color:#888;">ERA ${pitcher.away.era??'-'} | WHIP ${pitcher.away.whip??'-'} | K ${pitcher.away.k??'-'}</p>
+    <td width="12%" style="text-align:center;font-size:18px;font-weight:bold;color:#ccc;">VS</td>
+    <td width="44%" style="text-align:center;padding:12px 6px;background-color:#f0f8ff;border-left:1px solid #eee;word-break:keep-all;">
+      <p style="margin:0 0 4px 0;font-weight:bold;color:#0984e3;font-size:13px;">${awayTeam}</p>
+      <p style="margin:0 0 4px 0;font-size:16px;font-weight:bold;">${pitcher.away.name}</p>
+      <p style="margin:0;font-size:11px;color:#888;">ERA ${pitcher.away.era??'-'} | WHIP ${pitcher.away.whip??'-'} | K ${pitcher.away.k??'-'}</p>
     </td>
   </tr>
 </table>`
@@ -370,9 +370,9 @@ function buildNaverHTML(parsed: any, data: any) {
     return `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0;"><tr><td style="padding:16px 0 6px 0;font-size:17px;font-weight:bold;color:#2d3436;border-bottom:2px solid #eee;">${icon} ${title}</td></tr><tr><td style="padding:10px 0 8px 0;font-size:15px;line-height:1.8;color:#333;">${htmlBody}</td></tr></table>`
   }
 
-  return `<div style="max-width:680px;margin:0 auto;">
+  return `<div style="max-width:680px;margin:0 auto;overflow:hidden;word-break:keep-all;">
 <p style="text-align:center;font-size:13px;color:#0984e3;font-weight:bold;margin:0 0 2px 0;">${leagueNames[league]||league} | ${matchDate} ${matchTime}</p>
-<p style="text-align:center;font-size:24px;font-weight:bold;color:#2d3436;margin:0 0 2px 0;">${homeTeam} vs ${awayTeam}</p>
+<p style="text-align:center;font-size:22px;font-weight:bold;color:#2d3436;margin:0 0 2px 0;">${homeTeam} vs ${awayTeam}</p>
 <p style="text-align:center;font-size:14px;color:#999;margin:0 0 12px 0;">AI 데이터 기반 경기 분석 프리뷰</p>
 ${probBar}
 ${pitcherCard}
