@@ -162,37 +162,6 @@ async function predictMatch(match: any, league: string) {
   }
 }
 
-// ==================== 최근 N일 팀별 추천 빈도 ====================
-// 최근 7일간 같은 팀이 얼마나 자주 픽으로 등장했는지 집계 → 조합 score 페널티
-async function getRecentTeamFrequency(league: string, targetDate: string, days: number = 7): Promise<Map<string, number>> {
-  const freq = new Map<string, number>()
-  const base = new Date(targetDate + 'T00:00:00')
-  const start = new Date(base)
-  start.setDate(base.getDate() - days)
-  const startDate = start.toISOString().split('T')[0]
-
-  const { data, error } = await supabase
-    .from('baseball_combo_picks')
-    .select('picks, pick_date')
-    .eq('league', league)
-    .gte('pick_date', startDate)
-    .lt('pick_date', targetDate)
-
-  if (error) {
-    console.warn(`  ⚠️ 빈도 집계 실패 (${league}):`, error.message)
-    return freq
-  }
-
-  for (const row of data || []) {
-    const picks = Array.isArray(row.picks) ? row.picks : []
-    for (const p of picks) {
-      const key = p?.pickTeam || p?.pickTeamKo
-      if (key) freq.set(key, (freq.get(key) || 0) + 1)
-    }
-  }
-  return freq
-}
-
 // ==================== 조합 생성 로직 ====================
 interface MatchPrediction {
   matchId: number
@@ -214,82 +183,39 @@ interface MatchPrediction {
   awayStats: any
 }
 
-function generateSafeCombos(
-  predictions: MatchPrediction[],
-  teamFreq: Map<string, number>,
-): MatchPrediction[][] {
+function generateSafeCombos(predictions: MatchPrediction[]): MatchPrediction[][] {
   const eligible = predictions.filter(p => p.winProb >= 55)
   if (eligible.length < 2) return []
 
   eligible.sort((a, b) => b.winProb - a.winProb)
-  const CAP = Math.min(eligible.length, 10) // 6 → 10 : 후보 풀 확대
 
   const combos: { combo: MatchPrediction[]; score: number }[] = []
-  for (let i = 0; i < CAP; i++) {
-    for (let j = i + 1; j < CAP; j++) {
+  for (let i = 0; i < Math.min(eligible.length, 6); i++) {
+    for (let j = i + 1; j < Math.min(eligible.length, 6); j++) {
       const combo = [eligible[i], eligible[j]]
-
-      // 한 조합 안에서 같은 팀이 양쪽에 걸리는 경우는 이론상 없음 (다른 경기)
       const avgProb = combo.reduce((s, p) => s + p.winProb, 0) / 2
-      const totalOdds = combo.reduce((s, p) => s * p.odds, 1)
-      // EV = (승률 × 배당) - 1 → 가성비 지표
-      const totalEV = combo.reduce((s, p) => s + ((p.winProb / 100) * p.odds - 1), 0)
-      // 최근 7일 추천 빈도 페널티 (한 픽당 1회 = -3점)
-      const freqPenalty = combo.reduce((s, p) => s + (teamFreq.get(p.pickTeam) || 0), 0)
-
-      // Score 공식 (안전형): 승률 50% + EV 30% + 배당 20% - 빈도 페널티
-      const score =
-        avgProb * 0.5 +                       // 승률 (0~100 스케일)
-        totalEV * 30 +                        // EV (대개 -0.2~+0.3)
-        Math.min(totalOdds * 3, 15) * 0.2 -   // 배당 보정
-        freqPenalty * 3                       // 최근 등장 1회당 -3점
-
-      combos.push({ combo, score })
+      combos.push({ combo, score: avgProb * 0.9 + Math.min(combo.reduce((s, p) => s * p.odds, 1) * 5, 15) * 0.1 })
     }
   }
   combos.sort((a, b) => b.score - a.score)
   return combos.slice(0, 1).map(c => c.combo)
 }
 
-function generateHighOddsCombos(
-  predictions: MatchPrediction[],
-  usedMatchIds: Set<number>,
-  usedTeams: Set<string>,
-  teamFreq: Map<string, number>,
-): MatchPrediction[][] {
+function generateHighOddsCombos(predictions: MatchPrediction[], usedMatchIds: Set<number>): MatchPrediction[][] {
   const eligible = predictions.filter(p => p.winProb >= 52)
   if (eligible.length < 3) return []
 
-  eligible.sort((a, b) => b.winProb - a.winProb)
-  const CAP = Math.min(eligible.length, 10) // 6 → 10 : 후보 풀 확대
-
   const combos: { combo: MatchPrediction[]; score: number }[] = []
-  for (let i = 0; i < CAP; i++) {
-    for (let j = i + 1; j < CAP; j++) {
-      for (let k = j + 1; k < CAP; k++) {
+  for (let i = 0; i < Math.min(eligible.length, 6); i++) {
+    for (let j = i + 1; j < Math.min(eligible.length, 6); j++) {
+      for (let k = j + 1; k < Math.min(eligible.length, 6); k++) {
         const combo = [eligible[i], eligible[j], eligible[k]]
-
-        // 2폴드와 경기 겹치면 스킵 (완전 분리: 1개도 겹치면 X)
-        const matchOverlap = combo.filter(p => usedMatchIds.has(p.apiMatchId)).length
-        if (usedMatchIds.size > 0 && matchOverlap >= 1) continue
-
-        // 2폴드와 팀 겹치면 스킵 (같은 픽 팀 재등장 방지)
-        const teamOverlap = combo.filter(p => usedTeams.has(p.pickTeam)).length
-        if (usedTeams.size > 0 && teamOverlap >= 1) continue
+        const overlapCount = combo.filter(p => usedMatchIds.has(p.apiMatchId)).length
+        if (usedMatchIds.size > 0 && overlapCount >= 2) continue
 
         const avgProb = combo.reduce((s, p) => s + p.winProb, 0) / 3
         const totalOdds = combo.reduce((s, p) => s * p.odds, 1)
-        const totalEV = combo.reduce((s, p) => s + ((p.winProb / 100) * p.odds - 1), 0)
-        const freqPenalty = combo.reduce((s, p) => s + (teamFreq.get(p.pickTeam) || 0), 0)
-
-        // Score 공식 (고배당): 승률 30% + EV 40% + 배당 30% - 빈도 페널티
-        const score =
-          avgProb * 0.3 +
-          totalEV * 40 +
-          Math.min(totalOdds * 5, 40) * 0.3 -
-          freqPenalty * 3
-
-        combos.push({ combo, score })
+        combos.push({ combo, score: avgProb * 0.4 + Math.min(totalOdds * 8, 40) * 0.6 })
       }
     }
   }
@@ -589,22 +515,11 @@ export async function GET(request: NextRequest) {
     // 4. 조합 생성
     const combosToSave = []
 
-    // 🆕 최근 7일 팀별 추천 빈도 집계 (다양성 확보 페널티 적용)
-    const teamFreq = await getRecentTeamFrequency(league, targetDate, 7)
-    if (teamFreq.size > 0) {
-      const freqTop = Array.from(teamFreq.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5)
-      console.log(`  📊 최근 7일 추천 TOP5:`, freqTop.map(([t, n]) => `${t}(${n})`).join(', '))
-    }
-
     // 2 COMBO: 안전형
-    const safeCombos = generateSafeCombos(predictions, teamFreq)
+    const safeCombos = generateSafeCombos(predictions)
     const usedMatchIds = new Set<number>()
-    const usedTeams = new Set<string>()
     for (const combo of safeCombos) {
-      combo.forEach(p => {
-        usedMatchIds.add(p.apiMatchId)
-        usedTeams.add(p.pickTeam)
-      })
+      combo.forEach(p => usedMatchIds.add(p.apiMatchId))
       const avgConf = combo.reduce((s, p) => s + p.winProb, 0) / combo.length
       const totalOdds = combo.reduce((s, p) => s * p.odds, 1)
       const analysis = await generateAIAnalysis(combo, league)
@@ -639,7 +554,7 @@ export async function GET(request: NextRequest) {
 
     // 3 COMBO: 고배당형
     if (predictions.length >= 3) {
-      const highOddsCombos = generateHighOddsCombos(predictions, usedMatchIds, usedTeams, teamFreq)
+      const highOddsCombos = generateHighOddsCombos(predictions, usedMatchIds)
       for (const combo of highOddsCombos) {
         const avgConf = combo.reduce((s, p) => s + p.winProb, 0) / combo.length
         const totalOdds = combo.reduce((s, p) => s * p.odds, 1)
