@@ -12,8 +12,19 @@ node_modules/
 *.tsx.bak
 *.ts.bak
 *.json.bak
-# ÅäÅä ÀÛ¾÷Áß
+# ï¿½ï¿½ï¿½ï¿½ ï¿½Û¾ï¿½ï¿½ï¿½
 app/api/cron/collect-toto/
 app/api/toto/
 app/toto/
+
+# Naver auto-poster (sensitive & generated files)
+scripts/naver-auto-poster/.env
+scripts/naver-auto-poster/chrome_profile/
+scripts/naver-auto-poster/naver_cookies.pkl
+scripts/naver-auto-poster/thumbnails/
+scripts/naver-auto-poster/__pycache__/
+scripts/naver-auto-poster/error_*.png
+scripts/naver-auto-poster/debug_*.png
+scripts/naver-auto-poster/debug_source.html
+scripts/naver-auto-poster/publish_fail_*.png
 

@@ -12,19 +12,113 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 )
 
-const TEAM_NEWS_TTL_HOURS = 6
+const TEAM_NEWS_TTL_HOURS = 1 // 6h → 1h (잘못된 요약이 오래 남지 않도록 단축)
 
-async function fetchTeamNews(teamName: string, language: 'en' | 'ko' | 'ja' = 'en'): Promise<{ title: string; description: string; publishedAt: string }[]> {
-  if (!NEWS_API_TOKEN) return []
+// 일반 단어 닉네임 — 도시명/리그 키워드 없이는 다른 스포츠 기사로 오탐 위험
+const AMBIGUOUS_NICKNAMES = new Set([
+  // MLB
+  'tigers','giants','rangers','dodgers','mariners','angels','rays','twins','braves',
+  'guardians','athletics','royals','pirates','nationals','phillies','reds','mets',
+  'yankees','orioles','astros','cardinals','cubs','brewers','marlins','rockies',
+  'padres','diamondbacks','sox',
+  // KBO
+  'eagles','bears','wiz','twins','dinos','landers','lions','giants','tigers','heroes',
+  // NPB
+  'hawks','swallows','carp','baystars','dragons','buffaloes','marines','fighters','lions','tigers','giants',
+])
+
+/**
+ * 기사가 해당 팀을 실제로 다루는지 검증.
+ * 로직:
+ *  1) 기사 본문에 팀 full name(공백 포함)이 등장하면 통과 (가장 강한 신호)
+ *  2) 팀명이 단일 단어면 그것이 등장 + 리그 키워드 중 하나 함께 있으면 통과
+ *  3) 팀명이 여러 토큰이면 (a) 도시 토큰 포함 (b) nickname 토큰 + 리그 키워드 둘 중 하나 충족 시 통과
+ *  4) 한글/일본어 팀명은 full name 매칭만 허용
+ */
+function articleMentionsTeam(
+  article: { title: string; description: string },
+  teamName: string,
+  extraKeywords: string[] = []
+): boolean {
+  const haystack = `${article.title} ${article.description}`.toLowerCase()
+  const team = teamName.toLowerCase().trim()
+  if (!team) return false
+
+  // (1) full-name 직접 매칭 — 가장 강한 신호, 바로 통과
+  if (haystack.includes(team)) return true
+
+  // (2) 비ASCII (한글/일본어) — 전체 매칭만 인정
+  // eslint-disable-next-line no-control-regex
+  if (/[^\x00-\x7F]/.test(teamName)) return false
+
+  const tokens = team.split(/\s+/).filter(t => t.length >= 3)
+  if (tokens.length === 0) return false
+  const nickname = tokens[tokens.length - 1]
+  const cityTokens = tokens.slice(0, -1)
+
+  const nicknameHit = haystack.includes(nickname)
+  if (!nicknameHit) return false
+
+  // (3) 도시 토큰이 있으면 함께 등장해야 함 (ex: "San Francisco" + "Giants")
+  const cityHit = cityTokens.some(c => haystack.includes(c))
+  if (cityTokens.length > 0 && cityHit) return true
+
+  // (4) 도시 매칭 실패 → ambiguous nickname이면 리그 키워드 필수
+  if (AMBIGUOUS_NICKNAMES.has(nickname)) {
+    return extraKeywords.some(kw => haystack.includes(kw.toLowerCase()))
+  }
+
+  // (5) non-ambiguous 단일 단어 닉네임은 단독 매칭 허용
+  return tokens.length === 1
+}
+
+interface FetchNewsResult {
+  articles: { title: string; description: string; publishedAt: string }[]
+  meta: {
+    httpStatus: number | null
+    apiErrorMessage?: string
+    rawCount: number
+    yearFilteredOut: number
+    relevanceFilteredOut: number
+    searchTerm: string
+    language: string
+  }
+  rejectedSamples?: { title: string; reason: string }[]
+}
+
+async function fetchTeamNews(
+  teamName: string,
+  language: 'en' | 'ko' | 'ja' = 'en',
+  extraKeywords: string[] = [],
+  collectDebug = false
+): Promise<FetchNewsResult> {
+  const meta = {
+    httpStatus: null as number | null,
+    rawCount: 0,
+    yearFilteredOut: 0,
+    relevanceFilteredOut: 0,
+    searchTerm: teamName,
+    language,
+  }
+  const rejectedSamples: { title: string; reason: string }[] = []
+
+  if (!NEWS_API_TOKEN) {
+    return { articles: [], meta: { ...meta, apiErrorMessage: 'NEWS_API_TOKEN missing' }, rejectedSamples }
+  }
+
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+    // TheNewsAPI는 기본 AND 매칭 — 여러 단어 팀명이면 모두 포함된 기사만 반환됨
+    // (phrase quote 는 공식 지원 안 됨, 따옴표 사용 시 0 결과 발생)
     const params = new URLSearchParams({
       api_token: NEWS_API_TOKEN,
       categories: 'sports',
       search: teamName,
+      search_fields: 'title,description', // 메타/URL 매칭으로 인한 오탐 방지
       language,
-      limit: '5',
+      limit: '10',
       sort: 'published_at',
       sort_order: 'desc',
       published_after: sevenDaysAgo.toISOString().split('T')[0],
@@ -34,31 +128,54 @@ async function fetchTeamNews(teamName: string, language: 'en' | 'ko' | 'ja' = 'e
     const tid = setTimeout(() => controller.abort(), 8000)
     const res = await fetch(`https://api.thenewsapi.com/v1/news/all?${params}`, {
       signal: controller.signal,
-      cache: 'no-store', // ISR 캐시 완전 제거 - 항상 최신 데이터
+      cache: 'no-store',
     }).finally(() => clearTimeout(tid))
-    if (!res.ok) return []
-    const data = await res.json()
-    if (!data.data || !Array.isArray(data.data)) return []
 
-    // 2026년 기사만 필터링 (옛날 기사 방지)
+    meta.httpStatus = res.status
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      return { articles: [], meta: { ...meta, apiErrorMessage: body.slice(0, 200) }, rejectedSamples }
+    }
+    const data = await res.json()
+    if (!data.data || !Array.isArray(data.data)) {
+      return { articles: [], meta, rejectedSamples }
+    }
+
+    meta.rawCount = data.data.length
     const currentYear = new Date().getFullYear()
-    return data.data
-      .filter((a: any) => {
-        if (!a.title?.length) return false
-        // published_at 날짜 확인 - 올해 기사만
-        if (a.published_at) {
-          const pubYear = new Date(a.published_at).getFullYear()
-          if (pubYear < currentYear) return false
+    const articles: { title: string; description: string; publishedAt: string }[] = []
+
+    for (const a of data.data) {
+      if (!a.title?.length) continue
+      if (a.published_at) {
+        const pubYear = new Date(a.published_at).getFullYear()
+        if (pubYear < currentYear) {
+          meta.yearFilteredOut++
+          if (collectDebug && rejectedSamples.length < 3) {
+            rejectedSamples.push({ title: a.title, reason: `old article (${pubYear})` })
+          }
+          continue
         }
-        return true
-      })
-      .map((a: any) => ({
-        title: a.title || '',
-        description: a.description || a.snippet || '',
+      }
+      const article = { title: a.title || '', description: a.description || a.snippet || '' }
+      if (!articleMentionsTeam(article, teamName, extraKeywords)) {
+        meta.relevanceFilteredOut++
+        if (collectDebug && rejectedSamples.length < 3) {
+          rejectedSamples.push({ title: a.title, reason: 'team mismatch' })
+        }
+        continue
+      }
+      articles.push({
+        title: article.title,
+        description: article.description,
         publishedAt: a.published_at || '',
-      }))
-  } catch {
-    return []
+      })
+      if (articles.length >= 5) break
+    }
+
+    return { articles, meta, rejectedSamples }
+  } catch (e: any) {
+    return { articles: [], meta: { ...meta, apiErrorMessage: e?.message || String(e) }, rejectedSamples }
   }
 }
 
@@ -79,29 +196,31 @@ async function summarizeNews(
   const today = new Date().toISOString().split('T')[0]
 
   const prompt = uiLanguage === 'en'
-    ? `Today is ${today}. Below are recent news articles about ${leagueLabel} team "${teamName}".
+    ? `Today is ${today}. Below are recent news articles possibly about ${leagueLabel} team "${teamName}".
 
 ${articleText}
 
-Summarize the team's recent situation in English in 2-3 sentences.
+Summarize this team's recent situation in English in 2-3 sentences.
+- First, VERIFY each article actually concerns ${leagueLabel} team "${teamName}" and not another team with a similar name from a different league/sport. Discard any article that is not about this specific team.
 - Focus on injuries, player news, team morale, recent performance
 - IMPORTANT: Check each article's date. If articles are several days old, note that the situation may have changed since then.
 - IMPORTANT: If a player has transferred to another team (e.g. moved to MLB), do NOT include their performance at the new team as this team's news. Only mention players currently on this team's roster.
 - No markdown, no numbered lists, write in 100% English only
 - Separate each sentence with a newline(\\n)
-- If no relevant news about current roster players, write "No recent major news available."`
-    : `오늘은 ${today}입니다. 아래는 ${leagueLabel} 팀 "${teamName}"(${teamNameKo}) 관련 최근 뉴스입니다.
+- If no article genuinely concerns this team, write "No recent major news available."`
+    : `오늘은 ${today}입니다. 아래는 ${leagueLabel} 팀 "${teamName}"(${teamNameKo}) 관련일 수 있는 최근 뉴스입니다.
 
 ${articleText}
 
-이 뉴스들을 바탕으로 팀의 최근 상황을 한국어로 2~3문장으로 요약하세요.
+이 팀의 최근 상황을 한국어로 2~3문장으로 요약하세요.
+- 먼저, 각 기사가 실제로 ${leagueLabel} 팀 "${teamName}"(${teamNameKo})에 관한 것인지 확인하세요. 다른 리그/스포츠의 동명 팀 기사(예: NFL Giants, NHL Rangers, Detroit Tigers 등)라면 반드시 제외하세요.
 - 부상, 선수 소식, 팀 분위기, 최근 성적 등 핵심만
 - 중요: 각 기사의 날짜를 확인하세요. 며칠 전 기사라면 "기사 기준" 또는 "당시"라는 표현을 사용하세요.
 - 중요: 이미 다른 팀(예: MLB)으로 이적한 선수의 소식은 이 팀 뉴스에 포함하지 마세요. 현재 이 팀 소속 선수 소식만 요약하세요.
 - 마크다운 금지, 번호 매기기 금지
 - 반드시 100% 한국어로만 작성하세요. 일본어, 영어 등 외국어가 섞이면 안 됩니다. 선수 이름도 한국어 표기로 작성하세요.
 - 각 문장을 줄바꿈(\\n)으로 구분하세요.
-- 현재 소속 선수 관련 뉴스가 없으면 "최근 주요 뉴스가 없습니다."라고만 작성`
+- 이 팀과 무관한 기사만 있다면 "최근 주요 뉴스가 없습니다."라고만 작성`
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -187,33 +306,86 @@ export async function GET(request: NextRequest) {
   const homeSearchTerm = isKBO ? homeTeamKo : isNPB ? (NPB_TEAM_JA[homeTeam] || homeTeam) : homeTeam
   const awaySearchTerm = isKBO ? awayTeamKo : isNPB ? (NPB_TEAM_JA[awayTeam] || awayTeam) : awayTeam
 
-  // 1차: 팀명으로 검색
-  let [homeArticles, awayArticles] = await Promise.all([
-    fetchTeamNews(homeSearchTerm, searchLang),
-    fetchTeamNews(awaySearchTerm, searchLang),
-  ])
-
-  // 2차: 일본어로 안 잡히면 영어로 재시도 (NPB)
-  if (isNPB) {
-    if (homeArticles.length === 0) {
-      homeArticles = await fetchTeamNews(homeTeam, 'en')
-    }
-    if (awayArticles.length === 0) {
-      awayArticles = await fetchTeamNews(awayTeam, 'en')
-    }
+  // 리그별 disambiguation 키워드 (영어 fallback 시 다른 스포츠/리그 기사 필터링)
+  const leagueKeywords: Record<string, string[]> = {
+    KBO: ['kbo', 'korea', 'korean'],
+    NPB: ['npb', 'nippon', 'japan', 'japanese'],
+    CPBL: ['cpbl', 'taiwan', 'chinese professional'],
+    MLB: ['mlb', 'major league', 'baseball'],
   }
-
-  // 3차: 한글로 안 잡히면 영어로 재시도 (KBO)
-  if (isKBO) {
-    if (homeArticles.length === 0) {
-      homeArticles = await fetchTeamNews(homeTeam, 'en')
-    }
-    if (awayArticles.length === 0) {
-      awayArticles = await fetchTeamNews(awayTeam, 'en')
-    }
-  }
+  const disambig = leagueKeywords[league] || ['baseball']
 
   const debug = searchParams.get('debug') === 'true'
+
+  // 팀명 변형: 중간 수식어 제거 ("Hiroshima Toyo Carp" → "Hiroshima Carp", "Rakuten Gold. Eagles" → "Rakuten Eagles")
+  const TRIM_WORDS = new Set(['toyo', 'gold.', 'gold', 'goldeneagles', 'fc', 'inc', 'of'])
+  const simplifyTeamName = (name: string): string => {
+    const tokens = name.split(/\s+/).filter(t => t.length > 0 && !TRIM_WORDS.has(t.toLowerCase()))
+    return tokens.join(' ')
+  }
+  const nicknameOf = (name: string): string | null => {
+    const tokens = name.split(/\s+/).filter(t => t.length >= 3)
+    return tokens.length > 0 ? tokens[tokens.length - 1] : null
+  }
+
+  // 다단계 검색: (1) 네이티브 → (2) 영어 full → (3) 영어 단순화 → (4) 영어 nickname + 리그키워드
+  const homeAttempts: FetchNewsResult[] = []
+  const awayAttempts: FetchNewsResult[] = []
+
+  async function searchWithFallbacks(
+    nativeTerm: string,
+    engFull: string,
+    attempts: FetchNewsResult[]
+  ): Promise<FetchNewsResult> {
+    // 1차: 네이티브 언어
+    const nativeKeywords = isKBO || isNPB ? [] : disambig
+    let r = await fetchTeamNews(nativeTerm, searchLang, nativeKeywords, debug)
+    attempts.push(r)
+    if (r.articles.length > 0) return r
+
+    // 2차: 영어 full name (native 가 이미 en 이면 skip)
+    if (searchLang !== 'en') {
+      r = await fetchTeamNews(engFull, 'en', disambig, debug)
+      attempts.push(r)
+      if (r.articles.length > 0) return r
+    }
+
+    // 3차: 단순화된 full name
+    const simplified = simplifyTeamName(engFull)
+    if (simplified && simplified !== engFull) {
+      r = await fetchTeamNews(simplified, 'en', disambig, debug)
+      attempts.push(r)
+      if (r.articles.length > 0) return r
+    }
+
+    // 4차: nickname-only + 리그 키워드 (filter 에서 disambig 강제)
+    const nick = nicknameOf(simplified || engFull)
+    if (nick) {
+      // nickname 으로는 TheNewsAPI search 가 너무 많이 매칭되므로 "nickname + league-keyword" 로 AND 검색
+      const searchWithLeague = `${nick} ${disambig[0]}`
+      r = await fetchTeamNews(searchWithLeague, 'en', [nick, ...disambig], debug)
+      // 필터에서는 실제 팀명 기준으로 관련성 검증
+      const filtered: FetchNewsResult = {
+        articles: r.articles.filter(a =>
+          articleMentionsTeam({ title: a.title, description: a.description }, engFull, disambig)
+        ),
+        meta: { ...r.meta, searchTerm: `${searchWithLeague} (filtered by ${engFull})` },
+        rejectedSamples: r.rejectedSamples,
+      }
+      attempts.push(filtered)
+      return filtered
+    }
+
+    return r
+  }
+
+  const [homeResult, awayResult] = await Promise.all([
+    searchWithFallbacks(homeSearchTerm, homeTeam, homeAttempts),
+    searchWithFallbacks(awaySearchTerm, awayTeam, awayAttempts),
+  ])
+
+  const homeArticles = homeResult.articles
+  const awayArticles = awayResult.articles
 
   // Claude 요약 병렬
   const [homeSummary, awaySummary] = await Promise.all([
@@ -232,6 +404,8 @@ export async function GET(request: NextRequest) {
   if (debug) {
     result.debugHomeArticles = homeArticles
     result.debugAwayArticles = awayArticles
+    result.debugHomeAttempts = homeAttempts.map(r => ({ meta: r.meta, rejectedSamples: r.rejectedSamples }))
+    result.debugAwayAttempts = awayAttempts.map(r => ({ meta: r.meta, rejectedSamples: r.rejectedSamples }))
   }
 
   // 캐시 저장 (요약이 하나라도 있을 때만)

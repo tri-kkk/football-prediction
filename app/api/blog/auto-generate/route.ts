@@ -1522,22 +1522,24 @@ export async function GET(request: NextRequest) {
   
   try {
     const now = new Date()
-    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000)
-    
-    // 48시간 이내 경기 조회
+    // D-1 발행: 경기 시작 24시간 이내 경기만 대상
+    // (D-2 발행 시 경기 시작 직전 결과가 스탯에 반영되지 않아 데이터 정확도 저하)
+    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+
+    // 24시간 이내 경기 조회 (D-1 발행)
     const { data: upcomingMatches, error: matchError } = await supabase
       .from('match_odds_latest')
       .select('*')
       .gte('commence_time', now.toISOString())
-      .lte('commence_time', in48h.toISOString())
+      .lte('commence_time', in24h.toISOString())
       .order('commence_time', { ascending: true })
-    
+
     if (matchError) {
       return NextResponse.json({ error: 'Match query failed', details: matchError }, { status: 500 })
     }
-    
+
     if (!upcomingMatches || upcomingMatches.length === 0) {
-      return NextResponse.json({ success: true, message: 'No upcoming matches in 48h', generated: 0 })
+      return NextResponse.json({ success: true, message: 'No upcoming matches in 24h', generated: 0 })
     }
     
     // 지원 리그만 필터링
