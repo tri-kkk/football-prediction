@@ -107,7 +107,8 @@ async function fetchTeamNews(
   }
 
   try {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    // "최근 팀 상황" 블럭 → 3일 윈도우가 적절 (7일은 오래된 사건 혼입됨)
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
     // TheNewsAPI는 기본 AND 매칭 — 여러 단어 팀명이면 모두 포함된 기사만 반환됨
@@ -121,7 +122,7 @@ async function fetchTeamNews(
       limit: '10',
       sort: 'published_at',
       sort_order: 'desc',
-      published_after: sevenDaysAgo.toISOString().split('T')[0],
+      published_after: threeDaysAgo.toISOString().split('T')[0],
       published_before: tomorrow.toISOString().split('T')[0],
     })
     const controller = new AbortController()

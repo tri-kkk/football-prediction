@@ -141,13 +141,8 @@ class NaverBlogPoster:
     def ensure_login(self) -> bool:
         if not self.driver:
             self._create_driver()
-        print("    🔐 로그인 중...")
 
-        # 바로 ID/PW 자동 로그인
-        if self._login_auto():
-            return True
-
-        # 자동 실패 시 수동
+        # 수동 로그인: 네이버 로그인 페이지 열고 사용자가 직접 로그인
         return self.login_manual()
 
     # ═══════════════════════════════════════════════════
