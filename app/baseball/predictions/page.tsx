@@ -40,6 +40,13 @@ interface Match {
   } | null
   aiPick?: string | null
   aiPickConfidence?: string | null
+  // ✅ 상세 페이지 predict API가 저장한 최종 AI 예측 (최우선 사용)
+  aiPrediction?: {
+    homeWinProb: number
+    awayWinProb: number
+    grade: string | null
+    updatedAt: string | null
+  } | null
   homePitcher?: string | null
   homePitcherId?: number | null
   awayPitcher?: string | null
@@ -84,6 +91,47 @@ const LEAGUE_COLOR_HEX: Record<string, string> = {
 // =====================================================
 
 function calculatePrediction(match: Match): PredictionResult['prediction'] {
+  // ✅ 0순위: 상세 페이지 predict API가 DB에 저장한 최종 AI 예측 (가장 정확)
+  // baseball_odds_latest.ai_home_win_prob 등을 그대로 사용 → 상세 페이지와 100% 일치
+  if (match.aiPrediction && typeof match.aiPrediction.homeWinProb === 'number') {
+    const homeProb = match.aiPrediction.homeWinProb
+    const awayProb = match.aiPrediction.awayWinProb
+    const diff = Math.abs(homeProb - awayProb)
+
+    // DB 저장 grade가 PICK/GOOD/PASS면 그대로, 아니면 확률 차이로 재산정
+    let grade: 'PICK' | 'GOOD' | 'PASS'
+    const dbGrade = match.aiPrediction.grade
+    if (dbGrade === 'PICK' || dbGrade === 'GOOD' || dbGrade === 'PASS') {
+      grade = dbGrade
+    } else {
+      grade = diff >= 20 ? 'PICK' : diff >= 10 ? 'GOOD' : 'PASS'
+    }
+
+    const recommendedBet: 'HOME' | 'AWAY' | 'NONE' = grade !== 'PASS'
+      ? (homeProb >= awayProb ? 'HOME' : 'AWAY')
+      : 'NONE'
+    const reason = grade === 'PICK'
+      ? (homeProb >= awayProb ? '홈팀 압도적 우세' : '원정팀 압도적 우세')
+      : grade === 'GOOD'
+      ? (homeProb >= awayProb ? '홈팀 우세 예상' : '원정팀 우세 예상')
+      : '접전 예상 - 신중한 접근 필요'
+    const reasonEn = grade === 'PICK'
+      ? (homeProb >= awayProb ? 'Home team dominant' : 'Away team dominant')
+      : grade === 'GOOD'
+      ? (homeProb >= awayProb ? 'Home team favored' : 'Away team favored')
+      : 'Close match - proceed with caution'
+    return {
+      homeWinProb: homeProb,
+      awayWinProb: awayProb,
+      recommendedBet,
+      confidence: Math.max(homeProb, awayProb),
+      grade,
+      reason,
+      reasonEn,
+      isML: true,
+    }
+  }
+
   // ✅ 1순위: DB에 저장된 AI pick
   if (match.aiPick && (match.aiPick === 'PICK' || match.aiPick === 'GOOD' || match.aiPick === 'PASS')) {
     const grade = match.aiPick as 'PICK' | 'GOOD' | 'PASS'

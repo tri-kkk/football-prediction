@@ -11,7 +11,6 @@ SE ONE 에디터 HTML 구조 기반 (debug_editor.py로 분석)
 """
 import os
 import time
-import pickle
 import random
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
@@ -19,7 +18,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from config import NAVER_BLOG_ID, NAVER_ID, NAVER_PW, COOKIE_FILE, CHROME_PROFILE_DIR
+from config import NAVER_BLOG_ID, NAVER_ID, NAVER_PW
+import pyperclip
 
 
 class NaverBlogPoster:
@@ -29,6 +29,23 @@ class NaverBlogPoster:
         self.headless = headless
 
     def _create_driver(self):
+        """이미 열린 Chrome(9222포트)에 연결. 없으면 새로 생성."""
+        from selenium import webdriver
+
+        # 방법 1: 이미 열린 Chrome에 연결
+        try:
+            options = webdriver.ChromeOptions()
+            options.debugger_address = "127.0.0.1:9222"
+            self.driver = webdriver.Chrome(options=options)
+            self.driver.implicitly_wait(5)
+            print("    🔗 기존 Chrome에 연결 완료")
+            return
+        except Exception as e:
+            print(f"    ⚠️ 기존 Chrome 연결 실패: {e}")
+            print("    📌 open_chrome.bat으로 Chrome을 먼저 열어주세요")
+
+        # 방법 2: 새 Chrome 생성 (fallback — 로그인 필요)
+        print("    🆕 새 Chrome 생성 (로그인 필요할 수 있음)")
         options = uc.ChromeOptions()
         if self.headless:
             options.add_argument("--headless=new")
@@ -36,48 +53,11 @@ class NaverBlogPoster:
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--window-size=1400,900")
         options.add_argument("--lang=ko-KR")
-        if not os.path.exists(CHROME_PROFILE_DIR):
-            os.makedirs(CHROME_PROFILE_DIR)
-        options.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR}")
         self.driver = uc.Chrome(options=options)
         self.driver.implicitly_wait(5)
 
     def _delay(self, min_s=1.0, max_s=3.0):
         time.sleep(random.uniform(min_s, max_s))
-
-    def _save_cookies(self):
-        cookies = self.driver.get_cookies()
-        with open(COOKIE_FILE, "wb") as f:
-            pickle.dump(cookies, f)
-        print("    🍪 쿠키 저장 완료")
-
-    def _load_cookies(self):
-        if not os.path.exists(COOKIE_FILE):
-            return False
-        try:
-            with open(COOKIE_FILE, "rb") as f:
-                cookies = pickle.load(f)
-            self.driver.get("https://www.naver.com")
-            self._delay(1, 2)
-            for cookie in cookies:
-                try:
-                    self.driver.add_cookie(cookie)
-                except:
-                    pass
-            print("    🍪 쿠키 복원 완료")
-            return True
-        except:
-            return False
-
-    def _check_cookies(self) -> bool:
-        try:
-            self.driver.get("https://www.naver.com")
-            self._delay(2, 3)
-            cookies = self.driver.get_cookies()
-            cookie_names = [c["name"] for c in cookies]
-            return any(name in cookie_names for name in ["NID_AUT", "NID_SES", "nid_inf"])
-        except:
-            return False
 
     def _clipboard_paste(self, text: str):
         """클립보드에 텍스트 복사 후 Ctrl+V 붙여넣기"""
@@ -88,62 +68,90 @@ class NaverBlogPoster:
         ActionChains(self.driver).key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
         self._delay(0.5, 1)
 
-    def _login_auto(self) -> bool:
-        """자동 로그인: Chrome 저장 정보로 로그인 버튼만 클릭"""
-        print("    🔐 로그인 페이지 이동...")
-        self.driver.get("https://nid.naver.com/nidlogin.login")
-        self._delay(3, 5)
+    def ensure_login(self) -> bool:
+        """로그인 상태 확인 → 안 되어있으면 자동 로그인 시도"""
+        if not self.driver:
+            self._create_driver()
 
-        try:
-            # Chrome 자동완성 대기
+        # 현재 페이지에서 쿠키 확인 (이미 네이버에 있을 수 있음)
+        current = self.driver.current_url
+        if "naver.com" not in current:
+            self.driver.get("https://www.naver.com")
             self._delay(2, 3)
 
-            # 로그인 버튼 클릭
-            login_btn = self.driver.find_element(By.CSS_SELECTOR, '#log\\.login, .btn_login, button[type="submit"]')
+        cookies = self.driver.get_cookies()
+        cookie_names = [c["name"] for c in cookies]
+
+        if any(name in cookie_names for name in ["NID_AUT", "NID_SES", "nid_inf"]):
+            print("    ✅ 로그인 확인됨")
+            return True
+
+        # 쿠키 없음 → 자동 로그인 시도
+        print("    🔑 로그인 안 됨 — 자동 로그인 시도...")
+        return self._login_auto()
+
+    def _login_auto(self) -> bool:
+        """pyperclip으로 ID/PW 붙여넣기 자동 로그인"""
+        if not NAVER_ID or not NAVER_PW:
+            print("    ❌ .env에 NAVER_ID / NAVER_PW 설정 필요")
+            return False
+
+        try:
+            # 1. 네이버 로그인 페이지 이동
+            self.driver.get("https://nid.naver.com/nidlogin.login")
+            self._delay(3, 5)
+
+            # 2. ID 입력 — 클릭 → pyperclip 복사 → Ctrl+V
+            id_input = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#id"))
+            )
+            id_input.click()
+            self._delay(0.5, 1)
+
+            pyperclip.copy(NAVER_ID)
+            ActionChains(self.driver).key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
+            self._delay(1, 2)
+
+            # 3. PW 입력 — 클릭 → pyperclip 복사 → Ctrl+V
+            pw_input = self.driver.find_element(By.CSS_SELECTOR, "#pw")
+            pw_input.click()
+            self._delay(0.5, 1)
+
+            pyperclip.copy(NAVER_PW)
+            ActionChains(self.driver).key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
+            self._delay(1, 2)
+
+            # 4. 로그인 버튼 클릭
+            login_btn = self.driver.find_element(By.CSS_SELECTOR, "#log\\.login, .btn_login, button[type='submit']")
             login_btn.click()
-            print("    🔐 로그인 버튼 클릭")
+            print("    🔑 로그인 버튼 클릭")
             self._delay(5, 8)
 
-            # 로그인 확인
+            # 5. 로그인 성공 확인
             cookies = self.driver.get_cookies()
             cookie_names = [c["name"] for c in cookies]
+
             if any(name in cookie_names for name in ["NID_AUT", "NID_SES", "nid_inf"]):
-                self._save_cookies()
-                print("    ✅ 로그인 성공!")
+                print("    ✅ 자동 로그인 성공!")
+                # 보안: 클립보드 비우기
+                pyperclip.copy("")
                 return True
 
-            print(f"    ⚠️ 로그인 후 URL: {self.driver.current_url}")
+            # 캡차/2차인증 등으로 실패 가능
+            current_url = self.driver.current_url
+            if "nidlogin" in current_url:
+                print("    ⚠️ 로그인 페이지에 머물러 있음 (캡차/2차인증 확인 필요)")
+            else:
+                print(f"    ⚠️ 로그인 후 이동: {current_url}")
+
+            # 보안: 클립보드 비우기
+            pyperclip.copy("")
             return False
 
         except Exception as e:
-            print(f"    ❌ 로그인 실패: {e}")
+            print(f"    ❌ 자동 로그인 실패: {e}")
+            pyperclip.copy("")
             return False
-
-    def login_manual(self):
-        print("\n🔐 네이버 로그인이 필요합니다.")
-        print("   브라우저가 열리면 직접 로그인해주세요.\n")
-        if not self.driver:
-            self._create_driver()
-        self.driver.get("https://nid.naver.com/nidlogin.login")
-        self._delay(3, 5)
-        print(f"   📍 현재 URL: {self.driver.current_url}")
-        input("   → 로그인 완료 후 Enter 키를 누르세요... ")
-        cookies = self.driver.get_cookies()
-        cookie_names = [c["name"] for c in cookies]
-        if any(name in cookie_names for name in ["NID_AUT", "NID_SES", "nid_inf"]):
-            self._save_cookies()
-            print("   ✅ 로그인 성공!")
-            return True
-        print("   ⚠️ 확인 안 됨 — 쿠키 강제 저장")
-        self._save_cookies()
-        return True
-
-    def ensure_login(self) -> bool:
-        if not self.driver:
-            self._create_driver()
-
-        # 수동 로그인: 네이버 로그인 페이지 열고 사용자가 직접 로그인
-        return self.login_manual()
 
     # ═══════════════════════════════════════════════════
     # 포스팅 메인

@@ -497,6 +497,25 @@ export async function POST(request: NextRequest) {
       ? `${favoredTeam} 측 ${favoredProb}% 확률로 우세.${pitcherLine || ' 최근 득실점 흐름과 안타 생산력이 주요 예측 근거.'}`
       : `데이터가 부족하여 예측 신뢰도가 낮습니다. (홈 ${homeStats.games_played}경기, 원정 ${awayStats.games_played}경기)`
 
+    // ✅ full 모드 결과를 baseball_odds_latest에 저장 (메인 목록과 동기화)
+    // quickMode는 placeholder(배당/균등)라 저장하지 않음 — 실제 AI 블렌딩된 full 결과만 저장
+    if (!quickMode) {
+      try {
+        await supabase
+          .from('baseball_odds_latest')
+          .update({
+            ai_home_win_prob: homeWinProb,
+            ai_away_win_prob: awayWinProb,
+            ai_grade: aiResult.grade ?? null,
+            ai_pick_confidence: aiResult.confidence ?? null,
+            ai_updated_at: new Date().toISOString(),
+          })
+          .eq('api_match_id', match.api_match_id)
+      } catch (e) {
+        console.warn('predict upsert skip:', e)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       quick: quickMode,
@@ -549,29 +568,4 @@ export async function POST(request: NextRequest) {
           away: awaySeason ? {
             avg: awaySeason.team_avg,
             obp: awaySeason.team_obp,
-            slg: awaySeason.team_slg,
-            ops: awaySeason.team_ops,
-            hr: awaySeason.team_hr,
-            era: awaySeason.team_era_real,
-            whip: awaySeason.team_whip,
-            oppAvg: awaySeason.team_opp_avg,
-          } : null,
-        } : undefined,
-        summary,
-      },
-      dataQuality: {
-        homeGamesPlayed: homeStats.games_played,
-        awayGamesPlayed: awayStats.games_played,
-        reliable: dataReliable,
-        hasPitcherData,
-        pitcherAdjustment: Math.round(pitcherAdjustment * 1000) / 10, // %p
-      },
-    })
-  } catch (err) {
-    console.error('AI predict error:', err)
-    return NextResponse.json(
-      { success: false, error: String(err) },
-      { status: 500 }
-    )
-  }
-}
+            slg: awaySeaso
