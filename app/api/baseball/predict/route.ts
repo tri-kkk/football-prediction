@@ -568,4 +568,29 @@ export async function POST(request: NextRequest) {
           away: awaySeason ? {
             avg: awaySeason.team_avg,
             obp: awaySeason.team_obp,
-            slg: awaySeaso
+            slg: awaySeason.team_slg,
+            ops: awaySeason.team_ops,
+            hr: awaySeason.team_hr,
+            era: awaySeason.team_era_real,
+            whip: awaySeason.team_whip,
+            oppAvg: awaySeason.team_opp_avg,
+          } : null,
+        } : undefined,
+        summary,
+      },
+      dataQuality: {
+        homeGamesPlayed: homeStats.games_played,
+        awayGamesPlayed: awayStats.games_played,
+        reliable: dataReliable,
+        hasPitcherData,
+        pitcherAdjustment: Math.round(pitcherAdjustment * 1000) / 10, // %p
+      },
+    })
+  } catch (err) {
+    console.error('AI predict error:', err)
+    return NextResponse.json(
+      { success: false, error: String(err) },
+      { status: 500 }
+    )
+  }
+}

@@ -494,4 +494,22 @@ export async function GET(request: NextRequest) {
         awayPitcherId: match.away_pitcher_id ?? null,
         awayPitcherKo: match.away_pitcher_ko ?? null,
 
-        // ✅ 투수 데이터 반영 
+        // ✅ 투수 데이터 반영 여부 (KBO/NPB는 투수 이름 또는 ERA 있으면 true)
+        hasPitcherData: (match.league === 'MLB' || match.league === 'CPBL')
+          ? true
+          : ((match.home_pitcher_ko != null || match.home_pitcher_era != null) && (match.away_pitcher_ko != null || match.away_pitcher_era != null)),
+      }
+    }) || []
+
+    return NextResponse.json({
+      success: true,
+      count: formattedMatches.length,
+      filters: { league, status, limit, date },
+      matches: formattedMatches,
+    })
+
+  } catch (error: any) {
+    console.error('❌ API 오류:', error)
+    return NextResponse.json({ success: false, error: error.message, matches: [] }, { status: 500 })
+  }
+}
