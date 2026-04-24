@@ -6,6 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// ⚠️ Vercel function timeout — 65경기 직렬 처리에 시간이 걸리므로 명시 지정
+// Pro 플랜은 최대 800초까지 지원. 여유롭게 600초.
+export const maxDuration = 600
+export const runtime = 'nodejs'
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
