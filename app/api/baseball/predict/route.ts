@@ -501,16 +501,21 @@ export async function POST(request: NextRequest) {
     // quickMode는 placeholder(배당/균등)라 저장하지 않음 — 실제 AI 블렌딩된 full 결과만 저장
     if (!quickMode) {
       try {
+        // upsert — 배당 행이 없는 경기도 AI 예측만 있는 행으로 생성
         await supabase
           .from('baseball_odds_latest')
-          .update({
-            ai_home_win_prob: homeWinProb,
-            ai_away_win_prob: awayWinProb,
-            ai_grade: aiResult.grade ?? null,
-            ai_pick_confidence: aiResult.confidence ?? null,
-            ai_updated_at: new Date().toISOString(),
-          })
-          .eq('api_match_id', match.api_match_id)
+          .upsert(
+            {
+              api_match_id: match.api_match_id,
+              league: match.league,
+              ai_home_win_prob: homeWinProb,
+              ai_away_win_prob: awayWinProb,
+              ai_grade: aiResult.grade ?? null,
+              ai_pick_confidence: aiResult.confidence ?? null,
+              ai_updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'api_match_id' }
+          )
       } catch (e) {
         console.warn('predict upsert skip:', e)
       }
