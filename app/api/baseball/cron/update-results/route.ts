@@ -131,28 +131,22 @@ export async function GET(request: NextRequest) {
         console.log(`  📊 API 응답: status=${newStatus}, score=${homeScore}-${awayScore}, innings=${game.scores.home.innings ? 'O' : 'X'}`)
         
         // 이닝별 스코어 파싱
-        let inningData = null
+        // 🔥 2026-04 패치: API-Football은 연장 이닝 합계를 'extra' 키로 제공.
+        //   기존엔 이걸 버려서 home_score(11) ≠ 1~9이닝 합(8) 같은 불일치가 발생.
+        //   이제 'extra' 값도 그대로 보관하고, 프론트에서 연장(X회)으로 렌더링.
+        let inningData: any = null
         if (game.scores.home.innings && game.scores.away.innings) {
-          inningData = {
-            home: {},
-            away: {}
-          }
-          
-          // home.innings에서 데이터 추출
+          inningData = { home: {}, away: {} }
+
           for (const [inning, score] of Object.entries(game.scores.home.innings)) {
-            if (inning !== 'extra') {  // extra는 제외
-              inningData.home[inning] = score
-            }
+            inningData.home[inning] = score
           }
-          
-          // away.innings에서 데이터 추출
           for (const [inning, score] of Object.entries(game.scores.away.innings)) {
-            if (inning !== 'extra') {  // extra는 제외
-              inningData.away[inning] = score
-            }
+            inningData.away[inning] = score
           }
-          
-          console.log(`  ✨ 이닝 데이터 파싱 완료: ${Object.keys(inningData.home).length}개 이닝`)
+
+          const hasExtra = ('extra' in inningData.home) || ('extra' in inningData.away)
+          console.log(`  ✨ 이닝 데이터 파싱 완료: ${Object.keys(inningData.home).length}개 이닝${hasExtra ? ' (연장 포함)' : ''}`)
         } else {
           console.log(`  ⚠️ 이닝 데이터 없음 (API에서 제공 안 함)`)
         }

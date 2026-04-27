@@ -644,14 +644,28 @@ export default function BaseballDetailPage() {
   }, [match?.league])
 
   // 이닝 스코어 배열
-  const getInningsArray = () => {
+  // 🔥 2026-04 패치: API-Football은 연장(10회+) 합계를 'extra' 키로 제공.
+  //   1~9이닝 + 'X'(연장 합계) 컬럼으로 표시.
+  const getInningsArray = (): Array<{ inning: number | string; away: number | string; home: number | string }> => {
     if (!match?.innings) return []
-    const innings = []
+    const innings: Array<{ inning: number | string; away: number | string; home: number | string }> = []
     for (let i = 1; i <= 9; i++) {
       innings.push({
         inning: i,
         away: match.innings.away?.[i.toString()] ?? '-',
         home: match.innings.home?.[i.toString()] ?? '-',
+      })
+    }
+    // 연장 이닝 (API-Football이 'extra' 키로 합산 제공)
+    const extraAway = match.innings.away?.extra
+    const extraHome = match.innings.home?.extra
+    const hasExtraAway = extraAway != null && extraAway !== 0
+    const hasExtraHome = extraHome != null && extraHome !== 0
+    if (hasExtraAway || hasExtraHome) {
+      innings.push({
+        inning: 'X',
+        away: extraAway ?? 0,
+        home: extraHome ?? 0,
       })
     }
     return innings
