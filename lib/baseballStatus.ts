@@ -70,7 +70,7 @@ export function extractInningNumber(status?: string | null): string | null {
 
 /**
  * update-results cron 등에서 "다시 조회해야 할" status 목록.
- * - 미시작(NS), 라이브(LIVE/IN*/H*), 라이브성 휴식(BT/HT)
+ * - 미시작(NS), 라이브(LIVE / IN1~IN15 / 1H~15H), 라이브성 휴식(BT, HT)
  * - 일시 중단(INTR): API가 재개를 알려줄 수도, 영구 중단을 알려줄 수도 있어서 계속 폴링 필요
  */
 export const REQUERY_STATUSES: string[] = [
