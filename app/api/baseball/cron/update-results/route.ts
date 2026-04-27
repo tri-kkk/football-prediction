@@ -1,6 +1,11 @@
 // app/api/baseball/cron/update-results/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import {
+  isLiveBaseballStatus,
+  REQUERY_STATUSES_IN_CLAUSE,
+  FINISHED_STATUSES_ARRAY,
+} from '../../../../../lib/baseballStatus'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -24,14 +29,16 @@ export async function GET(request: NextRequest) {
     console.log(`📅 업데이트 대상: ${yesterdayStr}, ${todayStr}`)
     
     // 2. DB에서 업데이트가 필요한 경기 조회
-    // - 진행 중인 경기 (NS, LIVE, IN1-IN9, 1H-9H)
+    // - 진행 중인 경기 (NS, LIVE, IN1~IN15, 1H~15H, BT, HT)
+    // - 일시 중단된 경기 (INTR) — 재개 또는 영구 종료까지 폴링 필요
     // - 종료된 경기 중 이닝 데이터가 없는 경기 (FT인데 inning IS NULL)
+    // 🔥 2026-04 패치: lib/baseballStatus의 통합 화이트리스트 사용. 기존엔 INTR/IN10+가 빠져 영구 LIVE로 박히는 버그 있었음.
     const { data: matches, error: fetchError } = await supabase
       .from('baseball_matches')
-      .select('api_match_id, home_team, away_team, match_date, status, inning, updated_at')
+      .select('api_match_id, home_team, away_team, match_date, status, inning, home_score, away_score, updated_at')
       .gte('match_date', yesterdayStr)
       .lte('match_date', todayStr)
-      .or(`status.in.(NS,LIVE,IN1,IN2,IN3,IN4,IN5,IN6,IN7,IN8,IN9,1H,2H,3H,4H,5H,6H,7H,8H,9H),and(status.eq.FT,inning.is.null)`)
+      .or(`${REQUERY_STATUSES_IN_CLAUSE},and(status.eq.FT,inning.is.null)`)
       .limit(50)
     
     if (fetchError) {
@@ -87,7 +94,7 @@ export async function GET(request: NextRequest) {
         console.log(`  🔎 API 전체 응답:`, JSON.stringify(game.scores, null, 2))
         
         // 종료 상태 코드 매핑 (API-Football 야구)
-        const FINISHED_STATUSES = ['FT', 'AET', 'POST', 'CANC', 'ABD', 'AWD', 'WO']
+        const FINISHED_STATUSES = FINISHED_STATUSES_ARRAY
         let newStatus = game.status.short
         const homeScore = game.scores.home.total
         const awayScore = game.scores.away.total
@@ -98,13 +105,25 @@ export async function GET(request: NextRequest) {
           newStatus = 'FT'
         }
 
-        // 타임아웃 안전장치: IN7 이상 상태에서 3시간 이상 업데이트 없으면 자동 FT
-        const lateInnings = ['IN7', 'IN8', 'IN9']
+        // 타임아웃 안전장치 1: 후반 이닝(IN7~IN15)에서 3시간 이상 업데이트 없으면 자동 FT
+        const lateInnings = ['IN7', 'IN8', 'IN9', 'IN10', 'IN11', 'IN12', 'IN13', 'IN14', 'IN15']
         if (lateInnings.includes(match.status) && match.updated_at) {
           const lastUpdate = new Date(match.updated_at).getTime()
           const hoursElapsed = (Date.now() - lastUpdate) / (1000 * 60 * 60)
           if (hoursElapsed >= 3 && !FINISHED_STATUSES.includes(newStatus) && newStatus !== 'FT') {
             console.log(`  ⏰ 타임아웃: ${match.status} 상태에서 ${hoursElapsed.toFixed(1)}시간 경과 → FT 자동 전환`)
+            newStatus = 'FT'
+          }
+        }
+
+        // 타임아웃 안전장치 2: INTR(중단) 상태가 6시간 이상 + 점수가 있으면 → 사실상 종료된 경기로 간주, FT 처리
+        // (API-Football이 우천 콜드 게임에 INTR을 영구 유지하는 케이스 대응)
+        if (newStatus === 'INTR' && match.updated_at) {
+          const lastUpdate = new Date(match.updated_at).getTime()
+          const hoursElapsed = (Date.now() - lastUpdate) / (1000 * 60 * 60)
+          const hasScore = (homeScore ?? null) !== null && (awayScore ?? null) !== null
+          if (hoursElapsed >= 6 && hasScore) {
+            console.log(`  ⏰ INTR 타임아웃: ${hoursElapsed.toFixed(1)}시간 경과 + 점수(${homeScore}-${awayScore}) → FT 자동 전환`)
             newStatus = 'FT'
           }
         }
@@ -139,7 +158,7 @@ export async function GET(request: NextRequest) {
         }
         
         // 4. 점수나 상태가 변경되었으면 업데이트
-        if (newStatus === 'FT' || newStatus === 'LIVE' || newStatus.startsWith('IN') || homeScore !== null || awayScore !== null) {
+        if (newStatus === 'FT' || isLiveBaseballStatus(newStatus) || newStatus === 'INTR' || homeScore !== null || awayScore !== null) {
           console.log(`  💾 DB 업데이트 시도...`)
           
           const { error: updateError } = await supabase

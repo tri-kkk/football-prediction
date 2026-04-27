@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useLanguage } from '../contexts/LanguageContext'
 import AdBanner from '../components/AdBanner'
+import { isLiveBaseballStatus } from '../../lib/baseballStatus'
 
 // =====================================================
 // 타입 정의
@@ -219,7 +220,7 @@ export default function BaseballMainPage() {
           if (live.length > 0) {
             setLiveMatches(prev => {
               const newIds = new Set(live.map(m => m.id))
-              const kept = prev.filter(m => !newIds.has(m.id) && m.status?.startsWith('IN'))
+              const kept = prev.filter(m => !newIds.has(m.id) && isLiveBaseballStatus(m.status))
               return [...live, ...kept]
             })
           }
@@ -245,8 +246,8 @@ export default function BaseballMainPage() {
 
         // 오늘 경기 → 라이브/스케줄 분리
         if (todayData.success) {
-          const live = todayData.matches.filter((m: Match) => m.status?.startsWith('IN'))
-          const rest = todayData.matches.filter((m: Match) => !m.status?.startsWith('IN'))
+          const live = todayData.matches.filter((m: Match) => isLiveBaseballStatus(m.status))
+          const rest = todayData.matches.filter((m: Match) => !isLiveBaseballStatus(m.status))
           setLiveMatches(live)
           setScheduledMatches(rest)
         }
@@ -397,7 +398,7 @@ export default function BaseballMainPage() {
       )}
       
       {/* ===== 라이브 스코어 (진행중 경기가 있을 때만 표시) ===== */}
-      {liveMatches.some(m => m.status?.startsWith('IN')) && (
+      {liveMatches.some(m => isLiveBaseballStatus(m.status)) && (
       <div className="bg-gray-900 border-b border-gray-800 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center">
           {/* LIVE SCORE 라벨 */}
@@ -442,9 +443,9 @@ export default function BaseballMainPage() {
                 const deduped = [...liveMatches, ...scheduledMatches.filter(m => !liveIds.has(m.id))].slice(0, 10)
                 return deduped
               })().map((match) => {
-                const isLive = match.status?.startsWith('IN')
+                const isLive = isLiveBaseballStatus(match.status)
                 // 이닝 번호 추출 (IN1 → 1회, IN3 → 3회)
-                const inningNum = isLive ? match.status.replace('IN', '') : null
+                const inningNum = isLive ? (match.status?.replace('IN', '').replace('H', '') ?? null) : null
                 return (
                   <Link
                     key={match.id}
@@ -941,8 +942,8 @@ export default function BaseballMainPage() {
                 .filter(m => scheduleLeague === 'ALL' || m.league === scheduleLeague)
                 .slice(0, 10)
                 .map((match, idx, arr) => {
-                  const isLive = match.status?.startsWith('IN')
-                  const inningNum = isLive ? match.status.replace('IN', '') : null
+                  const isLive = isLiveBaseballStatus(match.status)
+                  const inningNum = isLive ? (match.status?.replace('IN', '').replace('H', '') ?? null) : null
                   return (
                   <Link
                     key={match.id}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isLiveBaseballStatus, isFinishedBaseballStatus } from '../../../../lib/baseballStatus'
 
 // =====================================================
 // 🔴 Baseball Live API
@@ -68,9 +69,9 @@ export async function GET(request: NextRequest) {
       return true
     })
 
-    // 라이브 + 오늘 종료 경기 필터 (IN% + FT)
+    // 라이브 + 오늘 종료 경기 필터 (IN1~IN12 / BT 등 라이브 + FT/AET 등 종료)
     const liveGames = allGames.filter((g: any) =>
-      (g.status?.short?.startsWith('IN') || g.status?.short === 'FT') &&
+      (isLiveBaseballStatus(g.status?.short) || isFinishedBaseballStatus(g.status?.short)) &&
       ALLOWED_LEAGUE_IDS.has(g.league?.id)
     )
 
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
       liveGames.map(async (g: any) => {
         const leagueCode = SUPPORTED_LEAGUES[g.league.id]  // ALLOWED_LEAGUE_IDS로 이미 필터됨
         const status = g.status.short
-        const isLive = status.startsWith('IN')
+        const isLive = isLiveBaseballStatus(status)
         const homeScore = g.scores.home.total ?? 0
         const awayScore = g.scores.away.total ?? 0
         const homeHits = g.scores.home.hits ?? 0

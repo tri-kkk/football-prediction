@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useLanguage } from '../../contexts/LanguageContext'
 import BaseballAIPrediction from '../../components/BaseballAIPrediction'
+import { isLiveBaseballStatus, extractInningNumber } from '../../../lib/baseballStatus'
 
 // =====================================================
 // 타입 정의
@@ -567,8 +568,8 @@ export default function BaseballDetailPage() {
   }, [language])
 
   const isFinished = match?.status === 'FT'
-  const isLive = match?.status?.startsWith('IN') ?? false
-  const currentInning = isLive ? match!.status.replace('IN', '') : null
+  const isLive = isLiveBaseballStatus(match?.status)
+  const currentInning = isLive ? extractInningNumber(match?.status) : null
 
   // 라이브 경기 30초 폴링 (/api/baseball/live → API-Sports 직접 조회 + DB 업데이트)
   useEffect(() => {
@@ -733,7 +734,7 @@ export default function BaseballDetailPage() {
               .filter((m: any) => sidebarLeague === 'ALL' || m.league === sidebarLeague)
               .map((m: any) => {
                 const isCurrent = String(m.id) === String(matchId)
-                const mIsLive = m.status?.startsWith('IN')
+                const mIsLive = isLiveBaseballStatus(m.status)
                 const mIsDone = m.status === 'FT'
                 const awayEn = m.awayTeam || m.away_team || ''
                 const homeEn = m.homeTeam || m.home_team || ''
@@ -841,7 +842,7 @@ export default function BaseballDetailPage() {
                   .filter((m: any) => sidebarLeague === 'ALL' || m.league === sidebarLeague)
                   .map((m: any) => {
                 const isCurrent = String(m.id) === String(matchId)
-                const mIsLive = m.status?.startsWith('IN')
+                const mIsLive = isLiveBaseballStatus(m.status)
                 const mIsDone = m.status === 'FT'
                 const awayEn = m.awayTeam || m.away_team || ''
                 const homeEn = m.homeTeam || m.home_team || ''
