@@ -563,10 +563,22 @@ export async function GET(request: Request) {
     }
     
     // 특정 회차 지정시
+    // 🔥 2026-04 패치: round만 받았을 때도 메인 페이지에서 정확한 seq 조회
+    // (SEQ_BASE 폴백은 회차 간격이 일정하지 않아 부정확 → 옛 회차 데이터를 새 회차로 잘못 저장하는 버그 발생)
+    let seqSource: 'param' | 'lookup' | 'fallback' = 'param'
     if (!masterSeq) {
-      masterSeq = calculateMasterSeq(parseInt(round))
+      const lookupSeq = await findSeqForRound(parseInt(round))
+      if (lookupSeq) {
+        masterSeq = lookupSeq
+        seqSource = 'lookup'
+      } else {
+        masterSeq = calculateMasterSeq(parseInt(round))
+        seqSource = 'fallback'
+        console.warn(`⚠️ ${round}회차 seq를 메인 페이지에서 못 찾아 폴백 사용 (${masterSeq}) — 데이터가 다른 회차일 수 있음`)
+      }
     }
-    
+    console.log(`🔑 ${round}회차 seq=${masterSeq} (source: ${seqSource})`)
+
     // Wisetoto 내부 API 호출
     const html = await fetchWisetotoGameList(round, masterSeq)
     console.log(`📄 HTML 수신: ${html.length}자`)
@@ -608,6 +620,7 @@ export async function GET(request: Request) {
       data: {
         round,
         masterSeq,
+        seqSource,
         total: matches.length,
         sports: sportCounts,
         gameTypes: typeCounts,
