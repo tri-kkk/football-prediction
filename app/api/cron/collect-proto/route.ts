@@ -53,10 +53,11 @@ function parseWisetotoHtml(html: string, round: string): ProtoMatch[] {
   while ((ulMatch = ulRegex.exec(html)) !== null) {
     const ulContent = ulMatch[1]
     
-    // 게임 번호 확인 (li.a1에 001, 002 등)
-    const numberMatch = ulContent.match(/<li\s+class="a1"[^>]*>(\d{3})<\/li>/)
+    // 게임 번호 확인 (li.a1에 001, 002, ... 또는 1600, 1601 등)
+    // 🔥 2026-04 패치: 와이즈토토가 게임 번호를 3자리 → 4자리로 변경 (1000 단위 누적)
+    const numberMatch = ulContent.match(/<li\s+class="a1"[^>]*>(\d{3,5})<\/li>/)
     if (!numberMatch) continue
-    
+
     const matchNumber = parseInt(numberMatch[1])
     
     // 날짜/시간 (li.a2)
