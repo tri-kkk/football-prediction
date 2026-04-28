@@ -563,7 +563,7 @@ export default function BaseballMainPage() {
                 </div>
                 <div>
                   <p className="text-xs text-blue-400 font-semibold tracking-wide mb-0.5">
-                    {language === 'ko' ? `${todayMonth}/${todayDay} AI 분석 정확도` : `${todayMonth}/${todayDay} AI Analysis Accuracy`}
+                    {language === 'ko' ? `${todayMonth}/${todayDay} 데이터 분석 통계` : `${todayMonth}/${todayDay} Analysis Stats`}
                   </p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-black text-white tabular-nums">{accuracyRate}%</span>
@@ -573,12 +573,12 @@ export default function BaseballMainPage() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-[11px] text-gray-500 mb-1">{language === 'ko' ? '일치' : 'Match'}</p>
+                  <p className="text-[11px] text-gray-500 mb-1">{language === 'ko' ? '예상값' : 'Forecast'}</p>
                   <p className="text-lg font-bold text-blue-400 tabular-nums">{correctCount}</p>
                 </div>
                 <div className="w-px h-8 bg-gray-700" />
                 <div className="text-right">
-                  <p className="text-[11px] text-gray-500 mb-1">{language === 'ko' ? '미일치' : 'Missed'}</p>
+                  <p className="text-[11px] text-gray-500 mb-1">{language === 'ko' ? '실제값' : 'Actual'}</p>
                   <p className="text-lg font-bold text-red-400 tabular-nums">{totalCount - correctCount}</p>
                 </div>
               </div>
@@ -586,14 +586,14 @@ export default function BaseballMainPage() {
           </div>
         )}
 
-        {/* ===== AI 추천 경기 ===== */}
+        {/* ===== 주요 경기 ===== */}
         <section>
           {/* 섹션 헤더 + 탭 */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-1 h-5 rounded-full bg-blue-500" />
               <h2 className="text-lg font-bold text-white">
-                {language === 'ko' ? 'AI 추천 경기' : 'AI Top Matches'}
+                {language === 'ko' ? '주요 경기' : 'Featured Matches'}
               </h2>
             </div>
             <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
@@ -651,7 +651,7 @@ export default function BaseballMainPage() {
                           <div className="flex items-center gap-1.5">
                             {isBest && (
                               <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-amber-900">
-                                BEST
+                                FOCUS
                               </span>
                             )}
                             <span className={`text-[10px] font-bold text-white px-2 py-0.5 rounded ${LEAGUE_COLORS[match.league]}`}>
@@ -707,7 +707,7 @@ export default function BaseballMainPage() {
                       </div>
                     </Link>
 
-                    {/* 🔒 BEST 카드 잠금 오버레이 */}
+                    {/* 🔒 FOCUS 카드 잠금 오버레이 */}
                     {isLocked && (
                       <div
                         className="absolute inset-0 rounded-xl flex flex-col items-center justify-center gap-2.5 pointer-events-none"
@@ -718,7 +718,7 @@ export default function BaseballMainPage() {
                         <div className="flex items-center gap-1.5">
                           <span className="text-lg">🔒</span>
                           <span className="text-sm font-bold" style={{ color: '#fbbf24' }}>
-                            {language === 'ko' ? 'BEST 경기 프리미엄 전용' : 'BEST · Premium Only'}
+                            {language === 'ko' ? '프리미엄 전용 경기' : 'Premium Only'}
                           </span>
                         </div>
                         <p className="text-[11px] text-center px-6" style={{ color: '#64748b' }}>
@@ -855,8 +855,8 @@ export default function BaseballMainPage() {
                             {isDraw
                               ? (language === 'ko' ? '무승부' : 'DRAW')
                               : correct
-                                ? (language === 'ko' ? '일치' : 'MATCH')
-                                : (language === 'ko' ? '미일치' : 'MISSED')
+                                ? (language === 'ko' ? '예상 일치' : 'ALIGNED')
+                                : (language === 'ko' ? '예상 차이' : 'DIVERGED')
                             }
                           </span>
                         </div>
@@ -1182,46 +1182,46 @@ export default function BaseballMainPage() {
       
       {/* SEO용 H1 태그 - 화면에서 숨김 */}
       <h1 className="sr-only">
-        실시간 프로야구 AI 전력 분석 및 경기 예측 (KBO, NPB, MLB)
+        실시간 프로야구 AI 전력 분석 및 데이터 리포트 (KBO, NPB, MLB)
       </h1>
 
       {/* SEO용 정적 콘텐츠 - 검색엔진 봇용 */}
       <section className="sr-only">
-        <h2>리그별 매치 리포트, 팀별 상대 전적 및 통계, 야구 승률 예측 분석</h2>
+        <h2>리그별 매치 리포트, 팀별 상대 전적 및 통계, 야구 데이터 심층 분석</h2>
         <p>
           트렌드베이스볼은 KBO, NPB, MLB 프로야구 리그의 경기 데이터를 AI로 정밀 분석하여
-          승률 예측 정보를 제공하는 전문 플랫폼입니다. 세이버메트릭스 기반 투수/타자 스탯,
+          심층 데이터 리포트를 제공하는 전문 플랫폼입니다. 세이버메트릭스 기반 투수/타자 스탯,
           팀 상대 전적, 실시간 라인업 정보를 종합적으로 분석합니다.
         </p>
         <h3>KBO 분석</h3>
         <p>
-          KBO 리그 전 경기 AI 승률 예측, 선발 투수 매치업 분석, 팀별 최근 폼 및 홈/원정 성적,
+          KBO 리그 전 경기 AI 데이터 분석, 선발 투수 매치업 분석, 팀별 최근 폼 및 홈/원정 성적,
           타자 주요 스탯 비교를 제공합니다.
         </p>
         <h3>NPB 분석</h3>
         <p>
-          일본프로야구(NPB) 센트럴리그, 퍼시픽리그 전 경기 분석 및 승률 예측,
+          일본프로야구(NPB) 센트럴리그, 퍼시픽리그 전 경기 데이터 분석,
           투수 세부 스탯 기반 매치업 리포트를 제공합니다.
         </p>
         <h3>MLB 분석</h3>
         <p>
-          메이저리그(MLB) 아메리칸리그, 내셔널리그 전 경기 AI 예측, 세이버메트릭스 통계,
+          메이저리그(MLB) 아메리칸리그, 내셔널리그 전 경기 AI 분석, 세이버메트릭스 통계,
           선발 투수 분석 및 팀 전력 비교 데이터를 제공합니다.
         </p>
       </section>
       <section className="sr-only" lang="en">
-        <h2>Professional Baseball AI Analysis &amp; Match Predictions (KBO, NPB, MLB)</h2>
+        <h2>Professional Baseball AI Analysis &amp; Data Reports (KBO, NPB, MLB)</h2>
         <p>
-          TrendBaseball provides AI-powered analysis and win probability predictions for KBO, NPB, and MLB
+          TrendBaseball provides AI-powered analysis and in-depth data reports for KBO, NPB, and MLB
           professional baseball leagues. Sabermetrics-based pitcher/batter stats, head-to-head records,
           and real-time lineup information are comprehensively analyzed.
         </p>
         <h3>KBO Analysis</h3>
-        <p>AI win probability predictions, starting pitcher matchup analysis, and team form tracking for all KBO league games.</p>
+        <p>AI-driven data analysis, starting pitcher matchup analysis, and team form tracking for all KBO league games.</p>
         <h3>NPB Analysis</h3>
-        <p>Full game analysis and predictions for Japan&apos;s NPB Central and Pacific leagues with detailed pitcher stats.</p>
+        <p>Full game data analysis for Japan&apos;s NPB Central and Pacific leagues with detailed pitcher stats.</p>
         <h3>MLB Analysis</h3>
-        <p>AI predictions, sabermetrics, starting pitcher analysis, and team comparison data for all MLB games.</p>
+        <p>AI analysis, sabermetrics, starting pitcher analysis, and team comparison data for all MLB games.</p>
       </section>
 
       {/* 하단 여백 (BottomNavigation 공간) */}

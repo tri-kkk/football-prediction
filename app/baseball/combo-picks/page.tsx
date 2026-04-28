@@ -278,8 +278,8 @@ export default function ComboPicksPage() {
           <div className="grid grid-cols-3 gap-3 mb-3">
             {[
               { label: tab === 'history' ? t('주간 조합', 'WEEKLY') : t('오늘 조합', 'COMBOS'), value: tab === 'history' ? String(picks.length) : String(todayCount), color: '#e2e8f0' },
-              { label: t('적중률', 'WIN RATE'), value: totalStats.total > 0 ? `${winRate}%` : '-%', color: winRate > 0 ? '#10b981' : '#64748b' },
-              { label: t('평균 배당', 'AVG ODDS'), value: String(avgOdds), color: '#fbbf24' },
+              { label: t('정합도', 'ACCURACY'), value: totalStats.total > 0 ? `${winRate}%` : '-%', color: winRate > 0 ? '#10b981' : '#64748b' },
+              { label: t('평균 지수', 'AVG INDEX'), value: String(avgOdds), color: '#fbbf24' },
             ].map((item, i) => (
               <div key={i} className="rounded-xl p-3.5 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.04)' }}>
                 <div className="text-[10px] font-semibold tracking-wider mb-1.5" style={{ color: '#64748b' }}>{item.label}</div>
@@ -287,12 +287,12 @@ export default function ComboPicksPage() {
               </div>
             ))}
           </div>
-          {/* 2행: 안전형/고배당 적중률 분리 */}
+          {/* 2행: 안정형/변동형 정합도 분리 */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ background: '#10b981' }} />
-                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('안전형', 'SAFE')}</span>
+                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('안정형', 'STABLE')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black" style={{ color: '#10b981' }}>
@@ -306,7 +306,7 @@ export default function ComboPicksPage() {
             <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ background: '#f59e0b' }} />
-                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('고배당', 'HIGH')}</span>
+                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('변동형', 'VOLATILE')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black" style={{ color: '#f59e0b' }}>
