@@ -74,7 +74,7 @@ export default function MobileBottomNav() {
       icon: 'combo',
       labelKo: '조합',
       labelEn: 'Combo',
-      hidden: true
+      hidden: false
     },
     {
       href: '/baseball/results',
