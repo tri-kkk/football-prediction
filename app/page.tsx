@@ -2187,9 +2187,9 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             {/* 심플 혜택 */}
             <div className="px-6 pb-2 space-y-2.5 text-center">
               {[
-                { ko: 'PICK 상세 분석 & 신뢰도 점수', en: 'Full PICK Analysis & Confidence Score' },
+                { ko: 'TOP 등급 상세 분석 & 신뢰도 점수', en: 'Full TOP Analysis & Confidence Score' },
                 { ko: '광고 없는 쾌적한 이용', en: 'Completely Ad-free' },
-                { ko: '24시간 전 예측 선공개', en: '24h Early Predictions' },
+                { ko: '24시간 전 데이터 선공개', en: '24h Early Data Access' },
               ].map((item, i) => (
                 <p key={i} className="text-gray-300 text-sm">{currentLanguage === 'ko' ? item.ko : item.en}</p>
               ))}
@@ -2219,26 +2219,26 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
       {/* SEO용 H1 태그 - 화면에서 숨김 */}
       <h1 className="sr-only">
-        Trend Soccer - 실시간 축구·야구 경기 예측 &amp; 프리뷰 플랫폼
+        Trend Soccer - 실시간 축구·야구 경기 데이터 분석 &amp; 프리뷰 플랫폼
       </h1>
-      
+
       {/* 🔥 SEO용 정적 콘텐츠 - 애드센스/검색엔진 봇용 */}
       <section className="sr-only">
-        <h2>프로야구 실시간 AI 전력 분석 및 추천 경기 확인</h2>
+        <h2>프로야구 실시간 AI 전력 분석 및 주요 경기 확인</h2>
         <p>
-          Trend Soccer는 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 
-          챔피언스리그 등 주요 유럽 축구 리그의 실시간 배당 분석과 
+          Trend Soccer는 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1,
+          챔피언스리그 등 주요 유럽 축구 리그의 실시간 데이터 분석과
           경기 트렌드를 제공하는 전문 플랫폼입니다.
         </p>
         <p>
-          데이터 기반 배당 트렌드 분석, 24시간 트렌드 차트로 
-          스마트한 축구 분석을 경험하세요. 매일 업데이트되는 경기 일정과 
+          데이터 기반 트렌드 분석, 24시간 트렌드 차트로
+          스마트한 축구 분석을 경험하세요. 매일 업데이트되는 경기 일정과
           상세한 팀 통계, H2H 전적 분석을 무료로 제공합니다.
         </p>
         <h3>주요 기능</h3>
         <ul>
-          <li>실시간 배당률 변동 추적 및 트렌드 분석</li>
-          <li>24시간 배당 트렌드 차트 시각화</li>
+          <li>실시간 경기 데이터 변동 추적 및 트렌드 분석</li>
+          <li>24시간 데이터 트렌드 차트 시각화</li>
           <li>경기 데이터 분석 및 통계 리포트</li>
           <li>팀 순위표 및 리그 통계</li>
           <li>H2H 상대전적 분석</li>
@@ -2247,32 +2247,32 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         <h3>지원 리그</h3>
         <p>
           UEFA 챔피언스리그, UEFA 유로파리그, UEFA 컨퍼런스리그,
-          잉글랜드 프리미어리그, 스페인 라리가, 독일 분데스리가, 
-          이탈리아 세리에A, 프랑스 리그1, 네덜란드 에레디비시, 
-          포르투갈 프리메이라리가, FA컵, 코파델레이, DFB포칼, 
+          잉글랜드 프리미어리그, 스페인 라리가, 독일 분데스리가,
+          이탈리아 세리에A, 프랑스 리그1, 네덜란드 에레디비시,
+          포르투갈 프리메이라리가, FA컵, 코파델레이, DFB포칼,
           코파이탈리아 등 20개 이상의 리그를 지원합니다.
         </p>
         <h3>서비스 소개</h3>
         <p>
-          Trend Soccer는 축구 팬들을 위한 무료 경기 분석 플랫폼입니다. 
-          실시간으로 업데이트되는 배당률 데이터를 바탕으로 트렌드를 분석하고, 
-          지난 24시간 동안의 배당 변동을 차트로 시각화하여 제공합니다. 
-          경기 전 팀의 최근 폼, 상대 전적, 라인업까지 
+          Trend Soccer는 축구 팬들을 위한 무료 경기 데이터 분석 플랫폼입니다.
+          실시간으로 업데이트되는 경기 데이터를 바탕으로 트렌드를 분석하고,
+          지난 24시간 동안의 데이터 변동을 차트로 시각화하여 제공합니다.
+          경기 전 팀의 최근 폼, 상대 전적, 라인업까지
           한눈에 확인할 수 있습니다.
         </p>
       </section>
       <section className="sr-only" lang="en">
-  <h2>Real-Time Football Betting Odds Analysis</h2>
-  <p>Trend Soccer provides real-time betting odds analysis and match trends 
-     for major European football leagues including Premier League, La Liga, 
+  <h2>Real-Time Football Match Data Analysis</h2>
+  <p>Trend Soccer provides real-time match data analysis and trends
+     for major European football leagues including Premier League, La Liga,
      Bundesliga, Serie A, Ligue 1, and UEFA Champions League.</p>
-  <p>Experience smart football analysis with data-driven odds trend analysis and
-     24-hour trend charts. Free daily match schedules, 
+  <p>Experience smart football analysis with data-driven trend analysis and
+     24-hour trend charts. Free daily match schedules,
      detailed team statistics, and H2H analysis.</p>
   <h3>Key Features</h3>
   <ul>
-    <li>Real-time betting odds tracking and trend analysis</li>
-    <li>24-hour odds trend chart visualization</li>
+    <li>Real-time match data tracking and trend analysis</li>
+    <li>24-hour data trend chart visualization</li>
     <li>Match data analysis and statistical reports</li>
     <li>League standings and team statistics</li>
     <li>Head-to-head analysis</li>

@@ -74,12 +74,6 @@ const baseballMenuItems: MenuItem[] = [
     icon: 'insights'
   },
   {
-    labelKo: '조합',
-    labelEn: 'Combo',
-    href: '/baseball/combo-picks',
-    icon: 'combo'
-  },
-  {
     labelKo: '결과',
     labelEn: 'Results',
     href: '/baseball/results',
