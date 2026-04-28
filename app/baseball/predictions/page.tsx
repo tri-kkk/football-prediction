@@ -258,13 +258,15 @@ function GradeBadge({ grade, size = 'sm', analyzing = false, language = 'ko' }: 
     PASS: { bg: '#374151', color: '#9ca3af', shadow: 'none' },
   }
   const s = styles[grade]
+  // 화면 표시용 라벨: PICK → TOP (구글 광고 정책 대응)
+  const label = grade === 'PICK' ? 'TOP' : grade
   const sizeClass = size === 'lg' ? 'px-3 py-1 text-xs' : 'px-2 py-0.5 text-[10px]'
   return (
     <span
       className={`${sizeClass} rounded font-black tracking-widest`}
       style={{ background: s.bg, color: s.color, boxShadow: s.shadow, letterSpacing: '0.08em' }}
     >
-      {grade}
+      {label}
     </span>
   )
 }
@@ -478,7 +480,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
           </div>
         )}
 
-        {/* 확률 바 + 예측 — PICK 잠금 시 통합 블러 */}
+        {/* 확률 바 + 예측 — TOP 잠금 시 통합 블러 */}
         {isAnalyzing ? (
           <div className="relative rounded-xl overflow-hidden mt-1"
             style={{ border: '1px solid #334155' }}>
@@ -515,7 +517,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
               <div className="flex items-center gap-1.5">
                 <span className="text-sm">🔒</span>
                 <span className="text-[12px] font-bold" style={{ color: '#fbbf24' }}>
-                  PICK {language === 'ko' ? '프리미엄 전용' : 'Premium Only'}
+                  TOP {language === 'ko' ? '프리미엄 전용' : 'Premium Only'}
                 </span>
               </div>
               {isLoggedIn ? (
@@ -740,12 +742,12 @@ export default function BaseballPredictionsPage() {
             {/* 요약 대시보드 */}
             <SummaryDashboard stats={stats} dateStr={currentDate} language={language} />
 
-            {/* PICK 섹션 */}
+            {/* TOP 섹션 */}
             {stats.pick > 0 && (
               <div className="mb-8">
                 <h2 className="text-base font-bold text-white mb-3 flex items-center gap-2">
                   <div className="w-1 h-5 rounded-full" style={{ background: 'linear-gradient(to bottom, #f59e0b, #d97706)' }} />
-                  TOP PICK
+                  {language === 'ko' ? '오늘의 TOP 경기' : 'TOP Matches'}
                   <span className="text-sm font-normal text-gray-500">({stats.pick})</span>
                 </h2>
 
@@ -758,11 +760,11 @@ export default function BaseballPredictionsPage() {
                       <div>
                         <p className="text-xs font-bold" style={{ color: '#fbbf24' }}>
                           {language === 'ko'
-                            ? `오늘 TOP PICK ${stats.pick}개`
-                            : `${stats.pick} TOP PICK${stats.pick > 1 ? 's' : ''} today`}
+                            ? `오늘 TOP 경기 ${stats.pick}개`
+                            : `${stats.pick} TOP match${stats.pick > 1 ? 'es' : ''} today`}
                         </p>
                         <p className="text-[10px] text-gray-500 mt-0.5">
-                          {language === 'ko' ? '프리미엄에서 모든 PICK을 확인하세요' : 'Unlock all PICKs with Premium'}
+                          {language === 'ko' ? '프리미엄에서 모든 TOP 경기를 확인하세요' : 'Unlock all TOP matches with Premium'}
                         </p>
                       </div>
                     </div>

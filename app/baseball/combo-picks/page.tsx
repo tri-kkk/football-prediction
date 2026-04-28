@@ -369,7 +369,7 @@ export default function ComboPicksPage() {
               <div className="text-center mb-4">
                 <h3 className="text-[14px] font-black text-white mb-1">{t('오늘의 AI 조합을 확인하세요', 'Unlock Today\'s AI Combos')}</h3>
                 <p className="text-[11.5px]" style={{ color: '#64748b' }}>
-                  {t('매일 3대 리그 AI 분석 조합 제공', 'Daily AI combo picks for KBO · MLB · NPB')}
+                  {t('매일 3대 리그 AI 분석 조합 제공', 'Daily AI combos for KBO · MLB · NPB')}
                 </p>
               </div>
 
@@ -667,7 +667,7 @@ function MatchRow({ pick, index, t, isLast }: {
           </span>
           {!isPickHome && (
             <span className="text-[8px] font-black px-2.5 py-0.5 rounded-full tracking-wide"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>PICK</span>
+              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>TOP</span>
           )}
         </div>
 
@@ -715,7 +715,7 @@ function MatchRow({ pick, index, t, isLast }: {
           </span>
           {isPickHome && (
             <span className="text-[8px] font-black px-2.5 py-0.5 rounded-full tracking-wide"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>PICK</span>
+              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>TOP</span>
           )}
         </div>
       </div>
@@ -723,7 +723,7 @@ function MatchRow({ pick, index, t, isLast }: {
       {/* 예측 라인 */}
       <div className="flex items-center justify-between mt-2.5 mx-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-medium" style={{ color: '#64748b' }}>{t('예측', 'Pick')}</span>
+          <span className="text-[10px] font-medium" style={{ color: '#64748b' }}>{t('예측', 'Prediction')}</span>
           <span className="text-[10px] font-bold text-amber-400">{pick.pickTeamKo} {t('승', 'W')}</span>
           <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded" style={{ background: `${barColor}15` }}>
             <span className="text-[10px] font-black" style={{ color: barColor }}>{pickProb}%</span>

@@ -1,43 +1,57 @@
 """
 네이버 블로그 에디터 HTML 구조 분석 (디버그용)
 - 글쓰기 페이지에 접속해서 주요 요소의 HTML 태그/클래스/속성을 덤프
+- open_chrome.bat으로 띄운 디버그 Chrome(9222)에 연결해서 사용
 """
 import os
 import time
+import json
 import pickle
-import undetected_chromedriver as uc
+import urllib.request
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from config import NAVER_BLOG_ID, COOKIE_FILE, CHROME_PROFILE_DIR
+from config import NAVER_BLOG_ID, COOKIE_FILE
+
+
+def _check_chrome_running() -> bool:
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:9222/json/version", timeout=3) as r:
+            json.loads(r.read().decode("utf-8"))
+        return True
+    except Exception:
+        return False
 
 
 def main():
     print("🔍 네이버 블로그 에디터 HTML 구조 분석")
 
-    # 드라이버 생성
-    options = uc.ChromeOptions()
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1400,900")
-    options.add_argument("--lang=ko-KR")
-    if not os.path.exists(CHROME_PROFILE_DIR):
-        os.makedirs(CHROME_PROFILE_DIR)
-    options.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR}")
+    if not _check_chrome_running():
+        print("\n❌ Chrome이 디버그 모드(9222)로 실행되어 있지 않습니다.")
+        print("   open_chrome.bat을 먼저 실행해주세요.")
+        return
 
-    driver = uc.Chrome(options=options)
+    # 기존 Chrome(9222)에 연결
+    options = webdriver.ChromeOptions()
+    options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+    driver = webdriver.Chrome(service=Service(), options=options)
     driver.implicitly_wait(5)
 
-    # 쿠키 복원
+    # 쿠키 복원 (디버그 Chrome에는 이미 로그인돼 있을 것이므로 보통 불필요)
     if os.path.exists(COOKIE_FILE):
-        driver.get("https://www.naver.com")
-        time.sleep(2)
-        with open(COOKIE_FILE, "rb") as f:
-            cookies = pickle.load(f)
-        for cookie in cookies:
-            try:
-                driver.add_cookie(cookie)
-            except:
-                pass
-        print("🍪 쿠키 복원 완료")
+        try:
+            driver.get("https://www.naver.com")
+            time.sleep(2)
+            with open(COOKIE_FILE, "rb") as f:
+                cookies = pickle.load(f)
+            for cookie in cookies:
+                try:
+                    driver.add_cookie(cookie)
+                except Exception:
+                    pass
+            print("🍪 쿠키 복원 시도 완료")
+        except Exception as e:
+            print(f"⚠️ 쿠키 복원 생략: {e}")
 
     # 글쓰기 페이지 이동
     write_url = f"https://blog.naver.com/{NAVER_BLOG_ID}/postwrite"
@@ -261,8 +275,13 @@ def main():
         f.write(driver.page_source)
     print(f"📄 페이지 소스: {source_path}")
 
-    driver.quit()
-    print("\n✅ 분석 완료!")
+    # 기존 Chrome(9222)에 attach한 것이므로 브라우저는 종료하지 않음
+    # (세션만 끊어서 사용자가 계속 Chrome을 쓸 수 있게)
+    try:
+        driver.close()  # 현재 탭만 닫기 (원치 않으면 이 줄 제거)
+    except Exception:
+        pass
+    print("\n[OK] 완료!")
 
 
 if __name__ == "__main__":

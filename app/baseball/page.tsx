@@ -593,7 +593,7 @@ export default function BaseballMainPage() {
             <div className="flex items-center gap-2.5">
               <div className="w-1 h-5 rounded-full bg-blue-500" />
               <h2 className="text-lg font-bold text-white">
-                {language === 'ko' ? 'AI 추천 경기' : 'AI Picks'}
+                {language === 'ko' ? 'AI 추천 경기' : 'AI Top Matches'}
               </h2>
             </div>
             <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
@@ -718,7 +718,7 @@ export default function BaseballMainPage() {
                         <div className="flex items-center gap-1.5">
                           <span className="text-lg">🔒</span>
                           <span className="text-sm font-bold" style={{ color: '#fbbf24' }}>
-                            {language === 'ko' ? 'BEST PICK 프리미엄 전용' : 'BEST PICK · Premium Only'}
+                            {language === 'ko' ? 'BEST 경기 프리미엄 전용' : 'BEST · Premium Only'}
                           </span>
                         </div>
                         <p className="text-[11px] text-center px-6" style={{ color: '#64748b' }}>
@@ -734,7 +734,7 @@ export default function BaseballMainPage() {
             </div>
             ) : (
               <div className="rounded-xl border border-gray-800/50 p-8 text-center text-gray-500 text-sm">
-                {language === 'ko' ? '해당 리그 추천 경기가 없습니다' : 'No picks available'}
+                {language === 'ko' ? '해당 리그 추천 경기가 없습니다' : 'No matches available'}
               </div>
             )
           })()}
@@ -1187,7 +1187,7 @@ export default function BaseballMainPage() {
 
       {/* SEO용 정적 콘텐츠 - 검색엔진 봇용 */}
       <section className="sr-only">
-        <h2>리그별 매치 리포트, 팀별 상대 전적 및 통계, 야구 승률 예측 픽</h2>
+        <h2>리그별 매치 리포트, 팀별 상대 전적 및 통계, 야구 승률 예측 분석</h2>
         <p>
           트렌드베이스볼은 KBO, NPB, MLB 프로야구 리그의 경기 데이터를 AI로 정밀 분석하여
           승률 예측 정보를 제공하는 전문 플랫폼입니다. 세이버메트릭스 기반 투수/타자 스탯,

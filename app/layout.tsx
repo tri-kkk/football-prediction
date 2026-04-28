@@ -21,7 +21,7 @@ import Footer from './components/Footer'
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.trendsoccer.com'),
   title: '트렌드사커 - 실시간 축구·야구 AI 데이터 분석 플랫폼',
-  description: '트렌드사커(TrendSoccer)는 축구 6대 리그 및 프로야구(KBO/MLB/NPB) 데이터를 AI로 정밀 분석하여 승률 정보를 제공합니다. 실시간 전력 분석과 적중 확률이 높은 프리미엄 경기 픽을 지금 확인하세요.',
+  description: '트렌드사커(TrendSoccer)는 축구 6대 리그 및 프로야구(KBO/MLB/NPB) 데이터를 AI로 정밀 분석하여 승률 정보를 제공합니다. 실시간 전력 분석과 정확도 높은 프리미엄 경기 분석을 지금 확인하세요.',
   keywords: '트랜드사커, TrendSoccer, 축구 분석, 경기 분석, 승률, 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1, 챔피언스리그, 해외축구, 축구 프리뷰, 경기 프리뷰, AI 축구 분석, 승무패 분석, Soccer Analysis, Football Analysis, EPL Analysis, Match Preview, Live Score, 야구 분석, KBO 예측, 프로야구 승률, MLB 분석, 세이버메트릭스, 경기 예측, KBO 프리뷰, 야구 데이터, NPB 예측, NPB 분석, NPB 프리뷰, MLB 프리뷰',
   authors: [{ name: '트랜드사커 (TrendSoccer)' }],
   robots: {
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: '트렌드사커 - 실시간 축구·야구 AI 데이터 분석 플랫폼',
-    description: '트렌드사커(TrendSoccer)는 축구 6대 리그 및 프로야구(KBO/MLB/NPB) 데이터를 AI로 정밀 분석하여 승률 정보를 제공합니다. 실시간 전력 분석과 적중 확률이 높은 프리미엄 경기 픽을 지금 확인하세요.',
+    description: '트렌드사커(TrendSoccer)는 축구 6대 리그 및 프로야구(KBO/MLB/NPB) 데이터를 AI로 정밀 분석하여 승률 정보를 제공합니다. 실시간 전력 분석과 정확도 높은 프리미엄 경기 분석을 지금 확인하세요.',
     type: 'website',
     locale: 'ko_KR',
     alternateLocale: ['en_US'],
