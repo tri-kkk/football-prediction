@@ -48,7 +48,7 @@ export default function UnifiedFeed({ matches, filter, onFilterChange, loading, 
     let list = matches
     if (leagueFilter) list = list.filter((m) => m.league === leagueFilter)
     else if (filter !== 'all') list = list.filter((m) => m.sport === filter)
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000
+    const cutoff = Date.now() - 48 * 60 * 60 * 1000
     list = list.filter((m) => !m.timestamp || new Date(m.timestamp).getTime() > cutoff)
     return list
   }, [matches, filter, leagueFilter])

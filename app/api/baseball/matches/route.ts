@@ -229,7 +229,7 @@ export async function GET(request: NextRequest) {
       // =====================================================
       if (league === 'ALL' && !matchId) {
         const LEAGUES = ['MLB', 'KBO', 'NPB', 'CPBL']
-        const perLeagueLimit = Math.max(20, Math.ceil(limit / LEAGUES.length))
+        const perLeagueLimit = Math.max(60, Math.ceil(limit / LEAGUES.length))
 
         const koreaOffset = 9 * 60
         const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
