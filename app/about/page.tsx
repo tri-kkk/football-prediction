@@ -109,11 +109,11 @@ export default function AboutPage() {
         <div className="max-w-4xl mx-auto text-center">
           
           {/* Title */}
-          <p className="text-blue-400 text-sm font-medium tracking-widest uppercase mb-6">{t.tagline}</p>
+          <p className="text-emerald-400 text-sm font-medium tracking-widest uppercase mb-6">{t.tagline}</p>
           <h1 className="text-5xl md:text-7xl font-bold mb-6">
             <span className="text-white">{t.title}</span>
             <br />
-            <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-300 to-emerald-500 bg-clip-text text-transparent">
               {t.titleHighlight}
             </span>
           </h1>
@@ -142,7 +142,7 @@ export default function AboutPage() {
             <span className="text-[10px] text-gray-500 uppercase tracking-[0.2em] mb-3">{t.contactLabel}</span>
             <a 
               href={`mailto:${t.email}`}
-              className="text-2xl md:text-3xl font-light text-white hover:text-blue-400 transition-colors tracking-wide"
+              className="text-2xl md:text-3xl font-light text-white hover:text-emerald-400 transition-colors tracking-wide"
             >
               {t.email}
             </a>

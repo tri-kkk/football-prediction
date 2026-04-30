@@ -173,10 +173,10 @@ export default function HighlightsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-black text-white">
       {/* 헤더 영역 */}
-      <div className="bg-[#0a0a0f]/95 backdrop-blur-sm sticky top-[65px] z-40">
-        <div className="max-w-7xl mx-auto px-4">
+      <div className="bg-black/95 backdrop-blur-sm sticky top-[65px] z-40">
+        <div className="home-container mx-auto px-4">
           {/* 제목 + 시청 횟수 */}
           <div className="py-4">
             <div className="flex items-start justify-between">
@@ -194,7 +194,7 @@ export default function HighlightsPage() {
 
               {/* 시청 횟수 표시 (무료회원만) */}
               {session && !isPremium && viewsRemaining !== null && (
-                <div className="bg-[#141824] border border-[#1e293b] rounded-xl px-4 py-2 text-right">
+                <div className="bg-[#252829] border border-gray-800 rounded-xl px-4 py-2 text-right">
                   <div className="text-[10px] text-gray-500 mb-0.5">
                     {language === 'ko' ? '오늘 남은 시청' : 'Views left'}
                   </div>
@@ -218,7 +218,7 @@ export default function HighlightsPage() {
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl whitespace-nowrap flex-shrink-0 transition-all text-sm font-medium ${
                       isActive
                         ? 'text-white shadow-lg'
-                        : 'bg-[#141824] border border-[#1e293b] text-gray-400 hover:bg-[#1a1f2e] hover:text-white'
+                        : 'bg-[#252829] border border-gray-800 text-gray-400 hover:bg-[#252829] hover:text-white'
                     }`}
                     style={isActive ? { background: league.gradient } : undefined}
                   >
@@ -238,12 +238,12 @@ export default function HighlightsPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="home-container mx-auto px-4 py-6">
 
         {/* 로딩 */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#1e293b] border-t-emerald-500 mb-4"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-800 border-t-emerald-500 mb-4"></div>
             <p className="text-gray-500 text-sm">{language === 'ko' ? '하이라이트 로딩 중...' : 'Loading highlights...'}</p>
           </div>
         )}
@@ -251,7 +251,7 @@ export default function HighlightsPage() {
         {/* 에러 */}
         {error && !loading && (
           <div className="text-center py-20">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-[#141824] border border-[#1e293b] flex items-center justify-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-[#252829] border border-gray-800 flex items-center justify-center">
               <span className="text-3xl">😢</span>
             </div>
             <p className="text-red-400 mb-4 text-sm">{error}</p>
@@ -270,11 +270,11 @@ export default function HighlightsPage() {
             {videos.map((video) => (
               <div
                 key={video.id}
-                className={`bg-[#141824] rounded-2xl overflow-hidden border border-[#1e293b] hover:border-emerald-500/40 transition-all duration-300 cursor-pointer group hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5 ${checkingView ? 'pointer-events-none opacity-70' : ''}`}
+                className={`bg-[#252829] rounded-2xl overflow-hidden border border-gray-800 hover:border-emerald-500/40 transition-all duration-300 cursor-pointer group hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5 ${checkingView ? 'pointer-events-none opacity-70' : ''}`}
                 onClick={() => handleVideoClick(video)}
               >
                 {/* 썸네일 */}
-                <div className="relative aspect-video bg-[#0f1623]">
+                <div className="relative aspect-video bg-[#1a1c1d]">
                   {video.thumbnail ? (
                     <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   ) : (
@@ -287,7 +287,7 @@ export default function HighlightsPage() {
                   {!session && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                       <div className="text-center">
-                        <div className="w-12 h-12 rounded-xl bg-[#141824] border border-[#1e293b] flex items-center justify-center mx-auto mb-2">
+                        <div className="w-12 h-12 rounded-xl bg-[#252829] border border-gray-800 flex items-center justify-center mx-auto mb-2">
                           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                           </svg>
@@ -331,7 +331,7 @@ export default function HighlightsPage() {
                     {video.title}
                   </h3>
                   {video.videos?.length > 1 && (
-                    <div className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] text-gray-500 bg-[#0f1623] px-2.5 py-1 rounded-lg">
+                    <div className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] text-gray-500 bg-[#1a1c1d] px-2.5 py-1 rounded-lg">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                       </svg>
@@ -347,7 +347,7 @@ export default function HighlightsPage() {
         {/* 결과 없음 */}
         {!loading && !error && videos.length === 0 && (
           <div className="text-center py-20">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-[#141824] border border-[#1e293b] flex items-center justify-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-[#252829] border border-gray-800 flex items-center justify-center">
               <span className="text-3xl opacity-50">🎬</span>
             </div>
             <p className="text-gray-400 font-medium mb-1">
@@ -363,9 +363,9 @@ export default function HighlightsPage() {
         {!loading && !error && videos.length > 0 && (
           <div className="mt-10 text-center">
             <div className="inline-flex items-center gap-2 text-gray-600 text-xs">
-              <div className="w-8 h-px bg-[#1e293b]" />
+              <div className="w-8 h-px bg-gray-800" />
               <span>{videos.length} {language === 'ko' ? '개 하이라이트' : 'highlights'}</span>
-              <div className="w-8 h-px bg-[#1e293b]" />
+              <div className="w-8 h-px bg-gray-800" />
             </div>
           </div>
         )}
@@ -374,9 +374,9 @@ export default function HighlightsPage() {
       {/* 비디오 모달 */}
       {selectedVideo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-sm" onClick={() => setSelectedVideo(null)}>
-          <div className="bg-[#141824] rounded-2xl overflow-hidden max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-[#1e293b]" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#252829] rounded-2xl overflow-hidden max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-800" onClick={(e) => e.stopPropagation()}>
             {/* 헤더 */}
-            <div className="sticky top-0 bg-[#141824]/95 backdrop-blur-sm p-4 border-b border-[#1e293b] flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-[#252829]/95 backdrop-blur-sm p-4 border-b border-gray-800 flex items-center justify-between z-10">
               <div className="flex items-center gap-3 pr-4 min-w-0">
                 {selectedVideo.leagueInfo?.logo && (
                   <div className="w-6 h-6 rounded bg-white/90 p-0.5 flex items-center justify-center flex-shrink-0">
@@ -385,7 +385,7 @@ export default function HighlightsPage() {
                 )}
                 <h2 className="font-bold text-base md:text-lg truncate">{selectedVideo.title}</h2>
               </div>
-              <button onClick={() => setSelectedVideo(null)} className="p-2 hover:bg-[#1e293b] rounded-xl transition-colors">
+              <button onClick={() => setSelectedVideo(null)} className="p-2 hover:bg-gray-800 rounded-xl transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -399,7 +399,7 @@ export default function HighlightsPage() {
             {/* 정보 */}
             <div className="p-5">
               <div className="flex items-center gap-3 text-sm text-gray-400">
-                <span className="px-2 py-1 bg-[#0f1623] rounded-lg text-xs">{getLeagueName(selectedVideo.leagueCode)}</span>
+                <span className="px-2 py-1 bg-[#1a1c1d] rounded-lg text-xs">{getLeagueName(selectedVideo.leagueCode)}</span>
                 <span className="text-gray-600">·</span>
                 <span className="text-xs">{formatDate(selectedVideo.date)}</span>
               </div>
@@ -411,7 +411,7 @@ export default function HighlightsPage() {
       {/* 로그인 모달 */}
       {showLoginModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShowLoginModal(false)}>
-          <div className="bg-[#141824] rounded-2xl p-6 max-w-sm w-full border border-[#1e293b] text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#252829] rounded-2xl p-6 max-w-sm w-full border border-gray-800 text-center" onClick={(e) => e.stopPropagation()}>
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
               <svg className="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -420,7 +420,7 @@ export default function HighlightsPage() {
             <h3 className="text-xl font-bold mb-2">{language === 'ko' ? '로그인이 필요합니다' : 'Login Required'}</h3>
             <p className="text-gray-400 text-sm mb-6">{language === 'ko' ? '하이라이트를 시청하려면 로그인해주세요' : 'Please login to watch'}</p>
             <div className="flex gap-3">
-              <button onClick={() => setShowLoginModal(false)} className="flex-1 px-4 py-2.5 border border-[#1e293b] rounded-xl hover:bg-[#1a1f2e] transition-colors text-sm">
+              <button onClick={() => setShowLoginModal(false)} className="flex-1 px-4 py-2.5 border border-gray-800 rounded-xl hover:bg-[#252829] transition-colors text-sm">
                 {language === 'ko' ? '취소' : 'Cancel'}
               </button>
               <Link href="/login" className="flex-1 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl hover:from-emerald-400 hover:to-emerald-500 font-medium text-sm text-center shadow-lg shadow-emerald-500/20 transition-all">
@@ -434,7 +434,7 @@ export default function HighlightsPage() {
       {/* 프리미엄 유도 모달 */}
       {showPremiumModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShowPremiumModal(false)}>
-          <div className="bg-[#141824] rounded-2xl p-6 max-w-sm w-full border border-[#1e293b] text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#252829] rounded-2xl p-6 max-w-sm w-full border border-gray-800 text-center" onClick={(e) => e.stopPropagation()}>
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/20 flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">👑</span>
             </div>
@@ -442,7 +442,7 @@ export default function HighlightsPage() {
             <p className="text-gray-400 text-sm mb-2">{language === 'ko' ? '무료 회원은 하루 3회까지 시청 가능합니다' : 'Free: 3 videos per day'}</p>
             <p className="text-emerald-400 font-medium text-sm mb-6">{language === 'ko' ? '프리미엄 회원은 무제한 시청!' : 'Premium: Unlimited!'}</p>
             <div className="flex gap-3">
-              <button onClick={() => setShowPremiumModal(false)} className="flex-1 px-4 py-2.5 border border-[#1e293b] rounded-xl hover:bg-[#1a1f2e] transition-colors text-sm">
+              <button onClick={() => setShowPremiumModal(false)} className="flex-1 px-4 py-2.5 border border-gray-800 rounded-xl hover:bg-[#252829] transition-colors text-sm">
                 {language === 'ko' ? '닫기' : 'Close'}
               </button>
               <Link href="/pricing" className="flex-1 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl hover:from-amber-400 hover:to-amber-500 font-medium text-black text-sm text-center shadow-lg shadow-amber-500/20 transition-all">

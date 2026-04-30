@@ -28,3 +28,4 @@ scripts/naver-auto-poster/debug_*.png
 scripts/naver-auto-poster/debug_source.html
 scripts/naver-auto-poster/publish_fail_*.png
 
+*.before-renewal-*

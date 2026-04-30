@@ -82,7 +82,7 @@ const LEAGUES = [
 const LEAGUE_COLOR_HEX: Record<string, string> = {
   KBO: '#dc2626',
   NPB: '#ea580c',
-  MLB: '#2563eb',
+  MLB: '#10b981',
   CPBL: '#7c3aed',
 }
 
@@ -234,7 +234,7 @@ function TeamLogo({ src, team, size = 'md' }: { src?: string; team: string; size
   }
   return (
     <div className={`${sizeClasses[size]} rounded-full flex items-center justify-center font-bold text-gray-400`}
-      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.08)' }}>
       {team.substring(0, 2)}
     </div>
   )
@@ -246,7 +246,7 @@ function GradeBadge({ grade, size = 'sm', analyzing = false, language = 'ko' }: 
     return (
       <span
         className={`${sizeClass} rounded font-bold`}
-        style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', letterSpacing: '0.04em' }}
+        style={{ background: '#252829', color: '#94a3b8', border: '1px solid #334155', letterSpacing: '0.04em' }}
       >
         {language === 'ko' ? '분석 중' : 'Analyzing'}
       </span>
@@ -284,7 +284,7 @@ function ConfidenceBar({ homeProb, awayProb, language }: {
         <span className="text-[10px] text-gray-600">{language === 'ko' ? '승리 확률' : 'Win Prob.'}</span>
         <span className={pickedSide === 'home' ? 'text-emerald-400 font-bold' : 'text-gray-500'}>{homeProb}%</span>
       </div>
-      <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: '#1e293b' }}>
+      <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: '#252829' }}>
         <div
           className="h-full rounded-l-full transition-all duration-700"
           style={{
@@ -292,7 +292,7 @@ function ConfidenceBar({ homeProb, awayProb, language }: {
             background: pickedSide === 'away' ? 'linear-gradient(90deg, #10b981, #34d399)' : '#475569',
           }}
         />
-        <div className="w-[2px]" style={{ background: '#0a0a0f' }} />
+        <div className="w-[2px]" style={{ background: '#000000' }} />
         <div
           className="h-full rounded-r-full transition-all duration-700"
           style={{
@@ -313,7 +313,7 @@ function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
   onNext?: () => void
 }) {
   return (
-    <div className="rounded-2xl p-4 mb-5" style={{ background: 'linear-gradient(135deg, #111827, #13132a)', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-2xl p-4 mb-5" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}>
       {/* 날짜 네비게이션 */}
       <div className="flex items-center justify-center gap-4 mb-4">
         <button
@@ -356,7 +356,7 @@ function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
           <p className="text-2xl font-black text-white mt-2">{stats.good}</p>
           <p className="text-[10px] text-gray-500 mt-0.5">{language === 'ko' ? '확률차 10-20%' : 'Diff 10-20%'}</p>
         </div>
-        <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-xl p-3 text-center" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}>
           <GradeBadge grade="PASS" size="lg" />
           <p className="text-2xl font-black text-white mt-2">{stats.pass}</p>
           <p className="text-[10px] text-gray-500 mt-0.5">{language === 'ko' ? '확률차 10%↓' : 'Diff 10%↓'}</p>
@@ -396,7 +396,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
     <div
       className="rounded-xl overflow-hidden transition-all hover:translate-y-[-2px]"
       style={{
-        background: '#111827',
+        background: '#252829',
         border: isPick ? '1px solid rgba(245,158,11,0.18)' : '1px solid rgba(255,255,255,0.05)',
         boxShadow: isPick ? '0 4px 24px rgba(245,158,11,0.05)' : '0 2px 10px rgba(0,0,0,0.3)',
       }}
@@ -452,7 +452,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
 
         {/* 선발투수 - 투수 데이터가 있는 경기만 표시 */}
         {(match.league === 'MLB' || (match.hasPitcherData && match.homePitcher)) && (
-          <div className="flex items-center justify-between mb-3 px-1 py-2 rounded-lg" style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.04)' }}>
+          <div className="flex items-center justify-between mb-3 px-1 py-2 rounded-lg" style={{ background: '#1a1c1d', border: '1px solid rgba(255,255,255,0.04)' }}>
             <div className="flex-1 text-center">
               <p className="text-[9px] text-gray-600 mb-0.5">{language === 'ko' ? '선발' : 'SP'}</p>
               <p className="text-[11px] font-semibold text-gray-400">{match.awayPitcher ? match.awayPitcher.split(' ').pop() : '—'}</p>
@@ -468,7 +468,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
         {/* 투수 데이터 분석 중 안내 (KBO/NPB) */}
         {isAnalyzing && (
           <div className="px-3 py-2.5 rounded-lg text-center mb-3"
-            style={{ background: '#1e293b', border: '1px solid #334155' }}>
+            style={{ background: '#252829', border: '1px solid #334155' }}>
             <p className="text-[12px] font-bold" style={{ color: '#e2e8f0' }}>
               {language === 'ko' ? '선발투수 데이터 반영 중' : 'Calculating pitcher matchup'}
             </p>
@@ -532,7 +532,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
                   <button
                     onClick={() => router.push('/login')}
                     className="px-3 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95"
-                    style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #334155' }}>
+                    style={{ background: '#252829', color: '#94a3b8', border: '1px solid #334155' }}>
                     {language === 'ko' ? '로그인' : 'Sign in'}
                   </button>
                   <button
@@ -571,7 +571,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
           </div>
         ) : (
           <div className="mx-4 mb-3 px-3 py-2.5 rounded-xl text-center"
-            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.05)' }}>
             <p className="text-xs text-gray-500">
               {language === 'ko' ? prediction.reason : prediction.reasonEn}
             </p>
@@ -582,7 +582,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
       {/* 상세 분석 링크 */}
       <Link
         href={`/baseball/${match.id}`}
-        className="flex items-center justify-center gap-1.5 px-4 py-3 text-[13px] font-semibold text-blue-400 hover:text-blue-300 transition-colors hover:bg-white/[0.02]"
+        className="flex items-center justify-center gap-1.5 px-4 py-3 text-[13px] font-semibold text-emerald-400 hover:text-blue-300 transition-colors hover:bg-white/[0.02]"
         style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
       >
         {language === 'ko' ? '상세 분석 보기' : 'View Details'}
@@ -702,16 +702,16 @@ export default function BaseballPredictionsPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0a0a0f' }}>
+    <div className="min-h-screen" style={{ background: '#000000' }}>
       {/* 스티키 헤더: 리그 필터 */}
       <div className="sticky top-0 z-40" style={{ background: 'rgba(10,10,15,0.92)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <div className="max-w-3xl mx-auto px-4 py-3">
+        <div className="home-container mx-auto px-4 py-3">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {LEAGUES.map(league => (
               <button key={league.id} onClick={() => setSelectedLeague(league.id)}
                 className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all"
                 style={{
-                  background: selectedLeague === league.id ? '#2563eb' : 'rgba(255,255,255,0.06)',
+                  background: selectedLeague === league.id ? '#10b981' : '#252829',
                   color: selectedLeague === league.id ? '#fff' : '#9ca3af',
                   border: selectedLeague === league.id ? 'none' : '1px solid rgba(255,255,255,0.04)',
                 }}>
@@ -723,10 +723,10 @@ export default function BaseballPredictionsPage() {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="max-w-3xl mx-auto px-4 pt-5 pb-24">
+      <div className="home-container mx-auto px-4 pt-5 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4" />
             <p className="text-gray-400">{language === 'ko' ? 'AI가 분석 중입니다...' : 'AI is analyzing...'}</p>
           </div>
         ) : predictions.length === 0 ? (
@@ -777,7 +777,7 @@ export default function BaseballPredictionsPage() {
                   </div>
                 )}
 
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {predictions.filter(p => p.prediction.grade === 'PICK').map(({ match, prediction }) => (
                     <PredictionCard key={match.id} match={match} prediction={prediction} language={language} isPremium={isPremium} isLoggedIn={isLoggedIn} />
                   ))}
@@ -793,7 +793,7 @@ export default function BaseballPredictionsPage() {
                   {language === 'ko' ? '추천 경기' : 'Recommended'}
                   <span className="text-sm font-normal text-gray-500">({stats.good})</span>
                 </h2>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {predictions.filter(p => p.prediction.grade === 'GOOD').map(({ match, prediction }) => (
                     <PredictionCard key={match.id} match={match} prediction={prediction} language={language} isPremium={isPremium} isLoggedIn={isLoggedIn} />
                   ))}
@@ -809,7 +809,7 @@ export default function BaseballPredictionsPage() {
                   {language === 'ko' ? '접전 예상' : 'Close Matches'}
                   <span className="text-sm font-normal text-gray-600">({stats.pass})</span>
                 </h2>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {predictions.filter(p => p.prediction.grade === 'PASS').map(({ match, prediction }) => (
                     <PredictionCard key={match.id} match={match} prediction={prediction} language={language} isPremium={isPremium} isLoggedIn={isLoggedIn} />
                   ))}
@@ -823,7 +823,7 @@ export default function BaseballPredictionsPage() {
         <div className="text-center py-6 mt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
           <p className="text-[11px] text-gray-600 leading-relaxed">
             {language === 'ko'
-              ? 'AI 분석은 참고용이며, 실제 결과와 다를 수 있습니다. 책임감 있는 이용을 권장합니다.'
+              ? 'AI 분석은 참고용이며, 실제 결과와 다를 수 있습니다.'
               : 'AI analysis is for reference only. Actual results may vary.'}
           </p>
         </div>

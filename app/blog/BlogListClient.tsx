@@ -183,10 +183,10 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
 
       return (
         <Link href={`/blog/${post.slug}`} className="group">
-          <article className="rounded-2xl overflow-hidden border border-[#1e293b] hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/5">
+          <article className="rounded-2xl overflow-hidden border border-gray-800 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/5">
             {/* 모바일: 이미지 위 + 텍스트 아래 분리 */}
             <div className="md:hidden">
-              <div className="relative aspect-video overflow-hidden bg-[#0f1623]">
+              <div className="relative aspect-video overflow-hidden bg-[#1a1c1d]">
                 <img
                   src={post.cover_image}
                   alt={getTitle(post)}
@@ -198,7 +198,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
                   </span>
                 </div>
               </div>
-              <div className="bg-[#141824] p-4">
+              <div className="bg-[#252829] p-4">
                 <span className="text-xs text-gray-500">{formatDate(post.published_at)}</span>
                 <h2 className="text-lg font-black mt-1.5 mb-2 group-hover:text-emerald-400 transition-colors line-clamp-2 leading-snug">
                   {getTitle(post)}
@@ -212,7 +212,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
 
             {/* 데스크탑: 오버레이 방식 */}
             <div className="hidden md:block">
-              <div className="relative aspect-[3/1] overflow-hidden bg-[#0f1623]">
+              <div className="relative aspect-[3/1] overflow-hidden bg-[#1a1c1d]">
                 <img
                   src={post.cover_image}
                   alt={getTitle(post)}
@@ -248,9 +248,9 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
 
     return (
       <Link href={`/blog/${post.slug}`} className="group">
-        <article className="bg-[#141824] rounded-2xl overflow-hidden border border-[#1e293b] hover:border-emerald-500/40 transition-all duration-300 h-full flex flex-col hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5">
+        <article className="bg-[#252829] rounded-2xl overflow-hidden border border-gray-800 hover:border-emerald-500/40 transition-all duration-300 h-full flex flex-col hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5">
           {post.cover_image && (
-            <div className="relative overflow-hidden bg-[#0f1623] aspect-video">
+            <div className="relative overflow-hidden bg-[#1a1c1d] aspect-video">
               <img
                 src={post.cover_image}
                 alt={getTitle(post)}
@@ -307,7 +307,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
                         className={`text-xs px-2 py-0.5 rounded-md ${
                           isKorean
                             ? 'bg-emerald-500/10 text-emerald-400/70'
-                            : 'bg-[#1e293b] text-gray-500'
+                            : 'bg-gray-800 text-gray-500'
                         }`}
                       >
                         #{tag}
@@ -323,11 +323,11 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-black text-white">
       {/* 히어로 섹션 */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 via-transparent to-transparent" />
-        <div className="max-w-7xl mx-auto px-4 pt-8 pb-4 relative">
+        <div className="home-container mx-auto px-4 pt-8 pb-4 relative">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-1 h-8 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600" />
             <h1 className="text-2xl font-black tracking-tight">
@@ -344,8 +344,8 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
       </div>
 
       {/* 카테고리 필터 */}
-      <div className="bg-[#0a0a0f]/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-2.5">
+      <div className="bg-black/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="home-container mx-auto px-4 py-2.5">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
             {categories.map(cat => {
               const isActive = selectedCategory === cat.value
@@ -356,7 +356,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-all text-sm font-medium shrink-0 ${
                     isActive
                       ? 'bg-gradient-to-r ' + cat.color + ' text-white shadow-lg'
-                      : 'bg-[#141824] text-gray-400 hover:bg-[#1a1f2e] hover:text-white border border-[#1e293b]'
+                      : 'bg-[#252829] text-gray-400 hover:bg-[#252829] hover:text-white border border-gray-800'
                   }`}
                 >
                   <span className="text-xs opacity-70">{cat.icon}</span>
@@ -377,8 +377,8 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
 
       {/* 로딩 */}
       {loading && (
-        <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#1e293b] border-t-emerald-500"></div>
+        <div className="home-container mx-auto px-4 py-20 text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-800 border-t-emerald-500"></div>
           <p className="mt-4 text-gray-500 text-sm">
             {currentLanguage === 'ko' ? '로딩 중...' : 'Loading...'}
           </p>
@@ -387,7 +387,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
 
       {/* 메인 콘텐츠 */}
       {!loading && (
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="home-container mx-auto px-4 py-6">
           <div className="flex gap-8">
             {/* 메인 콘텐츠 영역 */}
             <main className="flex-1 min-w-0">
@@ -444,11 +444,11 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
                       <button
                         onClick={loadMore}
                         disabled={loadingMore}
-                        className="inline-flex items-center gap-2 px-8 py-3 bg-[#141824] hover:bg-[#1a1f2e] disabled:opacity-50 text-white rounded-xl transition-all text-sm font-medium border border-[#1e293b] hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5"
+                        className="inline-flex items-center gap-2 px-8 py-3 bg-[#252829] hover:bg-[#252829] disabled:opacity-50 text-white rounded-xl transition-all text-sm font-medium border border-gray-800 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5"
                       >
                         {loadingMore ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#1e293b] border-t-emerald-500"></div>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-800 border-t-emerald-500"></div>
                             <span>{currentLanguage === 'ko' ? '로딩...' : 'Loading...'}</span>
                           </>
                         ) : (
@@ -476,7 +476,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
                 </>
               ) : (
                 <div className="text-center py-20">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-[#141824] border border-[#1e293b] flex items-center justify-center">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-[#252829] border border-gray-800 flex items-center justify-center">
                     <span className="text-3xl opacity-50">📝</span>
                   </div>
                   <p className="text-gray-400 mb-2 font-medium">
@@ -497,7 +497,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
               <aside className="hidden lg:block w-[300px] flex-shrink-0">
                 <div className="sticky top-20 space-y-4">
                   {/* 상단 광고 */}
-                  <div className="rounded-2xl overflow-hidden bg-[#141824] border border-[#1e293b]">
+                  <div className="rounded-2xl overflow-hidden bg-[#252829] border border-gray-800">
                     <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
                     <div className="p-2">
                       <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={true} />
@@ -505,7 +505,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
                   </div>
 
                   {/* 하단 광고 */}
-                  <div className="rounded-2xl overflow-hidden bg-[#141824] border border-[#1e293b]">
+                  <div className="rounded-2xl overflow-hidden bg-[#252829] border border-gray-800">
                     <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
                     <div className="p-2">
                       <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={true} />

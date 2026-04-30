@@ -88,7 +88,7 @@ function PrivacyV2_0({ isKo }: { isKo: boolean }) {
           {isKo ? '2. 수집하는 정보' : '2. Information We Collect'}
         </h2>
         
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '2.1 회원가입 시 수집 정보' : '2.1 Information Collected During Registration'}
         </h3>
         <p className="text-gray-300 mb-3">
@@ -103,7 +103,7 @@ function PrivacyV2_0({ isKo }: { isKo: boolean }) {
           <li>{isKo ? '소셜 계정 고유 ID' : 'Social account unique ID'}</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mb-3 mt-6 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 mt-6 text-emerald-400">
           {isKo ? '2.2 이용권 결제 시 수집 정보' : '2.2 Information Collected During Access Pass Payment'}
         </h3>
         <p className="text-gray-300 mb-3">
@@ -127,7 +127,7 @@ function PrivacyV2_0({ isKo }: { isKo: boolean }) {
           </p>
         </div>
 
-        <h3 className="text-xl font-semibold mb-3 mt-6 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 mt-6 text-emerald-400">
           {isKo ? '2.3 자동으로 수집되는 정보' : '2.3 Automatically Collected Information'}
         </h3>
         <p className="text-gray-300 mb-3">
@@ -202,7 +202,7 @@ function PrivacyV2_0({ isKo }: { isKo: boolean }) {
             : 'We use cookies and similar tracking technologies to track website activity and store certain information.'}
         </p>
         
-        <h3 className="text-xl font-semibold mb-3 mt-4 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 mt-4 text-emerald-400">
           {isKo ? '사용하는 쿠키 유형:' : 'Types of Cookies We Use:'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
@@ -275,7 +275,7 @@ function PrivacyV2_0({ isKo }: { isKo: boolean }) {
           {isKo ? '7. 결제 정보 처리' : '7. Payment Information Processing'}
         </h2>
         
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '7.1 회사가 저장하는 정보' : '7.1 Information Stored by the Company'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
@@ -287,7 +287,7 @@ function PrivacyV2_0({ isKo }: { isKo: boolean }) {
           <li>{isKo ? '구매한 이용권 종류 (1개월권/3개월권)' : 'Access pass type purchased (1-month/3-month)'}</li>
         </ul>
         
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '7.2 회사가 저장하지 않는 정보' : '7.2 Information NOT Stored by the Company'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
@@ -377,13 +377,13 @@ function PrivacyV2_0({ isKo }: { isKo: boolean }) {
           </p>
           <p className="text-gray-300 mb-2">
             <strong>{isKo ? '웹사이트:' : 'Website:'}</strong>{' '}
-            <a href="https://trendsoccer.com" className="text-blue-400 hover:text-blue-300">
+            <a href="https://trendsoccer.com" className="text-emerald-400 hover:text-blue-300">
               https://trendsoccer.com
             </a>
           </p>
           <p className="text-gray-300">
             <strong>{isKo ? '이메일:' : 'Email:'}</strong>{' '}
-            <a href="mailto:trikilab2025@gmail.com" className="text-blue-400 hover:text-blue-300">
+            <a href="mailto:trikilab2025@gmail.com" className="text-emerald-400 hover:text-blue-300">
               trikilab2025@gmail.com
             </a>
           </p>
@@ -512,7 +512,7 @@ function PrivacyV1_0({ isKo }: { isKo: boolean }) {
         <div className="bg-[#0f0f0f] rounded-lg p-4 border border-gray-700">
           <p className="text-gray-300">
             {isKo ? '이메일: ' : 'Email: '}
-            <a href="mailto:trikilab2025@gmail.com" className="text-blue-400 hover:text-blue-300">
+            <a href="mailto:trikilab2025@gmail.com" className="text-emerald-400 hover:text-blue-300">
               trikilab2025@gmail.com
             </a>
           </p>

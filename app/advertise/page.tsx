@@ -113,7 +113,7 @@ export default function AdvertisePage() {
           <h1 className="text-5xl md:text-7xl font-bold mb-6">
             <span className="text-white">{t.title}</span>
             <br />
-            <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-blue-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-300 to-emerald-500 bg-clip-text text-transparent">
               {t.titleHighlight}
             </span>
           </h1>

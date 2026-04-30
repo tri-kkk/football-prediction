@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import AnalysisSubNav from '../../components/AnalysisSubNav'
 
 export const metadata: Metadata = {
   title: '트렌드베이스볼 - 야구 데이터 조합 분석',
@@ -10,5 +11,10 @@ export default function ComboPicksLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <>{children}</>
+  return (
+    <>
+      <AnalysisSubNav />
+      {children}
+    </>
+  )
 }

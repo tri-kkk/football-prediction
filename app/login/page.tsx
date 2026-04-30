@@ -83,81 +83,38 @@ export default function LoginPage() {
   // 로딩 중
   if (status === 'loading') {
     return (
-      <div className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+      <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-start justify-center px-4 py-10 overflow-y-auto">
-      {/* 그라데이션 배경 */}
+    <div className="fixed inset-0 z-[100] bg-black flex items-start justify-center px-4 py-8 sm:py-12 overflow-y-auto">
+      {/* 미묘한 그라디언트 글로우 — 메인 톤 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-green-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-500/8 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-emerald-500/6 rounded-full blur-3xl" />
       </div>
 
-      {/* 스타일 정의 */}
-      <style jsx>{`
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px) rotate(45deg); }
-          50% { transform: translateY(-15px) rotate(50deg); }
-        }
-        @keyframes float-medium {
-          0%, 100% { transform: translateY(0px) rotate(12deg); }
-          50% { transform: translateY(-12px) rotate(18deg); }
-        }
-        @keyframes float-fast {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-8px) rotate(5deg); }
-        }
-        @keyframes pulse-glow {
-          0%, 100% { opacity: 0.3; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(1.2); }
-        }
-        .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
-        .animate-float-medium { animation: float-medium 6s ease-in-out infinite; }
-        .animate-float-fast { animation: float-fast 4s ease-in-out infinite; }
-        .animate-pulse-glow { animation: pulse-glow 5s ease-in-out infinite; }
-      `}</style>
-
-      <div className="w-full relative z-10 my-auto" style={{ maxWidth: '420px' }}>
+      <div className="w-full relative z-10" style={{ maxWidth: '420px' }}>
         {/* 로고 */}
         <div className="text-center mb-6">
           <Link href="/" className="inline-block">
-            <img 
-              src="/logo.svg" 
-              alt="트렌드사커" 
+            <img
+              src="/logo.svg"
+              alt="트렌드사커"
               className="h-10 w-auto mx-auto"
             />
           </Link>
         </div>
 
-        {/* 타이틀 + 스포츠 아이콘 */}
-        <div className="text-center mb-8 relative">
-          {/* 스포츠 아이콘 플로팅 */}
-          <div className="absolute -top-10 left-4 text-2xl animate-float-slow opacity-40">⚽</div>
-          <div className="absolute -top-6 right-6 text-xl animate-float-medium opacity-35">⚾</div>
-          <div className="absolute -top-12 left-1/3 text-lg animate-float-fast opacity-25">📊</div>
-          <div className="absolute -top-8 right-1/3 text-lg animate-float-slow opacity-30" style={{ animationDelay: '1.5s' }}>🤖</div>
-
-          {/* 기하학적 장식 */}
-          <div className="absolute -top-14 left-0 w-8 h-8 border border-green-500/20 rotate-45 animate-float-slow" />
-          <div className="absolute -top-10 right-2 w-6 h-6 border border-cyan-500/15 rotate-12 animate-float-medium" />
-
-          {/* 글로우 점들 */}
-          <div className="absolute -top-4 left-10 w-2 h-2 bg-green-500/40 rounded-full animate-pulse-glow" />
-          <div className="absolute -top-2 right-14 w-2 h-2 bg-cyan-500/40 rounded-full animate-pulse-glow" style={{ animationDelay: '1s' }} />
-
+        {/* 타이틀 — 깔끔하게 */}
+        <div className="text-center mb-7">
           <h1 className="text-2xl md:text-3xl font-bold leading-tight">
             <span className="text-white">{language === 'ko' ? 'AI가 분석하는' : 'AI-Powered'}</span>
             <br />
-            <span style={{
-              background: 'linear-gradient(to right, #22d3ee, #2dd4bf, #34d399)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
+            <span className="text-emerald-400">
               {language === 'ko' ? '축구 · 야구 예측' : 'Football · Baseball Predictions'}
             </span>
           </h1>
@@ -208,21 +165,18 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* 🎁 48시간 무료 체험 배너 */}
+        {/* 48시간 무료 체험 배너 — 에메랄드 톤 */}
         {!refCode && (
-          <div className="border border-yellow-500/25 rounded-2xl p-4 mb-6 flex items-center gap-4" style={{ background: 'rgba(234,179,8,0.06)' }}>
-            <span className="text-2xl flex-shrink-0">🎁</span>
-            <div>
-              <p className="text-yellow-400 font-bold text-sm">
-                {language === 'ko' ? '신규 가입 시 48시간 프리미엄 무료 체험 (축구+야구)' : '48-Hour Free Premium Trial (Football+Baseball)'}
-              </p>
-              
-            </div>
+          <div className="border border-emerald-500/30 rounded-2xl px-4 py-3 mb-5 flex items-center justify-center gap-2 bg-emerald-500/5">
+            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+            <p className="text-emerald-300 font-medium text-sm text-center">
+              {language === 'ko' ? '신규 가입 시 48시간 프리미엄 무료 체험' : '48-Hour Free Premium Trial for New Users'}
+            </p>
           </div>
         )}
 
-        {/* 로그인 카드 */}
-        <div className="bg-gradient-to-b from-[#1a1a1a] to-[#141414] rounded-3xl p-8 shadow-2xl border border-gray-800/50 backdrop-blur-sm">
+        {/* 로그인 카드 — 메인 톤 #252829 */}
+        <div className="rounded-3xl p-7 sm:p-8 shadow-2xl border border-gray-800" style={{ backgroundColor: '#252829' }}>
           <h2 className="text-xl font-bold text-white text-center mb-2">
             {language === 'ko' ? '로그인 / 회원가입' : 'Sign In / Sign Up'}
           </h2>
@@ -269,40 +223,26 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* 프리미엄 혜택 안내 */}
-          <div className="mt-6 pt-6 border-t border-gray-800">
-              <div className="text-gray-500 text-xs mb-3 text-center tracking-wider">PREMIUM BENEFITS</div>
-
-              {/* 스포츠별 카드 */}
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <div className="bg-gradient-to-br from-green-900/30 to-green-900/10 border border-green-500/20 rounded-xl p-3 text-center">
-                  <span className="text-xl block mb-1">⚽</span>
-                  <span className="text-green-400 text-xs font-bold">{language === 'ko' ? '축구 AI 픽' : 'Football AI'}</span>
-                  <p className="text-gray-500 text-[10px] mt-0.5">{language === 'ko' ? '6대 리그 분석' : '6 Leagues'}</p>
-                </div>
-                <div className="bg-gradient-to-br from-blue-900/30 to-blue-900/10 border border-blue-500/20 rounded-xl p-3 text-center">
-                  <span className="text-xl block mb-1">⚾</span>
-                  <span className="text-blue-400 text-xs font-bold">{language === 'ko' ? '야구 AI 픽' : 'Baseball AI'}</span>
-                  <p className="text-gray-500 text-[10px] mt-0.5">{language === 'ko' ? 'KBO·MLB·NPB' : 'KBO·MLB·NPB'}</p>
-                </div>
+          {/* 프리미엄 혜택 안내 — 한 줄로 압축 */}
+          <div className="mt-5 pt-5 border-t border-gray-800">
+            <div className="text-gray-500 text-[11px] mb-3 text-center tracking-wider uppercase">
+              {language === 'ko' ? '프리미엄 혜택' : 'Premium Benefits'}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="flex flex-col items-center gap-1 text-gray-300 rounded-lg px-2 py-2.5 border border-gray-800" style={{ backgroundColor: '#1a1c1d' }}>
+                <span className="text-emerald-400 text-base font-bold">AI</span>
+                <span className="text-[10px] text-center text-gray-400">{language === 'ko' ? '축구·야구' : 'Football·Baseball'}</span>
               </div>
-
-              {/* 공통 혜택 */}
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className="flex flex-col items-center gap-1 text-gray-400 bg-[#111] rounded-lg px-2 py-2.5">
-                  <span className="text-green-500 text-sm">⏰</span>
-                  <span className="text-[10px] text-center">{language === 'ko' ? '24h 선공개' : '24h Early'}</span>
-                </div>
-                <div className="flex flex-col items-center gap-1 text-gray-400 bg-[#111] rounded-lg px-2 py-2.5">
-                  <span className="text-green-500 text-sm">📊</span>
-                  <span className="text-[10px] text-center">{language === 'ko' ? '상세 리포트' : 'Reports'}</span>
-                </div>
-                <div className="flex flex-col items-center gap-1 text-gray-400 bg-[#111] rounded-lg px-2 py-2.5">
-                  <span className="text-green-500 text-sm">🚫</span>
-                  <span className="text-[10px] text-center">{language === 'ko' ? '광고 제거' : 'No Ads'}</span>
-                </div>
+              <div className="flex flex-col items-center gap-1 text-gray-300 rounded-lg px-2 py-2.5 border border-gray-800" style={{ backgroundColor: '#1a1c1d' }}>
+                <span className="text-emerald-400 text-base font-bold">24h</span>
+                <span className="text-[10px] text-center text-gray-400">{language === 'ko' ? '선공개' : 'Early'}</span>
+              </div>
+              <div className="flex flex-col items-center gap-1 text-gray-300 rounded-lg px-2 py-2.5 border border-gray-800" style={{ backgroundColor: '#1a1c1d' }}>
+                <span className="text-emerald-400 text-base font-bold">광고 X</span>
+                <span className="text-[10px] text-center text-gray-400">{language === 'ko' ? '쾌적' : 'No Ads'}</span>
               </div>
             </div>
+          </div>
 
         </div>
 

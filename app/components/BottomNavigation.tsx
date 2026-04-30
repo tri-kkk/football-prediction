@@ -1,222 +1,101 @@
 'use client'
+
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useLanguage } from '../contexts/LanguageContext'
-import { usePWAInstall } from './pwa/PWAInstallContext'
-import Image from 'next/image'
 
-export default function MobileBottomNav() {
-  const pathname = usePathname()
-  const { language } = useLanguage()
-  const { canInstall, isInstalled, triggerInstall } = usePWAInstall()
+export const MENU_OPEN_EVENT = 'trendsoccer:open-mobile-menu'
 
-  // 현재 스포츠 감지
-  const isBaseball = pathname.startsWith('/baseball')
+interface NavItem {
+  href?: string
+  label: string
+  isHome?: boolean
+  matches?: (path: string) => boolean
+  onClick?: () => void
+}
 
-  // ⚽ 축구 메뉴.
-  
-  const footballNavItems = [
-    {
-      href: '/',
-      icon: '/preview.svg',
-      labelKo: '트렌드',
-      labelEn: 'Trend',
-      hidden: false
-    },
-    {
-      href: '/premium',
-      icon: 'insights',
-      labelKo: '분석',
-      labelEn: 'Analysis',
-      hidden: false
-    },
-    {
-      href: '/highlights',
-      icon: 'play',
-      labelKo: '하이라이트',
-      labelEn: 'Highlights',
-      hidden: false
-    },
-    {
-      href: '/blog',
-      icon: '/article.svg',
-      labelKo: '리포트',
-      labelEn: 'Report',
-      hidden: false
-    },
-    {
-      href: '/news',
-      icon: 'feed',
-      labelKo: '뉴스',
-      labelEn: 'News',
-      hidden: false
-    },
+function emitMenuOpen() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(MENU_OPEN_EVENT))
+}
+
+export default function BottomNavigation() {
+  const pathname = usePathname() || '/'
+  const HIDDEN_ROUTES = ['/login', '/signup-complete']
+  if (HIDDEN_ROUTES.some((rp) => pathname === rp || pathname.startsWith(rp + '/'))) return null
+
+  const items: NavItem[] = [
+    { href: '/', label: '홈', isHome: true, matches: (p) => p === '/' || p === '' },
+    { href: '/football', label: '축구 분석', matches: (p) => p.startsWith('/football') || p.startsWith('/results') },
+    { href: '/baseball/predictions', label: '야구 분석', matches: (p) => p.startsWith('/baseball/predictions') || p.startsWith('/baseball/results') },
+    { href: '/baseball/combo-picks', label: '야구 조합', matches: (p) => p.startsWith('/baseball/combo-picks') },
+    { label: '메뉴', onClick: emitMenuOpen },
   ]
-
-  // ⚾ 야구 메뉴
-  const baseballNavItems = [
-    {
-      href: '/baseball',
-      icon: '/preview.svg',
-      labelKo: '홈',
-      labelEn: 'Home',
-      hidden: false
-    },
-    {
-      href: '/baseball/predictions',
-      icon: 'insights',
-      labelKo: '분석',
-      labelEn: 'Analysis',
-      hidden: false
-    },
-    {
-      href: '/baseball/combo-picks',
-      icon: 'combo',
-      labelKo: '조합',
-      labelEn: 'Combo',
-      hidden: false
-    },
-    {
-      href: '/baseball/results',
-      icon: 'play',
-      labelKo: '결과',
-      labelEn: 'Results',
-      hidden: false
-    },
-  ]
-
-  // 스포츠에 맞는 메뉴 선택
-  const navItems = isBaseball ? baseballNavItems : footballNavItems
-  const visibleNavItems = navItems.filter(item => !item.hidden)
-  
-  // 설치 가능하고 아직 설치 안 했으면 설치 버튼 추가
-  const showInstallButton = canInstall && !isInstalled
-  const totalColumns = visibleNavItems.length + (showInstallButton ? 1 : 0)
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0f0f0f] border-t border-gray-800 z-50 safe-area-bottom">
-      <div 
-        className="grid gap-1 px-2 py-3" 
-        style={{ gridTemplateColumns: `repeat(${totalColumns}, 1fr)` }}
-      >
-        {visibleNavItems.map((item) => {
-          const isActive = pathname === item.href
-          
+    <nav
+      className="fixed bottom-0 inset-x-0 z-50 sm:hidden border-t border-gray-800 backdrop-blur-md"
+      style={{ backgroundColor: 'rgba(10, 10, 10, 0.94)' }}
+      aria-label="모바일 하단 네비게이션"
+    >
+      <div className="grid grid-cols-5 h-14">
+        {items.map((it, idx) => {
+          const active = it.matches ? it.matches(pathname) : false
+
+          let labelStyle: React.CSSProperties = {}
+          let labelClass = 'text-[12px] font-medium'
+
+          if (it.isHome) {
+            labelStyle = { color: '#6dff5c' }
+            labelClass = 'text-[12px] font-bold'
+          } else if (active) {
+            labelClass = 'text-[12px] font-bold text-white'
+          } else {
+            labelClass = 'text-[12px] font-medium text-gray-400 hover:text-gray-200'
+          }
+
+          const indicator = active ? (
+            <span
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full"
+              style={{ background: it.isHome ? '#6dff5c' : '#10b981' }}
+            />
+          ) : null
+
+          const inner = (
+            <span className="relative flex items-center justify-center w-full h-full transition-colors">
+              {indicator}
+              <span className={labelClass} style={labelStyle}>
+                {it.label}
+              </span>
+            </span>
+          )
+
+          if (it.onClick) {
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={it.onClick}
+                className="relative flex items-center justify-center"
+                aria-label={it.label}
+              >
+                {inner}
+              </button>
+            )
+          }
+
           return (
             <Link
-              key={item.href}
-              href={item.href}
-              className={`relative flex flex-col items-center gap-2 py-2 rounded-lg transition-all ${
-                isActive 
-                  ? isBaseball 
-                    ? 'text-blue-500' 
-                    : 'text-emerald-500'
-                  : 'text-gray-400 active:bg-gray-800/50'
-              }`}
+              key={idx}
+              href={it.href || '/'}
+              className="relative flex items-center justify-center"
+              aria-label={it.label}
             >
-              <div className={`relative transition-opacity ${isActive ? 'opacity-100' : 'opacity-60'}`}>
-                {item.icon === 'feed' ? (
-                  <svg 
-                    width="24" 
-                    height="24" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className={isActive ? 'brightness-125' : ''}
-                  >
-                    <circle cx="6.18" cy="17.82" r="2.18" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
-                    <path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
-                  </svg>
-                ) : item.icon === 'combo' ? (
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className={isActive ? 'brightness-125' : ''}
-                  >
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2"/>
-                    <rect x="14" y="3" width="7" height="7" rx="1.5" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2"/>
-                    <rect x="3" y="14" width="7" height="7" rx="1.5" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2"/>
-                    <path d="M14 17.5h7M17.5 14v7" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                ) : item.icon === 'insights' ? (
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className={isActive ? 'brightness-125' : ''}
-                  >
-                    <path d="M3 3v18h18" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M7 14l4-4 4 4 5-5" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="20" cy="9" r="2" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
-                  </svg>
-                ) : item.icon === 'play' ? (
-                  <svg 
-                    width="24" 
-                    height="24" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                    className={isActive ? 'brightness-125' : ''}
-                  >
-                    <rect x="3" y="5" width="18" height="14" rx="2" stroke={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'} strokeWidth="2"/>
-                    <path d="M10 9l5 3-5 3V9z" fill={isActive ? (isBaseball ? '#3b82f6' : '#10b981') : '#9ca3af'}/>
-                  </svg>
-                ) : (
-                  <Image 
-                    src={item.icon} 
-                    alt={item.labelEn}
-                    width={24} 
-                    height={24}
-                    className={isActive ? 'brightness-125' : ''}
-                  />
-                )}
-              </div>
-              <span className="text-[11px] font-medium">
-                {language === 'ko' ? item.labelKo : item.labelEn}
-              </span>
-              {item.badge && (
-                <span className="absolute -top-0.5 -right-0.5 px-1 py-0.5 text-[8px] font-bold rounded bg-yellow-400 text-black">
-                  {item.badge}
-                </span>
-              )}
+              {inner}
             </Link>
           )
         })}
-        
-        {/* 앱 설치 버튼 */}
-        {showInstallButton && (
-          <button
-            onClick={() => triggerInstall()}
-            className="relative flex flex-col items-center gap-2 py-2 rounded-lg transition-all text-emerald-400 active:bg-emerald-500/10"
-          >
-            <div className="relative opacity-100">
-              <svg 
-                width="24" 
-                height="24" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect x="5" y="2" width="14" height="20" rx="2" stroke="#34d399" strokeWidth="2"/>
-                <path d="M12 7v6m0 0l-2.5-2.5M12 13l2.5-2.5" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="9" y1="18" x2="15" y2="18" stroke="#34d399" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <span className="text-[11px] font-medium">
-              {language === 'ko' ? '앱설치' : 'Install'}
-            </span>
-            {/* NEW 뱃지 */}
-            <span className="absolute -top-0.5 -right-0.5 px-1 py-0.5 text-[8px] font-bold rounded bg-red-500 text-white">
-              NEW
-            </span>
-          </button>
-        )}
       </div>
-    </div>
+      <div className="h-[env(safe-area-inset-bottom,0)]" />
+    </nav>
   )
 }

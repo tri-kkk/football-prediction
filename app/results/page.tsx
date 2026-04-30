@@ -648,9 +648,9 @@ export default function MatchResultsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0f0f] text-white pb-20 md:pb-0">
-        <div className="max-w-7xl mx-auto flex">
-          <aside className="hidden md:block w-64 min-h-screen bg-[#1a1a1a] border-r border-gray-800">
+      <div className="min-h-screen bg-black text-white pb-20 md:pb-0">
+        <div className="home-container mx-auto flex">
+          <aside className="hidden md:block w-64 min-h-screen bg-[#252829] border-r border-gray-800">
             <div className="p-4 space-y-4">
               <div className="h-24 bg-gray-800/50 rounded-lg animate-pulse"></div>
               <div className="space-y-2">
@@ -664,7 +664,7 @@ export default function MatchResultsPage() {
             <div className="animate-pulse space-y-4">
               <div className="h-12 bg-gray-800 rounded w-full"></div>
               {[1,2,3,4,5].map(i => (
-                <div key={i} className="bg-[#1a1a1a] rounded-lg p-4">
+                <div key={i} className="bg-[#252829] rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
@@ -686,10 +686,10 @@ export default function MatchResultsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white pb-20 md:pb-0">
-      <div className="max-w-7xl mx-auto flex">
+    <div className="min-h-screen bg-black text-white pb-20 md:pb-0">
+      <div className="home-container mx-auto flex">
         {/* 좌측 사이드바 */}
-        <aside className="hidden md:block w-64 min-h-screen bg-[#1a1a1a] border-r border-gray-800 sticky top-0 overflow-y-auto flex-shrink-0">
+        <aside className="hidden md:block w-64 min-h-screen bg-[#252829] border-r border-gray-800 sticky top-0 overflow-y-auto flex-shrink-0">
           <div className="p-4">
             {/* 🔥 대륙별 리그 그룹 (접이식) */}
             <div>
@@ -715,7 +715,7 @@ export default function MatchResultsPage() {
                             onClick={() => setSelectedLeague(league.code)}
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
                               selectedLeague === league.code
-                                ? 'bg-[#A3FF4C] text-gray-900 font-medium'
+                                ? 'bg-emerald-500 text-gray-900 font-medium'
                                 : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
                             }`}
                           >
@@ -757,7 +757,7 @@ export default function MatchResultsPage() {
                               onClick={() => setSelectedLeague(league.code)}
                               className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-all ${
                                 selectedLeague === league.code
-                                  ? 'bg-[#A3FF4C] text-gray-900 font-medium'
+                                  ? 'bg-emerald-500 text-gray-900 font-medium'
                                   : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
                               }`}
                             >
@@ -780,46 +780,28 @@ export default function MatchResultsPage() {
         {/* 메인 컨텐츠 */}
         <main className="flex-1 w-full md:min-h-screen">
           {/* 날짜 네비게이션 */}
-          <div className="sticky top-0 bg-[#0f0f0f] z-10 border-b border-gray-800">
+          <div className="sticky top-0 bg-black z-10 border-b border-gray-800">
             <div className="px-4 py-3">
               <div className="flex items-center justify-center gap-4 mb-3">
-                <button onClick={goToPreviousDay} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1a1a1a] hover:bg-[#252525] transition-colors">
+                <button onClick={goToPreviousDay} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252829] hover:bg-[#252525] transition-colors">
                   <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 
-                <button onClick={goToToday} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1a1a1a] hover:bg-[#252525] transition-colors">
+                <button onClick={goToToday} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#252829] hover:bg-[#252525] transition-colors">
                   <span className="text-white font-medium">{formatDateDisplay(selectedDate)}</span>
                   <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 
-                <button onClick={goToNextDay} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1a1a1a] hover:bg-[#252525] transition-colors">
+                <button onClick={goToNextDay} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252829] hover:bg-[#252525] transition-colors">
                   <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
               </div>
-
-              {/* ✅ 모바일 PICK 통계 (NEW!) */}
-              {pickStats.total > 0 && (
-                <div className="md:hidden mb-3 p-2 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg border border-yellow-600/30 flex items-center justify-between">
-                  <span className="text-xs text-yellow-400 font-medium flex items-center gap-1">
-                    ⭐ PICK
-                  </span>
-                  <span className={`text-sm font-bold ${
-                    pickStats.accuracy >= 70 ? 'text-green-400' :
-                    pickStats.accuracy >= 50 ? 'text-yellow-400' : 'text-gray-400'
-                  }`}>
-                    {pickStats.total - pickStats.pending > 0 
-                      ? `${pickStats.correct}/${pickStats.total - pickStats.pending} (${pickStats.accuracy}%)`
-                      : `${pickStats.pending} pending`
-                    }
-                  </span>
-                </div>
-              )}
 
               {/* 모바일 리그 필터 */}
               <div className="md:hidden overflow-x-auto scrollbar-hide -mx-4 px-4">
@@ -830,8 +812,8 @@ export default function MatchResultsPage() {
                       onClick={() => setSelectedLeague(league.code)}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${
                         selectedLeague === league.code
-                          ? 'bg-[#A3FF4C] text-gray-900 font-medium'
-                          : 'bg-[#1a1a1a] text-gray-400'
+                          ? 'bg-emerald-500 text-gray-900 font-medium'
+                          : 'bg-[#252829] text-gray-400'
                       }`}
                     >
                       {league.isEmoji ? (
@@ -875,7 +857,7 @@ export default function MatchResultsPage() {
                       </div>
                     )}
                     
-                    <div className="bg-[#1a1a1a] rounded-xl overflow-hidden">
+                    <div className="bg-[#252829] rounded-xl overflow-hidden">
                     <button
                       onClick={() => toggleLeague(leagueCode)}
                       className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#202020] transition-colors"
@@ -910,10 +892,9 @@ export default function MatchResultsPage() {
                       <>
                         {/* 데스크톱: 테이블 형식 */}
                         <div className="hidden md:block overflow-x-auto">
-                          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 140px 80px' }} className="gap-2 px-4 py-2 bg-[#1a1a1a] border-b border-gray-800 text-xs text-gray-500 font-medium">
+                          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px' }} className="gap-2 px-4 py-2 bg-[#252829] border-b border-gray-800 text-xs text-gray-500 font-medium">
                             <div className="text-center">{currentLanguage === 'ko' ? '시간' : 'Time'}</div>
                             <div className="text-center">{currentLanguage === 'ko' ? '경기' : 'Match'}</div>
-                            <div className="text-center">{currentLanguage === 'ko' ? '확률 (1-X-2)' : 'Prob (1-X-2)'}</div>
                             <div className="text-center">{currentLanguage === 'ko' ? '결과' : 'Result'}</div>
                           </div>
                           
@@ -927,8 +908,8 @@ export default function MatchResultsPage() {
                                 <div key={match.match_id} className={`${match.isPick ? 'bg-gradient-to-r from-yellow-900/10 to-transparent' : 'bg-[#151515]'}`}>
                                   <button
                                     onClick={() => handleMatchExpand(match)}
-                                    style={{ display: 'grid', gridTemplateColumns: '80px 1fr 140px 80px' }}
-                                    className="w-full gap-2 px-4 py-3 hover:bg-[#1a1a1a] transition-colors items-center"
+                                    style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px' }}
+                                    className="w-full gap-2 px-4 py-3 hover:bg-[#252829] transition-colors items-center"
                                   >
                                     {/* 시간 + PICK 배지 */}
                                     <div className="text-center">
@@ -963,41 +944,6 @@ export default function MatchResultsPage() {
                                           {translateTeamName(match.away_team, currentLanguage)}
                                         </span>
                                       </div>
-                                    </div>
-
-                                    {/* 확률 - PICK이면 PICK 확률 표시 */}
-                                    <div className="flex items-center justify-center gap-1 text-xs">
-                                      {match.isPick && match.pickInfo ? (
-                                        <>
-                                          <span className={match.pickInfo.pick_result === 'HOME' ? 'text-yellow-400 font-bold' : 'text-gray-400'}>
-                                            {match.pickInfo.home_probability}
-                                          </span>
-                                          <span className="text-gray-600">-</span>
-                                          <span className={match.pickInfo.pick_result === 'DRAW' ? 'text-yellow-400 font-bold' : 'text-gray-400'}>
-                                            {match.pickInfo.draw_probability}
-                                          </span>
-                                          <span className="text-gray-600">-</span>
-                                          <span className={match.pickInfo.pick_result === 'AWAY' ? 'text-yellow-400 font-bold' : 'text-gray-400'}>
-                                            {match.pickInfo.away_probability}
-                                          </span>
-                                        </>
-                                      ) : pred ? (
-                                        <>
-                                          <span className={pred.predictedWinner === 'home' ? 'text-[#A3FF4C] font-bold' : 'text-gray-400'}>
-                                            {pred.homeWinProbability || '-'}
-                                          </span>
-                                          <span className="text-gray-600">-</span>
-                                          <span className={pred.predictedWinner === 'draw' ? 'text-[#A3FF4C] font-bold' : 'text-gray-400'}>
-                                            {pred.drawProbability || '-'}
-                                          </span>
-                                          <span className="text-gray-600">-</span>
-                                          <span className={pred.predictedWinner === 'away' ? 'text-[#A3FF4C] font-bold' : 'text-gray-400'}>
-                                            {pred.awayWinProbability || '-'}
-                                          </span>
-                                        </>
-                                      ) : (
-                                        <span className="text-gray-600">-</span>
-                                      )}
                                     </div>
 
                                     {/* 결과 */}
@@ -1104,7 +1050,7 @@ export default function MatchResultsPage() {
                               <div key={match.match_id} className={`${match.isPick ? 'bg-gradient-to-r from-yellow-900/10 to-transparent' : 'bg-[#151515]'}`}>
                                 <button
                                   onClick={() => handleMatchExpand(match)}
-                                  className="w-full px-3 py-2.5 hover:bg-[#1a1a1a] transition-colors"
+                                  className="w-full px-3 py-2.5 hover:bg-[#252829] transition-colors"
                                 >
                                   {/* 📱 2줄 스택 레이아웃 */}
                                   <div className="flex flex-col gap-1.5">
@@ -1240,7 +1186,7 @@ export default function MatchResultsPage() {
           <aside className="hidden lg:block w-[300px] flex-shrink-0 p-4">
             <div className="sticky top-4 space-y-4">
               {/* 상단 광고 */}
-              <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
+              <div className="rounded-xl overflow-hidden bg-[#252829]">
                 <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
                 <div className="p-2">
                   <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={true} />
@@ -1248,7 +1194,7 @@ export default function MatchResultsPage() {
               </div>
 
               {/* 하단 광고 */}
-              <div className="rounded-xl overflow-hidden bg-[#1a1a1a]">
+              <div className="rounded-xl overflow-hidden bg-[#252829]">
                 <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
                 <div className="p-2">
                   <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={true} />

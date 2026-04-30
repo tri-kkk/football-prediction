@@ -2,6 +2,7 @@
 
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
+import { createPortal } from 'react-dom'
 import { useState, useRef, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 
@@ -24,6 +25,18 @@ export default function AuthButton() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // ESC 키로 드롭다운 닫기
+  useEffect(() => {
+    if (!showDropdown) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showDropdown])
 
   const handleSignOut = async () => {
     setIsLoading(true)
@@ -52,12 +65,13 @@ export default function AuthButton() {
           {!isPremium && (
             <Link
               href="/premium/pricing"
-              className="hidden md:flex items-center gap-1 px-3.5 py-2 rounded-lg font-bold text-xs text-white transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+              className="hidden md:flex items-center gap-1 px-3.5 py-2 rounded-lg font-bold text-xs transition-all shadow-md hover:shadow-lg whitespace-nowrap"
               style={{
-                background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+                background: 'linear-gradient(90deg, #6dff5c 0%, #36e07a 100%)',
+                color: '#0a0a0a',
               }}
             >
-              💎 {language === 'ko' ? '프리미엄 구독' : 'Go Premium'}
+              {language === 'ko' ? '프리미엄 구독' : 'Go Premium'}
             </Link>
           )}
 
@@ -65,7 +79,7 @@ export default function AuthButton() {
           <div className="relative z-[100]">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              className="flex items-center gap-1 transition-colors"
             >
               {/* 티어 배지 */}
               <span className={`px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-bold rounded ${
@@ -73,7 +87,7 @@ export default function AuthButton() {
                   ? 'bg-yellow-500 text-black'
                   : 'bg-gray-600 text-gray-200'
               }`}>
-                {isPremium ? 'PRO' : 'FREE'}
+                {isPremium ? '프리미엄' : '무료'}
               </span>
 
               {/* 화살표 */}
@@ -87,9 +101,10 @@ export default function AuthButton() {
               </svg>
             </button>
 
-            {/* 드롭다운 메뉴 */}
+            {/* 드롭다운 메뉴 (centered modal on all viewports) */}
             {showDropdown && (
-              <div className="absolute right-0 top-full mt-2 w-44 md:w-48 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-xl z-[100] overflow-hidden">
+              <>
+                <div className="absolute right-0 top-full mt-2 w-64 z-[100] rounded-xl shadow-xl bg-[#1a1a1a] border border-gray-700 overflow-hidden">
               {/* 유저 정보 */}
               <div className="px-3 md:px-4 py-2.5 md:py-3 border-b border-gray-700">
                 <div className="text-white text-xs md:text-sm font-medium truncate">{userName}</div>
@@ -155,7 +170,8 @@ export default function AuthButton() {
                   {language === 'ko' ? '회원 탈퇴' : 'Delete Account'}
                 </button>
               </div>
-              </div>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -215,6 +231,8 @@ function SubscriptionModal({
   premiumExpiresAt?: string
   promoCode?: string
 }) {
+  // ✅ 모든 훅은 early return 이전에 선언 (Rules of Hooks)
+  const [mounted, setMounted] = useState(false)
   const [subscription, setSubscription] = useState<{
     plan: string
     status: string
@@ -225,6 +243,8 @@ function SubscriptionModal({
   } | null>(null)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => { setMounted(true) }, [])
 
   // ✅ 구독 정보 로드 (개선됨)
   useEffect(() => {
@@ -336,21 +356,24 @@ function SubscriptionModal({
     }
   }
 
-  const daysRemaining = subscription?.daysRemaining 
+  const daysRemaining = subscription?.daysRemaining
     ?? calculateDaysRemaining(subscription?.expiresAt || null)
   const startedAt = subscription?.startedAt || null
   const expiresAt = subscription?.expiresAt || null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  // ✅ SSR 가드: 마운트 후에만 portal 생성 (모든 훅 이후에 위치)
+  if (!mounted) return null
+
+  return createPortal(
+    <>
       {/* 배경 */}
-      <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+      <div
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200]"
         onClick={onClose}
       />
-      
+
       {/* 모달 */}
-      <div className="relative bg-[#1a1a1a] border border-gray-700 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[80vh] overflow-y-auto">
+      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:max-w-sm sm:w-full z-[201] rounded-2xl shadow-2xl bg-[#1a1a1a] border border-gray-700 overflow-hidden max-h-[85vh] overflow-y-auto p-6">
         {loadingData ? (
           // 로딩 상태
           <div className="flex items-center justify-center py-8">
@@ -462,7 +485,8 @@ function SubscriptionModal({
           </>
         )}
       </div>
-    </div>
+    </>,
+    document.body
   )
 }
 

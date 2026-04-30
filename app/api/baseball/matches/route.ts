@@ -256,6 +256,11 @@ export async function GET(request: NextRequest) {
             q = q.like('status', 'IN%')
           } else if (status === 'today') {
             q = q.eq('match_date', today)
+          } else {
+            // status === 'all' (default): yesterday~tomorrow window so home feed shows current matches
+            const yesterdayDate = new Date(now.getTime() - 86_400_000).toISOString().split('T')[0]
+            const tomorrowDate = new Date(now.getTime() + 86_400_000).toISOString().split('T')[0]
+            q = q.gte('match_date', yesterdayDate).lte('match_date', tomorrowDate)
           }
 
           if (date) q = q.eq('match_date', date)
@@ -371,6 +376,13 @@ export async function GET(request: NextRequest) {
         const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
         const today = now.toISOString().split('T')[0]
         query = query.eq('match_date', today)
+      } else {
+        // status === 'all' (default): yesterday~tomorrow window
+        const koreaOffset = 9 * 60
+        const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
+        const yesterdayDate = new Date(now.getTime() - 86_400_000).toISOString().split('T')[0]
+        const tomorrowDate = new Date(now.getTime() + 86_400_000).toISOString().split('T')[0]
+        query = query.gte('match_date', yesterdayDate).lte('match_date', tomorrowDate)
       }
 
       if (date) {

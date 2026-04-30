@@ -368,7 +368,12 @@ export async function GET(request: Request) {
       const startOfDay = `${date}T00:00:00Z`
       const endOfDay = `${date}T23:59:59Z`
       upcomingUrl += `&commence_time=gte.${startOfDay}&commence_time=lte.${endOfDay}`
+    } else if (league === 'ALL') {
+      const yesterday = new Date(Date.now() - 86400000)
+      const fortnightLater = new Date(Date.now() + 14 * 86400000)
+      upcomingUrl += `&commence_time=gte.${yesterday.toISOString()}&commence_time=lte.${fortnightLater.toISOString()}`
     }
+    upcomingUrl += `&order=commence_time.asc&limit=1500`
     
     const upcomingResponse = await fetch(upcomingUrl, {
       headers,

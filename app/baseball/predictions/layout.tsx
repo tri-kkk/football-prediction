@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import AnalysisSubNav from '../../components/AnalysisSubNav'
 
 export const metadata: Metadata = {
   title: '트렌드베이스볼 - 야구 데이터 분석 리포트',
@@ -18,5 +19,10 @@ export default function PredictionsLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <>{children}</>
+  return (
+    <>
+      <AnalysisSubNav />
+      {children}
+    </>
+  )
 }

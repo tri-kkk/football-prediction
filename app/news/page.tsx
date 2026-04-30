@@ -273,13 +273,13 @@ export default function NewsPage() {
         {/* 트렌드 PICK 배너 - 광고 스타일 */}
         <section className="mb-8">
           <a href="/premium" className="block group">
-            <div className="relative bg-gradient-to-r from-[#2a1a1a] via-[#1a1a1a] to-[#2a1a1a] rounded-xl border border-orange-500/30 overflow-hidden hover:border-orange-500/50 transition-all py-4 px-6">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-0.5 bg-gradient-to-r from-transparent via-orange-500 to-transparent"></div>
+            <div className="relative bg-gradient-to-r from-[#1a1c1d] to-[#252829] rounded-xl border border-emerald-500/30 overflow-hidden hover:border-emerald-500/50 transition-all py-4 px-6">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-0.5 bg-gradient-to-r from-transparent via-emerald-500 to-transparent"></div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <span className="text-2xl">🔥</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-orange-400">
+                    <span className="text-lg font-bold text-emerald-400">
                       {uiLang === 'ko' ? '트렌드 PICK' : 'Trend PICK'}
                     </span>
                     <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded animate-pulse">
@@ -290,7 +290,7 @@ export default function NewsPage() {
                     </span>
                   </div>
                 </div>
-                <span className="text-orange-400 font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                <span className="text-emerald-400 font-semibold text-sm group-hover:translate-x-1 transition-transform">
                   {uiLang === 'ko' ? '무료 예측 보기 →' : 'View Predictions →'}
                 </span>
               </div>

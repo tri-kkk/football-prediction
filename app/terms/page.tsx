@@ -88,7 +88,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           {isKo ? '2. 회원가입 및 계정' : '2. Registration and Account'}
         </h2>
         
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '2.1 회원가입' : '2.1 Registration'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
@@ -97,7 +97,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           <li>{isKo ? '허위 정보로 가입 시 서비스 이용이 제한될 수 있습니다' : 'Service may be restricted if you register with false information'}</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '2.2 계정 관리' : '2.2 Account Management'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
@@ -113,7 +113,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           {isKo ? '3. 회원 등급 및 서비스' : '3. Membership Tiers and Services'}
         </h2>
         
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '3.1 회원 등급' : '3.1 Membership Tiers'}
         </h3>
         <p className="text-gray-300 mb-3">
@@ -127,7 +127,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           <li><strong>{isKo ? '프리미엄:' : 'Premium:'}</strong> {isKo ? '이용권 구매를 통해 프리미엄 혜택 이용' : 'Access premium benefits through access pass purchase'}</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '3.2 프리미엄 혜택' : '3.2 Premium Benefits'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
@@ -145,7 +145,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           {isKo ? '4. 이용권 구매 및 결제' : '4. Access Pass Purchase and Payment'}
         </h2>
         
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '4.1 이용권 종류' : '4.1 Access Pass Types'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
@@ -153,7 +153,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           <li><strong>{isKo ? '3개월권:' : '3-Month Pass:'}</strong> {isKo ? '구매일로부터 90일간 프리미엄 혜택 이용' : 'Premium benefits for 90 days from purchase date'}</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '4.2 이용권 적용' : '4.2 Pass Activation'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
@@ -163,7 +163,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           <li>{isKo ? '이용권을 연장하려면 새로운 이용권을 구매해야 합니다' : 'To extend access, you must purchase a new access pass'}</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '4.3 요금 안내' : '4.3 Pricing'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
@@ -172,7 +172,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           <li>{isKo ? '모든 요금은 부가가치세(VAT)가 포함된 금액입니다' : 'All prices include VAT'}</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '4.4 결제 방법' : '4.4 Payment Methods'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
@@ -195,7 +195,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
         </ul>
         <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
           <p className="text-gray-300">
-            <strong className="text-blue-400">{isKo ? '참고:' : 'Note:'}</strong>{' '}
+            <strong className="text-emerald-400">{isKo ? '참고:' : 'Note:'}</strong>{' '}
             {isKo 
               ? '전자상거래법에 따라 디지털 콘텐츠의 환불 규정이 적용됩니다.'
               : 'Refund regulations for digital content apply in accordance with the E-commerce Act.'}
@@ -222,7 +222,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           {isKo ? '7. 서비스 이용' : '7. Use of Service'}
         </h2>
         
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '7.1 허용되는 사용' : '7.1 Permitted Use'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
@@ -231,7 +231,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           <li>{isKo ? '개인적, 비상업적 목적의 사용' : 'Personal, non-commercial use'}</li>
         </ul>
 
-        <h3 className="text-xl font-semibold mb-3 text-blue-400">
+        <h3 className="text-xl font-semibold mb-3 text-emerald-400">
           {isKo ? '7.2 금지되는 사용' : '7.2 Prohibited Use'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
@@ -261,7 +261,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
         </ul>
         <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
           <p className="text-gray-300">
-            <strong className="text-blue-400">{isKo ? '중요:' : 'Important:'}</strong>{' '}
+            <strong className="text-emerald-400">{isKo ? '중요:' : 'Important:'}</strong>{' '}
             {isKo 
               ? '본 서비스의 예측은 통계 분석을 기반으로 하며, 베팅이나 재정적 결정의 유일한 근거로 사용되어서는 안 됩니다. 예측을 바탕으로 발생한 손실에 대해 책임지지 않습니다.'
               : 'Our predictions are based on statistical analysis and should not be used as the sole basis for betting or financial decisions. We are not responsible for any losses incurred based on our predictions.'}
@@ -364,13 +364,13 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           </p>
           <p className="text-gray-300 mb-2">
             <strong>{isKo ? '웹사이트:' : 'Website:'}</strong>{' '}
-            <a href="https://trendsoccer.com" className="text-blue-400 hover:text-blue-300">
+            <a href="https://trendsoccer.com" className="text-emerald-400 hover:text-blue-300">
               https://trendsoccer.com
             </a>
           </p>
           <p className="text-gray-300">
             <strong>{isKo ? '이메일:' : 'Email:'}</strong>{' '}
-            <a href="mailto:trikilab2025@gmail.com" className="text-blue-400 hover:text-blue-300">
+            <a href="mailto:trikilab2025@gmail.com" className="text-emerald-400 hover:text-blue-300">
               trikilab2025@gmail.com
             </a>
           </p>

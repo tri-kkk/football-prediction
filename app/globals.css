@@ -213,3 +213,29 @@ body {
   left: -5px;
   animation-delay: 0.75s;
 }
+/* 🔥 통합 홈 사이드바 — Tailwind JIT 가 lg:w-80 를 생성 못하는 이슈 우회 */
+.home-sidebar {
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  .home-sidebar {
+    width: 320px;
+    flex-shrink: 0;
+  }
+}
+
+/* 🔥 통합 홈 컨테이너 — bc.game 처럼 화면 폭을 더 시원하게 사용 */
+.home-container {
+  width: 100%;
+  max-width: 1280px;
+}
+@media (min-width: 1280px) {
+  .home-container {
+    max-width: 1440px;
+  }
+}
+@media (min-width: 1536px) {
+  .home-container {
+    max-width: 1600px;
+  }
+}

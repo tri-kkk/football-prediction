@@ -612,7 +612,7 @@ function ProbabilityBar({ home, draw, away, t }: {
 function GradeBadge({ grade, language }: { grade: 'PICK' | 'GOOD' | 'PASS'; language: string }) {
   const config = {
     PICK: {
-      bg: 'bg-gradient-to-r from-orange-500 to-red-500',
+      bg: 'bg-gradient-to-r from-emerald-500 to-red-500',
       text: 'text-white',
       icon: '🔥',
       label: language === 'ko' ? '강추' : 'PICK',
@@ -647,7 +647,7 @@ function GradeBadge({ grade, language }: { grade: 'PICK' | 'GOOD' | 'PASS'; lang
 function ValueBadge({ value, t }: { value: string; t: typeof texts['ko'] }) {
   const colors: Record<string, string> = {
     GOOD: 'bg-emerald-600',
-    FAIR: 'bg-yellow-600',
+    FAIR: 'bg-emerald-600',
     POOR: 'bg-gray-600',
   }
   
@@ -925,13 +925,13 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
   const canView = isPremiumUser ? isOpen : (isFreeUser ? isFree : (viewedCount < 1 && isGuestOpen))
   
   return (
-    <div className={`bg-[#141824] rounded-2xl p-5 border transition-all ${
+    <div className={`bg-[#252829] rounded-2xl p-5 border transition-all ${
       canView ? 'border-gray-700 hover:border-gray-600' : 'border-gray-800/50 opacity-80'
     }`}>
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 bg-[#1e293b] px-2 py-1 rounded-lg">
+          <span className="text-xs text-gray-400 bg-[#2a2d2e] px-2 py-1 rounded-lg">
             {match.league_code}
           </span>
           {canView && !prediction && (
@@ -1009,7 +1009,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               ? 'bg-red-900/20 border-red-500/30'
               : prediction.recommendation.pick === 'DRAW'
               ? 'bg-gray-800/50 border-gray-600/30'
-              : 'bg-gray-900/50 border-[#1e293b]/30'
+              : 'bg-gray-900/50 border-[#2a2d2e]/30'
           }`}>
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2">
@@ -1036,7 +1036,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
 
             {/* 핵심 수치 */}
             <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className="bg-[#0f1623] rounded p-2 text-center">
+              <div className="bg-[#1a1d1e] rounded p-2 text-center">
                 <div className="text-[10px] text-gray-500 mb-1">{t.winRate}</div>
                 <div className={`text-base font-bold ${
                   prediction.recommendation.pick === 'HOME' ? 'text-blue-400'
@@ -1049,15 +1049,15 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                   {prediction.recommendation.pick === 'SKIP' && '-'}
                 </div>
               </div>
-              <div className="bg-[#0f1623] rounded p-2 text-center">
+              <div className="bg-[#1a1d1e] rounded p-2 text-center">
                 <div className="text-[10px] text-gray-500 mb-1">{t.powerDiff}</div>
-                <div className="text-base font-bold text-yellow-400">
+                <div className="text-base font-bold text-emerald-400">
                   {Math.abs((prediction.homePower || 0) - (prediction.awayPower || 0))}
                 </div>
               </div>
               <div className={`rounded p-2 text-center flex items-center justify-center ${
                 prediction.recommendation.grade === 'PICK'
-                  ? 'bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50'
+                  ? 'bg-gradient-to-r from-emerald-500/20 to-red-500/20 border border-emerald-500/50'
                   : prediction.recommendation.grade === 'GOOD'
                   ? 'bg-emerald-500/20 border border-emerald-500/50'
                   : 'bg-gray-700/50 border border-gray-600/50'
@@ -1068,7 +1068,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
 
             {/* 근거 */}
             {prediction.recommendation.reasons.length > 0 && (
-              <div className="bg-[#0a0e17] rounded p-1.5">
+              <div className="bg-[#141516] rounded p-1.5">
                 <div className="text-[10px] text-gray-500 mb-1">{t.analysisReason}</div>
                 <div className="text-xs text-gray-400 space-y-0.5">
                   {prediction.recommendation.reasons.slice(0, 3).map((reason, i) => (
@@ -1083,7 +1083,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
 
             {/* 배당 */}
             {match.home_odds && match.draw_odds && match.away_odds && (
-              <div className="bg-[#0a0e17] rounded p-3 mt-2">
+              <div className="bg-[#141516] rounded p-3 mt-2">
                 <div className="text-[10px] text-gray-500 mb-2">{t.odds}</div>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2 text-center">
@@ -1131,7 +1131,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
           {isExpanded && (
             <>
               {/* 파워 점수 비교 */}
-              <div className="bg-[#0f1623] rounded-lg p-3">
+              <div className="bg-[#1a1d1e] rounded-lg p-3">
                 <div className="text-xs text-gray-500 mb-2 text-center">{t.powerIndex}</div>
                 <div className="flex items-center justify-between">
                   <div className="text-center flex-1">
@@ -1156,7 +1156,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               </div>
               
               {/* 최종 확률 */}
-              <div className="bg-[#0f1623] rounded-lg p-3">
+              <div className="bg-[#1a1d1e] rounded-lg p-3">
                 <div className="text-xs text-gray-500 mb-2">{t.finalProb}</div>
                 <ProbabilityBar 
                   home={prediction.finalProb.home}
@@ -1167,7 +1167,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               </div>
               
               {/* 상세 통계 - 시각화 개선 */}
-              <div className="bg-[#0f1623] rounded-lg p-3">
+              <div className="bg-[#1a1d1e] rounded-lg p-3">
                 <div className="text-xs text-gray-500 mb-3">{t.teamStats}</div>
                 <div className="space-y-2">
                   {/* 선제골 승률 */}
@@ -1208,7 +1208,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                   {/* 역전률 */}
                   <div className="flex items-center gap-2">
                     <div className="w-16 text-right">
-                      <span className="text-yellow-400 font-bold text-sm">
+                      <span className="text-emerald-400 font-bold text-sm">
                         {prediction.debug?.homeStats?.homeComebackRate !== undefined
                           ? `${(prediction.debug.homeStats.homeComebackRate * 100).toFixed(0)}%` 
                           : '-'}
@@ -1217,7 +1217,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                     <div className="flex-1">
                       <div className="h-2 bg-gray-700 rounded-full overflow-hidden flex">
                         <div 
-                          className="bg-yellow-500 h-full" 
+                          className="bg-emerald-500 h-full" 
                           style={{ width: `${(prediction.debug?.homeStats?.homeComebackRate || 0) * 100}%` }}
                         />
                       </div>
@@ -1226,13 +1226,13 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                     <div className="flex-1">
                       <div className="h-2 bg-gray-700 rounded-full overflow-hidden flex justify-end">
                         <div 
-                          className="bg-yellow-500 h-full" 
+                          className="bg-emerald-500 h-full" 
                           style={{ width: `${(prediction.debug?.awayStats?.awayComebackRate || 0) * 100}%` }}
                         />
                       </div>
                     </div>
                     <div className="w-16 text-left">
-                      <span className="text-yellow-400 font-bold text-sm">
+                      <span className="text-emerald-400 font-bold text-sm">
                         {prediction.debug?.awayStats?.awayComebackRate !== undefined
                           ? `${(prediction.debug.awayStats.awayComebackRate * 100).toFixed(0)}%` 
                           : '-'}
@@ -1305,7 +1305,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               </div>
               
               {/* Method별 분석 - 시각화 개선 */}
-              <div className="bg-[#0f1623] rounded-lg p-3">
+              <div className="bg-[#1a1d1e] rounded-lg p-3">
                 <div className="text-xs text-gray-500 mb-3">{t.method3Analysis}</div>
                 <div className="space-y-2">
                   {/* M1 */}
@@ -1348,11 +1348,11 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               </div>
               
               {/* 패턴 정보 */}
-              <div className="bg-[#0f1623] rounded-lg p-3">
+              <div className="bg-[#1a1d1e] rounded-lg p-3">
                 <div className="flex justify-between items-center">
                   <div>
                     <span className="text-xs text-gray-500">{t.pattern} </span>
-                    <span className="font-mono text-yellow-400 font-bold">{prediction.pattern}</span>
+                    <span className="font-mono text-emerald-400 font-bold">{prediction.pattern}</span>
                     {prediction.patternStats && (
                       <span className="text-xs text-gray-500 ml-2">
                         ({prediction.patternStats.totalMatches} {t.basedOn})
@@ -1375,11 +1375,11 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               
               {/* 프리미엄 팀 분석 섹션 (클린 디자인 + 다국어) */}
               {isPremiumUser ? (
-                <div className="bg-[#0f1623] rounded-lg border border-[#1e293b] overflow-hidden">
+                <div className="bg-[#1a1d1e] rounded-lg border border-[#2a2d2e] overflow-hidden">
                   {/* 헤더 */}
-                  <div className="px-3 py-2 bg-gradient-to-r from-yellow-500/10 to-transparent border-b border-[#1e293b]">
+                  <div className="px-3 py-2 bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-[#2a2d2e]">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-yellow-500 tracking-wide uppercase">
+                      <span className="text-xs font-semibold text-emerald-500 tracking-wide uppercase">
                         {language === 'ko' ? '프리미엄 분석' : 'Premium Analysis'}
                       </span>
                       {teamStatsLoading && (
@@ -1391,7 +1391,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                   </div>
                   
                   {/* 탭 */}
-                  <div className="flex border-b border-[#1e293b]">
+                  <div className="flex border-b border-[#2a2d2e]">
                     <button 
                       className={`flex-1 py-2.5 text-xs font-medium transition-all ${
                         selectedTeamTab === 'h2h' 
@@ -1487,7 +1487,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                                   })}
                                 </div>
                                 {h2hData.recent5?.trendDescription && (
-                                  <div className="text-[10px] text-center text-amber-400">
+                                  <div className="text-[10px] text-center text-emerald-400">
                                     {h2hData.recent5.trendDescription}
                                   </div>
                                 )}
@@ -1511,16 +1511,16 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                                   </div>
                                   <div className="grid grid-cols-3 gap-1 text-center">
                                     <div className="bg-gray-900/50 rounded py-2">
-                                      <div className="text-sm font-bold text-yellow-400">{avgTotalGoals}</div>
+                                      <div className="text-sm font-bold text-emerald-400">{avgTotalGoals}</div>
                                       <div className="text-[9px] text-gray-600">{language === 'ko' ? '평균 골' : 'Avg Goals'}</div>
                                     </div>
-                                    <div className={`rounded py-2 border ${over25Rate >= 60 ? 'bg-emerald-900/30 border-emerald-500/30' : 'bg-gray-900/50 border-[#1e293b]/30'}`}>
+                                    <div className={`rounded py-2 border ${over25Rate >= 60 ? 'bg-emerald-900/30 border-emerald-500/30' : 'bg-gray-900/50 border-[#2a2d2e]/30'}`}>
                                       <div className={`text-sm font-bold ${over25Rate >= 60 ? 'text-emerald-400' : 'text-gray-400'}`}>
                                         {over25Rate}%{over25Rate >= 60 && <span className="ml-1 text-[10px]">✓</span>}
                                       </div>
                                       <div className="text-[9px] text-gray-600">O2.5</div>
                                     </div>
-                                    <div className={`rounded py-2 border ${bttsRate >= 60 ? 'bg-emerald-900/30 border-emerald-500/30' : 'bg-gray-900/50 border-[#1e293b]/30'}`}>
+                                    <div className={`rounded py-2 border ${bttsRate >= 60 ? 'bg-emerald-900/30 border-emerald-500/30' : 'bg-gray-900/50 border-[#2a2d2e]/30'}`}>
                                       <div className={`text-sm font-bold ${bttsRate >= 60 ? 'text-emerald-400' : 'text-gray-400'}`}>
                                         {bttsRate}%{bttsRate >= 60 && <span className="ml-1 text-[10px]">✓</span>}
                                       </div>
@@ -1703,7 +1703,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                                       <div className="text-[9px] text-gray-600">{language === 'ko' ? '실점' : 'GA'}</div>
                                     </div>
                                     <div className="bg-gray-900/50 rounded p-2 text-center">
-                                      <div className="text-lg font-bold text-yellow-400">{avgTotalGoals}</div>
+                                      <div className="text-lg font-bold text-emerald-400">{avgTotalGoals}</div>
                                       <div className="text-[9px] text-gray-600">{language === 'ko' ? '총골' : 'Total'}</div>
                                     </div>
                                   </div>
@@ -1728,7 +1728,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                                           className={`rounded p-2 text-center border ${
                                             isGood ? 'bg-emerald-900/30 border-emerald-500/30' : 
                                             isBad ? 'bg-red-900/30 border-red-500/30' : 
-                                            'bg-gray-900/50 border-[#1e293b]/30'
+                                            'bg-gray-900/50 border-[#2a2d2e]/30'
                                           }`}
                                         >
                                           <div className={`text-sm font-bold ${
@@ -1833,7 +1833,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                 </div>
               ) : (
                 /* 비프리미엄 */
-                <div className="bg-[#0f1623] rounded-lg border border-[#1e293b] relative overflow-hidden">
+                <div className="bg-[#1a1d1e] rounded-lg border border-[#2a2d2e] relative overflow-hidden">
                   <div className="absolute inset-0 backdrop-blur-sm bg-black/60 z-10" />
                   <div className="opacity-20 p-4">
                     <div className="h-6 bg-gray-800 rounded w-1/3 mb-4"></div>
@@ -1846,8 +1846,8 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                     </div>
                   </div>
                   <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-                    <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3">
-                      <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center mb-3">
+                      <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                     </div>
@@ -1859,7 +1859,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                     </div>
                     <Link 
                       href="/premium/pricing"
-                      className="px-4 py-1.5 bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-bold rounded-full hover:from-yellow-400 hover:to-amber-400 transition-all"
+                      className="px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-500 text-black text-xs font-bold rounded-full hover:from-emerald-400 hover:to-emerald-400 transition-all"
                     >
                       {language === 'ko' ? '잠금해제' : 'Unlock'}
                     </Link>
@@ -1872,7 +1872,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
           {/* 분석 초기화 버튼 */}
           <button
             onClick={onClear}
-            className="w-full py-2 text-xs text-gray-500 hover:text-gray-300 border border-[#1e293b] hover:border-gray-600 rounded-lg transition-colors"
+            className="w-full py-2 text-xs text-gray-500 hover:text-gray-300 border border-[#2a2d2e] hover:border-gray-600 rounded-lg transition-colors"
           >
             ↺ {t.close}
           </button>
@@ -1881,7 +1881,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
         <div className="space-y-2">
           {/* 블러 오버레이 (분석 버튼 클릭 시) */}
           {showBlurOverlay && (
-            <div className="bg-[#0f1623] rounded-lg p-6 text-center border border-[#1e293b]">
+            <div className="bg-[#1a1d1e] rounded-lg p-6 text-center border border-[#2a2d2e]">
               <div className="text-3xl mb-3">🔒</div>
               <div className="text-white font-bold mb-2 text-lg">
                 {language === 'ko' ? '프리미엄 분석' : 'Premium Analysis'}
@@ -2484,9 +2484,9 @@ export default function PremiumPredictPage() {
   }
   
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* 소개 헤더 - 스크롤 시 사라짐 */}
-      <div className="bg-[#0a0a0f]">
+      <div className="bg-[#0a0a0a]">
         <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
           <div className="flex flex-col gap-4">
             {/* 상단: 텍스트 */}
@@ -2508,7 +2508,7 @@ export default function PremiumPredictPage() {
       </div>
       
       {/* 리그 필터 - Sticky */}
-      <header className="bg-[#0a0a0f]/95 backdrop-blur-sm sticky top-0 z-[5]">
+      <header className="bg-[#0a0a0a]/95 backdrop-blur-sm sticky top-0 z-[5]">
         <div className="max-w-7xl mx-auto px-4 py-2">
           {/* 리그 필터 */}
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -2521,7 +2521,7 @@ export default function PremiumPredictPage() {
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-semibold whitespace-nowrap transition-all border ${
                     isSelected
                       ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-500/30'
-                      : 'bg-[#141824] text-gray-300 hover:bg-[#1a1f2e] border-[#1e293b] hover:border-emerald-500/50'
+                      : 'bg-[#252829] text-gray-300 hover:bg-[#2a2d2e] border-[#2a2d2e] hover:border-emerald-500/50'
                   }`}
                 >
                   {league.code === 'ALL' ? (
@@ -2555,11 +2555,11 @@ export default function PremiumPredictPage() {
         <div className="relative">
             {/* 프리미엄 픽 컨텐츠 */}
             <div>
-              <div className="bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] border border-yellow-500/30 rounded-xl overflow-hidden">
+              <div className="bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] border border-emerald-500/30 rounded-xl overflow-hidden">
                 {/* 헤더 - 골드 그라데이션 */}
-                <div className="px-4 py-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-b border-yellow-500/20 flex items-center justify-between">
+                <div className="px-4 py-3 bg-gradient-to-r from-emerald-500/10 to-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-sm flex items-center justify-center">
+                    <div className="w-5 h-5 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-sm flex items-center justify-center">
                       <span className="text-white text-xs font-black">P</span>
                     </div>
                     <span className="text-white font-bold text-lg">
@@ -2625,7 +2625,7 @@ export default function PremiumPredictPage() {
                           {/* 배지 - 우측 고정 */}
                           <div className="flex items-center gap-1 flex-shrink-0 ml-3">
                             <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded">WIN</span>
-                            <span className="text-yellow-400 text-xs font-bold px-2 py-0.5 bg-yellow-500/20 rounded border border-yellow-500/30">
+                            <span className="text-emerald-400 text-xs font-bold px-2 py-0.5 bg-emerald-500/20 rounded border border-emerald-500/30">
                               {pick.pick_result}
                             </span>
                           </div>
@@ -2659,7 +2659,7 @@ export default function PremiumPredictPage() {
                       </div>
                       {/* 현재 연승 */}
                       <div className="bg-gray-800/60 rounded-xl p-3 text-center border border-gray-700/50">
-                        <div className="text-orange-400 font-black text-xl leading-none">
+                        <div className="text-emerald-400 font-black text-xl leading-none">
                           {weeklyStats.streak > 0 ? `${weeklyStats.streak}연승` : '-'}
                         </div>
                         <div className="text-gray-500 text-xs mt-1">{language === 'ko' ? '현재 연승' : 'Win Streak'}</div>
@@ -2668,15 +2668,15 @@ export default function PremiumPredictPage() {
 
                     {/* 긴급성 문구 */}
                     <div className="text-center mb-3">
-                      <span className="inline-flex items-center gap-2 text-yellow-400 text-sm">
-                        <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
+                      <span className="inline-flex items-center gap-2 text-emerald-400 text-sm">
+                        <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
                         {language === 'ko' ? '24시간 선공개 진행 중' : '24h Early Access Active'}
                       </span>
                     </div>
                     <button
                       onClick={loadPremiumPicks}
                       disabled={loading || matches.length === 0}
-                      className="w-full py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 disabled:from-gray-700 disabled:to-gray-700 text-white rounded-xl font-bold text-lg transition-all shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 hover:scale-[1.02] transform flex items-center justify-center gap-2"
+                      className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-500 hover:from-emerald-400 hover:to-emerald-400 disabled:from-gray-700 disabled:to-gray-700 text-white rounded-xl font-bold text-lg transition-all shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 hover:scale-[1.02] transform flex items-center justify-center gap-2"
                     >
                       <span>{language === 'ko' ? '오늘의 경기 확인하기' : "Check Today's PICK"}</span>
                       <span className="text-xl">→</span>
@@ -2726,12 +2726,12 @@ export default function PremiumPredictPage() {
                         {/* 상단 배지 + 제목 */}
                         <div className="relative py-2 md:py-4">
                           {/* 장식용 배경 글로우 */}
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 md:w-64 h-48 md:h-64 bg-yellow-500/8 rounded-full blur-3xl pointer-events-none" />
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 md:w-64 h-48 md:h-64 bg-emerald-500/8 rounded-full blur-3xl pointer-events-none" />
                           
                           {/* PREMIUM 배지 */}
-                          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-full px-4 py-1.5 mb-4">
-                            <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
-                            <span className="text-yellow-400 text-xs md:text-sm font-bold tracking-wider">PREMIUM</span>
+                          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500/20 to-emerald-500/20 border border-emerald-500/30 rounded-full px-4 py-1.5 mb-4">
+                            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                            <span className="text-emerald-400 text-xs md:text-sm font-bold tracking-wider">PREMIUM</span>
                           </div>
                           
                           <h3 className="text-white font-black text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-3 leading-tight">
@@ -2780,32 +2780,32 @@ export default function PremiumPredictPage() {
                           </div>
                           
                           {/* Premium 카드 */}
-                          <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl p-4 md:p-5 border border-yellow-500/40 relative overflow-hidden text-center">
+                          <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/10 rounded-xl p-4 md:p-5 border border-emerald-500/40 relative overflow-hidden text-center">
                             {/* 코너 리본 효과 */}
-                            <div className="absolute -top-1 -right-7 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-[8px] md:text-[9px] font-bold px-7 py-0.5 rotate-[30deg] transform shadow-lg">
+                            <div className="absolute -top-1 -right-7 bg-gradient-to-r from-emerald-500 to-emerald-500 text-white text-[8px] md:text-[9px] font-bold px-7 py-0.5 rotate-[30deg] transform shadow-lg">
                               HOT
                             </div>
-                            <div className="text-yellow-400 text-xs md:text-sm font-bold tracking-wider mb-3 md:mb-4">PREMIUM</div>
+                            <div className="text-emerald-400 text-xs md:text-sm font-bold tracking-wider mb-3 md:mb-4">PREMIUM</div>
                             <div className="space-y-2.5 md:space-y-3">
                               <div className="flex items-center justify-center gap-2">
-                                <span className="text-yellow-400 text-sm md:text-base">⚡</span>
-                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '24시간 전 선공개' : '24h early access'}</span>
+                                <span className="text-emerald-400 text-sm md:text-base">⚡</span>
+                                <span className="text-emerald-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '24시간 전 선공개' : '24h early access'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
-                                <span className="text-yellow-400 text-sm md:text-base">🎯</span>
-                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '오늘의 경기 제공' : 'AI + confidence'}</span>
+                                <span className="text-emerald-400 text-sm md:text-base">🎯</span>
+                                <span className="text-emerald-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '오늘의 경기 제공' : 'AI + confidence'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
-                                <span className="text-yellow-400 text-sm md:text-base">🎬</span>
-                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '하이라이트 무제한' : 'Unlimited highlights'}</span>
+                                <span className="text-emerald-400 text-sm md:text-base">🎬</span>
+                                <span className="text-emerald-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '하이라이트 무제한' : 'Unlimited highlights'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
-                                <span className="text-yellow-400 text-sm md:text-base">🧮</span>
-                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '프로토 계산기 무제한' : 'Proto calculator unlimited'}</span>
+                                <span className="text-emerald-400 text-sm md:text-base">🧮</span>
+                                <span className="text-emerald-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '프로토 계산기 무제한' : 'Proto calculator unlimited'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
-                                <span className="text-yellow-400 text-sm md:text-base">✨</span>
-                                <span className="text-yellow-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '광고 완전 제거' : 'No ads ever'}</span>
+                                <span className="text-emerald-400 text-sm md:text-base">✨</span>
+                                <span className="text-emerald-200/90 text-sm md:text-base font-medium">{language === 'ko' ? '광고 완전 제거' : 'No ads ever'}</span>
                               </div>
                             </div>
                           </div>
@@ -2829,7 +2829,7 @@ export default function PremiumPredictPage() {
                         <div className="relative max-w-md mx-auto">
                           <Link 
                             href="/premium/pricing"
-                            className="group relative inline-flex items-center justify-center gap-2 w-full py-4 md:py-5 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 hover:from-yellow-400 hover:via-amber-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg md:text-xl transition-all shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40 hover:scale-[1.02] transform overflow-hidden"
+                            className="group relative inline-flex items-center justify-center gap-2 w-full py-4 md:py-5 bg-gradient-to-r from-emerald-500 via-amber-500 to-emerald-500 hover:from-emerald-400 hover:via-amber-400 hover:to-emerald-400 text-white rounded-xl font-bold text-lg md:text-xl transition-all shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40 hover:scale-[1.02] transform overflow-hidden"
                           >
                             {/* 버튼 내부 빛 효과 */}
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -2847,9 +2847,9 @@ export default function PremiumPredictPage() {
                             </div>
                             <div className="w-px h-4 bg-gray-700" />
                             <div className="flex items-center gap-1.5">
-                              <span className="text-yellow-400 font-bold text-base md:text-lg">₩9,900</span>
+                              <span className="text-emerald-400 font-bold text-base md:text-lg">₩9,900</span>
                               <span className="text-gray-500 text-sm">/{language === 'ko' ? '3개월' : '3mo'}</span>
-                              <span className="text-[10px] md:text-xs text-orange-400 bg-orange-500/15 px-2 py-0.5 rounded font-bold">
+                              <span className="text-[10px] md:text-xs text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded font-bold">
                                 33% OFF
                               </span>
                             </div>
@@ -2922,14 +2922,14 @@ export default function PremiumPredictPage() {
                     }
                     
                     return (
-                    <div key={`premium-${match.match_id || idx}`} className="bg-black/40 rounded-lg p-3 border border-yellow-500/30 hover:border-yellow-500/50 transition-colors">
+                    <div key={`premium-${match.match_id || idx}`} className="bg-black/40 rounded-lg p-3 border border-emerald-500/30 hover:border-emerald-500/50 transition-colors">
                       {/* 헤더: 리그 + 시간 + 배지 */}
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[10px] text-gray-400 bg-gray-700/50 px-1.5 py-0.5 rounded">{match.league_code}</span>
                           <span className="text-[10px] text-gray-500">{timeStr}</span>
                         </div>
-                        <span className="text-[10px] text-yellow-400 font-medium">💎 PREMIUM</span>
+                        <span className="text-[10px] text-emerald-400 font-medium">💎 PREMIUM</span>
                       </div>
                       
                       {/* 팀 정보 */}
@@ -2964,7 +2964,7 @@ export default function PremiumPredictPage() {
                       {prediction && (
                         <>
                           {/* 예측 결과 */}
-                          <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-lg p-3 mb-2">
+                          <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-500/10 rounded-lg p-3 mb-2">
                             <div className="flex items-center justify-center gap-3">
                               <div className={`px-4 py-2 rounded-lg text-sm font-bold ${
                                 prediction.recommendation.pick === 'HOME' 
@@ -2977,7 +2977,7 @@ export default function PremiumPredictPage() {
                                 {prediction.recommendation.pick === 'AWAY' && (language === 'ko' ? '원정승' : 'AWAY')}
                                 {prediction.recommendation.pick === 'DRAW' && (language === 'ko' ? '무승부' : 'DRAW')}
                               </div>
-                              <div className="text-yellow-400 font-bold text-2xl">
+                              <div className="text-emerald-400 font-bold text-2xl">
                                 {prediction.recommendation.pick === 'HOME' && `${(prediction.finalProb.home * 100).toFixed(0)}%`}
                                 {prediction.recommendation.pick === 'AWAY' && `${(prediction.finalProb.away * 100).toFixed(0)}%`}
                                 {prediction.recommendation.pick === 'DRAW' && `${(prediction.finalProb.draw * 100).toFixed(0)}%`}
@@ -3026,7 +3026,7 @@ export default function PremiumPredictPage() {
                             {/* 역전률 */}
                             <div className="flex items-center justify-between bg-black/30 rounded p-1.5">
                               <div className="text-center flex-1">
-                                <div className="text-yellow-400 font-bold">
+                                <div className="text-emerald-400 font-bold">
                                   {prediction.debug?.homeStats?.homeComebackRate !== undefined
                                     ? `${(prediction.debug.homeStats.homeComebackRate * 100).toFixed(0)}%` 
                                     : '-'}
@@ -3036,21 +3036,21 @@ export default function PremiumPredictPage() {
                                 <div className="flex items-center gap-1">
                                   <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                                     <div 
-                                      className="bg-yellow-500 h-full" 
+                                      className="bg-emerald-500 h-full" 
                                       style={{ width: `${(prediction.debug?.homeStats?.homeComebackRate || 0) * 100}%` }}
                                     />
                                   </div>
                                   <span className="text-[10px] text-gray-400 w-12 text-center">{language === 'ko' ? '역전률' : 'Comeback'}</span>
                                   <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                                     <div 
-                                      className="bg-yellow-500 h-full float-right" 
+                                      className="bg-emerald-500 h-full float-right" 
                                       style={{ width: `${(prediction.debug?.awayStats?.awayComebackRate || 0) * 100}%` }}
                                     />
                                   </div>
                                 </div>
                               </div>
                               <div className="text-center flex-1">
-                                <div className="text-yellow-400 font-bold">
+                                <div className="text-emerald-400 font-bold">
                                   {prediction.debug?.awayStats?.awayComebackRate !== undefined
                                     ? `${(prediction.debug.awayStats.awayComebackRate * 100).toFixed(0)}%` 
                                     : '-'}
@@ -3156,7 +3156,7 @@ export default function PremiumPredictPage() {
                 <p className="text-gray-400">{t.noMatches}</p>
                 <button 
                   onClick={loadUpcomingMatches}
-                  className="mt-4 px-4 py-2 bg-[#1e293b] hover:bg-[#2a3444] rounded-xl text-sm"
+                  className="mt-4 px-4 py-2 bg-[#2a2d2e] hover:bg-[#36393a] rounded-xl text-sm"
                 >
                   🔄 {t.refresh}
                 </button>

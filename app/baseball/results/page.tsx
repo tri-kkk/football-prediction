@@ -662,10 +662,10 @@ export default function BaseballMatchesPage() {
     : 0
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f]">
+    <div className="min-h-screen bg-black">
       {/* 필터 헤더 */}
-      <div className="sticky top-0 z-40 bg-[#1a1f2e] border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4">
+      <div className="sticky top-0 z-40 bg-[#252829] border-b border-gray-800">
+        <div className="home-container mx-auto px-4">
           <div className="py-3">
             {/* 예정/결과 탭 */}
             <div className="flex items-center justify-center gap-2 mb-3">
@@ -799,7 +799,7 @@ export default function BaseballMatchesPage() {
       </div>
       
       {/* 경기 카드 목록 */}
-      <div className="max-w-7xl mx-auto px-4 pb-24 pt-4">
+      <div className="home-container mx-auto px-4 pb-24 pt-4">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className={`animate-spin rounded-full h-12 w-12 border-b-2 mb-4 ${activeTab === 'scheduled' ? 'border-blue-500' : 'border-blue-500'}`}></div>

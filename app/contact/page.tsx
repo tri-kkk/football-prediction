@@ -185,7 +185,7 @@ export default function ContactPage() {
                 className={`w-full px-6 py-3 rounded-lg font-semibold transition-colors ${
                   isSubmitting
                     ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-emerald-500 hover:bg-emerald-600'
                 }`}
               >
                 {isSubmitting ? (
@@ -215,7 +215,7 @@ export default function ContactPage() {
                   </h3>
                   <a 
                     href="mailto:trikilab2025@gmail.com" 
-                    className="text-blue-400 hover:text-blue-300 transition-colors text-lg"
+                    className="text-emerald-400 hover:text-blue-300 transition-colors text-lg"
                   >
                     trikilab2025@gmail.com
                   </a>
