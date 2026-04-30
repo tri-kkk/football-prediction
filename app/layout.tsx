@@ -1,4 +1,5 @@
 import './globals.css'
+import { Suspense } from 'react'
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import Link from 'next/link'
@@ -322,7 +323,7 @@ export default function RootLayout({
         <AdSenseLoader />
 
         {/* 🔥 통합 GNB - NavMenu */}
-        <NavMenu />
+        <Suspense fallback={null}><NavMenu /></Suspense>
 
         {/* ✅ TermsGuard로 감싸서 약관 미동의 시 리다이렉트 */}
         <TermsGuard>
