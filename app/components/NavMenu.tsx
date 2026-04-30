@@ -165,17 +165,19 @@ export default function NavMenu() {
     <>
       <header className="md:hidden sticky top-0 z-50 backdrop-blur-md border-b border-gray-800" style={{ backgroundColor: 'rgba(10, 10, 10, 0.92)' }}>
         <div className="flex items-center justify-between px-4 h-12">
-          <Link href="/" className="flex items-center gap-1.5 font-black text-white text-base tracking-tight">
-            <span style={{ color: '#6dff5c' }}>Trend</span><span>Soccer</span>
+          <Link href="/" className="flex items-center" aria-label="TrendSoccer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="TrendSoccer" className="h-7 w-auto" />
           </Link>
           <AuthButton />
         </div>
       </header>
 
       <header className="hidden md:block sticky top-0 z-50 backdrop-blur-md border-b border-gray-800" style={{ backgroundColor: 'rgba(10, 10, 10, 0.92)' }}>
-        <div className="home-container mx-auto flex items-center justify-between px-5 h-12">
-          <Link href="/" className="flex items-center gap-2 font-black text-white text-lg tracking-tight">
-            <span style={{ color: '#6dff5c' }}>Trend</span><span>Soccer</span>
+        <div className="home-container mx-auto flex items-center justify-between px-5 h-14">
+          <Link href="/" className="flex items-center" aria-label="TrendSoccer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="TrendSoccer" className="h-9 w-auto" />
           </Link>
           <AuthButton />
         </div>
