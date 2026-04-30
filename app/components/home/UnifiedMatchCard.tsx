@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import type { UnifiedMatch } from './types'
-import { isFinishedStatus, isLiveStatus } from './normalizers'
+import { isFinishedStatus, isLiveStatus, isPostponedStatus } from './normalizers'
 import FootballMatchModal from './FootballMatchModal'
 
 interface Props {
@@ -45,6 +45,7 @@ export default function UnifiedMatchCard({ match }: Props) {
   const away = match.awayTeamKo || match.awayTeam
   const live = isLiveStatus(match.status)
   const finished = isFinishedStatus(match.status)
+  const postponed = isPostponedStatus(match.status)
   const showScore = live || finished
   const time = formatTime(match.timestamp, match.time)
   const isBaseball = match.sport === 'baseball'
@@ -73,10 +74,11 @@ export default function UnifiedMatchCard({ match }: Props) {
             {!finished && time && (<><span className="text-gray-600 mx-1">·</span>{time}</>)}
           </span>
         </div>
-        {(live || finished) && (
+        {(live || finished || postponed) && (
           <div className="mt-1.5 flex justify-center">
             {live && <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold animate-pulse">● LIVE {match.status}</span>}
             {finished && <span className="px-2 py-0.5 rounded-full bg-gray-700 text-gray-300 text-[10px] font-bold">종료</span>}
+            {postponed && <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold">연기</span>}
           </div>
         )}
       </div>

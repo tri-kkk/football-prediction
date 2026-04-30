@@ -27,6 +27,13 @@ export function isFinishedStatus(status: string | null | undefined): boolean {
   return FINISHED_TOKENS.has(String(status).toUpperCase())
 }
 
+const POSTPONED_TOKENS = new Set(['POST', 'POSTPONED', 'PST', 'CANC', 'CANCELLED', 'CANCELED', 'ABD', 'ABANDONED', 'INT'])
+
+export function isPostponedStatus(status: string | null | undefined): boolean {
+  if (!status) return false
+  return POSTPONED_TOKENS.has(String(status).toUpperCase())
+}
+
 export function normalizeFootballMatch(m: any): UnifiedMatch {
   const homeProb = (m.home_probability ?? 0) / 100
   const drawProb = (m.draw_probability ?? 0) / 100
