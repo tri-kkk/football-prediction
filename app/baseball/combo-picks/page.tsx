@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { useComboUnlock, type ComboLeague } from '../../hooks/useComboUnlock'
+import RewardedAdModal from '../../components/RewardedAdModal'
 
 // =====================================================
 // 타입
@@ -122,6 +124,20 @@ export default function ComboPicksPage() {
 
   const isPremium = (session?.user as any)?.tier === 'premium'
 
+  // 🎁 리그별 광고 시청 잠금 해제 (KST 자정 리셋)
+  const { unlocks, unlock, hasAnyUnlock } = useComboUnlock()
+  const [adModalLeague, setAdModalLeague] = useState<ComboLeague | null>(null)
+
+  // 현재 league 탭 기준 접근 권한
+  const hasAccess = isPremium || (
+    league === 'ALL' ? hasAnyUnlock : !!unlocks[league as ComboLeague]
+  )
+
+  // 무료 사용자는 unlock된 리그의 픽만 노출
+  const visiblePicks = isPremium
+    ? picks
+    : picks.filter(p => unlocks[p.league as ComboLeague])
+
   const getKSTToday = () => {
     const now = new Date(Date.now() + 9 * 60 * 60 * 1000)
     return now.toISOString().split('T')[0]
@@ -191,7 +207,7 @@ export default function ComboPicksPage() {
     return `${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`
   }
 
-  const groupedByDate = picks.reduce((acc, p) => {
+  const groupedByDate = visiblePicks.reduce((acc, p) => {
     if (!acc[p.pick_date]) acc[p.pick_date] = []
     acc[p.pick_date].push(p)
     return acc
@@ -342,7 +358,7 @@ export default function ComboPicksPage() {
         )}
 
         {/* ====== 프리미엄 잠금 ====== */}
-        {!loading && !isPremium && (
+        {!loading && !hasAccess && (
           <div className="rounded-2xl overflow-hidden relative" style={{ background: '#252829', border: '1px solid rgba(16,185,129,0.12)' }}>
             {/* 배경 글로우 */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-[100px] rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: 'radial-gradient(circle, #10b981, transparent)' }} />
@@ -387,24 +403,93 @@ export default function ComboPicksPage() {
                 ))}
               </div>
 
-              {/* CTA 버튼 */}
-              <div className="text-center">
+              {/* CTA 영역: 프리미엄 + 리그별 광고 풀기 */}
+              <div className="flex flex-col items-center gap-3">
                 <Link href="/premium/pricing"
-                  className="inline-flex items-center justify-center gap-2 w-full max-w-[280px] py-3 text-[13px] font-bold rounded-xl text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 w-full max-w-[300px] py-3 text-[13px] font-bold rounded-xl text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
                   style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 24px rgba(16,185,129,0.3)' }}
                 >
-                  {t('프리미엄 시작하기', 'Start Premium')}
+                  {t('프리미엄으로 모든 리그 무제한', 'Premium · All leagues unlimited')}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
                   </svg>
                 </Link>
+
+                <div className="w-full max-w-[300px] flex items-center gap-2 my-1">
+                  <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                  <span className="text-[10px]" style={{ color: '#475569' }}>{t('또는 리그별 광고 시청', 'OR watch an ad per league')}</span>
+                  <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 w-full max-w-[300px]">
+                  {([
+                    { id: 'KBO' as ComboLeague, name: 'KBO', color: '#ef4444', logo: 'https://media.api-sports.io/baseball/leagues/5.png' },
+                    { id: 'MLB' as ComboLeague, name: 'MLB', color: '#3b82f6', logo: 'https://media.api-sports.io/baseball/leagues/1.png' },
+                    { id: 'NPB' as ComboLeague, name: 'NPB', color: '#f97316', logo: 'https://media.api-sports.io/baseball/leagues/2.png' },
+                  ]).map(lg => {
+                    const isUnlocked = unlocks[lg.id]
+                    return (
+                      <button
+                        key={lg.id}
+                        type="button"
+                        onClick={() => !isUnlocked && setAdModalLeague(lg.id)}
+                        disabled={isUnlocked}
+                        className={[
+                          'flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[11px] font-bold transition-all',
+                          isUnlocked
+                            ? 'cursor-default opacity-90'
+                            : 'hover:scale-[1.03] active:scale-[0.97] cursor-pointer',
+                        ].join(' ')}
+                        style={{
+                          background: isUnlocked
+                            ? `linear-gradient(135deg, ${lg.color}25, ${lg.color}10)`
+                            : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${isUnlocked ? lg.color + '50' : 'rgba(255,255,255,0.10)'}`,
+                          color: isUnlocked ? lg.color : '#e5e7eb',
+                        }}
+                      >
+                        <span className="w-6 h-6 rounded-full bg-white/95 flex items-center justify-center p-0.5">
+                          <img src={lg.logo} alt={lg.name} className="max-w-full max-h-full object-contain" />
+                        </span>
+                        <span>{lg.name}</span>
+                        <span className="text-[9px] font-medium opacity-80">
+                          {isUnlocked ? t('✓ 풀림', '✓ Unlocked') : t('📺 광고 1', '📺 Watch ad')}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <p className="text-[10px] mt-1" style={{ color: '#64748b' }}>
+                  {t('자정(KST)에 자동 잠김 · 리그별 별도 시청', 'Auto-locks at midnight KST · Per-league')}
+                </p>
               </div>
             </div>
           </div>
         )}
 
+        {/* 🎁 광고 시청 모달 (리그별) */}
+        <RewardedAdModal
+          open={adModalLeague !== null}
+          onClose={() => setAdModalLeague(null)}
+          onComplete={() => { if (adModalLeague) unlock(adModalLeague) }}
+          countdownSec={15}
+          title={adModalLeague
+            ? t(`${adModalLeague} 조합 픽 잠금 해제`, `Unlock ${adModalLeague} combo picks`)
+            : t('잠금 해제', 'Unlock')}
+          subtitle={adModalLeague
+            ? t(
+                `아래 광고를 끝까지 보시면 오늘 자정(KST)까지 ${adModalLeague} 조합 픽이 무료로 풀립니다.`,
+                `Watch the ad to unlock ${adModalLeague} combo picks until midnight KST.`
+              )
+            : ''}
+          rewardLabel={adModalLeague
+            ? t(`${adModalLeague} 조합 픽 잠금 해제`, `Unlock ${adModalLeague} combo picks`)
+            : t('잠금 해제', 'Unlock')}
+        />
+
         {/* ====== 빈 상태 ====== */}
-        {!loading && isPremium && picks.length === 0 && (() => {
+        {!loading && hasAccess && visiblePicks.length === 0 && (() => {
           const leagueInfo: Record<string, { color: string; gradient: string; time: string; timeEn: string; logo: string }> = {
             KBO: {
               color: '#ef4444', gradient: 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(239,68,68,0.02) 100%)',
@@ -472,7 +557,7 @@ export default function ComboPicksPage() {
         })()}
 
         {/* ====== 조합 카드 그리드 ====== */}
-        {!loading && isPremium && sortedDates.map(date => (
+        {!loading && hasAccess && sortedDates.map(date => (
           <div key={date} className="mb-6">
             {tab === 'history' && (
               <div className="flex items-center gap-3 mb-4">
