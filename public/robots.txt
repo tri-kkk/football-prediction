@@ -2,12 +2,35 @@
 User-agent: *
 Allow: /
 
-# Sitemaps
+# 색인 불필요 — Next.js 빌드 자산 + 내부 API
+Disallow: /_next/
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /signup/
+Disallow: /login
+Disallow: /signup-complete
+Disallow: /test-payment
+Disallow: /*?*sport=
+Disallow: /*?*league=
+Disallow: /*?*date=
+
+# Sitemap
 Sitemap: https://trendsoccer.com/sitemap.xml
 
-# Allow all crawlers
+# 허용된 크롤러 (명시적 화이트리스트)
 User-agent: Googlebot
 Allow: /
+Disallow: /_next/
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /signup/
+Disallow: /login
+Disallow: /signup-complete
+Disallow: /test-payment
 
 User-agent: Mediapartners-Google
 Allow: /
@@ -16,4 +39,7 @@ User-agent: AdsBot-Google
 Allow: /
 
 User-agent: Yeti
-Allow:/
+Allow: /
+Disallow: /_next/
+Disallow: /api/
+Disallow: /admin/
