@@ -14,7 +14,11 @@ const FINISHED_TOKENS = new Set(['FT', 'AET', 'PEN', 'AWD', 'WO', 'FINISHED', 'F
 
 export function isLiveStatus(status: string | null | undefined): boolean {
   if (!status) return false
-  return LIVE_TOKENS.has(String(status).toUpperCase())
+  const s = String(status).toUpperCase()
+  if (LIVE_TOKENS.has(s)) return true
+  // 야구 이닝별 진행 토큰 (IN1, IN2, IN3 ... INH, INM 등 'IN' 접두)
+  if (/^IN[A-Z0-9]+$/.test(s)) return true
+  return false
 }
 
 export function isScheduledStatus(status: string | null | undefined): boolean {
