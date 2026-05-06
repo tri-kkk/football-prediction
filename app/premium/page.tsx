@@ -2077,7 +2077,7 @@ export default function PremiumPredictPage() {
         
         if (data.picks && data.picks.length > 0) {
           // DB 데이터를 MatchWithPrediction 형식으로 변환
-          const picks: MatchWithPrediction[] = data.picks.map((pick: any) => ({
+          const picksRaw: MatchWithPrediction[] = data.picks.map((pick: any) => ({
             match_id: pick.match_id,
             home_team: pick.home_team,
             away_team: pick.away_team,
@@ -2090,6 +2090,17 @@ export default function PremiumPredictPage() {
             away_odds: pick.away_odds,
             prediction: pick.prediction,
           }))
+          // 🔥 중복 제거 — match_id 우선, fallback 으로 팀+킥오프 조합 키
+          const seenById = new Set<any>()
+          const seenByKey = new Set<string>()
+          const picks: MatchWithPrediction[] = picksRaw.filter((p) => {
+            if (p.match_id != null && seenById.has(p.match_id)) return false
+            const key = `${(p.home_team || '').toLowerCase().trim()}|${(p.away_team || '').toLowerCase().trim()}|${(p.commence_time || '').slice(0, 16)}`
+            if (seenByKey.has(key)) return false
+            if (p.match_id != null) seenById.add(p.match_id)
+            seenByKey.add(key)
+            return true
+          })
           
           // 종료된 경기 필터링 (경기 시작 후 2시간 지난 것 제외)
           const now = new Date()
