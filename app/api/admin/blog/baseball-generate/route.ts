@@ -379,8 +379,10 @@ function buildNaverHTML(parsed: any, data: any) {
     return groups.filter(g => g.length > 0)
   }
 
-  // 섹션 빌더 — 네이버 자동 광고 삽입 활성화를 위해 h3 + 다수의 p 태그로 변환
-  // (table로 감싸면 네이버가 단일 블록으로 인식해서 본문 중간 광고 삽입이 안됨)
+  // 섹션 빌더 — 네이버 자동 광고 삽입 활성화를 위해 모두 p 태그로 변환
+  // h3는 네이버 SE-HEADING으로 변환되어 광고 삽입 후보에서 제외되고 추가 여백 생김
+  // → 제목도 bold p 태그로 처리해서 모두 SE-TEXT 컴포넌트로 인식되게 함
+  // text-align:left 명시: 네이버 SE-TEXT 기본값이 center일 수 있어서 강제 좌측 정렬
   const section = (title: string, body: string, icon: string) => {
     if (!body) return ''
     // 1차 분할: AI가 \n\n으로 넣은 단락 구분
@@ -391,10 +393,10 @@ function buildNaverHTML(parsed: any, data: any) {
     // 2차 분할: AI가 단락 구분 안 넣었으면 문장 단위로 자동 분할
     paragraphs = paragraphs.flatMap(p => splitLongParagraph(p))
     const paragraphsHtml = paragraphs
-      .map(p => `<p style="font-size:15px;line-height:1.8;color:#333;margin:0 0 14px 0;">${p}</p>`)
+      .map(p => `<p style="text-align:center;font-size:15px;line-height:1.8;color:#333;margin:0 0 14px 0;">${p}</p>`)
       .join('\n')
     return `
-<h3 style="font-size:17px;font-weight:bold;color:#2d3436;border-bottom:2px solid #eee;padding-bottom:6px;margin:24px 0 12px 0;">${icon} ${title}</h3>
+<p style="text-align:center;font-size:17px;font-weight:bold;color:#2d3436;border-bottom:2px solid #eee;padding-bottom:6px;margin:24px 0 12px 0;">${icon} ${title}</p>
 ${paragraphsHtml}`
   }
 
@@ -409,7 +411,7 @@ ${section(parsed.section1_title||'매치 프리뷰', parsed.section1, '⚾')}
 ${section(parsed.section2_title||'선발 투수 매치업', parsed.section2, '🏏')}
 ${section(parsed.section3_title||'팀 전력 분석', parsed.section3, '📊')}
 ${section(parsed.section4_title||'AI 승부예측', parsed.section4, '🎯')}
-<p style="font-size:14px;color:#0984e3;margin:24px 0 0 0;">${(parsed.tags || []).map((t: string) => `#${t}`).join(' ')}</p>
+<p style="text-align:center;font-size:14px;color:#0984e3;margin:24px 0 0 0;">${(parsed.tags || []).map((t: string) => `#${t}`).join(' ')}</p>
 <p style="text-align:center;margin:12px 0 0 0;"><a href="https://www.trendsoccer.com/baseball" target="_blank"><img src="https://www.trendsoccer.com/1200x200.png" alt="TrendSoccer" style="max-width:100%;" /></a></p>
 `
 }
