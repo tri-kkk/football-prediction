@@ -2379,12 +2379,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
         
         <div className="flex gap-8 relative">
-          {/* 광고 배너 - Popular Leagues 왼쪽에 배치 (PC 전용) - 🆕 스포라이브: 모든 티어 노출 */}
-          <aside className={`hidden xl:block flex-shrink-0 w-[300px]`} style={{ marginLeft: '-332px' }}>
-            <div className="sticky top-20">
-              <AdBanner slot="sidebar" />
-            </div>
-          </aside>
+          {/* ❌ 좌측 광고 사이드바 제거됨 (2026-05-07) - 우측 사이드바와 중복으로 UX 저하 */}
 
           {/* 왼쪽 사이드바: Popular Leagues (PC 전용) */}
           <aside className={`hidden lg:block w-64 flex-shrink-0`}>
@@ -2516,10 +2511,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             
             {/* 🔴 라이브 중계 배너 - 필터로 대체되어 제거됨 */}
 
-            {/* 상단 배너 728x90 - 날짜 필터 위 (데스크톱 전용) - 🆕 스포라이브: 모든 티어 노출 */}
-            <div className="hidden lg:flex justify-center mb-6">
-              <AdBanner slot="desktop_banner" />
-            </div>
+            {/* ❌ 상단 728x90 광고 배너 제거됨 (2026-05-07) - 인피드 광고와 역할 중복 */}
 
         {/* 🔥 트렌드 PICK CTA 배너 (모바일 + PC 통합) */}
         {/* 무료 회원 & 비로그인: 프리미엄 이미지 배너 */}
@@ -3808,21 +3800,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
               </div>
             )}
 
-            {/* 📢 AdSense - 우측 사이드바 하단 (💎 프리미엄 제외) */}
-            {!isPremium && (
-              <div className={`rounded-xl overflow-hidden ${
-                darkMode ? 'bg-[#1a1a1a]' : 'bg-white border border-gray-200'
-              }`}>
-                <div className={`text-[10px] text-center py-1 ${
-                  darkMode ? 'text-gray-600' : 'text-gray-400'
-                }`}>
-                  AD
-                </div>
-                <div className="flex justify-center p-2">
-                  <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={darkMode} />
-                </div>
-              </div>
-            )}
+            {/* ❌ 우측 사이드바 하단 광고 제거됨 (2026-05-07) - 상단 광고만 유지 */}
             </div>
           </aside>
         </div>
@@ -3962,23 +3940,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
       </a>
 
 
-      {/* 📢 모바일 하단 고정 배너 (320x50) - 🆕 스포라이브: 모든 티어 노출 */}
-      {!isMobileAdClosed && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 safe-area-bottom">
-          <div className="relative flex justify-center py-2">
-            <button
-              onClick={() => setIsMobileAdClosed(true)}
-              className="absolute top-1 left-2 w-5 h-5 bg-black/70 text-white text-xs rounded-full flex items-center justify-center hover:bg-black z-10"
-            >
-              ✕
-            </button>
-            <AdBanner slot="mobile_bottom" />
-            <span className="absolute top-1 right-2 px-1.5 py-0.5 bg-black/50 text-white text-[10px] rounded">
-              AD
-            </span>
-          </div>
-        </div>
-      )}
+      {/* ❌ 모바일 floating 하단 배너 제거됨 (2026-05-07) - 인라인 모바일 광고와 중복, 화면 가림 UX 저하 */}
     </div>
   )
 }

@@ -199,14 +199,25 @@ export default function AuthButton() {
     )
   }
 
-  // 비로그인 상태 - 모바일 최적화
+  // 비로그인 상태 - 가입 버튼 명확화 (모바일 최적화: 좁은 헤더에 두 버튼 모두 들어가도록)
   return (
-    <div className="flex items-center gap-1.5 md:gap-2">
+    <div className="flex items-center gap-1 md:gap-2">
       <Link
         href="/login"
-        className="flex items-center justify-center px-2.5 md:px-4 py-1.5 md:py-2 text-xs md:text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors font-medium whitespace-nowrap"
+        className="inline-flex items-center h-7 md:h-8 px-2 md:px-3 text-xs md:text-sm text-gray-300 hover:text-white transition-colors font-medium whitespace-nowrap"
       >
         {language === 'ko' ? '로그인' : 'Login'}
+      </Link>
+      <Link
+        href="/signup"
+        className="inline-flex items-center justify-center h-7 md:h-8 px-3 md:px-4 text-xs md:text-sm font-bold text-black rounded-md whitespace-nowrap shadow-sm hover:shadow-md transition-all active:scale-95"
+        style={{
+          background: 'linear-gradient(90deg, #6dff5c 0%, #36e07a 100%)',
+        }}
+      >
+        {/* 모바일: "가입" / 데스크톱: "무료 가입" */}
+        <span className="md:hidden">{language === 'ko' ? '가입' : 'Sign up'}</span>
+        <span className="hidden md:inline">{language === 'ko' ? '무료 가입' : 'Sign up free'}</span>
       </Link>
     </div>
   )

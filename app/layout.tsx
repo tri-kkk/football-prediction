@@ -13,6 +13,7 @@ import LanguageToggle from './components/LanguageToggle'
 import HtmlLangUpdater from './components/HtmlLangUpdater'
 import { Providers } from './providers'
 import AuthButton from './components/AuthButton'
+import SignupIncentiveBanner from './components/SignupIncentiveBanner'
 import { PWAInstallProvider } from './components/pwa/PWAInstallContext'
 import { IOSInstallGuide } from './components/pwa/IOSInstallGuide'
 import InstallBanner from './components/InstallBanner'
@@ -324,6 +325,9 @@ export default function RootLayout({
 
         {/* 🔥 통합 GNB - NavMenu */}
         <Suspense fallback={null}><NavMenu /></Suspense>
+
+        {/* 🎯 비회원 가입 유도 배너 (헤더 바로 아래) */}
+        <Suspense fallback={null}><SignupIncentiveBanner /></Suspense>
 
         {/* ✅ TermsGuard로 감싸서 약관 미동의 시 리다이렉트 */}
         <TermsGuard>

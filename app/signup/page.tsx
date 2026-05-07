@@ -35,69 +35,14 @@ export default function SignupPage() {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* 스타일 정의 */}
-      <style jsx>{`
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px) rotate(45deg); }
-          50% { transform: translateY(-15px) rotate(50deg); }
-        }
-        @keyframes float-medium {
-          0%, 100% { transform: translateY(0px) rotate(12deg); }
-          50% { transform: translateY(-12px) rotate(18deg); }
-        }
-        @keyframes float-fast {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-8px) rotate(5deg); }
-        }
-        @keyframes pulse-glow {
-          0%, 100% { opacity: 0.3; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(1.2); }
-        }
-        .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
-        .animate-float-medium { animation: float-medium 6s ease-in-out infinite; }
-        .animate-float-fast { animation: float-fast 4s ease-in-out infinite; }
-        .animate-pulse-glow { animation: pulse-glow 5s ease-in-out infinite; }
-      `}</style>
-
       <div className="w-full relative z-10" style={{ maxWidth: '420px' }}>
-        {/* 타이틀 + 기하학적 배경 */}
-        <div className="text-center mb-8 relative">
-          {/* 기하학적 도형들 */}
-          <div className="absolute -top-16 left-0 w-12 h-12 border border-green-500/30 rotate-45 animate-float-slow" />
-          <div className="absolute -top-12 right-4 w-10 h-10 border border-cyan-500/25 rotate-12 animate-float-medium" />
-          <div className="absolute -top-8 left-1/4 w-6 h-6 border border-emerald-500/20 -rotate-12 animate-float-fast" />
-          <div className="absolute -top-20 right-1/4 w-8 h-8 border border-teal-500/25 rotate-45 animate-float-slow" />
-          <div className="absolute top-0 -left-8 w-5 h-5 border border-green-400/20 rotate-0 animate-float-medium" />
-          <div className="absolute -top-4 -right-4 w-7 h-7 border border-cyan-400/20 rotate-45 animate-float-fast" />
-          
-          {/* 원형 점들 */}
-          <div className="absolute -top-10 left-8 w-2 h-2 bg-green-500/40 rounded-full animate-pulse-glow" />
-          <div className="absolute -top-6 right-12 w-3 h-3 bg-cyan-500/40 rounded-full animate-pulse-glow" style={{ animationDelay: '1s' }} />
-          <div className="absolute -top-14 left-1/2 w-2 h-2 bg-emerald-500/30 rounded-full animate-pulse-glow" style={{ animationDelay: '2s' }} />
-          <div className="absolute top-2 -right-2 w-2 h-2 bg-teal-500/40 rounded-full animate-pulse-glow" style={{ animationDelay: '0.5s' }} />
-          <div className="absolute -top-2 left-0 w-3 h-3 bg-green-400/30 rounded-full animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
-          
-          <h1 className="text-3xl md:text-4xl font-bold leading-tight">
-            <span className="text-white">{language === 'ko' ? '데이터로 읽는' : 'Read with Data'}</span>
-            <br />
-            <span style={{ 
-              background: 'linear-gradient(to right, #22d3ee, #2dd4bf, #34d399)', 
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              {language === 'ko' ? '축구의 흐름' : 'Football Flow'}
-            </span>
-          </h1>
-        </div>
-
         {/* 회원가입 카드 */}
         <div className="bg-gradient-to-b from-[#1a1a1a] to-[#141414] rounded-3xl p-8 shadow-2xl border border-gray-800/50 backdrop-blur-sm">
           <h2 className="text-xl font-bold text-white text-center mb-6">
             {language === 'ko' ? '회원가입' : 'Sign Up'}
           </h2>
 
-          {/* 가입 혜택 테이블 - 3단계 비교 */}
+          {/* 가입 혜택 - 무료 vs 프리미엄 2단 비교 (실제 구현 기준) */}
           <div className="mb-6 bg-[#0f0f0f] rounded-xl overflow-hidden border border-gray-800">
             <div className="bg-green-500/10 px-4 py-2 border-b border-gray-800">
               <p className="text-center text-green-400 text-sm font-medium">
@@ -105,47 +50,63 @@ export default function SignupPage() {
               </p>
             </div>
             <div className="p-4 space-y-3">
-              {/* 비회원 */}
-              <div className="flex items-center justify-between py-2 border-b border-gray-800/50">
-                <span className="text-gray-500 text-sm">
-                  {language === 'ko' ? '비회원' : 'Guest'}
-                </span>
-                <span className="text-gray-500 text-sm">
-                  {language === 'ko' ? '1시간 전 공개' : '1h Before'}
-                </span>
-              </div>
               {/* 무료 회원 */}
-              <div className="flex items-center justify-between py-2 border-b border-gray-800/50">
-                <div className="flex items-center gap-2">
-                  <span className="text-green-400 text-sm font-medium">
+              <div className="py-2 border-b border-gray-800/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-green-400 text-sm font-bold">
                     {language === 'ko' ? '무료 회원' : 'Free'}
                   </span>
                   <span className="text-[10px] text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded">
                     {language === 'ko' ? '가입 시' : 'Sign Up'}
                   </span>
                 </div>
-                <span className="text-green-400 text-sm font-medium">
-                  {language === 'ko' ? '3시간 전 공개' : '3h Before'}
-                </span>
+                <ul className="space-y-1">
+                  <li className="text-gray-300 text-[12px] flex items-start gap-1.5">
+                    <span className="text-green-400 mt-0.5">·</span>
+                    <span>{language === 'ko' ? '경기 데이터 & 통계 분석' : 'Match data & statistical analysis'}</span>
+                  </li>
+                  <li className="text-gray-300 text-[12px] flex items-start gap-1.5">
+                    <span className="text-green-400 mt-0.5">·</span>
+                    <span>{language === 'ko' ? '광고 시청 시 야구 조합픽 열람' : 'Baseball combo picks via ad view'}</span>
+                  </li>
+                  <li className="text-gray-300 text-[12px] flex items-start gap-1.5">
+                    <span className="text-green-400 mt-0.5">·</span>
+                    <span>{language === 'ko' ? '기본 경기 분석 리포트' : 'Basic match analysis reports'}</span>
+                  </li>
+                </ul>
               </div>
               {/* 프리미엄 */}
-              <div className="py-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-yellow-400 text-sm font-bold">
-                      {language === 'ko' ? '프리미엄' : 'Premium'}
-                    </span>
-                  </div>
+              <div className="py-2 bg-yellow-500/[0.03] -mx-4 px-4 rounded relative">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-yellow-400 text-sm font-bold">
-                    {language === 'ko' ? '24시간 전 공개' : '24h Before'}
+                    {language === 'ko' ? '프리미엄' : 'Premium'}
+                  </span>
+                  <span className="text-[10px] text-yellow-400 bg-yellow-500/20 px-1.5 py-0.5 rounded font-bold">
+                    {language === 'ko' ? '추천' : 'Recommended'}
                   </span>
                 </div>
-                <p className="text-yellow-400/70 text-xs mt-1.5">
-                  + {language === 'ko' ? '승률 높은 경기 추천' : 'High win-rate picks'}
-                </p>
-                <p className="text-yellow-400/70 text-xs mt-0.5">
-                  + {language === 'ko' ? '광고 제거' : 'Ad-free'}
-                </p>
+                <ul className="space-y-1">
+                  <li className="text-yellow-100 text-[12px] flex items-start gap-1.5 font-medium">
+                    <span className="text-yellow-400 mt-0.5">★</span>
+                    <span>{language === 'ko' ? '축구 경기 AI 픽 (전 리그)' : 'Football AI picks (all leagues)'}</span>
+                  </li>
+                  <li className="text-yellow-100 text-[12px] flex items-start gap-1.5 font-medium">
+                    <span className="text-yellow-400 mt-0.5">★</span>
+                    <span>{language === 'ko' ? '야구 조합 픽 무제한 (KBO·MLB·NPB)' : 'Baseball combo picks unlimited (KBO·MLB·NPB)'}</span>
+                  </li>
+                  <li className="text-yellow-100/90 text-[12px] flex items-start gap-1.5">
+                    <span className="text-yellow-400 mt-0.5">·</span>
+                    <span>{language === 'ko' ? 'AI 심층 팀 분석 (시간대별/상황별)' : 'In-depth AI team analysis'}</span>
+                  </li>
+                  <li className="text-yellow-100/90 text-[12px] flex items-start gap-1.5">
+                    <span className="text-yellow-400 mt-0.5">·</span>
+                    <span>{language === 'ko' ? '광고 완전 제거' : 'Ad-free experience'}</span>
+                  </li>
+                  <li className="text-yellow-100/90 text-[12px] flex items-start gap-1.5">
+                    <span className="text-yellow-400 mt-0.5">·</span>
+                    <span>{language === 'ko' ? '우선 콘텐츠 업데이트' : 'Priority content updates'}</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
@@ -167,11 +128,10 @@ export default function SignupPage() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
               )}
-              Google
+              {language === 'ko' ? 'Google로 시작하기' : 'Continue with Google'}
             </button>
 
-            {/* 🔒 Naver 가입 - 검수 완료 후 활성화 */}
-            {/* 
+            {/* Naver 가입 - 검수 통과 활성화됨 */}
             <button
               onClick={() => handleSignIn('naver')}
               disabled={isLoading !== null}
@@ -184,9 +144,8 @@ export default function SignupPage() {
                   <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727v12.845z" />
                 </svg>
               )}
-              Naver
+              {language === 'ko' ? 'Naver로 시작하기' : 'Continue with Naver'}
             </button>
-            */}
           </div>
 
           {/* 약관 동의 */}

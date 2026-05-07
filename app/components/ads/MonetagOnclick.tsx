@@ -1,43 +1,13 @@
-// app/components/ads/MonetagOnclick.tsx
 'use client'
 
-import Script from 'next/script'
-import { useEffect } from 'react'
-
+/**
+ * ❌ MonetagOnclick (클릭 시 팝업 광고) - 비활성화됨
+ *
+ * 클릭 가로채기성 광고로 가입 버튼 등 주요 CTA 클릭을 방해함.
+ * 가입 전환율 하락의 주요 원인 + AdSense 정책 위반 가능성으로 비활성화.
+ *
+ * 비활성화 일시: 2026-05-07
+ */
 export default function MonetagOnclick() {
-  useEffect(() => {
-    let lastClick = 0
-    const cooldown = 60000 // 1분 = 60,000ms
-    
-    const handleClick = () => {
-      const now = Date.now()
-      const timeSinceLastClick = now - lastClick
-      
-      if (timeSinceLastClick < cooldown) {
-        console.log(`🕐 쿨다운 중... ${Math.ceil((cooldown - timeSinceLastClick) / 1000)}초 남음`)
-        return
-      }
-      
-      lastClick = now
-      console.log('✅ Monetag Onclick 실행')
-    }
-    
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [])
-  
-  return (
-    <Script
-      id="monetag-onclick"
-      strategy="afterInteractive"
-      dangerouslySetInnerHTML={{
-        __html: `
-          (function(s){
-            s.dataset.zone='10181857',
-            s.src='https://al5sm.com/tag.min.js'
-          })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))
-        `
-      }}
-    />
-  )
+  return null
 }
