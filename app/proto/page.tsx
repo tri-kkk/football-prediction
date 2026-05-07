@@ -638,7 +638,7 @@ export default function ProtoPage() {
   // 로딩 중
   if (isLoading_auth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="mt-4 text-gray-400 text-sm">로딩중...</p>
@@ -650,7 +650,7 @@ export default function ProtoPage() {
   // 비회원 차단
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <span className="text-4xl">🎫</span>
@@ -671,11 +671,11 @@ export default function ProtoPage() {
   }
 
   return (
-    <div className="min-h-screen text-white" style={{ background: '#0a0a0f' }}>
+    <div className="min-h-screen text-white" style={{ background: '#0f0f0f' }}>
       {/* 제한 모달 */}
       {showLimitModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="rounded-2xl p-6 max-w-sm w-full" style={{ background: 'linear-gradient(180deg, #1a1f2e 0%, #141824 100%)', border: '1px solid #2a3040' }}>
+          <div className="rounded-2xl p-6 max-w-sm w-full" style={{ background: 'linear-gradient(180deg, #1a1a1a 0%, #252829 100%)', border: '1px solid #2a3040' }}>
             <div className="text-center">
               <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#f59e0b15', border: '1px solid #f59e0b30' }}>
                 <span className="text-3xl">⚠️</span>
@@ -685,7 +685,7 @@ export default function ProtoPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowLimitModal(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm transition-colors" style={{ background: '#1e293b', color: '#94a3b8' }}
+                  className="flex-1 py-2.5 rounded-xl text-sm transition-colors" style={{ background: 'rgba(255,255,255,0.06)', color: '#94a3b8' }}
                 >
                   닫기
                 </button>
@@ -702,7 +702,7 @@ export default function ProtoPage() {
       )}
 
       {/* 헤더 - 완전 고정, 불투명 배경 */}
-      <header className="fixed top-[70px] md:top-[73px] left-0 right-0 z-50 shadow-lg shadow-black/50" style={{ background: '#0d0d14', borderBottom: '1px solid #1e293b40' }}>
+      <header className="fixed top-12 md:top-[98px] left-0 right-0 z-40 shadow-lg shadow-black/50" style={{ background: 'rgba(10,10,10,0.92)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="max-w-4xl mx-auto px-3 md:px-4 py-1.5 md:py-2 space-y-1.5 md:space-y-2">
           {/* 상단: 타이틀 + 탭 */}
           <div className="flex items-center justify-between">
@@ -713,32 +713,32 @@ export default function ProtoPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
-              <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+              <h1 className="text-[13px] md:text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent whitespace-nowrap">
                 프로토 계산기
               </h1>
             </div>
 
             {/* 탭 버튼 */}
-            <div className="flex gap-1 p-0.5 rounded-xl" style={{ background: '#141824' }}>
+            <div className="flex gap-1 p-0.5 rounded-xl" style={{ background: '#252829' }}>
               <button
                 onClick={() => changeTab('calculator')}
-                className={`py-1 px-2.5 md:py-1.5 md:px-4 rounded-lg text-[11px] md:text-sm font-medium transition-all ${
+                className={`py-1 px-2 md:py-1.5 md:px-3.5 rounded-lg text-[11px] md:text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === 'calculator'
                     ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                🧮 계산기
+                계산기
               </button>
               <button
                 onClick={() => changeTab('history')}
-                className={`py-1 px-2.5 md:py-1.5 md:px-4 rounded-lg text-[11px] md:text-sm font-medium transition-all relative ${
+                className={`py-1 px-2 md:py-1.5 md:px-3.5 rounded-lg text-[11px] md:text-sm font-medium transition-all relative whitespace-nowrap ${
                   activeTab === 'history'
                     ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                📜 기록
+                기록
                 {(() => {
                   const pendingCount = savedSlips.filter(s => s.status === 'pending').length
                   return pendingCount > 0 && (
@@ -750,13 +750,13 @@ export default function ProtoPage() {
               </button>
               <button
                 onClick={() => changeTab('stats')}
-                className={`py-1 px-2.5 md:py-1.5 md:px-4 rounded-lg text-[11px] md:text-sm font-medium transition-all ${
+                className={`py-1 px-2 md:py-1.5 md:px-3.5 rounded-lg text-[11px] md:text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === 'stats'
                     ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                📊 통계
+                통계
               </button>
             </div>
           </div>
@@ -770,7 +770,7 @@ export default function ProtoPage() {
                 <select
                   value={currentRound}
                   onChange={(e) => setCurrentRound(e.target.value)}
-                  className="rounded-lg px-2 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500" style={{ background: '#141824', border: '1px solid #1e293b' }}
+                  className="rounded-lg px-2 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}
                 >
                   {availableRounds.map((round) => (
                     <option key={round} value={round}>
@@ -786,7 +786,7 @@ export default function ProtoPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="팀명 검색"
-                    className="w-full rounded-lg pl-7 pr-7 py-1 md:pl-9 md:pr-8 md:py-1.5 text-[11px] md:text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" style={{ background: '#141824', border: '1px solid #1e293b' }}
+                    className="w-full rounded-lg pl-7 pr-7 py-1 md:pl-9 md:pr-8 md:py-1.5 text-[11px] md:text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}
                   />
                   <svg className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2 w-3 h-3 md:w-4 md:h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -809,7 +809,7 @@ export default function ProtoPage() {
                       ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                       : 'text-gray-400 hover:text-white'
                   }`}
-                  style={!(showFilters || activeFilterCount > 0) ? { background: '#141824', border: '1px solid #1e293b' } : {}}
+                  style={!(showFilters || activeFilterCount > 0) ? { background: '#252829', border: '1px solid rgba(255,255,255,0.06)' } : {}}
                 >
                   <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -834,7 +834,7 @@ export default function ProtoPage() {
 
               {/* 확장 필터 패널 */}
               {showFilters && (
-                <div className="p-3 rounded-xl space-y-3" style={{ background: '#141824', border: '1px solid #1e293b60' }}>
+                <div className="p-3 rounded-xl space-y-3" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}>
                   {/* 날짜 필터 */}
                   <div>
                     <label className="text-[10px] text-gray-500 mb-1.5 block">날짜</label>
@@ -844,7 +844,7 @@ export default function ProtoPage() {
                         className={`px-2.5 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-all ${
                           dateFilter === 'ALL'
                             ? 'bg-emerald-600 text-white'
-                            : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                            : 'bg-[#1a1a1a]/60 text-gray-400 hover:bg-[#252829]'
                         }`}
                       >
                         전체
@@ -858,7 +858,7 @@ export default function ProtoPage() {
                             className={`px-2.5 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-all ${
                               dateFilter === date
                                 ? 'bg-emerald-600 text-white'
-                                : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                                : 'bg-[#1a1a1a]/60 text-gray-400 hover:bg-[#252829]'
                             }`}
                           >
                             {date} ({count})
@@ -877,7 +877,7 @@ export default function ProtoPage() {
                         setLeagueFilter(e.target.value)
                         setShowFilters(false)  // 선택 후 패널 닫기
                       }}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-[#1a1a1a] border border-[rgba(255,255,255,0.06)] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                     >
                       <option value="ALL">전체 리그</option>
                       {availableLeagues.map(league => {
@@ -895,7 +895,7 @@ export default function ProtoPage() {
                   {activeFilterCount > 0 && (
                     <button
                       onClick={clearAllFilters}
-                      className="w-full py-2 bg-gray-700/50 hover:bg-gray-700 rounded-lg text-xs text-gray-400 hover:text-white transition-colors"
+                      className="w-full py-2 bg-[#1a1a1a]/60 hover:bg-[#252829] rounded-lg text-xs text-gray-400 hover:text-white transition-colors"
                     >
                       필터 초기화 ({activeFilterCount})
                     </button>
@@ -919,7 +919,7 @@ export default function ProtoPage() {
                           ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                           : 'text-gray-400 hover:text-gray-200'
                       }`}
-                      style={sportFilter !== filter.key ? { background: '#141824' } : {}}
+                      style={sportFilter !== filter.key ? { background: '#252829' } : {}}
                     >
                       <span>{filter.icon}</span>
                       <span>{count}</span>
@@ -927,7 +927,7 @@ export default function ProtoPage() {
                   )
                 })}
                 
-                <div className="w-px h-3.5 md:h-5 mx-0.5 md:mx-1" style={{ background: '#1e293b' }} />
+                <div className="w-px h-3.5 md:h-5 mx-0.5 md:mx-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
                 {/* 유형 필터 */}
                 {TYPE_FILTERS_CONFIG.map(filter => (
@@ -939,7 +939,7 @@ export default function ProtoPage() {
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
-                    style={typeFilter !== filter.key ? { background: '#141824' } : {}}
+                    style={typeFilter !== filter.key ? { background: '#252829' } : {}}
                   >
                     {filter.short}
                     {filter.key !== 'ALL' && (
@@ -958,13 +958,13 @@ export default function ProtoPage() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main ref={mainContentRef} className={`max-w-4xl mx-auto px-3 pb-24 ${activeTab === 'calculator' ? 'pt-[146px] md:pt-[155px]' : 'pt-[90px] md:pt-[95px]'}`}>
+      <main ref={mainContentRef} className={`max-w-4xl mx-auto px-3 pb-24 ${activeTab === 'calculator' ? 'pt-[140px] md:pt-[200px]' : 'pt-[80px] md:pt-[140px]'}`}>
         {/* 계산기 탭 */}
         {activeTab === 'calculator' && (
         <>
         {filteredMatches.length === 0 ? (
-          <div className="bg-gray-800/30 rounded-xl border border-gray-700/50 p-8 text-center">
-            <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-3">
+          <div className="bg-[#252829]/40 rounded-xl border border-[rgba(255,255,255,0.06)] p-8 text-center">
+            <div className="w-16 h-16 bg-[#1a1a1a]/60 rounded-full flex items-center justify-center mx-auto mb-3">
               <span className="text-3xl">{searchQuery ? '🔍' : '🎫'}</span>
             </div>
             <h3 className="text-base font-bold text-white mb-1">
@@ -979,7 +979,7 @@ export default function ProtoPage() {
             {(searchQuery || activeFilterCount > 0) && (
               <button
                 onClick={clearAllFilters}
-                className="mt-3 px-4 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs text-white transition-colors"
+                className="mt-3 px-4 py-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] rounded-lg text-xs text-white transition-colors"
               >
                 필터 초기화
               </button>
@@ -993,11 +993,11 @@ export default function ProtoPage() {
               className="mb-3 scroll-mt-[200px]"
             >
               {/* 날짜 헤더 */}
-              <div className="flex items-center gap-2.5 mb-3 sticky top-[176px] md:top-[195px] z-20 py-2 md:py-2.5 -mx-3 px-3 md:-mx-4 md:px-4" style={{ background: '#0a0a0f', borderBottom: '1px solid #1e293b40' }}>
+              <div className="flex items-center gap-2.5 mb-3 sticky top-[138px] md:top-[200px] z-20 py-2 md:py-2.5 -mx-3 px-3 md:-mx-4 md:px-4" style={{ background: '#0f0f0f', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className="w-1 h-5 rounded-full bg-emerald-500" />
                 <h2 className="text-xs md:text-sm font-bold text-white">{date}</h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] md:text-xs font-medium" style={{ background: '#10b98115', color: '#34d399', border: '1px solid #10b98130' }}>{dateMatches.length}경기</span>
-                <div className="flex-1 h-px" style={{ background: '#1e293b' }} />
+                <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
               </div>
 
               {/* 경기 카드들 */}
@@ -1110,17 +1110,17 @@ export default function ProtoPage() {
                                 : ''
                       }`}
                       style={{
-                        background: isSelected ? 'linear-gradient(180deg, #0f1623 0%, #0d1a1a 100%)' : '#0f1623',
-                        border: isSelected ? '1px solid #10b98140' : '1px solid #1e293b60'
+                        background: isSelected ? 'linear-gradient(180deg, #1a1a1a 0%, #0d1a1a 100%)' : '#1a1a1a',
+                        border: isSelected ? '1px solid #10b98140' : '1px solid rgba(255,255,255,0.06)'
                       }}
                     >
                       {/* 경기 정보 헤더 */}
-                      <div className="flex items-center justify-between px-3 py-1.5" style={{ borderBottom: '1px solid #1e293b40' }}>
+                      <div className="flex items-center justify-between px-3 py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: '#1e293b60', color: '#64748b' }}>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: '#64748b' }}>
                             #{String(match.matchSeq).padStart(3, '0')}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#1e293b80', color: '#94a3b8' }}>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>
                             {getLeagueIcon(match.leagueName)} {match.leagueName}
                           </span>
                           {match.matchType !== '승패' && (
@@ -1187,7 +1187,7 @@ export default function ProtoPage() {
                                 }`}>
                                   {match.homeTeam}
                                 </span>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: '#1e293b60', color: '#475569' }}>VS</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: '#475569' }}>VS</span>
                                 <span className={`text-[13px] font-bold truncate max-w-[38%] ${
                                   isFinished && rightResults.includes(match.resultCode || '') ? 'text-red-400' :
                                   rightPredictions.includes(selection?.prediction || '') ? 'text-emerald-400' :
@@ -1235,13 +1235,13 @@ export default function ProtoPage() {
                                     style={{
                                       background: isFinished && leftResults.includes(match.resultCode || '')
                                         ? '#1e40af20'
-                                        : isDisabled ? '#0f162340'
+                                        : isDisabled ? '#1a1a1a40'
                                         : leftPredictions.includes(selection?.prediction || '') ? 'linear-gradient(180deg, #059669 0%, #047857 100%)'
-                                        : match.homeOdds ? '#141824' : '#0f162340',
+                                        : match.homeOdds ? '#252829' : '#1a1a1a40',
                                       border: isFinished && leftResults.includes(match.resultCode || '')
                                         ? '1px solid #3b82f650'
                                         : leftPredictions.includes(selection?.prediction || '') ? '1px solid #10b98150'
-                                        : '1px solid #1e293b60',
+                                        : '1px solid rgba(255,255,255,0.06)',
                                       color: isFinished && leftResults.includes(match.resultCode || '')
                                         ? '#93c5fd'
                                         : isDisabled ? '#475569'
@@ -1273,13 +1273,13 @@ export default function ProtoPage() {
                                     style={{
                                       background: isFinished && rightResults.includes(match.resultCode || '')
                                         ? '#dc262620'
-                                        : isDisabled ? '#0f162340'
+                                        : isDisabled ? '#1a1a1a40'
                                         : rightPredictions.includes(selection?.prediction || '') ? 'linear-gradient(180deg, #059669 0%, #047857 100%)'
-                                        : match.awayOdds ? '#141824' : '#0f162340',
+                                        : match.awayOdds ? '#252829' : '#1a1a1a40',
                                       border: isFinished && rightResults.includes(match.resultCode || '')
                                         ? '1px solid #ef444450'
                                         : rightPredictions.includes(selection?.prediction || '') ? '1px solid #10b98150'
-                                        : '1px solid #1e293b60',
+                                        : '1px solid rgba(255,255,255,0.06)',
                                       color: isFinished && rightResults.includes(match.resultCode || '')
                                         ? '#fca5a5'
                                         : isDisabled ? '#475569'
@@ -1321,12 +1321,12 @@ export default function ProtoPage() {
                                   }`}
                                   style={{
                                     background: isResult ? resultColors[btn.key]?.bg
-                                      : isDisabled ? '#0f162340'
+                                      : isDisabled ? '#1a1a1a40'
                                       : isPicked ? 'linear-gradient(180deg, #059669 0%, #047857 100%)'
-                                      : btn.odds ? '#141824' : '#0f162340',
+                                      : btn.odds ? '#252829' : '#1a1a1a40',
                                     border: isResult ? `1px solid ${resultColors[btn.key]?.border}`
                                       : isPicked ? '1px solid #10b98150'
-                                      : '1px solid #1e293b60',
+                                      : '1px solid rgba(255,255,255,0.06)',
                                     color: isResult ? resultColors[btn.key]?.text
                                       : isDisabled ? '#475569'
                                       : isPicked ? '#fff'
@@ -1361,7 +1361,7 @@ export default function ProtoPage() {
             {savedSlips.length > 0 && (
               <div className="mb-3 grid grid-cols-4 gap-1.5">
                 {[
-                  { value: historyCounts.all, label: '전체', color: '#94a3b8', bg: '#1e293b40' },
+                  { value: historyCounts.all, label: '전체', color: '#94a3b8', bg: 'rgba(255,255,255,0.05)' },
                   { value: historyCounts.pending, label: '대기', color: '#60a5fa', bg: '#3b82f610' },
                   { value: historyCounts.won, label: '적중', color: '#34d399', bg: '#10b98110' },
                   { value: historyCounts.lost, label: '미적중', color: '#f87171', bg: '#ef444410' },
@@ -1376,7 +1376,7 @@ export default function ProtoPage() {
 
             {/* ✅ 필터 + 전체정리 */}
             <div className="mb-3 flex items-center justify-between">
-              <div className="flex gap-1 p-0.5 rounded-xl overflow-x-auto" style={{ background: '#141824' }}>
+              <div className="flex gap-1 p-0.5 rounded-xl overflow-x-auto" style={{ background: '#252829' }}>
                 {[
                   { key: 'all' as const, label: '전체', activeColor: '#10b981', activeBg: '#059669' },
                   { key: 'pending' as const, label: '대기', activeColor: '#3b82f6', activeBg: '#2563eb' },
@@ -1403,7 +1403,7 @@ export default function ProtoPage() {
                 <button
                   onClick={deleteAllSlips}
                   className="px-2.5 py-1 rounded-lg text-[11px] whitespace-nowrap transition-all hover:text-red-400"
-                  style={{ background: '#141824', border: '1px solid #1e293b', color: '#64748b' }}
+                  style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)', color: '#64748b' }}
                   disabled={isLoading}
                 >
                   {isLoading ? '삭제 중...' : '전체 정리'}
@@ -1423,7 +1423,7 @@ export default function ProtoPage() {
                     <div
                       key={slip.id}
                       className="rounded-xl overflow-hidden"
-                      style={{ background: '#0f1623', border: '1px solid #1e293b60' }}
+                      style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.06)' }}
                     >
                       {/* 상태 인디케이터 바 */}
                       <div className="h-[2px]" style={{
@@ -1436,12 +1436,12 @@ export default function ProtoPage() {
                       <div
                         onClick={() => toggleSlipExpand(slip.id)}
                         className="px-3 py-2.5 cursor-pointer transition-colors"
-                        style={{ background: isExpanded ? '#141824' : 'transparent' }}
+                        style={{ background: isExpanded ? '#252829' : 'transparent' }}
                       >
                         {/* 1행: 회차, 상태, 날짜 */}
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-lg font-bold" style={{ background: '#1e293b60', color: '#94a3b8' }}>
+                            <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-lg font-bold" style={{ background: 'rgba(255,255,255,0.06)', color: '#94a3b8' }}>
                               {slip.round}회
                             </span>
                             <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{
@@ -1485,11 +1485,11 @@ export default function ProtoPage() {
 
                       {/* ✅ 상세 내역 (펼쳤을 때만) */}
                       {isExpanded && (
-                        <div className="px-3 py-2 space-y-1" style={{ borderTop: '1px solid #1e293b40', background: '#0a0e18' }}>
+                        <div className="px-3 py-2 space-y-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: '#0a0e18' }}>
                           {slip.selections.map((sel, idx) => (
-                            <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 rounded-lg text-[11px]" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
+                            <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 rounded-lg text-[11px]" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.05)' }}>
                               <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                <span className="text-[9px] shrink-0 w-4 h-4 rounded flex items-center justify-center font-bold" style={{ background: '#1e293b', color: '#64748b' }}>{idx + 1}</span>
+                                <span className="text-[9px] shrink-0 w-4 h-4 rounded flex items-center justify-center font-bold" style={{ background: 'rgba(255,255,255,0.06)', color: '#64748b' }}>{idx + 1}</span>
                                 <span className="truncate" style={{ color: '#cbd5e1' }}>{sel.homeTeam} vs {sel.awayTeam}</span>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0 ml-2">
@@ -1522,7 +1522,7 @@ export default function ProtoPage() {
                               deleteSlip(slip.id)
                             }}
                             className="w-full mt-1 py-1.5 rounded-lg text-[10px] transition-colors hover:text-red-400"
-                            style={{ background: '#141824', color: '#475569', border: '1px solid #1e293b40' }}
+                            style={{ background: '#252829', color: '#475569', border: '1px solid rgba(255,255,255,0.05)' }}
                           >
                             삭제
                           </button>
@@ -1538,7 +1538,7 @@ export default function ProtoPage() {
                     <button
                       onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
                       disabled={historyPage === 1}
-                      className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs text-white disabled:opacity-30 hover:bg-gray-700 transition-colors"
+                      className="px-3 py-1.5 bg-[#252829] rounded-lg text-xs text-white disabled:opacity-30 hover:bg-[#252829] transition-colors"
                     >
                       ← 이전
                     </button>
@@ -1548,7 +1548,7 @@ export default function ProtoPage() {
                     <button
                       onClick={() => setHistoryPage(prev => Math.min(totalHistoryPages, prev + 1))}
                       disabled={!hasMoreHistory}
-                      className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs text-white disabled:opacity-30 hover:bg-gray-700 transition-colors"
+                      className="px-3 py-1.5 bg-[#252829] rounded-lg text-xs text-white disabled:opacity-30 hover:bg-[#252829] transition-colors"
                     >
                       다음 →
                     </button>
@@ -1571,9 +1571,9 @@ export default function ProtoPage() {
             {slipStats && (slipStats.totalSlips > 0 || (slipStats.totalDeleted ?? 0) > 0) ? (
               <>
                 {/* ✅ 수익률 히어로 + 지표 통합 카드 */}
-                <div className="rounded-2xl overflow-hidden mb-3" style={{ background: '#0f1623', border: '1px solid #1e293b60' }}>
+                <div className="rounded-2xl overflow-hidden mb-3" style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.06)' }}>
                   {/* 헤더 */}
-                  <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #1e293b40' }}>
+                  <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <div className="flex items-center gap-2.5">
                       <div className="w-1 h-5 rounded-full bg-emerald-500" />
                       <span className="text-white text-sm font-bold">누적 통계</span>
@@ -1601,7 +1601,7 @@ export default function ProtoPage() {
 
                     {/* 수익률 바 */}
                     <div className="mb-4">
-                      <div className="h-2.5 rounded-full overflow-hidden relative" style={{ background: '#1e293b' }}>
+                      <div className="h-2.5 rounded-full overflow-hidden relative" style={{ background: 'rgba(255,255,255,0.06)' }}>
                         <div className="absolute left-1/2 top-0 w-px h-full z-10" style={{ background: '#475569' }} />
                         {slipStats.totalReturn >= slipStats.totalInvested ? (
                           <div
@@ -1632,7 +1632,7 @@ export default function ProtoPage() {
 
                     {/* 4개 지표 그리드 */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
+                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <div className="flex items-baseline justify-between">
                           <span className="text-[10px]" style={{ color: '#64748b' }}>총 조합</span>
                           <span className="text-lg font-black text-white leading-none">{slipStats.totalSlips}</span>
@@ -1641,20 +1641,20 @@ export default function ProtoPage() {
                           <p className="text-[9px] text-right mt-0.5" style={{ color: '#475569' }}>삭제 {slipStats.totalDeleted}건 포함</p>
                         )}
                       </div>
-                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
+                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <div className="flex items-baseline justify-between">
                           <span className="text-[10px]" style={{ color: '#64748b' }}>적중률</span>
                           <span className="text-lg font-black leading-none" style={{ color: '#34d399' }}>{slipStats.hitRate.toFixed(1)}%</span>
                         </div>
                         <p className="text-[9px] text-right mt-0.5" style={{ color: '#475569' }}>{slipStats.won}승 {slipStats.lost}패</p>
                       </div>
-                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
+                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <div className="flex items-baseline justify-between">
                           <span className="text-[10px]" style={{ color: '#64748b' }}>총 투자</span>
                           <span className="text-sm font-bold leading-none" style={{ color: '#60a5fa' }}>{slipStats.totalInvested.toLocaleString()}<span className="text-[9px] font-normal" style={{ color: '#475569' }}>원</span></span>
                         </div>
                       </div>
-                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#141824', border: '1px solid #1e293b40' }}>
+                      <div className="rounded-xl py-2.5 px-3" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <div className="flex items-baseline justify-between">
                           <span className="text-[10px]" style={{ color: '#64748b' }}>총 수익</span>
                           <span className={`text-sm font-bold leading-none`} style={{ color: slipStats.totalReturn >= slipStats.totalInvested ? '#34d399' : '#f87171' }}>
@@ -1667,8 +1667,8 @@ export default function ProtoPage() {
                 </div>
 
                 {/* ✅ 승패 분포 */}
-                <div className="rounded-2xl overflow-hidden mb-3" style={{ background: '#0f1623', border: '1px solid #1e293b60' }}>
-                  <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid #1e293b40' }}>
+                <div className="rounded-2xl overflow-hidden mb-3" style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <div className="w-1 h-5 rounded-full bg-amber-500" />
                     <span className="text-white text-sm font-bold">승패 분포</span>
                   </div>
@@ -1692,7 +1692,7 @@ export default function ProtoPage() {
                         </div>
                       )}
                       {slipStats.won === 0 && slipStats.lost === 0 && (
-                        <div className="h-10 rounded-xl w-full flex items-center justify-center text-[11px]" style={{ background: '#1e293b', color: '#64748b' }}>
+                        <div className="h-10 rounded-xl w-full flex items-center justify-center text-[11px]" style={{ background: 'rgba(255,255,255,0.06)', color: '#64748b' }}>
                           결과 대기 중
                         </div>
                       )}
@@ -1751,7 +1751,7 @@ export default function ProtoPage() {
 
         {/* 면책 문구 */}
         <footer className="mt-4 mb-4">
-          <div className="rounded-xl p-3 space-y-2" style={{ background: '#0f1623', border: '1px solid #1e293b40' }}>
+          <div className="rounded-xl p-3 space-y-2" style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.05)' }}>
             <div className="flex items-start gap-1.5">
               <span className="text-[10px] mt-0.5" style={{ color: '#eab308' }}>※</span>
               <p className="text-[10px] leading-relaxed" style={{ color: '#64748b' }}>
@@ -1773,9 +1773,9 @@ export default function ProtoPage() {
 
       {/* 하단 고정 패널 */}
       {activeTab === 'calculator' && selections.length > 0 && (
-        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40" style={{ background: '#0a0a0f' }}>
+        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40" style={{ background: '#0f0f0f' }}>
           <div className="shadow-[0_-8px_30px_rgba(0,0,0,0.9)]" style={{ borderTop: '2px solid #10b98160' }}>
-            <div className="max-w-4xl mx-auto px-3 py-2" style={{ background: '#0a0a0f' }}>
+            <div className="max-w-4xl mx-auto px-3 py-2" style={{ background: '#0f0f0f' }}>
             <div 
               onClick={() => setShowSlipPanel(!showSlipPanel)}
               className="flex items-center justify-between cursor-pointer"
@@ -1791,7 +1791,7 @@ export default function ProtoPage() {
               </div>
 
               <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-1 bg-gray-800 rounded-lg px-2 py-1">
+                <div className="flex items-center gap-1 bg-[#252829] rounded-lg px-2 py-1">
                   <input
                     type="number"
                     value={betAmount}
@@ -1812,7 +1812,7 @@ export default function ProtoPage() {
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelections([]); setShowSlipPanel(false) }}
-                  className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-xs transition-colors"
+                  className="px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-gray-300 rounded-lg text-xs transition-colors"
                 >
                   초기화
                 </button>
@@ -1827,13 +1827,13 @@ export default function ProtoPage() {
             </div>
 
             {showSlipPanel && (
-              <div className="mt-2 pt-2" style={{ borderTop: '1px solid #1e293b40', background: '#0a0a0f' }}>
+              <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: '#0f0f0f' }}>
                 <div className="space-y-1 max-h-36 overflow-y-auto">
                   {selections.map((sel) => (
                     <div
                       key={sel.matchSeq}
                       className="flex items-center justify-between py-1.5 px-2.5 rounded-lg text-xs"
-                      style={{ background: '#141824', border: '1px solid #1e293b40' }}
+                      style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.05)' }}
                     >
                       <span className="truncate max-w-[55%]" style={{ color: '#94a3b8' }}>
                         #{String(sel.matchSeq).padStart(3, '0')} {sel.homeTeam} vs {sel.awayTeam}
@@ -1875,7 +1875,7 @@ export default function ProtoPage() {
                           ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                           : 'text-gray-400 hover:text-gray-200'
                       }`}
-                      style={betAmount !== amt ? { background: '#141824' } : {}}
+                      style={betAmount !== amt ? { background: '#252829' } : {}}
                     >
                       {amt >= 10000 ? `${amt/10000}만` : `${amt/1000}천`}
                     </button>
