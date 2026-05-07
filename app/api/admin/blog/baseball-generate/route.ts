@@ -259,19 +259,20 @@ ${oddsStr}
 2. 각 섹션 300~500자
 3. 자연스러운 문체 (AI 티 제거)
 4. 데이터 없으면 자연스럽게 생략
+5. **각 섹션은 반드시 2~3개의 단락으로 나누세요. 단락 사이는 빈 줄(\\n\\n)로 구분합니다.** (네이버 블로그 광고 자동 삽입 최적화를 위해 필수)
 
 === 반드시 아래 JSON으로만 응답 ===
 {
   "title": "${data.matchDate} [${data.league}] ${data.homeTeam} vs ${data.awayTeam} AI 분석 프리뷰",
   "section1_title": "매치 프리뷰",
-  "section1": "양 팀 최근 폼, 승률 흐름 기반 프리뷰 (300~500자)",
+  "section1": "양 팀 최근 폼, 승률 흐름 기반 프리뷰 (300~500자, 2~3단락 \\n\\n으로 구분)",
   "section2_title": "선발 투수 매치업",
-  "section2": "선발 투수 핵심 지표 비교 분석 (300~500자)",
+  "section2": "선발 투수 핵심 지표 비교 분석 (300~500자, 2~3단락 \\n\\n으로 구분)",
   "section3_title": "팀 전력 분석",
-  "section3": "시즌 스탯 비교 및 타선 분석 (300~500자)",
+  "section3": "시즌 스탯 비교 및 타선 분석 (300~500자, 2~3단락 \\n\\n으로 구분)",
   "section4_title": "AI 승부예측",
-  "section4": "AI 승률, 배당 기반 최종 예측 (300~500자)",
-  "tags": ["${data.league}", "${data.homeTeam}", "${data.awayTeam}", "야구분석", "승부예측", "AI분석"],
+  "section4": "AI 승률, 배당 기반 최종 예측 (300~500자, 2~3단락 \\n\\n으로 구분)",
+  "tags": ["${data.league}", "${data.homeTeam.replace(/\s+/g, '')}", "${data.awayTeam.replace(/\s+/g, '')}", "야구분석", "승부예측", "AI분석"],
   "excerpt": "한줄 요약 50자"
 }
 
@@ -362,15 +363,43 @@ function buildNaverHTML(parsed: any, data: any) {
 
   // 배당 카드 제거 (사용 안함)
 
-  // 섹션 빌더 — 네이버 블로그 최적화 (div margin 대신 table 구분선 사용)
-  const section = (title: string, body: string, icon: string) => {
-    if (!body) return ''
-    // 연속 줄바꿈을 하나로 축소, 문단 사이만 <br> 하나
-    const htmlBody = body.replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>')
-    return `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0;"><tr><td style="padding:16px 0 6px 0;font-size:17px;font-weight:bold;color:#2d3436;border-bottom:2px solid #eee;">${icon} ${title}</td></tr><tr><td style="padding:10px 0 8px 0;font-size:15px;line-height:1.8;color:#333;">${htmlBody}</td></tr></table>`
+  // 한 단락이 너무 길면 문장 단위로 분할 (네이버 광고 삽입 최적화)
+  // 200자 이상이면 2~3문장씩 묶어서 분할
+  const splitLongParagraph = (text: string): string[] => {
+    if (text.length < 200) return [text]
+    // 한국어 문장 끝(. / 다. / 요. / ! / ?)으로 분할
+    const sentences = text.match(/[^.!?。]+[.!?。]+/g) || [text]
+    if (sentences.length <= 2) return [text]
+    // 2~3문장씩 묶어서 그룹 생성
+    const groupSize = Math.ceil(sentences.length / Math.min(3, Math.ceil(sentences.length / 2)))
+    const groups: string[] = []
+    for (let i = 0; i < sentences.length; i += groupSize) {
+      groups.push(sentences.slice(i, i + groupSize).join('').trim())
+    }
+    return groups.filter(g => g.length > 0)
   }
 
-  return `<div style="max-width:680px;margin:0 auto;overflow:hidden;word-break:keep-all;">
+  // 섹션 빌더 — 네이버 자동 광고 삽입 활성화를 위해 h3 + 다수의 p 태그로 변환
+  // (table로 감싸면 네이버가 단일 블록으로 인식해서 본문 중간 광고 삽입이 안됨)
+  const section = (title: string, body: string, icon: string) => {
+    if (!body) return ''
+    // 1차 분할: AI가 \n\n으로 넣은 단락 구분
+    let paragraphs = body
+      .split(/\n{2,}|\n/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0)
+    // 2차 분할: AI가 단락 구분 안 넣었으면 문장 단위로 자동 분할
+    paragraphs = paragraphs.flatMap(p => splitLongParagraph(p))
+    const paragraphsHtml = paragraphs
+      .map(p => `<p style="font-size:15px;line-height:1.8;color:#333;margin:0 0 14px 0;">${p}</p>`)
+      .join('\n')
+    return `
+<h3 style="font-size:17px;font-weight:bold;color:#2d3436;border-bottom:2px solid #eee;padding-bottom:6px;margin:24px 0 12px 0;">${icon} ${title}</h3>
+${paragraphsHtml}`
+  }
+
+  // 외부 div 컨테이너 제거 — 네이버 에디터가 본문 컴포넌트로 인식하도록 평탄화
+  return `
 <p style="text-align:center;font-size:13px;color:#0984e3;font-weight:bold;margin:0 0 2px 0;">${leagueNames[league]||league} | ${matchDate} ${matchTime}</p>
 <p style="text-align:center;font-size:22px;font-weight:bold;color:#2d3436;margin:0 0 2px 0;">${homeTeam} vs ${awayTeam}</p>
 <p style="text-align:center;font-size:14px;color:#999;margin:0 0 12px 0;">AI 데이터 기반 경기 분석 프리뷰</p>
@@ -380,9 +409,9 @@ ${section(parsed.section1_title||'매치 프리뷰', parsed.section1, '⚾')}
 ${section(parsed.section2_title||'선발 투수 매치업', parsed.section2, '🏏')}
 ${section(parsed.section3_title||'팀 전력 분석', parsed.section3, '📊')}
 ${section(parsed.section4_title||'AI 승부예측', parsed.section4, '🎯')}
-<p style="font-size:14px;color:#0984e3;margin:16px 0 0 0;">${(parsed.tags || []).map((t: string) => `#${t}`).join(' ')}</p>
-<p style="text-align:center;margin:12px 0 0 0;"><a href="https://www.trendsoccer.com/baseball" target="_blank"><img src="https://www.trendsoccer.com/1200x200.png" alt="TrendSoccer" style="max-width:100%;width:680px;" /></a></p>
-</div>`
+<p style="font-size:14px;color:#0984e3;margin:24px 0 0 0;">${(parsed.tags || []).map((t: string) => `#${t}`).join(' ')}</p>
+<p style="text-align:center;margin:12px 0 0 0;"><a href="https://www.trendsoccer.com/baseball" target="_blank"><img src="https://www.trendsoccer.com/1200x200.png" alt="TrendSoccer" style="max-width:100%;" /></a></p>
+`
 }
 
 // ─── 유틸 ───
