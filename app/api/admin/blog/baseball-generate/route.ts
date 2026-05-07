@@ -379,10 +379,8 @@ function buildNaverHTML(parsed: any, data: any) {
     return groups.filter(g => g.length > 0)
   }
 
-  // 섹션 빌더 — 네이버 자동 광고 삽입 활성화를 위해 모두 p 태그로 변환
-  // h3는 네이버 SE-HEADING으로 변환되어 광고 삽입 후보에서 제외되고 추가 여백 생김
-  // → 제목도 bold p 태그로 처리해서 모두 SE-TEXT 컴포넌트로 인식되게 함
-  // text-align:left 명시: 네이버 SE-TEXT 기본값이 center일 수 있어서 강제 좌측 정렬
+  // 섹션 빌더 — 제목(가운데 정렬) + 본문 박스(좌측 정렬, 배경색)
+  // 본문은 박스 안에 다수의 p 태그로 분리 → 네이버 SE-TEXT 컴포넌트로 인식
   const section = (title: string, body: string, icon: string) => {
     if (!body) return ''
     // 1차 분할: AI가 \n\n으로 넣은 단락 구분
@@ -393,11 +391,16 @@ function buildNaverHTML(parsed: any, data: any) {
     // 2차 분할: AI가 단락 구분 안 넣었으면 문장 단위로 자동 분할
     paragraphs = paragraphs.flatMap(p => splitLongParagraph(p))
     const paragraphsHtml = paragraphs
-      .map(p => `<p style="text-align:center;font-size:15px;line-height:1.8;color:#333;margin:0 0 14px 0;">${p}</p>`)
+      .map((p, idx) => `<p style="text-align:left;font-size:15px;line-height:1.8;color:#2d3436;margin:0 0 ${idx === paragraphs.length - 1 ? '0' : '12'}px 0;">${p}</p>`)
       .join('\n')
+    // 박스는 table로 구현 (네이버 에디터가 div 배경색을 무시할 수 있어 table이 더 안전)
     return `
-<p style="text-align:center;font-size:17px;font-weight:bold;color:#2d3436;border-bottom:2px solid #eee;padding-bottom:6px;margin:24px 0 12px 0;">${icon} ${title}</p>
-${paragraphsHtml}`
+<p style="text-align:center;font-size:18px;font-weight:bold;color:#2d3436;margin:24px 0 10px 0;">${icon} ${title}</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background-color:#faf8f3;margin:0 0 16px 0;">
+  <tr><td style="padding:18px 20px;">
+${paragraphsHtml}
+  </td></tr>
+</table>`
   }
 
   // 외부 div 컨테이너 제거 — 네이버 에디터가 본문 컴포넌트로 인식하도록 평탄화
