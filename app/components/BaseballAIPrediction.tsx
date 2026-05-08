@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -302,7 +302,7 @@ export default function BaseballAIPrediction({
               background: pred.grade === 'PICK' ? '#ef4444' : pred.grade === 'GOOD' ? '#2563eb' : '#475569',
               boxShadow: pred.grade === 'PICK' ? '0 0 10px #ef444450' : pred.grade === 'GOOD' ? '0 0 10px #2563eb50' : 'none'
             }}>
-            {pred.grade}
+            {pred.grade === 'PICK' ? t('추천', 'Recommended') : pred.grade === 'GOOD' ? t('관심', 'Watch') : pred.grade}
           </span>
         ) : pred ? (
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"

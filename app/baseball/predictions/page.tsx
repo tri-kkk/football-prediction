@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -259,7 +259,7 @@ function GradeBadge({ grade, size = 'sm', analyzing = false, language = 'ko' }: 
   }
   const s = styles[grade]
   // 화면 표시용 라벨: PICK → TOP (구글 광고 정책 대응)
-  const label = grade === 'PICK' ? 'TOP' : grade
+  const label = grade === 'PICK' ? 'TOP' : grade === 'GOOD' ? 'WATCH' : grade
   const sizeClass = size === 'lg' ? 'px-3 py-1 text-xs' : 'px-2 py-0.5 text-[10px]'
   return (
     <span

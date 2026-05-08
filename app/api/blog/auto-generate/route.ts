@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // ============================================
@@ -1081,7 +1081,7 @@ function formatFormTextEn(results: string[]): string {
 }
 
 function getGradeKo(grade: string): string {
-  return grade === 'PICK' ? 'PICK (강추)' : grade === 'GOOD' ? 'GOOD (추천)' : 'PASS (비추)'
+  return grade === 'PICK' ? 'TOP (분석 우위)' : grade === 'GOOD' ? 'WATCH (참고)' : 'PASS (해당 없음)'
 }
 
 function getPickKo(pick: string): string {
