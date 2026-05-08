@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 // =====================================================
 // Baseball Matches API - 프론트엔드용
 // GET /api/baseball/matches
-// ✅ ML 예측값(mlPrediction) 추가 - 원본 구조 유지
+// ✅ ML 분석값(mlPrediction) 추가 - 원본 구조 유지
 // =====================================================
 
 const TEAM_NAME_KO: Record<string, string> = {
@@ -421,7 +421,7 @@ export async function GET(request: NextRequest) {
     const oddsMap = new Map(odds.map(o => [o.api_match_id, o]))
 
     // =====================================================
-    // ✅ MLB 경기만 ML 예측 병렬 호출 추가
+    // ✅ MLB 경기만 ML 분석 병렬 호출 추가
     // =====================================================
     const mlPredictions = skipML
       ? (matches || []).map(() => null)
@@ -490,7 +490,7 @@ export async function GET(request: NextRequest) {
         // ✅ DB에 저장된 AI pick (디테일 페이지와 동일한 소스)
         aiPick: matchOdds?.ai_pick ?? null,
         aiPickConfidence: matchOdds?.ai_pick_confidence ?? null,
-        // ✅ 상세 페이지 predict API가 저장한 최종 AI 예측 (최우선 사용)
+        // ✅ 상세 페이지 predict API가 저장한 최종 AI 분석 (최우선 사용)
         aiPrediction: matchOdds?.ai_home_win_prob != null ? {
           homeWinProb: matchOdds.ai_home_win_prob,
           awayWinProb: matchOdds.ai_away_win_prob,

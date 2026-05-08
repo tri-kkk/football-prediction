@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 
 // =====================================================
-// 야구 조합 픽 광고 시청 잠금 해제 훅 (리그별)
+// 야구 다경기 분석 광고 시청 잠금 해제 훅 (리그별)
 // - localStorage 기반
 // - KST 자정 자동 리셋 (날짜 키)
 // - 리그(KBO/MLB/NPB)별 독립 잠금

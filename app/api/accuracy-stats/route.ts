@@ -181,7 +181,7 @@ async function predictMatch(match: any): Promise<{
     finalWin /= finalTotal; finalDraw /= finalTotal; finalLose /= finalTotal
   }
   
-  // 예측
+  // 분석
   let predictedWinner: 'HOME' | 'DRAW' | 'AWAY' | 'SKIP' = 'HOME'
   const maxProb = Math.max(finalWin, finalDraw, finalLose)
   if (finalWin === maxProb) predictedWinner = 'HOME'

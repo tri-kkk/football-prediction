@@ -160,10 +160,10 @@ export default function SignupCompletePage() {
             {/* 프리미엄 혜택 */}
             <ul className="space-y-2 mb-5">
               {[
-                { ko: '✓ PICK 예측 상세 분석 열람', en: '✓ Full PICK analysis access' },
+                { ko: '✓ PICK 분석 상세 분석 열람', en: '✓ Full PICK analysis access' },
                 { ko: '✓ 트렌드 차트 전체 기간 조회', en: '✓ Full trend chart history' },
                 { ko: '✓ 광고 없이 쾌적한 이용', en: '✓ Ad-free experience' },
-                { ko: '✓ 24시간 전 경기 예측 선공개', en: '✓ 24h early predictions' },
+                { ko: '✓ 24시간 전 경기 분석 선공개', en: '✓ 24h early predictions' },
               ].map((item, i) => (
                 <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
                   <span className="text-yellow-400">{language === 'ko' ? item.ko.split(' ')[0] : item.en.split(' ')[0]}</span>
@@ -190,7 +190,7 @@ export default function SignupCompletePage() {
                 { ko: '리그별 오즈 트렌드 분석', en: 'League odds trend analysis' },
                 { ko: '24시간 배당률 변화 차트', en: '24-hour odds change charts' },
                 { ko: '팀별 최근 폼 분석', en: 'Team form analysis' },
-                { ko: '경기 예측 기본 데이터', en: 'Basic prediction data' },
+                { ko: '경기 분석 기본 데이터', en: 'Basic prediction data' },
               ].map((item, i) => (
                 <li key={i} className="flex items-center gap-3 text-sm text-gray-300">
                   <span className="text-green-500 text-lg">✓</span>
@@ -209,7 +209,7 @@ export default function SignupCompletePage() {
             </p>
             <ol className="space-y-3 text-sm text-gray-300 mb-6">
               {[
-                { ko: '경기 예측과 트렌드 분석 시작', en: 'Start exploring predictions' },
+                { ko: '경기 분석과 트렌드 분석 시작', en: 'Start exploring predictions' },
                 { ko: 'Premium으로 업그레이드', en: 'Upgrade to Premium' },
                 { ko: '친구 초대하고 보상 받기', en: 'Refer friends and earn rewards' },
               ].map((item, i) => (

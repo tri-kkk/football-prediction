@@ -1,5 +1,5 @@
 // app/api/predictions/batch/route.ts
-// 여러 경기의 예측 데이터를 한 번에 조회 - 기존 테이블 구조
+// 여러 경기의 분석 데이터를 한 번에 조회 - 기존 테이블 구조
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'

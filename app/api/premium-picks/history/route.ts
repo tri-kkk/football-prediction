@@ -1,5 +1,5 @@
 // app/api/premium-picks/history/route.ts
-// 프리미엄 픽 히스토리 조회 API (적중 통계용)
+// 프리미엄 리포트 히스토리 조회 API (적중 통계용)
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'

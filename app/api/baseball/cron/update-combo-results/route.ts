@@ -1,6 +1,6 @@
 // app/api/baseball/cron/update-combo-results/route.ts
-// 조합 픽 결과 자동 업데이트
-// - pending 상태의 조합 픽을 확인
+// 다경기 분석 결과 자동 업데이트
+// - pending 상태의 다경기 분석을 확인
 // - 경기 결과(FT)가 나온 경우 적중/미적중 판정
 // - 모든 경기가 끝나면 조합 전체 결과 업데이트
 
@@ -18,9 +18,9 @@ export async function GET(request: NextRequest) {
   // 인증 (Supabase pg_cron에서 net.http_get으로 호출하므로 open access)
   // 다른 크론 라우트들과 동일하게 처리
 
-  console.log('🔄 조합 픽 결과 업데이트 시작')
+  console.log('🔄 다경기 분석 결과 업데이트 시작')
 
-  // 1. pending 상태의 조합 픽 조회 (최근 7일)
+  // 1. pending 상태의 다경기 분석 조회 (최근 7일)
   const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
   const weekAgo = new Date(kstNow.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 

@@ -40,7 +40,7 @@ interface Match {
   } | null
   aiPick?: string | null
   aiPickConfidence?: string | null
-  // ✅ 상세 페이지 predict API가 저장한 최종 AI 예측 (최우선 사용)
+  // ✅ 상세 페이지 predict API가 저장한 최종 AI 분석 (최우선 사용)
   aiPrediction?: {
     homeWinProb: number
     awayWinProb: number
@@ -90,8 +90,8 @@ const LEAGUE_COLOR_HEX: Record<string, string> = {
 // 유틸리티 함수
 // =====================================================
 
-function calculatePrediction(match: Match): PredictionResult['prediction'] {
-  // ✅ 0순위: 상세 페이지 predict API가 DB에 저장한 최종 AI 예측 (가장 정확)
+function calculatePrediction(match: Match): PredictionResult['analysis'] {
+  // ✅ 0순위: 상세 페이지 predict API가 DB에 저장한 최종 AI 분석 (가장 정확)
   // baseball_odds_latest.ai_home_win_prob 등을 그대로 사용 → 상세 페이지와 100% 일치
   if (match.aiPrediction && typeof match.aiPrediction.homeWinProb === 'number') {
     const homeProb = match.aiPrediction.homeWinProb
@@ -153,7 +153,7 @@ function calculatePrediction(match: Match): PredictionResult['prediction'] {
     return { homeWinProb: homeProb, awayWinProb: awayProb, recommendedBet, confidence: Math.max(homeProb, awayProb), grade, reason, reasonEn, isML: true }
   }
 
-  // ✅ 2순위: ML 예측값
+  // ✅ 2순위: ML 분석값
   const ml = match.mlPrediction
   const odds = match.odds
   const source = ml ?? (odds ? { homeWinProb: odds.homeWinProb, awayWinProb: odds.awayWinProb } : null)
@@ -375,7 +375,7 @@ function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
 
 function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: {
   match: Match
-  prediction: PredictionResult['prediction']
+  prediction: PredictionResult['analysis']
   language: 'ko' | 'en'
   isPremium: boolean
   isLoggedIn: boolean
@@ -480,7 +480,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
           </div>
         )}
 
-        {/* 확률 바 + 예측 — TOP 잠금 시 통합 블러 */}
+        {/* 확률 바 + 분석 — TOP 잠금 시 통합 블러 */}
         {isAnalyzing ? (
           <div className="relative rounded-xl overflow-hidden mt-1"
             style={{ border: '1px solid #334155' }}>
@@ -554,7 +554,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
         )}
       </div>
 
-      {/* 예측 영역 — 잠금/분석중이 아닌 경우만 */}
+      {/* 분석 영역 — 잠금/분석중이 아닌 경우만 */}
       {!isLocked && !isAnalyzing && (
         prediction.recommendedBet !== 'NONE' ? (
           <div className="mx-4 mb-3 px-3 py-2.5 rounded-xl"

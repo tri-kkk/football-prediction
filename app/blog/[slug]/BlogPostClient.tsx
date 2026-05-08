@@ -256,7 +256,7 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
             const BLUR_KEYWORDS = [
               '전술 포인트', 'Tactical Points',
               '승부처', 'Key Factors',
-              'TrendSoccer 예측', 'TrendSoccer Prediction',
+              'TrendSoccer 분석', 'TrendSoccer Prediction',
             ]
 
             const isBlurSection = (section: string): boolean => {
@@ -273,7 +273,7 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
               if (firstLine.includes('전술') || firstLine.includes('Tactical')) return { color: 'from-purple-500 to-purple-600', icon: '🎯' }
               if (firstLine.includes('라인업') || firstLine.includes('Lineup')) return { color: 'from-green-500 to-green-600', icon: '👥' }
               if (firstLine.includes('승부처') || firstLine.includes('Key Factor')) return { color: 'from-rose-500 to-rose-600', icon: '💡' }
-              if (firstLine.includes('예측') || firstLine.includes('Prediction')) return { color: 'from-emerald-500 to-emerald-600', icon: '📈' }
+              if (firstLine.includes('분석') || firstLine.includes('Analysis')) return { color: 'from-emerald-500 to-emerald-600', icon: '📈' }
               if (firstLine.includes('상대 전적') || firstLine.includes('Head')) return { color: 'from-orange-500 to-orange-600', icon: '⚔️' }
               if (firstLine.includes('Tags') || firstLine.includes('태그')) return { color: 'from-gray-500 to-gray-600', icon: '🏷️' }
               return null
@@ -504,7 +504,7 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
                           </p>
                           <p className="text-gray-400 text-sm mb-2">
                             {currentLanguage === 'ko'
-                              ? '전술 분석 · 승부처 · 상세 예측 데이터'
+                              ? '전술 분석 · 승부처 · 상세 분석 데이터'
                               : 'Tactical Analysis · Key Factors · Detailed Predictions'}
                           </p>
                           <p className="text-gray-600 text-xs mb-6">

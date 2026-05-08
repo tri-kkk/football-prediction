@@ -87,7 +87,7 @@ function generateDescription(pattern: string, homeWinRate: number, drawRate: num
   } else if (drawRate >= 0.35) {
     desc = `무승부 높은 패턴 (${(drawRate * 100).toFixed(1)}%)`
   } else {
-    desc = `균형 패턴 - 예측 어려움`
+    desc = `균형 패턴 - 분석 어려움`
   }
   
   if (pattern.startsWith('1-') && pattern.endsWith('-3')) {

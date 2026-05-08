@@ -1,7 +1,7 @@
 // app/api/baseball/cron/batch-predict/route.ts
-// 예정된 야구 경기들의 AI 예측을 배치로 실행하고 DB에 저장
+// 예정된 야구 경기들의 AI 분석을 배치로 실행하고 DB에 저장
 // pg_cron에서 매시간 호출 → baseball_odds_latest.ai_* 컬럼 자동 갱신
-// 덕분에 사용자가 상세 페이지를 열지 않아도 메인 목록에 AI 예측 표시됨
+// 덕분에 사용자가 상세 페이지를 열지 않아도 메인 목록에 AI 분석 표시됨
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -23,7 +23,7 @@ const API_BASE =
 
 // 상태 확인용
 export async function GET() {
-  // 저장된 예측 수 통계
+  // 저장된 분석 수 통계
   const { count: totalWithAi } = await supabase
     .from('baseball_odds_latest')
     .select('*', { count: 'exact', head: true })
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // 2. 이미 최근에 예측된 경기 skip
+  // 2. 이미 최근에 분석된 경기 skip
   const apiMatchIds = matches.map((m) => m.api_match_id)
   const { data: freshOdds } = await supabase
     .from('baseball_odds_latest')

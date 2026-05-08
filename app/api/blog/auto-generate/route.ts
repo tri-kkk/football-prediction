@@ -17,7 +17,7 @@ const API_BASE = process.env.NEXT_PUBLIC_SITE_URL || 'https://trendsoccer.com'
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || ''
 
 // ============================================
-// 예측 페이지에서 지원하는 리그만 (KL, J리그 포함)
+// 분석 페이지에서 지원하는 리그만 (KL, J리그 포함)
 // ============================================
 const LEAGUE_INFO: Record<string, { 
   nameKo: string; nameEn: string; 
@@ -199,7 +199,7 @@ function generateTitleEn(home: string, away: string, leagueInfo: any, seasonCtx:
   return patterns[hash % patterns.length]()
 }
 
-// 예측 없는 excerpt (프리미엄 보호)
+// 분석 없는 excerpt (프리미엄 보호)
 function generateExcerptKr(homeKo: string, awayKo: string, leagueInfo: any, seasonCtx: SeasonContext): string {
   const patterns = [
     `${homeKo}와 ${awayKo}의 ${leagueInfo.nameKo} 경기를 데이터로 분석합니다. 양팀 폼, 전력 비교, 핵심 관전 포인트까지.`,
@@ -753,7 +753,7 @@ async function generateAISections(
 ## 경기 정보
 - ${hKo}(${match.home_team}) vs ${aKo}(${match.away_team})
 - ${li.nameKo} (${li.nameEn}), ${dateStr} (한국시간)
-- 예측: ${pickKo} (${maxP}%), 등급: ${pred.recommendation.grade}
+- 분석: ${pickKo} (${maxP}%), 등급: ${pred.recommendation.grade}
 - 배당: ${match.home_odds} / ${match.draw_odds} / ${match.away_odds}
 - 파워지수: ${hKo} ${pred.homePower||'?'} vs ${aKo} ${pred.awayPower||'?'} (차이: ${pDiff}점)
 
@@ -794,7 +794,7 @@ ${h2hSum}${seasonNote}${newsContext}
 - **대회 형식/라운드 구조 언급 금지** — "단판전", "단판 승부", "1차전", "2차전", "원정 골 규칙" 등 대회 진행 방식을 임의로 서술하지 마세요. 이 경기 자체의 데이터만 다루세요
 - 데이터에 없는 내용 창작 (감독 전술 스타일, 팀 문화, 구단 역사 등) — 제공된 수치와 통계만 사용
 - 단, 뉴스에 명시된 선수명/감독명은 뉴스 섹션(news_ko/news_en)에서만 인용 가능
-- **예측 결과(승/무/패, 확률%) 언급 금지** — 인트로와 전술에서 결과를 암시하지 마세요
+- **분석 결과(승/무/패, 확률%) 언급 금지** — 인트로와 전술에서 결과를 암시하지 마세요
 
 ### 데이터 정합성 (매우 중요)
 - 제공된 데이터만 사용하세요. 없는 수치를 만들지 마세요.
@@ -812,7 +812,7 @@ ${seasonCtx.cautionNote ? `- **${seasonCtx.cautionNote}**` : ''}
 - 베팅/토토/배당 관련 기사는 무시하세요.
 
 ### 섹션별 요구
-1. **인트로 (3-4문장)**: 경기 날짜/시간 포함, 양팀 현재 상황과 이번 경기의 관전 포인트. 예측 결과를 직접 언급하지 말 것. 선수명/라인업 언급 금지.
+1. **인트로 (3-4문장)**: 경기 날짜/시간 포함, 양팀 현재 상황과 이번 경기의 관전 포인트. 분석 결과를 직접 언급하지 말 것. 선수명/라인업 언급 금지.
 2. **전술 포인트 (4-6문장)**: 제공된 홈/원정 성적, 득실 평균, 강점/약점 데이터만 기반으로 분석. 반드시 구체적 수치 인용. 선수명/감독명/전술 시스템 추측 금지.
 3. **승부처 (3개, 각 2-3문장)**: 분석 근거 데이터 기반, **1. 제목** 형식. 구체적 수치 포함. 수치 없이 감으로 쓰는 문장 금지.
 4. **뉴스 이슈**: 부상/결장/이적/팀 소식 등 관련 뉴스 요약. 해당 팀 관련 뉴스가 없으면 빈 태그.
@@ -867,7 +867,7 @@ function translateReason(reason: string): string {
   if (reason === 'Warning: Home promoted') return '⚠️ 홈팀 승격팀'
   if (reason === 'Warning: Away promoted') return '⚠️ 원정팀 승격팀'
   if (reason.includes('Low edge') && reason.includes('risky')) {
-    return reason.replace('Low edge', '확률 차이').replace('- risky', '- 예측 어려움')
+    return reason.replace('Low edge', '확률 차이').replace('- risky', '- 분석 어려움')
   }
   if (reason === 'Insufficient team stats') return '팀 통계 부족'
   return reason
@@ -916,7 +916,7 @@ function isLeagueInSeasonStart(leagueCode: string): boolean {
   return false
 }
 
-// 예측 데이터 유효성 검증
+// 분석 데이터 유효성 검증
 function isPredictionValid(prediction: any): boolean {
   if (!prediction?.finalProb) return false
   
@@ -1128,7 +1128,7 @@ function generateContentKo(
   } else {
     c += `${dateStr} ${timeStr}(한국시간), ${leagueInfo.nameKo} ${homeKo}와 ${awayKo}의 대결이 예정되어 있다. `
     c += `TrendSoccer AI 분석 결과 **${getPickKo(prediction.recommendation.pick)}** 가능성이 가장 높으며, `
-    c += `예측 등급은 **${getGradeKo(prediction.recommendation.grade)}**다. `
+    c += `분석 등급은 **${getGradeKo(prediction.recommendation.grade)}**다. `
     if (prediction.homePower && prediction.awayPower) {
       const diff = Math.abs(prediction.homePower - prediction.awayPower)
       if (diff >= 100) c += `파워 지수 차이가 **${diff}점**으로 상당한 전력 격차가 존재한다.\n\n`
@@ -1290,15 +1290,15 @@ function generateContentKo(
     c += ai.newsKo + '\n\n'
   }
   
-  // ===== 📈 TrendSoccer 예측 =====
-  c += `## TrendSoccer 예측\n\n`
+  // ===== 📈 TrendSoccer 분석 =====
+  c += `## TrendSoccer 분석\n\n`
   c += `| | 확률 |\n|:---|:---|\n`
   c += `| ${homeKo} | ${generateProbBar('', homePct)} |\n`
   c += `| 무승부 | ${generateProbBar('', drawPct)} |\n`
   c += `| ${awayKo} | ${generateProbBar('', awayPct)} |\n\n`
   
   c += `| 항목 | 분석 |\n|:---|:---|\n`
-  c += `| 예측 | **${getPickKo(prediction.recommendation.pick)}** |\n`
+  c += `| 분석 | **${getPickKo(prediction.recommendation.pick)}** |\n`
   c += `| 등급 | **${getGradeKo(prediction.recommendation.grade)}** |\n`
   c += `| 배당 | ${match.home_odds} / ${match.draw_odds} / ${match.away_odds} |\n`
   if (prediction.homePower && prediction.awayPower) {
@@ -1506,7 +1506,7 @@ function generateTags(match: any, leagueInfo: any): string[] {
     awayKo !== match.away_team ? awayKo : match.away_team.replace(/\s+/g, ''),
     'MatchPreview',
     '축구분석',
-    '경기예측',
+    '경기분석',
     'Football',
     isCup ? '유럽컵' : '해외축구',
     '프리뷰',
@@ -1572,11 +1572,11 @@ export async function GET(request: NextRequest) {
       if (existingSlugs.has(slug)) { skipped++; continue }
       
       try {
-        // 1. 예측 데이터
+        // 1. 분석 데이터
         const prediction = await fetchPrediction(match)
         if (!prediction) { failed++; continue }
         
-        // 1.5. 예측 유효성 검증 (확률 0% 등)
+        // 1.5. 분석 유효성 검증 (확률 0% 등)
         if (!isPredictionValid(prediction)) {
           console.log(`⏭️ Invalid prediction: ${match.home_team} vs ${match.away_team}`)
           failed++
@@ -1630,7 +1630,7 @@ export async function GET(request: NextRequest) {
           Math.round(prediction.finalProb.away * 100),
         )
         
-        // 6. DB INSERT — 제목 다양화, excerpt에 예측 노출 안 함
+        // 6. DB INSERT — 제목 다양화, excerpt에 분석 노출 안 함
         const titleKr = generateTitleKr(homeKo, awayKo, leagueInfo, seasonCtx, homeStats, awayStats)
         const titleEn = generateTitleEn(match.home_team, match.away_team, leagueInfo, seasonCtx, homeStats, awayStats)
         const excerptKr = generateExcerptKr(homeKo, awayKo, leagueInfo, seasonCtx)

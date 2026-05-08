@@ -586,17 +586,17 @@ export async function GET(request: NextRequest) {
     
     console.log(`🔍 중복 제거 후: ${uniqueMatches.length}개`)
 
-    // 예측 데이터 가져오기
+    // 분석 데이터 가져오기
     const { data: predictions, error: predError } = await supabase
       .from('match_odds_latest')
       .select('*')
       .in('match_id', uniqueMatches.map(m => String(m.fixture.id)))
 
     if (predError) {
-      console.error('❌ 예측 데이터 조회 실패:', predError)
+      console.error('❌ 분석 데이터 조회 실패:', predError)
     }
 
-    console.log(`📊 예측 데이터: ${predictions?.length || 0}개`)
+    console.log(`📊 분석 데이터: ${predictions?.length || 0}개`)
 
     let savedCount = 0
     let skippedCount = 0
@@ -607,9 +607,9 @@ export async function GET(request: NextRequest) {
         const matchId = String(match.fixture.id)
         const prediction = predictions?.find(p => String(p.match_id) === matchId)
 
-        // 예측 데이터 없으면 결과 저장은 스킵하되, status는 업데이트!
+        // 분석 데이터 없으면 결과 저장은 스킵하되, status는 업데이트!
         if (!prediction) {
-          // 🔥 예측 없어도 match_odds_latest status 업데이트
+          // 🔥 분석 없어도 match_odds_latest status 업데이트
           const { error: statusUpdateError } = await supabase
             .from('match_odds_latest')
             .update({ 
@@ -619,7 +619,7 @@ export async function GET(request: NextRequest) {
             .eq('match_id', matchId)
           
           if (!statusUpdateError) {
-            console.log(`  🔄 Status 업데이트 (예측 없음): ${match.teams.home.name} vs ${match.teams.away.name} → ${match.fixture.status.short}`)
+            console.log(`  🔄 Status 업데이트 (분석 없음): ${match.teams.home.name} vs ${match.teams.away.name} → ${match.fixture.status.short}`)
           }
           
           skippedCount++
@@ -630,7 +630,7 @@ export async function GET(request: NextRequest) {
         const finalScoreHome = match.goals.home
         const finalScoreAway = match.goals.away
 
-        // 예측 계산
+        // 분석 계산
         const { predictedWinner, predictedScoreHome, predictedScoreAway, probabilities } = 
           calculatePrediction(prediction)
 
@@ -776,7 +776,7 @@ async function fetchFinishedMatches(leagueId: number, fromDate: string, toDate: 
   return finishedMatches
 }
 
-// 📊 예측 계산
+// 📊 분석 계산
 function calculatePrediction(prediction: any) {
   const homeOdds = prediction.home_odds || 2.0
   const drawOdds = prediction.draw_odds || 3.5
@@ -795,7 +795,7 @@ function calculatePrediction(prediction: any) {
     away: Number(((awayProb / total) * 100).toFixed(2))
   }
 
-  // 승자 예측 (확률이 가장 높은 쪽)
+  // 승자 분석 (확률이 가장 높은 쪽)
   let predictedWinner: 'home' | 'away' | 'draw' = 'home'
   if (probabilities.away > probabilities.home && probabilities.away > probabilities.draw) {
     predictedWinner = 'away'
@@ -803,7 +803,7 @@ function calculatePrediction(prediction: any) {
     predictedWinner = 'draw'
   }
 
-  // 스코어 예측 (단순 로직)
+  // 스코어 분석 (단순 로직)
   let predictedScoreHome = 1
   let predictedScoreAway = 1
 

@@ -1,5 +1,5 @@
 // app/api/cron/premium-picks/route.ts
-// 프리미엄 픽 자동 생성 Cron
+// 프리미엄 리포트 자동 생성 Cron
 // K리그/J리그 지원 추가
 
 import { NextResponse } from 'next/server'
@@ -143,7 +143,7 @@ export async function GET(request: Request) {
       await new Promise(resolve => setTimeout(resolve, 300))
     }
     
-    // 6. 프리미엄 픽 조건 필터링 (엄격한 기준)
+    // 6. 프리미엄 리포트 조건 필터링 (엄격한 기준)
     const premiumPicks = analyzedMatches.filter(m => {
       if (!m.prediction) return false
       const p = m.prediction

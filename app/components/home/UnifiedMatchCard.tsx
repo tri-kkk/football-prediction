@@ -1,4 +1,4 @@
-// 🔥 통합 매치 카드 — BC.game 컬러 톤 (단순화: 예측 영역 제거)
+// 🔥 통합 매치 카드 — BC.game 컬러 톤 (단순화: 분석 영역 제거)
 'use client'
 
 import { useState } from 'react'

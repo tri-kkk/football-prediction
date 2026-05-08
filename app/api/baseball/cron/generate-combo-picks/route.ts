@@ -1,5 +1,5 @@
 // app/api/baseball/cron/generate-combo-picks/route.ts
-// 야구 조합 픽 자동 생성 크론
+// 야구 다경기 분석 자동 생성 크론
 // v2: 배당 없으면 스킵, 배당 있으면 배당확률 70% + Railway 30% 가중 평균
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -79,7 +79,7 @@ async function getTeamStats(team: string, league: string) {
   }
 }
 
-// ==================== Railway 예측 ====================
+// ==================== Railway 분석 ====================
 async function predictMatch(match: any, league: string) {
   try {
     const [homeStats, awayStats] = await Promise.all([
@@ -157,7 +157,7 @@ async function predictMatch(match: any, league: string) {
       },
     }
   } catch (e) {
-    console.error(`  ❌ Railway 예측 실패 (${match.api_match_id}):`, e)
+    console.error(`  ❌ Railway 분석 실패 (${match.api_match_id}):`, e)
     return null
   }
 }
@@ -318,7 +318,7 @@ async function generateAIAnalysis(combo: MatchPrediction[], league: string): Pro
       max_tokens: 500,
       messages: [{
         role: 'user',
-        content: `당신은 프로 야구 분석가입니다. 아래 ${league} ${combo.length}폴드 조합 픽에 대해 한국어로 간결한 분석 요약문을 작성해주세요.
+        content: `당신은 프로 야구 분석가입니다. 아래 ${league} ${combo.length}폴드 다경기 분석에 대해 한국어로 간결한 분석 요약문을 작성해주세요.
 
 ${matchSummaries}
 
@@ -384,7 +384,7 @@ export async function GET(request: NextRequest) {
 
   for (const league of leagues) {
     const targetDate = league === 'MLB' ? tomorrow : today
-    console.log(`\n🎯 [${league}] 조합 픽 생성 시작 - ${targetDate} (force=${force})`)
+    console.log(`\n🎯 [${league}] 다경기 분석 생성 시작 - ${targetDate} (force=${force})`)
 
     // 1. 이미 생성된 픽이 있으면 스킵 (force 모드에서는 기존 삭제 후 재생성)
     const { data: existing } = await supabase
@@ -446,12 +446,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 4. 각 경기에 대해 Railway 예측 + 배당 조회
+    // 4. 각 경기에 대해 Railway 분석 + 배당 조회
     const predictions: MatchPrediction[] = []
     let skippedNoOdds = 0
 
     for (const match of matches) {
-      // Railway 예측
+      // Railway 분석
       const prediction = await predictMatch(match, league)
       if (!prediction) continue
 
@@ -581,7 +581,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (predictions.length < 2) {
-      console.log(`  ⚠️ 유효한 예측 ${predictions.length}개 - 조합 불가 (배당 없어서 스킵: ${skippedNoOdds}개)`)
+      console.log(`  ⚠️ 유효한 분석 ${predictions.length}개 - 조합 불가 (배당 없어서 스킵: ${skippedNoOdds}개)`)
       results[league] = { status: 'insufficient', count: predictions.length, skippedNoOdds, totalMatches: matches.length }
       continue
     }

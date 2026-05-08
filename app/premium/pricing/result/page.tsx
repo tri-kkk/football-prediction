@@ -63,7 +63,7 @@ function ResultContent() {
 
             <div className="space-y-3">
               <Link href="/premium" className="block w-full py-3.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black rounded-xl font-bold transition-all">
-                {language === 'ko' ? '프리미엄 픽 보기' : 'View Premium Picks'}
+                {language === 'ko' ? '프리미엄 리포트 보기' : 'View Premium Picks'}
               </Link>
               <Link href="/" className="block w-full py-3.5 bg-[#1a1a1a] hover:bg-[#252525] border border-gray-800 rounded-xl font-medium transition-colors">
                 {language === 'ko' ? '홈으로' : 'Home'}

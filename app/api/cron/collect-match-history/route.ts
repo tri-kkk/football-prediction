@@ -1,5 +1,5 @@
 // app/api/cron/collect-match-history/route.ts
-// 선제골 예측 시스템용 경기 데이터 수집 API
+// 선제골 분석 시스템용 경기 데이터 수집 API
 // API-Football에서 경기 결과, 선제골, 배당 데이터를 가져와 fg_match_history에 저장
 // 승격팀: 이전 시즌 1부 기록이 없으면 자동 판별
 

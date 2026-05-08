@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
         final_score_home: row.final_score_home ?? 0,
         final_score_away: row.final_score_away ?? 0,
         
-        // 예측 데이터
+        // 분석 데이터
         predicted_winner: row.predicted_winner || null,
         predicted_score_home: row.predicted_score_home ?? null,
         predicted_score_away: row.predicted_score_away ?? null,
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // 예측 데이터 있는 경기 수 로깅
+    // 분석 데이터 있는 경기 수 로깅
     const withPredictions = matches.filter(m => m.predicted_home_probability !== null).length
     console.log(`📊 Matches with predictions: ${withPredictions}/${matches.length}`)
 

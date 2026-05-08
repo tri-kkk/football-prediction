@@ -291,7 +291,7 @@ export default function NewsPage() {
                   </div>
                 </div>
                 <span className="text-emerald-400 font-semibold text-sm group-hover:translate-x-1 transition-transform">
-                  {uiLang === 'ko' ? '무료 예측 보기 →' : 'View Predictions →'}
+                  {uiLang === 'ko' ? '무료 분석 보기 →' : 'View Predictions →'}
                 </span>
               </div>
             </div>

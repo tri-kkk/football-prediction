@@ -1,7 +1,7 @@
 {
-  "name": "TrendSoccer - AI 축구 예측",
+  "name": "TrendSoccer - AI 축구 분석",
   "short_name": "TrendSoccer",
-  "description": "실시간 오즈 트렌드 분석 및 AI 기반 축구 경기 예측",
+  "description": "실시간 오즈 트렌드 분석 및 AI 기반 축구 경기 분석",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -59,21 +59,21 @@
     {
       "name": "프리미어리그",
       "short_name": "EPL",
-      "description": "프리미어리그 경기 예측",
+      "description": "프리미어리그 경기 분석",
       "url": "/?league=PL",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "라리가",
       "short_name": "LaLiga",
-      "description": "라리가 경기 예측",
+      "description": "라리가 경기 분석",
       "url": "/?league=PD",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "챔피언스리그",
       "short_name": "UCL",
-      "description": "챔피언스리그 경기 예측",
+      "description": "챔피언스리그 경기 분석",
       "url": "/?league=CL",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }

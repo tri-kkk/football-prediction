@@ -11,7 +11,7 @@ interface MenuItem { ko: string; href?: string; matchPaths?: string[]; children?
 const MENU: MenuItem[] = [
   { ko: '홈', href: '/' },
   {
-    ko: '예측',
+    ko: '경기 일정',
     matchPaths: [],
     children: [
       { ko: '프리미어리그', href: '/?league=PL', logo: 'https://media.api-sports.io/football/leagues/39.png' },
@@ -28,12 +28,12 @@ const MENU: MenuItem[] = [
     ],
   },
   {
-    ko: '분석',
+    ko: 'AI 분석',
     matchPaths: ['/premium', '/baseball/predictions', '/baseball/combo-picks'],
     children: [
       { ko: '축구 프리미엄', href: '/premium' },
       { ko: '야구 분석', href: '/baseball/predictions' },
-      { ko: '야구 조합 픽', href: '/baseball/combo-picks' },
+      { ko: '야구 다경기 분석', href: '/baseball/combo-picks' },
     ],
   },
   {

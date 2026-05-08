@@ -379,7 +379,7 @@ async function getUpcomingFixturesWithOdds(leagueCode: string, leagueId: number,
 
 // 메인 핸들러
 export async function GET(request: NextRequest) {
-  console.log('🎯 예측 생성 Cron 시작:', new Date().toISOString())
+  console.log('🎯 분석 생성 Cron 시작:', new Date().toISOString())
   console.log(`📊 총 ${Object.keys(LEAGUE_IDS).length}개 리그 처리 예정`)
 
   const apiKey = process.env.API_FOOTBALL_KEY
@@ -464,11 +464,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`\n🎯 예측 생성 완료: ${generatedCount}개 생성, ${errorCount}개 오류`)
+    console.log(`\n🎯 분석 생성 완료: ${generatedCount}개 생성, ${errorCount}개 오류`)
 
     return NextResponse.json({
       success: true,
-      message: '예측 생성 완료',
+      message: '분석 생성 완료',
       stats: {
         leaguesProcessed: Object.keys(LEAGUE_IDS).length,
         generated: generatedCount,
@@ -478,7 +478,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('💥 예측 생성 Cron 오류:', error)
+    console.error('💥 분석 생성 Cron 오류:', error)
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

@@ -200,7 +200,7 @@ interface Match {
   lineupAvailable?: boolean
   homeFormation?: string
   awayFormation?: string
-  // 🆕 FotMob 스타일: 예측 결과 관련 필드
+  // 🆕 FotMob 스타일: 분석 결과 관련 필드
   predictedWinner?: 'home' | 'draw' | 'away'
   actualWinner?: 'home' | 'draw' | 'away'
   isWinnerCorrect?: boolean
@@ -261,7 +261,7 @@ function getMatchStatus(match: Match): MatchStatus {
   return 'SCHEDULED'
 }
 
-// 🆕 예측 승자 계산
+// 🆕 분석 승자 계산
 function getPredictedWinner(match: Match): 'home' | 'draw' | 'away' {
   const { homeWinRate, drawRate, awayWinRate } = match
   if (homeWinRate >= drawRate && homeWinRate >= awayWinRate) return 'home'
@@ -615,7 +615,7 @@ export default function FootballHomeContent() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const desktopScrollRef = useRef<HTMLDivElement>(null) // 🆕 데스크톱 전용
   
-  // 💎 프리미엄 픽 미리보기 상태
+  // 💎 프리미엄 리포트 미리보기 상태
   const [premiumPreview, setPremiumPreview] = useState<any[]>([])
   const [premiumPreviewLoading, setPremiumPreviewLoading] = useState(false)
   
@@ -881,7 +881,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
     }
   }
 
-  // 💎 프리미엄 픽 미리보기 로드
+  // 💎 프리미엄 리포트 미리보기 로드
   useEffect(() => {
     const loadPremiumPreview = async () => {
       setPremiumPreviewLoading(true)
@@ -3294,7 +3294,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                             </button>
                                           </div>
 
-                                          {/* ━━━ 경기 예측 Poll ━━━ */}
+                                          {/* ━━━ 경기 분석 Poll ━━━ */}
                                           <div className="px-4 pb-3">
                                             <MatchPoll
                                               matchId={match.id?.toString() || ''}
@@ -3314,7 +3314,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                             />
                                           </div>
 
-                                          {/* ━━━ AI 경기 예측 분석 ━━━ */}
+                                          {/* ━━━ AI 경기 분석 분석 ━━━ */}
                                           <div className={`border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                                             <MatchPrediction
                                               fixtureId={match.id}

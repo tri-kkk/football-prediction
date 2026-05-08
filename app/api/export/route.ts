@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
             away: match.away_odds,
           },
           
-          // 예측 결과
+          // 분석 결과
           prediction: {
             result: prediction.recommendation.pick,
             resultKo: prediction.recommendation.pick === 'HOME' ? '홈승' : 
@@ -301,7 +301,7 @@ function formatAsText(matches: any[], date: string) {
     const p = match.prediction
     const gradeEmoji = p.grade === 'PICK' ? '🔥' : p.grade === 'GOOD' ? '✅' : '⚪'
     
-    // 예측 결과에 따른 확률
+    // 분석 결과에 따른 확률
     const resultProb = match.probability[p.result.toLowerCase()] || 0
     
     // 팀명 (한글)
@@ -323,8 +323,8 @@ function formatAsText(matches: any[], date: string) {
     lines.push(` ${homeTeam} : ${match.power.home}`)
     lines.push(` ${awayTeam} : ${match.power.away}`)
     
-    // 최종 예측 확률
-    lines.push(`📈 최종 예측 확률`)
+    // 최종 분석 확률
+    lines.push(`📈 최종 분석 확률`)
     lines.push(` ${homeTeam} ${match.probability.home}% | 무 ${match.probability.draw}% | ${awayTeam} ${match.probability.away}%`)
     
     // 패턴 (있을 경우만)
@@ -348,7 +348,7 @@ function formatAsText(matches: any[], date: string) {
 function formatAsMarkdown(matches: any[], date: string) {
   const lines: string[] = []
   
-  lines.push(`# 📅 ${date} 경기 예측\n`)
+  lines.push(`# 📅 ${date} 경기 분석\n`)
   lines.push(`> 총 **${matches.length}경기** 분석\n`)
   
   // PICK 경기
@@ -396,7 +396,7 @@ function formatMatchMarkdown(match: any) {
   lines.push(`|------|------|`)
   lines.push(`| ⏰ 시간 | ${match.time} |`)
   lines.push(`| 🏆 리그 | ${match.leagueName} |`)
-  lines.push(`| 🎯 예측 | **${p.resultKo}** (${match.probability[p.result.toLowerCase()]}%) |`)
+  lines.push(`| 🎯 분석 | **${p.resultKo}** (${match.probability[p.result.toLowerCase()]}%) |`)
   lines.push(`| ⚡ 파워차 | ${match.power.diff}점 |`)
   lines.push(`| 💰 배당 | ${match.odds.home?.toFixed(2)} / ${match.odds.draw?.toFixed(2)} / ${match.odds.away?.toFixed(2)} |`)
   lines.push('')

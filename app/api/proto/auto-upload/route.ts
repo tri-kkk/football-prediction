@@ -452,7 +452,7 @@ async function updateSlipStatus(round: string, matches: any[]) {
           break
         }
         
-        // 예측과 결과 비교
+        // 분석과 결과 비교
         if (match.result_code !== sel.prediction) {
           allCorrect = false
         }

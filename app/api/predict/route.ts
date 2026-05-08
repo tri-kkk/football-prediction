@@ -1,6 +1,6 @@
 // app/api/predict/route.ts
-// 선제골 기반 경기 예측 알고리즘 v1
-// 배당 + 팀 통계 + 패턴 + 폼 지수 → 최종 예측
+// 선제골 기반 경기 분석 알고리즘 v1
+// 배당 + 팀 통계 + 패턴 + 폼 지수 → 최종 분석
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -169,7 +169,7 @@ function evaluateConfidence(sampleSize: number): string {
 }
 
 // ============================================
-// 메인 예측 로직
+// 메인 분석 로직
 // ============================================
 
 async function predict(input: PredictionInput): Promise<PredictionResult> {
@@ -460,7 +460,7 @@ function generateRecommendation(
   if (probDiff < 0.10) {
     pick = 'SKIP'
     confidence = 'LOW'
-    reasons.unshift(`확률 차이 ${(probDiff * 100).toFixed(1)}% - 예측 어려움`)
+    reasons.unshift(`확률 차이 ${(probDiff * 100).toFixed(1)}% - 분석 어려움`)
   }
   
   return { pick, confidence, value, reasons }
@@ -499,7 +499,7 @@ export async function GET(request: NextRequest) {
   })
 }
 
-// POST: 예측 실행
+// POST: 분석 실행
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

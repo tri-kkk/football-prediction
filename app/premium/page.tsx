@@ -14,7 +14,7 @@ import { getTeamLogo } from '../teamLogos'
 
 const texts = {
   ko: {
-    title: '경기 예측',
+    title: '경기 분석',
     subtitle: '선제골 + 폼 기반 통계 분석',
     total: '총',
     matches: '경기',
@@ -31,7 +31,7 @@ const texts = {
     afterOpen: '후 오픈',
     matchStart: '경기 시작',
     powerIndex: '파워 지수',
-    finalProb: '최종 예측 확률',
+    finalProb: '최종 분석 확률',
     teamStats: '팀 상세 통계',
     firstGoalWin: '선제골 승률',
     comebackRate: '역전률',
@@ -61,7 +61,7 @@ const texts = {
     close: '닫기',
     expand: '상세보기',
     refresh: '새로고침',
-    disclaimer: '※ 이 예측은 통계 기반이며, 베팅 손실에 대한 책임을 지지 않습니다.',
+    disclaimer: '※ 이 분석은 통계 기반이며, 베팅 손실에 대한 책임을 지지 않습니다.',
     // 프리미엄 팀 분석
     premiumTeamAnalysis: '🔐 프리미엄 팀 분석',
     goalsByPeriod: '시간대별 득점',
@@ -92,7 +92,7 @@ const texts = {
     lateStrong: '막판 강함',
   },
   en: {
-    title: 'Match Prediction',
+    title: 'Match Analysis',
     subtitle: 'First Goal + Form Based Analysis',
     total: 'Total',
     matches: 'matches',
@@ -542,7 +542,7 @@ const translateReason = (reason: string, language: 'ko' | 'en'): string => {
     return '⚠️ 원정팀 승격팀'
   }
   if (reason.includes('Low edge') && reason.includes('risky')) {
-    return reason.replace('Low edge', '확률 차이').replace('- risky', '- 예측 어려움')
+    return reason.replace('Low edge', '확률 차이').replace('- risky', '- 분석 어려움')
   }
   if (reason === 'Insufficient team stats') {
     return '팀 통계 부족'
@@ -664,7 +664,7 @@ function ValueBadge({ value, t }: { value: string; t: typeof texts['ko'] }) {
   )
 }
 
-// 경기 예측 카드
+// 경기 분석 카드
 function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: { 
   match: MatchWithPrediction
   onAnalyze: () => void
@@ -697,7 +697,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
     }
   }, [])
   
-  // 예측이 로드되면 카운트 증가 (한 번만)
+  // 분석이 로드되면 카운트 증가 (한 번만)
   useEffect(() => {
     if (prediction && !session && typeof window !== 'undefined') {
       const viewedMatches = JSON.parse(localStorage.getItem('viewedMatches') || '[]')
@@ -770,7 +770,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
     fetchTeamStats()
   }, [prediction, isPremiumUser, match.home_team, match.away_team, match.league_code])
   
-  // 블러 조건: 비회원이고 2번째 이상 볼 때 (예측 로드 후)
+  // 블러 조건: 비회원이고 2번째 이상 볼 때 (분석 로드 후)
   const isBlurred = !session && viewedCount > 1
   
   // 팀명 번역
@@ -964,7 +964,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
         </div>
       </div>
       
-      {/* 예측 결과 */}
+      {/* 분석 결과 */}
       {loading ? (
         <div className="text-center py-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
@@ -1888,8 +1888,8 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               </div>
               <div className="text-gray-400 text-sm mb-4">
                 {language === 'ko' 
-                  ? '10,000+ 경기 데이터 기반 AI 예측' 
-                  : 'AI predictions based on 10,000+ matches'}
+                  ? '10,000+ 경기 데이터 기반 AI 분석' 
+                  : 'AI analysis based on 10,000+ matches'}
               </div>
               <Link 
                 href="/login"
@@ -1943,8 +1943,8 @@ export default function PremiumPredictPage() {
   const [loading, setLoading] = useState(true)
   const [selectedLeague, setSelectedLeague] = useState('ALL')
   const [analyzingAll, setAnalyzingAll] = useState(false)
-  const [premiumPicksData, setPremiumPicksData] = useState<MatchWithPrediction[]>([]) // 프리미엄 픽 전용
-  const [premiumLoading, setPremiumLoading] = useState(false) // 프리미엄 픽 로딩
+  const [premiumPicksData, setPremiumPicksData] = useState<MatchWithPrediction[]>([]) // 프리미엄 리포트 전용
+  const [premiumLoading, setPremiumLoading] = useState(false) // 프리미엄 리포트 로딩
   const [premiumRequested, setPremiumRequested] = useState(false) // 버튼 클릭 여부
   const [noPremiumPicks, setNoPremiumPicks] = useState(false) // 확신 경기 없음
   const [premiumStats, setPremiumStats] = useState<{
@@ -2061,7 +2061,7 @@ export default function PremiumPredictPage() {
     return () => clearInterval(interval)
   }, [noPremiumPicks])
   
-  // 🔥 프리미엄 픽 로드 함수 (DB에서 조회)
+  // 🔥 프리미엄 리포트 로드 함수 (DB에서 조회)
   const loadPremiumPicks = async () => {
     console.log('🔄 Loading Premium Picks from DB...')
     setPremiumLoading(true)
@@ -2069,7 +2069,7 @@ export default function PremiumPredictPage() {
     setNoPremiumPicks(false)
     
     try {
-      // DB에서 오늘의 프리미엄 픽 조회
+      // DB에서 오늘의 프리미엄 리포트 조회
       const response = await fetch('/api/premium-picks')
       
       if (response.ok) {
@@ -2211,7 +2211,7 @@ export default function PremiumPredictPage() {
       await new Promise(resolve => setTimeout(resolve, 200))
     }
     
-    // 💎 프리미엄 픽 조건 필터링 (엄격한 기준)
+    // 💎 프리미엄 리포트 조건 필터링 (엄격한 기준)
     const filtered = analyzedMatches.filter(m => {
       if (!m.prediction) return false
       const p = m.prediction
@@ -2481,7 +2481,7 @@ export default function PremiumPredictPage() {
             : m.league_code === selectedLeague
       )
   
-  // 💎 프리미엄 픽은 premiumPicksData state 사용 (별도 관리)
+  // 💎 프리미엄 리포트은 premiumPicksData state 사용 (별도 관리)
   const premiumPicks = premiumPicksData
   
   // 통계
@@ -2505,12 +2505,12 @@ export default function PremiumPredictPage() {
               <span className="text-emerald-500 text-[10px] md:text-xs font-semibold tracking-widest">MATCH ANALYTICS</span>
               <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mt-1 mb-2">
                 {language === 'ko' 
-                  ? '통계 기반 경기 예측' 
-                  : 'Statistics-Based Match Prediction'}
+                  ? '통계 기반 경기 분석' 
+                  : 'Statistics-Based Match Analysis'}
               </h1>
               <p className="text-gray-400 text-xs md:text-sm leading-relaxed">
                 {language === 'ko' 
-                  ? '8개 리그 4시즌, 10,000+ 경기 데이터를 토대로 만들어진 통계 예측 플랫폼' 
+                  ? '8개 리그 4시즌, 10,000+ 경기 데이터를 토대로 만들어진 통계 분석 플랫폼' 
                   : 'Prediction platform built on 10,000+ matches across 8 leagues over 4 seasons'}
               </p>
             </div>
@@ -2561,10 +2561,10 @@ export default function PremiumPredictPage() {
         </div>
       </header>
       
-      {/* 💎 프리미엄 픽 섹션 */}
+      {/* 💎 프리미엄 리포트 섹션 */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="relative">
-            {/* 프리미엄 픽 컨텐츠 */}
+            {/* 프리미엄 리포트 컨텐츠 */}
             <div>
               <div className="bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] border border-emerald-500/30 rounded-xl overflow-hidden">
                 {/* 헤더 - 골드 그라데이션 */}
@@ -2574,7 +2574,7 @@ export default function PremiumPredictPage() {
                       <span className="text-white text-xs font-black">P</span>
                     </div>
                     <span className="text-white font-bold text-lg">
-                      {language === 'ko' ? '프리미엄 픽' : 'Premium Picks'}
+                      {language === 'ko' ? '프리미엄 리포트' : 'Premium Picks'}
                     </span>
                   </div>
 
@@ -2767,7 +2767,7 @@ export default function PremiumPredictPage() {
                               </div>
                               <div className="flex items-center justify-center gap-2">
                                 <span className="text-gray-600 text-sm md:text-base">📊</span>
-                                <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '기본 예측만' : 'Basic picks'}</span>
+                                <span className="text-gray-500 text-sm md:text-base">{language === 'ko' ? '기본 분석만' : 'Basic picks'}</span>
                               </div>
                               <div className="flex items-center justify-center gap-2">
                                 <span className="text-gray-600 text-sm md:text-base">🎬</span>
@@ -2974,7 +2974,7 @@ export default function PremiumPredictPage() {
                       
                       {prediction && (
                         <>
-                          {/* 예측 결과 */}
+                          {/* 분석 결과 */}
                           <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-500/10 rounded-lg p-3 mb-2">
                             <div className="flex items-center justify-center gap-3">
                               <div className={`px-4 py-2 rounded-lg text-sm font-bold ${
@@ -3134,7 +3134,7 @@ export default function PremiumPredictPage() {
                 <div className="mt-4 text-center">
                   <p className="text-gray-500 text-xs">
                     {language === 'ko' 
-                      ? '⚠️ 본 예측은 통계 기반 참고 자료이며, 최종 결정과 책임은 본인에게 있습니다.'
+                      ? '⚠️ 본 분석은 통계 기반 참고 자료이며, 최종 결정과 책임은 본인에게 있습니다.'
                       : '⚠️ These predictions are for reference only. Final decisions and responsibility are yours.'}
                   </p>
                 </div>

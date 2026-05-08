@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
     console.log(`🔍 Fetching predictions for fixture: ${fixtureId}`)
 
-    // API-Football Predictions 엔드포인트 호출
+    // API-Football Analysis 엔드포인트 호출
     const response = await fetch(
       `https://${API_HOST}/predictions?fixture=${fixtureId}`,
       {
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
     const data = await response.json()
 
-    // 예측 데이터가 없는 경우
+    // 분석 데이터가 없는 경우
     if (!data.response || data.response.length === 0) {
       console.warn(`⚠️ No predictions available for fixture: ${fixtureId}`)
       return NextResponse.json(
@@ -120,9 +120,3 @@ export async function GET(request: Request) {
 
   } catch (error: any) {
     console.error('❌ Predictions API error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}

@@ -1,5 +1,5 @@
 // app/api/cron/premium-picks-results/route.ts
-// 프리미엄 픽 결과 확인 Cron
+// 프리미엄 리포트 결과 확인 Cron
 // 경기 종료 후 결과 체크하여 WIN/LOSE 업데이트
 
 import { NextResponse } from 'next/server'
@@ -87,7 +87,7 @@ export async function GET() {
           continue
         }
         
-        // 3. 예측 결과 판정
+        // 3. 분석 결과 판정
         const predictedPick = pick.prediction?.recommendation?.pick // 'HOME', 'AWAY', 'DRAW'
         
         let actualResult: 'HOME' | 'AWAY' | 'DRAW'

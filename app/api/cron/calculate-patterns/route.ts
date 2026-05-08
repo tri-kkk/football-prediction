@@ -72,7 +72,7 @@ function generateDescription(pattern: string, homeWinRate: number, drawRate: num
   }
   // 균형
   else {
-    desc = `균형 패턴 - 예측 어려움`
+    desc = `균형 패턴 - 분석 어려움`
   }
   
   // 특수 패턴

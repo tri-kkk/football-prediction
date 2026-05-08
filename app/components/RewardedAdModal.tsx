@@ -27,8 +27,8 @@ export default function RewardedAdModal({
   onComplete,
   countdownSec = 15,
   title = '광고 시청 후 잠금 해제',
-  subtitle = '아래 광고를 보시면 오늘 하루 야구 조합 픽이 무료로 풀립니다.',
-  rewardLabel = '오늘의 조합 픽 잠금 해제',
+  subtitle = '아래 광고를 보시면 오늘 하루 야구 다경기 분석이 무료로 풀립니다.',
+  rewardLabel = '오늘의 다경기 분석 잠금 해제',
 }: RewardedAdModalProps) {
   const [mounted, setMounted] = useState(false)
   const [remaining, setRemaining] = useState(countdownSec)

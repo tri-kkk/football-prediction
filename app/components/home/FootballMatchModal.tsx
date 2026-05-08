@@ -132,10 +132,10 @@ export default function FootballMatchModal({ match, onClose }: Props) {
           </div>
         )}
 
-        {/* AI 픽 + 예상 스코어 */}
+        {/* AI 리포트 + 예상 스코어 */}
         {(winnerLabel || (match.predictedScoreHome != null && match.predictedScoreAway != null)) && (
           <div className="mx-4 mb-4 rounded-xl border border-emerald-500/20 p-3" style={{ backgroundColor: '#1a1c1d' }}>
-            <div className="text-[10px] text-emerald-400 uppercase tracking-wider mb-2 font-bold">AI 예측</div>
+            <div className="text-[10px] text-emerald-400 uppercase tracking-wider mb-2 font-bold">AI 분석</div>
             <div className="flex items-center justify-between gap-3">
               {winnerLabel && (
                 <div>

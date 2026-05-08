@@ -113,7 +113,7 @@ export default function NewsKeywords({ homeTeam, awayTeam, matchId }: NewsKeywor
         }
       } else if (title.includes('lineup') || title.includes('starting')) {
         insight = '선발 라인업 발표'
-      } else if (title.includes('preview') || title.includes('prediction')) {
+      } else if (title.includes('preview') || title.includes('analysis')) {
         insight = '경기 프리뷰'
       }
       

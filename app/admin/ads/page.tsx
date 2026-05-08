@@ -371,7 +371,7 @@ const TABS = [
   { id: 'report', label: '광고 리포트', icon: '📉' },
   { id: 'blog', label: '블로그 관리', icon: '📝' },
   { id: 'proto', label: '프로토 관리', icon: '🎫' },
-  { id: 'export', label: '예측 Export', icon: '📤' },
+  { id: 'export', label: '분석 Export', icon: '📤' },
   { id: 'notices', label: '공지 관리', icon: '📣' },
   { id: 'revenue', label: '매출 관리', icon: '💵' },
   { id: 'pitcher', label: '선발 관리', icon: '⚾' },
@@ -1424,7 +1424,7 @@ export default function AdminDashboard() {
   // 전체 경기 포맷
   const formatAllMatches = (matches: any[], format: string, date: string): string => {
     if (format === 'markdown') {
-      let md = `# 📅 ${date} 경기 예측\n\n`
+      let md = `# 📅 ${date} 경기 분석\n\n`
       md += `> 총 **${matches.length}경기** 분석\n\n`
       
       matches.forEach((match, idx) => {
@@ -1437,7 +1437,7 @@ export default function AdminDashboard() {
     }
     
     // text
-    let text = `📅 ${date} Match Predictions / 경기 예측\n`
+    let text = `📅 ${date} Match Analysis / 경기 분석\n`
     text += `Total ${matches.length} matches / 총 ${matches.length}경기\n`
     text += '─'.repeat(50) + '\n\n'
     
@@ -1479,7 +1479,7 @@ export default function AdminDashboard() {
       md += `| 항목 | 내용 |\n|------|------|\n`
       md += `| ⏰ 시간 | ${match.time} |\n`
       md += `| 🏆 리그 | ${match.leagueName} |\n`
-      md += `| 🎯 예측 | **${p.resultKo || '-'}** (${winProb || 0}%) |\n`
+      md += `| 🎯 분석 | **${p.resultKo || '-'}** (${winProb || 0}%) |\n`
       md += `| ⚡ 파워차 | ${power.diff || 0}점 |\n`
       md += `| 💰 배당 | ${match.odds?.home?.toFixed(2) || '-'} / ${match.odds?.draw?.toFixed(2) || '-'} / ${match.odds?.away?.toFixed(2) || '-'} |\n`
       md += `| 등급 | ${p.grade || 'PASS'} |\n\n`
@@ -1536,7 +1536,7 @@ export default function AdminDashboard() {
     // ========== 🆕 text format - 간결한 형식 ==========
     const gradeEmoji = p.grade === 'PICK' ? '🔥' : p.grade === 'GOOD' ? '✅' : '⚪'
     
-    // 영문 예측 결과
+    // 영문 분석 결과
     const resultEn = p.result === 'HOME' ? 'Home Win' : p.result === 'AWAY' ? 'Away Win' : p.result === 'DRAW' ? 'Draw' : '-'
     
     // 리그명 영문 매핑
@@ -1579,7 +1579,7 @@ export default function AdminDashboard() {
     text += `⚡ 파워 지수\n`
     text += ` ${match.homeTeamKo} : ${power.home || 0}\n`
     text += ` ${match.awayTeamKo} : ${power.away || 0}\n`
-    text += `📈 최종 예측 확률\n`
+    text += `📈 최종 분석 확률\n`
     text += ` ${match.homeTeamKo} ${prob.home || 0}% | 무 ${prob.draw || 0}% | ${match.awayTeamKo} ${prob.away || 0}%\n`
     if (pattern.totalMatches > 0) {
       text += `🎯 패턴 ${pattern.code}\n`
@@ -4371,7 +4371,7 @@ export default function AdminDashboard() {
               </div>
             )}
             
-            {/* 📤 예측 Export 탭 */}
+            {/* 📤 분석 Export 탭 */}
             {activeTab === 'export' && (
               <div className="space-y-6">
                 {/* 필터 영역 */}
@@ -4507,7 +4507,7 @@ export default function AdminDashboard() {
                               </div>
                               <div className="mt-1 flex items-center gap-3 text-xs">
                                 <span className="text-gray-400">
-                                  예측: <span className={
+                                  분석: <span className={
                                     p.result === 'home' ? 'text-blue-400' :
                                     p.result === 'away' ? 'text-red-400' :
                                     'text-gray-300'
@@ -4564,7 +4564,7 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         
-                        {/* 예측 결과 */}
+                        {/* 분석 결과 */}
                         <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg p-4 border border-purple-500/20">
                           <div className="flex items-center justify-between mb-3">
                             <span className="text-purple-400 font-semibold">
@@ -4634,9 +4634,9 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         
-                        {/* 최종 예측 확률 */}
+                        {/* 최종 분석 확률 */}
                         <div className="bg-gray-900/50 rounded-lg p-3">
-                          <div className="text-xs text-gray-500 mb-2">최종 예측 확률</div>
+                          <div className="text-xs text-gray-500 mb-2">최종 분석 확률</div>
                           <div className="grid grid-cols-3 gap-2 text-center">
                             <div className={`p-2 rounded ${exportSelectedMatch.prediction?.result === 'HOME' ? 'bg-blue-500/20 border border-blue-500' : 'bg-gray-800'}`}>
                               <div className="text-lg font-bold text-white">{exportSelectedMatch.probability?.home || 0}%</div>

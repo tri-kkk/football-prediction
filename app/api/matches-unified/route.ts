@@ -49,11 +49,11 @@ interface UnifiedMatch {
   // 스코어 (완료/라이브 경기)
   homeScore?: number | null
   awayScore?: number | null
-  // 예측 확률
+  // 분석 확률
   homeWinRate?: number
   drawRate?: number
   awayWinRate?: number
-  // 예측 결과 (match_results에서)
+  // 분석 결과 (match_results에서)
   predictedWinner?: string
   isCorrect?: boolean
   predictionType?: string   // 'exact', 'winner_only', 'wrong'
@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
             status: (match.match_status || 'FT') as any,
             homeScore: match.final_score_home,
             awayScore: match.final_score_away,
-            // 예측 정보 (DB에 저장된 예측)
+            // 분석 정보 (DB에 저장된 분석)
             homeWinRate: parseFloat(match.predicted_home_probability) || undefined,
             drawRate: parseFloat(match.predicted_draw_probability) || undefined,
             awayWinRate: parseFloat(match.predicted_away_probability) || undefined,
@@ -243,7 +243,7 @@ export async function GET(request: NextRequest) {
               leagueCode: match.league_code,
               kickoffTime: match.commence_time,
               status: 'NS' as const,
-              // 예측 확률
+              // 분석 확률
               homeWinRate: match.home_probability,
               drawRate: match.draw_probability,
               awayWinRate: match.away_probability,

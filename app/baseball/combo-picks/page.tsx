@@ -294,7 +294,7 @@ export default function ComboPicksPage() {
           <div className="grid grid-cols-3 gap-3 mb-3">
             {[
               { label: tab === 'history' ? t('주간 조합', 'WEEKLY') : t('오늘 조합', 'COMBOS'), value: tab === 'history' ? String(picks.length) : String(todayCount), color: '#e2e8f0' },
-              { label: t('정합도', 'ACCURACY'), value: totalStats.total > 0 ? `${winRate}%` : '-%', color: winRate > 0 ? '#10b981' : '#64748b' },
+              { label: t('분석 일치도', 'ACCURACY'), value: totalStats.total > 0 ? `${winRate}%` : '-%', color: winRate > 0 ? '#10b981' : '#64748b' },
               { label: t('평균 지수', 'AVG INDEX'), value: String(avgOdds), color: '#fbbf24' },
             ].map((item, i) => (
               <div key={i} className="rounded-xl p-3.5 text-center" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.04)' }}>
@@ -303,12 +303,12 @@ export default function ComboPicksPage() {
               </div>
             ))}
           </div>
-          {/* 2행: 안정형/변동형 정합도 분리 */}
+          {/* 2행: 전력 우위형/접전형 분석 일치도 분리 */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ background: '#10b981' }} />
-                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('안정형', 'STABLE')}</span>
+                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('전력 우위형', 'STABLE')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black" style={{ color: '#10b981' }}>
@@ -322,7 +322,7 @@ export default function ComboPicksPage() {
             <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ background: '#f59e0b' }} />
-                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('변동형', 'VOLATILE')}</span>
+                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('접전형', 'VOLATILE')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black" style={{ color: '#f59e0b' }}>
@@ -475,16 +475,16 @@ export default function ComboPicksPage() {
           onComplete={() => { if (adModalLeague) unlock(adModalLeague) }}
           countdownSec={15}
           title={adModalLeague
-            ? t(`${adModalLeague} 조합 픽 잠금 해제`, `Unlock ${adModalLeague} combo picks`)
+            ? t(`${adModalLeague} 다경기 분석 잠금 해제`, `Unlock ${adModalLeague} multi-match analysis`)
             : t('잠금 해제', 'Unlock')}
           subtitle={adModalLeague
             ? t(
-                `아래 광고를 끝까지 보시면 오늘 자정(KST)까지 ${adModalLeague} 조합 픽이 무료로 풀립니다.`,
-                `Watch the ad to unlock ${adModalLeague} combo picks until midnight KST.`
+                `아래 광고를 끝까지 보시면 오늘 자정(KST)까지 ${adModalLeague} 다경기 분석이 무료로 풀립니다.`,
+                `Watch the ad to unlock ${adModalLeague} multi-match analysis until midnight KST.`
               )
             : ''}
           rewardLabel={adModalLeague
-            ? t(`${adModalLeague} 조합 픽 잠금 해제`, `Unlock ${adModalLeague} combo picks`)
+            ? t(`${adModalLeague} 다경기 분석 잠금 해제`, `Unlock ${adModalLeague} multi-match analysis`)
             : t('잠금 해제', 'Unlock')}
         />
 
@@ -805,10 +805,10 @@ function MatchRow({ pick, index, t, isLast }: {
         </div>
       </div>
 
-      {/* 예측 라인 */}
+      {/* 분석 라인 */}
       <div className="flex items-center justify-between mt-2.5 mx-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-medium" style={{ color: '#64748b' }}>{t('예측', 'Prediction')}</span>
+          <span className="text-[10px] font-medium" style={{ color: '#64748b' }}>{t('분석', 'Analysis')}</span>
           <span className="text-[10px] font-bold text-amber-400">{pick.pickTeamKo} {t('승', 'W')}</span>
           <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded" style={{ background: `${barColor}15` }}>
             <span className="text-[10px] font-black" style={{ color: barColor }}>{pickProb}%</span>

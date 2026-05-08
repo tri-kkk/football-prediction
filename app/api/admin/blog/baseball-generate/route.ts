@@ -270,9 +270,9 @@ ${oddsStr}
   "section2": "선발 투수 핵심 지표 비교 분석 (300~500자, 2~3단락 \\n\\n으로 구분)",
   "section3_title": "팀 전력 분석",
   "section3": "시즌 스탯 비교 및 타선 분석 (300~500자, 2~3단락 \\n\\n으로 구분)",
-  "section4_title": "AI 승부예측",
-  "section4": "AI 승률, 배당 기반 최종 예측 (300~500자, 2~3단락 \\n\\n으로 구분)",
-  "tags": ["${data.league}", "${data.homeTeam.replace(/\s+/g, '')}", "${data.awayTeam.replace(/\s+/g, '')}", "야구분석", "승부예측", "AI분석"],
+  "section4_title": "AI 경기 분석",
+  "section4": "AI 승률, 배당 기반 최종 분석 (300~500자, 2~3단락 \\n\\n으로 구분)",
+  "tags": ["${data.league}", "${data.homeTeam.replace(/\s+/g, '')}", "${data.awayTeam.replace(/\s+/g, '')}", "야구분석", "경기 분석", "AI분석"],
   "excerpt": "한줄 요약 50자"
 }
 
@@ -413,7 +413,7 @@ ${pitcherCard}
 ${section(parsed.section1_title||'매치 프리뷰', parsed.section1, '⚾')}
 ${section(parsed.section2_title||'선발 투수 매치업', parsed.section2, '🏏')}
 ${section(parsed.section3_title||'팀 전력 분석', parsed.section3, '📊')}
-${section(parsed.section4_title||'AI 승부예측', parsed.section4, '🎯')}
+${section(parsed.section4_title||'AI 경기 분석', parsed.section4, '🎯')}
 <p style="text-align:center;font-size:14px;color:#0984e3;margin:24px 0 0 0;">${(parsed.tags || []).map((t: string) => `#${t}`).join(' ')}</p>
 <p style="text-align:center;margin:12px 0 0 0;"><a href="https://www.trendsoccer.com/baseball" target="_blank"><img src="https://www.trendsoccer.com/1200x200.png" alt="TrendSoccer" style="max-width:100%;" /></a></p>
 `

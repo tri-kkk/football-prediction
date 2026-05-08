@@ -385,7 +385,7 @@ function extractKeywords(headlines: any[]) {
   const relevantWords = [
     'injury', 'injured', 'return', 'comeback', 'lineup', 'squad',
     'win', 'loss', 'draw', 'victory', 'defeat',
-    'preview', 'prediction', 'analysis', 'vs', 'against',
+    'preview', 'analysis', 'analysis', 'vs', 'against',
     'goal', 'score', 'assist', 'shot',
     'manager', 'coach', 'tactics', 'formation',
     '부상', '복귀', '출전', '결장',

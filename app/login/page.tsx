@@ -118,7 +118,7 @@ export default function LoginPage() {
             <span className="text-white">{language === 'ko' ? 'AI가 분석하는' : 'AI-Powered'}</span>
             <br />
             <span className="text-emerald-400">
-              {language === 'ko' ? '축구 · 야구 예측' : 'Football · Baseball Predictions'}
+              {language === 'ko' ? '축구 · 야구 분석' : 'Football · Baseball Analysis'}
             </span>
           </h1>
           <p className="text-gray-500 text-sm mt-2">

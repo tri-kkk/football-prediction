@@ -25,8 +25,8 @@ const ANALYSIS_TABS: SubNavItem[] = [
   },
   {
     href: '/baseball/combo-picks',
-    labelKo: '야구 조합 픽',
-    labelEn: 'Combo Picks',
+    labelKo: '야구 다경기 분석',
+    labelEn: 'Multi-Match Analysis',
   },
 ]
 

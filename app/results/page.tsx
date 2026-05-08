@@ -216,7 +216,7 @@ const LEAGUE_GROUPS = [
   },
 ]
 
-// 예측 정보 인터페이스
+// 분석 정보 인터페이스
 interface Prediction {
   homeWinProbability: number
   drawProbability: number
@@ -963,7 +963,7 @@ export default function MatchResultsPage() {
                                     <div className="px-4 py-3 bg-yellow-900/10 border-t border-yellow-600/20">
                                       <div className="flex items-center gap-4 text-xs">
                                         <div className="flex items-center gap-2">
-                                          <span className="text-gray-400">{currentLanguage === 'ko' ? '예측' : 'Pick'}:</span>
+                                          <span className="text-gray-400">{currentLanguage === 'ko' ? '분석' : 'Pick'}:</span>
                                           <span className="text-yellow-400 font-bold">
                                             {getPickResultText(match.pickInfo.pick_result, currentLanguage)} ({match.pickInfo.pick_probability}%)
                                           </span>

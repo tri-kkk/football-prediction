@@ -1,5 +1,5 @@
 // app/api/predict-v2/route.ts
-// 오리지널 방식 예측 알고리즘 v2
+// 오리지널 방식 분석 알고리즘 v2
 // 선제골 + 폼 기반 (배당 불필요)
 // 3가지 Method 평균 + 패턴 역대 승률 반영
 // ✅ v2.1: 전체 시즌 통합 통계 사용
@@ -332,7 +332,7 @@ async function getAggregatedStats(
 }
 
 // ============================================
-// 메인 예측 함수
+// 메인 분석 함수
 // ============================================
 
 async function predict(input: PredictionInput): Promise<PredictionResult> {
@@ -346,12 +346,12 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   const awayStats = await getAggregatedStats(awayTeamId, awayTeam, season)
   
   if (!homeStats || !awayStats) {
-    // ✅ fallback: DB에 통계가 없는 팀은 기본값으로 예측 진행
+    // ✅ fallback: DB에 통계가 없는 팀은 기본값으로 분석 진행
     console.warn(`⚠️ Stats not found, using fallback: ${!homeStats ? homeTeam : ''} ${!awayStats ? awayTeam : ''}`)
   }
   
   // ✅ v2.4: fallback을 중립값으로 변경 (기존: 홈 유리 → P/A 1.3, 선제골 75%)
-  // DB에 없는 팀이 홈일 때 잘못된 승리 예측이 나오는 버그 수정
+  // DB에 없는 팀이 홈일 때 잘못된 승리 분석이 나오는 버그 수정
   // 중립값이면 상대팀의 실데이터가 결과를 결정하게 됨
   const fallbackStats: AggregatedStats = {
     team_name: '',
@@ -830,7 +830,7 @@ async function savePick(input: PredictionInput, result: PredictionResult): Promi
         away_team_logo: input.awayTeamLogo || null,
         commence_time: input.commenceTime || new Date().toISOString(),
         
-        // 예측 정보
+        // 분석 정보
         pick_result: result.recommendation.pick,
         pick_probability: Math.round(pickProbability * 10) / 10,
         home_probability: Math.round(result.finalProb.home * 1000) / 10,

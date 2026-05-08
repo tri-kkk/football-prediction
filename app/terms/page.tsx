@@ -122,8 +122,8 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
             : 'The service operates with the following membership tiers:'}
         </p>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
-          <li><strong>{isKo ? '비회원:' : 'Guest:'}</strong> {isKo ? '경기 1시간 전 예측 열람 (제한적)' : 'View predictions 1 hour before match (limited)'}</li>
-          <li><strong>{isKo ? '무료회원:' : 'Free Member:'}</strong> {isKo ? '경기 2시간 전 예측 열람' : 'View predictions 2 hours before match'}</li>
+          <li><strong>{isKo ? '비회원:' : 'Guest:'}</strong> {isKo ? '경기 1시간 전 분석 열람 (제한적)' : 'View predictions 1 hour before match (limited)'}</li>
+          <li><strong>{isKo ? '무료회원:' : 'Free Member:'}</strong> {isKo ? '경기 2시간 전 분석 열람' : 'View predictions 2 hours before match'}</li>
           <li><strong>{isKo ? '프리미엄:' : 'Premium:'}</strong> {isKo ? '이용권 구매를 통해 프리미엄 혜택 이용' : 'Access premium benefits through access pass purchase'}</li>
         </ul>
 
@@ -132,7 +132,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
           <li>{isKo ? '트렌드사커 픽: 엄선된 고확률 경기 추천' : 'TrendSoccer Picks: curated high-probability match recommendations'}</li>
-          <li>{isKo ? '경기 24시간 전 예측 선공개' : '24-hour early access to predictions'}</li>
+          <li>{isKo ? '경기 24시간 전 분석 선공개' : '24-hour early access to predictions'}</li>
           <li>{isKo ? '광고 완전 제거' : 'Complete ad-free experience'}</li>
           <li>{isKo ? '하이라이트 무제한 시청' : 'Unlimited highlights viewing'}</li>
           <li>{isKo ? '프로토 계산기 무제한 저장' : 'Unlimited Proto calculator saves'}</li>
@@ -226,7 +226,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           {isKo ? '7.1 허용되는 사용' : '7.1 Permitted Use'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
-          <li>{isKo ? '축구 경기 예측 및 분석 정보 열람' : 'Viewing football match predictions and analysis'}</li>
+          <li>{isKo ? '축구 경기 분석 및 분석 정보 열람' : 'Viewing football match analysis and analysis'}</li>
           <li>{isKo ? '실시간 경기 데이터 및 통계 확인' : 'Accessing real-time match data and statistics'}</li>
           <li>{isKo ? '개인적, 비상업적 목적의 사용' : 'Personal, non-commercial use'}</li>
         </ul>
@@ -255,7 +255,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
             : 'Information provided by TrendSoccer is for reference purposes only. While we strive to provide accurate information, we do not guarantee:'}
         </p>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
-          <li>{isKo ? '예측의 정확성, 완전성, 신뢰성' : 'Accuracy, completeness, or reliability of predictions'}</li>
+          <li>{isKo ? '분석의 정확성, 완전성, 신뢰성' : 'Accuracy, completeness, or reliability of predictions'}</li>
           <li>{isKo ? '서비스의 지속적인 가용성' : 'Continuous availability of the service'}</li>
           <li>{isKo ? '오류 또는 버그의 부재' : 'Absence of errors or bugs'}</li>
         </ul>
@@ -263,7 +263,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           <p className="text-gray-300">
             <strong className="text-emerald-400">{isKo ? '중요:' : 'Important:'}</strong>{' '}
             {isKo 
-              ? '본 서비스의 예측은 통계 분석을 기반으로 하며, 베팅이나 재정적 결정의 유일한 근거로 사용되어서는 안 됩니다. 예측을 바탕으로 발생한 손실에 대해 책임지지 않습니다.'
+              ? '본 서비스의 분석은 통계 분석을 기반으로 하며, 베팅이나 재정적 결정의 유일한 근거로 사용되어서는 안 됩니다. 분석을 바탕으로 발생한 손실에 대해 책임지지 않습니다.'
               : 'Our predictions are based on statistical analysis and should not be used as the sole basis for betting or financial decisions. We are not responsible for any losses incurred based on our predictions.'}
           </p>
         </div>
@@ -279,7 +279,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
             <strong className="text-red-400">{isKo ? '중요한 고지사항:' : 'Important Notice:'}</strong>
           </p>
           <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
-            <li>{isKo ? '제공되는 예측은 오직 정보 제공 목적입니다' : 'Predictions provided are for informational purposes only'}</li>
+            <li>{isKo ? '제공되는 분석은 오직 정보 제공 목적입니다' : 'Predictions provided are for informational purposes only'}</li>
             <li>{isKo ? '베팅 거래를 수락하거나 처리하지 않습니다' : 'We do not accept or process betting transactions'}</li>
             <li>{isKo ? '귀하의 지역 도박 관련 법률을 준수할 책임은 사용자에게 있습니다' : 'You are responsible for complying with local gambling laws in your jurisdiction'}</li>
             <li>{isKo ? '도박은 중독성이 있을 수 있으니 신중하게 이용하시기 바랍니다' : 'Gambling can be addictive - please gamble responsibly'}</li>
@@ -302,7 +302,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           <li>{isKo ? '데이터 손실' : 'Loss of data'}</li>
           <li>{isKo ? '사업 기회의 손실' : 'Loss of business opportunities'}</li>
           <li>{isKo ? '간접적, 부수적, 특별, 결과적 손해' : 'Indirect, incidental, special, or consequential damages'}</li>
-          <li>{isKo ? '예측을 기반으로 한 베팅 또는 투자 손실' : 'Betting or investment losses based on predictions'}</li>
+          <li>{isKo ? '분석을 기반으로 한 베팅 또는 투자 손실' : 'Betting or investment losses based on predictions'}</li>
         </ul>
       </section>
 
@@ -422,8 +422,8 @@ function TermsV1_1({ isKo }: { isKo: boolean }) {
           {isKo ? '3. 프리미엄 혜택 (v1.1 기준)' : '3. Premium Benefits (v1.1)'}
         </h2>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
-          <li>{isKo ? '경기 24시간 전 예측 선공개' : '24-hour early access to predictions'}</li>
-          <li>{isKo ? '승률 높은 경기 추천 (프리미엄 픽)' : 'High win-rate match recommendations (Premium Picks)'}</li>
+          <li>{isKo ? '경기 24시간 전 분석 선공개' : '24-hour early access to predictions'}</li>
+          <li>{isKo ? '승률 높은 경기 추천 (프리미엄 리포트)' : 'High win-rate match recommendations (Premium Picks)'}</li>
           <li>{isKo ? '광고 제거' : 'Ad-free experience'}</li>
         </ul>
       </section>
@@ -483,7 +483,7 @@ function TermsV1_0({ isKo }: { isKo: boolean }) {
           {isKo ? '2. 서비스 이용' : '2. Use of Service'}
         </h2>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
-          <li>{isKo ? '축구 경기 예측 및 분석 정보 열람' : 'Viewing football match predictions and analysis'}</li>
+          <li>{isKo ? '축구 경기 분석 및 분석 정보 열람' : 'Viewing football match analysis and analysis'}</li>
           <li>{isKo ? '실시간 경기 데이터 및 통계 확인' : 'Accessing real-time match data and statistics'}</li>
           <li>{isKo ? '개인적, 비상업적 목적의 사용' : 'Personal, non-commercial use'}</li>
         </ul>

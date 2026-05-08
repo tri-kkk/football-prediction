@@ -10,7 +10,7 @@ export default function AboutPage() {
       tagline: 'About',
       title: '데이터로 읽는',
       titleHighlight: '축구의 흐름',
-      desc: 'AI 기반 실시간 분석으로 경기의 흐름을 예측합니다.\n프리미어리그부터 챔피언스리그까지, 모든 빅매치를 더 깊이 즐기세요.',
+      desc: 'AI 기반 실시간 분석으로 경기의 흐름을 분석합니다.\n프리미어리그부터 챔피언스리그까지, 모든 빅매치를 더 깊이 즐기세요.',
       features: [
         { title: 'AI 분석', desc: '4시즌 데이터 기반' },
         { title: '실시간', desc: '배당 트렌드 추적' },

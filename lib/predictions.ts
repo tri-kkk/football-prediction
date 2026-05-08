@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 
 /**
- * 경기 예측 저장 (중복 방지 포함)
+ * 경기 분석 저장 (중복 방지 포함)
  */
 export async function savePrediction(match: any, probability: any) {
   try {
@@ -37,7 +37,7 @@ export async function savePrediction(match: any, probability: any) {
       return false
     }
     
-    console.log('✅ 새 예측 저장:', match.homeTeam, 'vs', match.awayTeam)
+    console.log('✅ 새 분석 저장:', match.homeTeam, 'vs', match.awayTeam)
     return true
     
   } catch (err) {
@@ -78,7 +78,7 @@ export async function updateMatchResult(
 }
 
 /**
- * 모든 예측 데이터 가져오기
+ * 모든 분석 데이터 가져오기
  */
 export async function getAllPredictions() {
   try {
@@ -102,7 +102,7 @@ export async function getAllPredictions() {
 }
 
 /**
- * 예측 정확도 계산
+ * 분석 정확도 계산
  */
 export async function calculateAccuracy() {
   try {

@@ -31,7 +31,7 @@ export interface UnifiedMatch {
   awayLogo: string
   awayScore: number | null
 
-  // 배당/예측 (있는 경우만)
+  // 배당/분석 (있는 경우만)
   odds?: {
     homeWinProb: number
     awayWinProb: number
@@ -41,7 +41,7 @@ export interface UnifiedMatch {
   aiPick?: string | null
   aiPickConfidence?: string | null
 
-  // 예측 정보 (축구 우선)
+  // 분석 정보 (축구 우선)
   predictedWinner?: 'home' | 'draw' | 'away' | null
   predictedScoreHome?: number | null
   predictedScoreAway?: number | null

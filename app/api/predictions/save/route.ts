@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 예측 승자 결정
+    // 분석 승자 결정
     const homeProb = parseFloat(homeWinProbability) || 33
     const drawProb = parseFloat(drawProbability) || 34
     const awayProb = parseFloat(awayWinProbability) || 33
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET: 특정 경기의 저장된 예측 조회
+// GET: 특정 경기의 저장된 분석 조회
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

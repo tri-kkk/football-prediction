@@ -222,7 +222,7 @@ export default function MatchPoll({
         <div className="flex items-center gap-2">
           <span className="text-lg">🗳️</span>
           <span className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            {language === 'ko' ? '승부 분석' : 'Match Prediction'}
+            {language === 'ko' ? '승부 분석' : 'Match Analysis'}
           </span>
         </div>
         <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -230,7 +230,7 @@ export default function MatchPoll({
         </span>
       </div>
 
-      {/* AI 분석 + 커뮤니티 예측 비교 */}
+      {/* AI 분석 + 커뮤니티 분석 비교 */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         {/* AI 분석 */}
         {aiPrediction && (
@@ -238,7 +238,7 @@ export default function MatchPoll({
             <div className="flex items-center gap-1.5 mb-2">
               <span className="text-sm">🤖</span>
               <span className={`text-xs font-medium ${darkMode ? 'text-[#A3FF4C]' : 'text-green-700'}`}>
-                {language === 'ko' ? 'AI 분석' : 'AI Prediction'}
+                {language === 'ko' ? 'AI 분석' : 'AI Analysis'}
               </span>
             </div>
             <div className="space-y-1.5">

@@ -29,7 +29,7 @@ export async function GET() {
   <channel>
     <title>TrendSoccer - 축구 분석 리포트</title>
     <link>${siteUrl}</link>
-    <description>AI 기반 축구 경기 분석 및 예측 리포트. 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1 등 주요 리그 경기 분석.</description>
+    <description>AI 기반 축구 경기 분석 및 분석 리포트. 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1 등 주요 리그 경기 분석.</description>
     <language>ko</language>
     <lastBuildDate>${now}</lastBuildDate>
     <atom:link href="${siteUrl}/feed" rel="self" type="application/rss+xml"/>

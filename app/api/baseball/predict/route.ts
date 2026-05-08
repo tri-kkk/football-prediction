@@ -187,8 +187,8 @@ export async function POST(request: NextRequest) {
       oddsImpliedAway = rawAway / total
     }
 
-    // MLB만 AI 예측 지원 → 전체 리그 지원으로 변경
-    // KBO/NPB는 투수 피처 없이 팀 스탯만으로 예측
+    // MLB만 AI 분석 지원 → 전체 리그 지원으로 변경
+    // KBO/NPB는 투수 피처 없이 팀 스탯만으로 분석
 
     // Rolling feature 계산
     const [homeStats, awayStats] = await Promise.all([
@@ -494,14 +494,14 @@ export async function POST(request: NextRequest) {
     }
 
     const summary = dataReliable
-      ? `${favoredTeam} 측 ${favoredProb}% 확률로 우세.${pitcherLine || ' 최근 득실점 흐름과 안타 생산력이 주요 예측 근거.'}`
-      : `데이터가 부족하여 예측 신뢰도가 낮습니다. (홈 ${homeStats.games_played}경기, 원정 ${awayStats.games_played}경기)`
+      ? `${favoredTeam} 측 ${favoredProb}% 확률로 우세.${pitcherLine || ' 최근 득실점 흐름과 안타 생산력이 주요 분석 근거.'}`
+      : `데이터가 부족하여 분석 신뢰도가 낮습니다. (홈 ${homeStats.games_played}경기, 원정 ${awayStats.games_played}경기)`
 
     // ✅ full 모드 결과를 baseball_odds_latest에 저장 (메인 목록과 동기화)
     // quickMode는 placeholder(배당/균등)라 저장하지 않음 — 실제 AI 블렌딩된 full 결과만 저장
     if (!quickMode) {
       try {
-        // upsert — 배당 행이 없는 경기도 AI 예측만 있는 행으로 생성
+        // upsert — 배당 행이 없는 경기도 AI 분석만 있는 행으로 생성
         await supabase
           .from('baseball_odds_latest')
           .upsert(

@@ -26,7 +26,7 @@ const LEAGUES_TO_ANALYZE = [
 ]
 
 // ============================================
-// 예측 알고리즘 (predict-v2와 동일)
+// 분석 알고리즘 (predict-v2와 동일)
 // ============================================
 
 function calcPA(goals_for: number, goals_against: number): number {

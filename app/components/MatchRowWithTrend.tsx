@@ -185,7 +185,7 @@ export default function MatchRowWithTrend({ match, darkMode, language }: MatchRo
           </span>
         </div>
 
-        {/* 6. AI 예측 (승률 바) */}
+        {/* 6. AI 분석 (승률 바) */}
         <div className="col-span-3 flex items-center gap-2">
           <div className="flex-1">
             <div className="flex items-center justify-between text-xs mb-1">

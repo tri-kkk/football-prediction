@@ -120,7 +120,7 @@ async function collectSoccerData(matchId: string) {
     .order('match_date', { ascending: false })
     .limit(10)
 
-  // 4) 예측 결과
+  // 4) 분석 결과
   const { data: prediction } = await supabase
     .from('match_results')
     .select('predicted_winner, predicted_home_probability, predicted_draw_probability, predicted_away_probability')
@@ -321,8 +321,8 @@ ${h2hStr}
   "body1": "양 팀 최근 폼, 득실점 흐름 기반 매치 프리뷰 (300~400자)",
   "body2": "핵심 스탯 비교 및 상대 전적 기반 객관적 전력 분석 (300~400자)",
   "body3": "홈/원정 데이터 분석 기반 전술 포인트 및 승부처 3가지 (300~400자)",
-  "body4": "TrendSoccer 데이터 기반 최종 승부예측, 픽 추천, 예상 배당 및 마무리 인사 (300~400자)",
-  "tags": ["트렌드사커", "리그명", "팀명1", "팀명2", "승부예측"]
+  "body4": "TrendSoccer 데이터 기반 최종 경기 분석, 픽 추천, 예상 배당 및 마무리 인사 (300~400자)",
+  "tags": ["트렌드사커", "리그명", "팀명1", "팀명2", "경기 분석"]
 }
 
 JSON만 응답하세요. 다른 텍스트 없이 JSON 객체만 반환하세요.`
@@ -398,8 +398,8 @@ ${oddsStr}
   "body1": "최근 10경기 승률 흐름 및 팀 뉴스 기반 매치 프리뷰 (300~400자)",
   "body2": "선발 투수 매치업 분석 - ERA, WHIP 등 핵심 지표 및 강약점 비교 (300~400자)",
   "body3": "최근 10경기 팀 생산력 및 시즌 스탯 비교, 타선 및 전력 분석 (300~400자)",
-  "body4": "AI 전력 분석(승패 확률, 언더오버), 배당률 기반 최종 승부예측 및 픽 추천, 마무리 인사 (300~400자)",
-  "tags": ["트렌드사커", "리그명", "팀명1", "팀명2", "승부예측"]
+  "body4": "AI 전력 분석(승패 확률, 언더오버), 배당률 기반 최종 경기 분석 및 픽 추천, 마무리 인사 (300~400자)",
+  "tags": ["트렌드사커", "리그명", "팀명1", "팀명2", "경기 분석"]
 }
 
 JSON만 응답하세요. 다른 텍스트 없이 JSON 객체만 반환하세요.`

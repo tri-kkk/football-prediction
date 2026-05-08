@@ -22,7 +22,7 @@ export default function InstallBanner() {
     },
     en: {
       title: 'Faster with App! ⚡',
-      subtitle: 'Check match predictions from home screen',
+      subtitle: 'Check match analysis from home screen',
       tag1: 'Instant Access',
       tag2: 'App-like',
       tag3: '0MB Storage',

@@ -1475,7 +1475,7 @@ export default function BaseballDetailPage() {
           )
         }
 
-        {/* AI 예측 컴포넌트 - 예정 경기만 */}
+        {/* AI 분석 컴포넌트 - 예정 경기만 */}
         {match.status === "NS" && (
           <div className="mt-2">
             {isPremium ? (

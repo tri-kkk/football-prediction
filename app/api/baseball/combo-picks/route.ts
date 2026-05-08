@@ -1,5 +1,5 @@
 // app/api/baseball/combo-picks/route.ts
-// 조합 픽 조회 API
+// 다경기 분석 조회 API
 // GET /api/baseball/combo-picks?league=KBO&date=2026-04-01
 
 import { NextRequest, NextResponse } from 'next/server'

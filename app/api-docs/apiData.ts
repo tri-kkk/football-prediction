@@ -34,12 +34,12 @@ export type ApiCategory = {
 
 export const CATEGORIES: ApiCategory[] = [
   { id: 'soccer-match', label: '⚽ 축구 — 경기/일정', description: '경기 목록, 트렌드, 라이브 상세' },
-  { id: 'soccer-analysis', label: '⚽ 축구 — 분석', description: '예측, H2H, 팀 통계, 라인업, 통계' },
-  { id: 'soccer-pick', label: '⚽ 축구 — 프리미엄 픽', description: '오늘의 픽, 히스토리, 적중률' },
+  { id: 'soccer-analysis', label: '⚽ 축구 — 분석', description: '분석, H2H, 팀 통계, 라인업, 통계' },
+  { id: 'soccer-pick', label: '⚽ 축구 — 프리미엄 리포트', description: '오늘의 리포트, 히스토리, 적중률' },
   { id: 'soccer-content', label: '⚽ 축구 — 컨텐츠', description: '뉴스, 하이라이트' },
   { id: 'baseball-match', label: '⚾ 야구 — 경기/일정', description: '경기 목록, 상세, 라이브, 순위' },
-  { id: 'baseball-analysis', label: '⚾ 야구 — 분석', description: 'H2H, 팀/투수 통계, AI 예측, 코멘트' },
-  { id: 'baseball-content', label: '⚾ 야구 — 컨텐츠', description: '뉴스, 라인업, 조합 픽' },
+  { id: 'baseball-analysis', label: '⚾ 야구 — 분석', description: 'H2H, 팀/투수 통계, AI 분석, 코멘트' },
+  { id: 'baseball-content', label: '⚾ 야구 — 컨텐츠', description: '뉴스, 라인업, 다경기 분석' },
   { id: 'report', label: '📰 리포트', description: '블로그/리포트' },
   { id: 'auth-sub', label: '🔐 인증 / 구독 / 결제', description: '약관, 구독 상태, 결제 초기화' },
   { id: 'misc', label: '📌 기타', description: '광고, 투표, 인사이트, 문의 등' },
@@ -183,17 +183,17 @@ export const ENDPOINTS: ApiEndpoint[] = [
 
   // ============ 축구 — 분석 ============
   {
-    id: 'predictions',
+    id: 'analysis',
     category: 'soccer-analysis',
     method: 'GET',
     path: '/api/predictions',
-    description: '경기 예측 (API-Football, 1시간 캐시)',
+    description: '경기 분석 (API-Football, 1시간 캐시)',
     auth: 'none',
     params: [
       { name: 'fixtureId', in: 'query', required: true, type: 'number', description: '경기 ID' },
     ],
     responseExample: `{
-  "predictions": {
+  "analysis": {
     "winner": { "id": 33, "name": "Manchester United", "comment": "Likely" },
     "advice": "Under 2.5",
     "percent": { "home": "45%", "draw": "28%", "away": "27%" }
@@ -207,7 +207,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'soccer-analysis',
     method: 'POST',
     path: '/api/predict',
-    description: '자체 알고리즘 예측 (배당+선제골+패턴)',
+    description: '자체 알고리즘 분석 (배당+선제골+패턴)',
     auth: 'none',
     params: [
       { name: 'homeTeam', in: 'body', required: true, type: 'string', description: '홈팀명' },
@@ -221,7 +221,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
     ],
     responseExample: `{
   "success": true,
-  "prediction": {
+  "analysis": {
     "marketProb": { "home": 45, "draw": 28, "away": 27 },
     "finalProb": { "home": 48, "draw": 28, "away": 24 },
     "recommendation": { "pick": "HOME", "confidence": "HIGH", "value": "GOOD", "reason": [...] },
@@ -342,13 +342,13 @@ export const ENDPOINTS: ApiEndpoint[] = [
     tryItDefaults: { fixtureId: '' },
   },
 
-  // ============ 축구 — 프리미엄 픽 ============
+  // ============ 축구 — 프리미엄 리포트 ============
   {
     id: 'premium-picks',
     category: 'soccer-pick',
     method: 'GET',
     path: '/api/premium-picks',
-    description: '오늘/어제의 프리미엄 픽 (KST 기준 자동 선택)',
+    description: '오늘/어제의 프리미엄 리포트 (KST 기준 자동 선택)',
     auth: 'none',
     responseExample: `{
   "success": true,
@@ -358,7 +358,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
       "id": 123,
       "home_team": "Manchester United", "away_team": "Arsenal",
       "commence_time": "2026-04-27T21:00:00Z",
-      "prediction": { "recommendation": { "pick": "Over 2.5" } },
+      "analysis": { "recommendation": { "pick": "Over 2.5" } },
       "result": "PENDING"
     }
   ],
@@ -520,14 +520,14 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'baseball-match',
     method: 'GET',
     path: '/api/baseball/matches',
-    description: '야구 경기 일정 + 예측 + 배당 통합',
+    description: '야구 경기 일정 + 분석 + 배당 통합',
     auth: 'none',
     params: [
       { name: 'league', in: 'query', required: false, type: 'string', description: 'ALL | MLB | KBO | NPB | CPBL', default: 'ALL' },
       { name: 'status', in: 'query', required: false, type: 'string', description: 'all | scheduled | finished | live | today', default: 'all' },
       { name: 'limit', in: 'query', required: false, type: 'number', description: '조회 개수', default: '50' },
       { name: 'date', in: 'query', required: false, type: 'string', description: 'YYYY-MM-DD' },
-      { name: 'skipML', in: 'query', required: false, type: 'boolean', description: 'true시 ML 예측 스킵 (속도↑)' },
+      { name: 'skipML', in: 'query', required: false, type: 'boolean', description: 'true시 ML 분석 스킵 (속도↑)' },
       { name: 'id', in: 'query', required: false, type: 'number', description: '특정 경기 ID' },
     ],
     responseExample: `{
@@ -745,17 +745,17 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'baseball-analysis',
     method: 'POST',
     path: '/api/baseball/predict',
-    description: 'AI 야구 경기 예측 (Railway ML, 배당 블렌딩)',
+    description: 'AI 야구 경기 분석 (Railway ML, 배당 블렌딩)',
     auth: 'none',
     params: [
       { name: 'matchId', in: 'body', required: true, type: 'number', description: '경기 ID' },
       { name: 'homeTeam', in: 'body', required: true, type: 'string', description: '홈팀명' },
       { name: 'awayTeam', in: 'body', required: true, type: 'string', description: '원정팀명' },
-      { name: 'quick', in: 'body', required: false, type: 'boolean', description: 'true시 빠른 예측 (인사이트 생략)' },
+      { name: 'quick', in: 'body', required: false, type: 'boolean', description: 'true시 빠른 분석 (인사이트 생략)' },
     ],
     responseExample: `{
   "success": true, "quick": false,
-  "prediction": { "homeWinProb": 58, "awayWinProb": 42, "overProb": 55, "underProb": 45, "confidence": 72, "grade": "A" },
+  "analysis": { "homeWinProb": 58, "awayWinProb": 42, "overProb": 55, "underProb": 45, "confidence": 72, "grade": "A" },
   "insights": {
     "keyFactors": [{ "name": "선발투수 ERA", "value": 2.88, "impact": 35, "description": "..." }],
     "homeAdvantage": {...}, "recentForm": {...}, "summary": "Yankees 측 58% 확률로 우세..."
@@ -847,7 +847,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'baseball-content',
     method: 'GET',
     path: '/api/baseball/combo-picks',
-    description: '야구 조합 픽 + 적중률 통계 (프리미엄 전용)',
+    description: '야구 다경기 분석 + 적중률 통계 (프리미엄 전용)',
     auth: 'none',
     params: [
       { name: 'league', in: 'query', required: false, type: 'string', description: 'MLB | KBO | NPB' },

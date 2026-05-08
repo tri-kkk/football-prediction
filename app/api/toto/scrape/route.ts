@@ -366,7 +366,7 @@ function toSearchKey(name: string): string {
 }
 
 // =========================================================
-// AI 예측 + 등급 계산
+// AI 분석 + 등급 계산
 // =========================================================
 async function enrichWithPredictions(matches: any[]) {
   for (const m of matches) {
@@ -704,7 +704,7 @@ export async function GET(request: NextRequest) {
       }, { status: 422 })
     }
 
-    // AI 예측 추가
+    // AI 분석 추가
     matches = await enrichWithPredictions(matches)
 
     // DB 저장

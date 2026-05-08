@@ -187,7 +187,7 @@ export default function PricingPage() {
                   backgroundClip: 'text',
                 }}
               >
-                {language === 'ko' ? '프리미엄 예측픽 무료' : 'FREE Premium Picks'}
+                {language === 'ko' ? '프리미엄 분석픽 무료' : 'FREE Premium Picks'}
               </p>
               <Link
                 href="/login"
@@ -213,7 +213,7 @@ export default function PricingPage() {
               href="/premium"
               className="inline-block px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
             >
-              {language === 'ko' ? '프리미엄 픽 보기' : 'View Premium Picks'}
+              {language === 'ko' ? '프리미엄 리포트 보기' : 'View Premium Picks'}
             </Link>
           </div>
         ) : (
@@ -225,7 +225,7 @@ export default function PricingPage() {
                 <span className="text-white">{language === 'ko' ? '트렌드사커' : 'TrendSoccer'}</span>
                 <br />
                 <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                  {language === 'ko' ? '프리미엄 픽' : 'Premium Picks'}
+                  {language === 'ko' ? '프리미엄 리포트' : 'Premium Picks'}
                 </span>
               </h1>
               <p className="text-gray-400">
@@ -351,18 +351,18 @@ export default function PricingPage() {
                 {[
                   {
                     icon: '⚽',
-                    title: language === 'ko' ? '축구 AI 프리미엄 픽' : 'Football AI Premium Picks',
-                    desc: language === 'ko' ? '6대 리그 엄선 경기 승률 예측' : 'Top 6 league curated match predictions',
+                    title: language === 'ko' ? '축구 AI 프리미엄 리포트' : 'Football AI Premium Picks',
+                    desc: language === 'ko' ? '6대 리그 엄선 경기 데이터 분석' : 'Top 6 league curated match analysis',
                   },
                   {
                     icon: '⚾',
-                    title: language === 'ko' ? '야구 AI 프리미엄 픽' : 'Baseball AI Premium Picks',
-                    desc: language === 'ko' ? 'KBO·MLB·NPB 경기 승률 예측' : 'KBO·MLB·NPB match predictions',
+                    title: language === 'ko' ? '야구 AI 프리미엄 리포트' : 'Baseball AI Premium Picks',
+                    desc: language === 'ko' ? 'KBO·MLB·NPB 경기 데이터 분석' : 'KBO·MLB·NPB match analysis',
                   },
                   {
                     icon: '⏰',
                     title: language === 'ko' ? '24시간 선공개' : '24h Early Access',
-                    desc: language === 'ko' ? '예측을 남들보다 먼저 확인' : 'Get predictions before others',
+                    desc: language === 'ko' ? '분석을 남들보다 먼저 확인' : 'Get predictions before others',
                   },
                   {
                     icon: '📊',

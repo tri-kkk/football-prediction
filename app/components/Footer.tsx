@@ -83,7 +83,7 @@ export default function Footer() {
                 © 2025 TrendSoccer. All rights reserved.
               </p>
               <p className="text-gray-600 text-[11px]">
-                AI-powered soccer match prediction and analysis platform
+                AI-powered soccer match analysis and analysis platform
               </p>
             </div>
           </div>
