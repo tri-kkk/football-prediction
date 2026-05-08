@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import BaseballBlogPanel from './BaseballBlogPanel'
+import PostHogAnalyticsDashboard from '../../components/admin/PostHogAnalyticsDashboard'
 
 // ==================== 검색형 선발투수 콤보박스 ====================
 function PitcherCombobox({
@@ -363,6 +364,7 @@ const SLOT_TYPES = [
 const TABS = [
   { id: 'dashboard', label: '대시보드', icon: '📊' },
   { id: 'traffic', label: '트래픽 분석', icon: '📈' },
+  { id: 'behavior', label: '행동/퍼널', icon: '🎯' },
   { id: 'users', label: '회원 관리', icon: '👥' },
   { id: 'subscriptions', label: '구독 관리', icon: '💳' },
   { id: 'ads', label: '광고 관리', icon: '📢' },
@@ -2750,6 +2752,11 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* 🎯 행동/퍼널 분석 탭 (PostHog 기반) */}
+            {activeTab === 'behavior' && (
+              <PostHogAnalyticsDashboard />
             )}
 
             {/* 📊 트래픽 분석 탭 (신규) */}

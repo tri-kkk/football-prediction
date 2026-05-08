@@ -23,6 +23,7 @@
     "next-auth": "^4.24.13",
     "next-intl": "^4.5.0",
     "nodemailer": "^7.0.10",
+    "posthog-js": "^1.372.10",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",

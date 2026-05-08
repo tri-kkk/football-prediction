@@ -4,6 +4,7 @@ import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import Link from 'next/link'
+import { track } from '@/lib/analytics'
 
 export default function SignupPage() {
   const { language } = useLanguage()
@@ -17,8 +18,10 @@ export default function SignupPage() {
       setShowError(true)
       return
     }
-    
+
     setIsLoading(provider)
+    // 📊 가입 시도 이벤트 (OAuth 리다이렉트 직전)
+    track.signupStarted(provider)
     try {
       await signIn(provider, { callbackUrl: '/' })
     } catch (error) {

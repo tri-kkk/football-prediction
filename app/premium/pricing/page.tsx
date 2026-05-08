@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { track } from '@/lib/analytics'
 
 declare global {
   interface Window {
@@ -92,11 +93,20 @@ export default function PricingPage() {
   // ✅ 실제 결제 함수
   const handlePayment = async () => {
     if (!session?.user?.email) {
+      // 📊 비로그인 상태에서 결제 시도 → 가입 유도 흐름
+      track.premiumCtaClicked('pricing_page_no_session')
       window.location.href = '/login'
       return
     }
 
     setLoading(true)
+
+    // 📊 결제 시작 이벤트 (퍼널 핵심 지표)
+    const planAmount = (plans as any)[selectedPlan]?.price ?? 0
+    track.checkoutStarted({
+      plan: selectedPlan === 'monthly' ? 'monthly' : 'yearly',
+      amount: planAmount,
+    })
 
     try {
       // 1️⃣ Init API 호출

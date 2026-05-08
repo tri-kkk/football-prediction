@@ -1,9 +1,10 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useLanguage } from '../../../contexts/LanguageContext'
+import { track } from '@/lib/analytics'
 
 function ResultContent() {
   const { language } = useLanguage()
@@ -14,6 +15,18 @@ function ResultContent() {
 
   const isSuccess = status === 'success'
   const isCancelled = message === '사용자 종료' || message === 'User cancelled'
+
+  // 📊 결제 성공 시 단 1회 subscription_completed 이벤트 발화
+  const firedRef = useRef(false)
+  useEffect(() => {
+    if (!isSuccess || firedRef.current) return
+    firedRef.current = true
+    const num = Number(amount) || 0
+    track.subscriptionCompleted({
+      plan: num >= 9900 ? 'yearly' : 'monthly',
+      amount: num,
+    })
+  }, [isSuccess, amount])
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white flex items-center justify-center px-4">

@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import Link from 'next/link'
 import GoogleTagManager from './GoogleTagManager'
+import Clarity from './components/Clarity'
 import Navigation from './components/Navigation'
 import BottomNavigation from './components/BottomNavigation'
 import NavMenu from './components/NavMenu'
@@ -205,6 +206,9 @@ export default function RootLayout({
         <HtmlLangUpdater />
         
         <GoogleTagManager />
+
+        {/* Microsoft Clarity (히트맵 + 세션 녹화) */}
+        <Clarity />
 
         {/* ============================================
             🛡️ 무효 트래픽 방지 스크립트 (애드센스 보호)

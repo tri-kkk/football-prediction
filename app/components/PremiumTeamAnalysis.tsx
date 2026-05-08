@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { track } from '@/lib/analytics'
 
 // ================================
 // 타입 정의
@@ -305,31 +306,7 @@ export default function PremiumTeamAnalysis({
   
   // 비프리미엄 - 블러
   if (!isPremiumUser) {
-    return (
-      <div className="bg-[#12121a] rounded-lg p-3 border border-gray-700 relative overflow-hidden">
-        <div className="absolute inset-0 backdrop-blur-sm bg-black/40 z-10" />
-        <div className="opacity-30">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-yellow-400">🔐</span>
-            <span className="text-sm font-bold text-yellow-400">{t.title}</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {[1,2,3].map(i => <div key={i} className="bg-gray-800 rounded h-12" />)}
-          </div>
-        </div>
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <div className="text-3xl mb-2">🔒</div>
-          <div className="text-white font-bold mb-1">{t.secretData}</div>
-          <div className="text-xs text-gray-400 mb-3 text-center px-4">{t.secretDesc}</div>
-          <Link 
-            href="/premium"
-            className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold rounded-lg text-sm"
-          >
-            {t.unlockPremium}
-          </Link>
-        </div>
-      </div>
-    )
+    return <PremiumGate t={t} homeTeam={homeTeam} awayTeam={awayTeam} leagueCode={leagueCode} />
   }
   
   return (
@@ -768,6 +745,55 @@ function BettingIndicator({
         {displayRate}%
       </div>
       <div className="text-[10px] text-gray-500">{label}</div>
+    </div>
+  )
+}
+
+// ================================
+// 프리미엄 잠금 게이트 (이벤트 추적 포함)
+// ================================
+function PremiumGate({
+  t,
+  homeTeam,
+  awayTeam,
+  leagueCode,
+}: {
+  t: any
+  homeTeam: string
+  awayTeam: string
+  leagueCode: string
+}) {
+  // 게이트가 화면에 노출된 시점 = 전환 퍼널의 핵심 신호
+  useEffect(() => {
+    track.pickGated({ matchId: `${leagueCode}-${homeTeam}-${awayTeam}`, tier: 'free' })
+  }, [homeTeam, awayTeam, leagueCode])
+
+  return (
+    <div className="bg-[#12121a] rounded-lg p-3 border border-gray-700 relative overflow-hidden">
+      <div className="absolute inset-0 backdrop-blur-sm bg-black/40 z-10" />
+      <div className="opacity-30">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-yellow-400">🔐</span>
+          <span className="text-sm font-bold text-yellow-400">{t.title}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-gray-800 rounded h-12" />
+          ))}
+        </div>
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+        <div className="text-3xl mb-2">🔒</div>
+        <div className="text-white font-bold mb-1">{t.secretData}</div>
+        <div className="text-xs text-gray-400 mb-3 text-center px-4">{t.secretDesc}</div>
+        <Link
+          href="/premium"
+          onClick={() => track.premiumCtaClicked('premium_team_analysis_gate')}
+          className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold rounded-lg text-sm"
+        >
+          {t.unlockPremium}
+        </Link>
+      </div>
     </div>
   )
 }

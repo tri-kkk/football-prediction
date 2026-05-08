@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '../contexts/LanguageContext'
 import Link from 'next/link'
+import { track } from '@/lib/analytics'
 
 export default function LoginPage() {
   const { language } = useLanguage()
@@ -72,6 +73,8 @@ export default function LoginPage() {
 
   const handleSignIn = async (provider: string) => {
     setIsLoading(provider)
+    // 📊 로그인 시도 이벤트 (OAuth 리다이렉트 직전)
+    track.signupStarted(provider)
     try {
       await signIn(provider, { callbackUrl: '/auth/terms' })
     } catch (error) {

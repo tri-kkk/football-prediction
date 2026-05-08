@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import MatchTrendChart from './MatchTrendChart'
+import { track } from '@/lib/analytics'
 
 interface Match {
   id: number
@@ -101,7 +102,18 @@ export default function MatchRowWithTrend({ match, darkMode, language }: MatchRo
         hover:scale-[1.01] cursor-pointer
         ${showTrend ? 'ring-2 ring-blue-500' : ''}
       `}
-      onClick={() => setShowTrend(!showTrend)}
+      onClick={() => {
+        const next = !showTrend
+        setShowTrend(next)
+        // 📊 카드 펼치기 = 매치 카드 클릭 이벤트 + 트렌드 차트 노출
+        if (next) {
+          track.matchCardClicked({
+            matchId: String(match.id),
+            league: match.league,
+          })
+          track.trendChartViewed({ matchId: String(match.id) })
+        }
+      }}
     >
       {/* 메인 경기 정보 - Forebet 스타일 가로 배치 */}
       <div className="grid grid-cols-12 gap-2 p-4 items-center">
