@@ -4,7 +4,7 @@ import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import Link from 'next/link'
-import { track } from '@/lib/analytics'
+import { track } from '../../lib/analytics'
 
 export default function SignupPage() {
   const { language } = useLanguage()

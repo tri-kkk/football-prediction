@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '../contexts/LanguageContext'
 import Link from 'next/link'
-import { track } from '@/lib/analytics'
+import { track } from '../../lib/analytics'
 
 export default function LoginPage() {
   const { language } = useLanguage()

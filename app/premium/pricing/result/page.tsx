@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useLanguage } from '../../../contexts/LanguageContext'
-import { track } from '@/lib/analytics'
+import { track } from '../../../../lib/analytics'
 
 function ResultContent() {
   const { language } = useLanguage()

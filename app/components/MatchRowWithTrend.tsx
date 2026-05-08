@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import MatchTrendChart from './MatchTrendChart'
-import { track } from '@/lib/analytics'
+import { track } from '../../lib/analytics'
 
 interface Match {
   id: number

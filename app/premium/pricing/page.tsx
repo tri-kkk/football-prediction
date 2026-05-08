@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useLanguage } from '../../contexts/LanguageContext'
-import { track } from '@/lib/analytics'
+import { track } from '../../../lib/analytics'
 
 declare global {
   interface Window {
