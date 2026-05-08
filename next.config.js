@@ -1,4 +1,4 @@
-/** @type {import('next').NextConfig} */
+﻿/** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -25,10 +25,19 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // 과거 존재했던 페이지 → 메인으로 301 영구 리디렉션
       {
         source: '/movement',
         destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/baseball/predictions/:path*',
+        destination: '/baseball/analysis/:path*',
+        permanent: true,
+      },
+      {
+        source: '/baseball/combo-picks/:path*',
+        destination: '/baseball/multi-match/:path*',
         permanent: true,
       },
     ]

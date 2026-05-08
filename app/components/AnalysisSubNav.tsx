@@ -1,4 +1,4 @@
-// 🔥 분석 페이지 공통 서브 네비 — 모바일/데스크톱 모두 분석 카테고리 빠른 전환
+﻿// 🔥 분석 페이지 공통 서브 네비 — 모바일/데스크톱 모두 분석 카테고리 빠른 전환
 'use client'
 
 import Link from 'next/link'
@@ -19,12 +19,12 @@ const ANALYSIS_TABS: SubNavItem[] = [
     labelEn: 'Football Premium',
   },
   {
-    href: '/baseball/predictions',
+    href: '/baseball/analysis',
     labelKo: '야구 분석',
     labelEn: 'Baseball Analysis',
   },
   {
-    href: '/baseball/combo-picks',
+    href: '/baseball/multi-match',
     labelKo: '야구 다경기 분석',
     labelEn: 'Multi-Match Analysis',
   },

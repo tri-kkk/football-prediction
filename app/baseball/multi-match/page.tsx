@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -191,7 +191,7 @@ export default function ComboPicksPage() {
         params.set('start_date', range.start)
         params.set('end_date', range.end)
       }
-      const res = await fetch(`/api/baseball/combo-picks?${params}`)
+      const res = await fetch(`/api/baseball/multi-match?${params}`)
       const data = await res.json()
       setPicks(data.picks || [])
       setStats(data.stats || {})

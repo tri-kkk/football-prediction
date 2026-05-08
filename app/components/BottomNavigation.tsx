@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -26,8 +26,8 @@ export default function BottomNavigation() {
   const items: NavItem[] = [
     { href: '/', label: '홈', isHome: true, matches: (p) => p === '/' || p === '' },
     { href: '/premium', label: '축구 분석', matches: (p) => p.startsWith('/premium') || p.startsWith('/football') || p.startsWith('/results') },
-    { href: '/baseball/predictions', label: '야구 분석', matches: (p) => p.startsWith('/baseball/predictions') || p.startsWith('/baseball/results') },
-    { href: '/baseball/combo-picks', label: '야구 다경기', matches: (p) => p.startsWith('/baseball/combo-picks') },
+    { href: '/baseball/analysis', label: '야구 분석', matches: (p) => p.startsWith('/baseball/analysis') || p.startsWith('/baseball/results') },
+    { href: '/baseball/multi-match', label: '야구 다경기', matches: (p) => p.startsWith('/baseball/multi-match') },
     { label: '메뉴', onClick: emitMenuOpen },
   ]
 

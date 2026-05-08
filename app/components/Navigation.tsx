@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import Link from 'next/link'
@@ -70,13 +70,13 @@ const baseballMenuItems: MenuItem[] = [
   { 
     labelKo: '분석',
     labelEn: 'Analysis',
-    href: '/baseball/predictions', 
+    href: '/baseball/analysis', 
     icon: 'insights'
   },
   {
     labelKo: '조합',
     labelEn: 'Combo',
-    href: '/baseball/combo-picks',
+    href: '/baseball/multi-match',
     icon: 'combo'
   },
   {

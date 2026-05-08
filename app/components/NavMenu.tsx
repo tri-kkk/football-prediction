@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
@@ -29,11 +29,11 @@ const MENU: MenuItem[] = [
   },
   {
     ko: 'AI 분석',
-    matchPaths: ['/premium', '/baseball/predictions', '/baseball/combo-picks'],
+    matchPaths: ['/premium', '/baseball/analysis', '/baseball/multi-match'],
     children: [
       { ko: '축구 프리미엄', href: '/premium' },
-      { ko: '야구 분석', href: '/baseball/predictions' },
-      { ko: '야구 다경기 분석', href: '/baseball/combo-picks' },
+      { ko: '야구 분석', href: '/baseball/analysis' },
+      { ko: '야구 다경기 분석', href: '/baseball/multi-match' },
     ],
   },
   {

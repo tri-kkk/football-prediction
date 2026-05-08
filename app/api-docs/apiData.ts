@@ -1,4 +1,4 @@
-// app/api-docs/apiData.ts
+﻿// app/api-docs/apiData.ts
 // TrendSoccer 모바일 앱용 API 명세
 // 코드 기반 추출 — 변경 시 sync 필요
 
@@ -846,7 +846,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
     id: 'baseball-combo-picks',
     category: 'baseball-content',
     method: 'GET',
-    path: '/api/baseball/combo-picks',
+    path: '/api/baseball/multi-match',
     description: '야구 다경기 분석 + 적중률 통계 (프리미엄 전용)',
     auth: 'none',
     params: [
