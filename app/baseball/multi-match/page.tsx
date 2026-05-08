@@ -191,7 +191,7 @@ export default function ComboPicksPage() {
         params.set('start_date', range.start)
         params.set('end_date', range.end)
       }
-      const res = await fetch(`/api/baseball/multi-match?${params}`)
+      const res = await fetch(`/api/baseball/combo-picks?${params}`)
       const data = await res.json()
       setPicks(data.picks || [])
       setStats(data.stats || {})

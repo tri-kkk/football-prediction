@@ -846,7 +846,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
     id: 'baseball-combo-picks',
     category: 'baseball-content',
     method: 'GET',
-    path: '/api/baseball/multi-match',
+    path: '/api/baseball/combo-picks',
     description: '야구 다경기 분석 + 적중률 통계 (프리미엄 전용)',
     auth: 'none',
     params: [
