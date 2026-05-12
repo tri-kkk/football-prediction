@@ -22,13 +22,6 @@ interface BlogPost {
   tags: string[]
 }
 
-const categories = [
-  { value: 'all', labelKo: '전체', labelEn: 'All', icon: '◉', color: 'from-gray-500 to-gray-600' },
-  { value: 'weekly', labelKo: '주간', labelEn: 'Weekly', icon: '▤', color: 'from-blue-500 to-blue-600' },
-  { value: 'preview', labelKo: '프리뷰', labelEn: 'Preview', icon: '◎', color: 'from-emerald-500 to-emerald-600' },
-  { value: 'analysis', labelKo: '분석', labelEn: 'Analysis', icon: '◇', color: 'from-amber-500 to-amber-600' },
-]
-
 const categoryColorMap: Record<string, string> = {
   weekly: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   preview: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
@@ -50,7 +43,6 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
   const isPremium = (session?.user as any)?.tier === 'premium'
 
   const [posts, setPosts] = useState<BlogPost[]>(initialPosts || [])
-  const [selectedCategory, setSelectedCategory] = useState('all')
   const [loading, setLoading] = useState(!initialPosts || initialPosts.length === 0)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(initialPosts ? initialPosts.length >= POSTS_PER_PAGE : true)
@@ -60,7 +52,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
 
   useEffect(() => {
     // 첫 로드 시 initialPosts가 있으면 fetch 스킵
-    if (isInitialLoad && initialPosts && initialPosts.length > 0 && selectedCategory === 'all') {
+    if (isInitialLoad && initialPosts && initialPosts.length > 0) {
       setIsInitialLoad(false)
       return
     }
@@ -69,7 +61,7 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
     setOffset(0)
     setHasMore(true)
     fetchPosts(0, true)
-  }, [selectedCategory, currentLanguage])
+  }, [currentLanguage])
 
   const fetchPosts = async (currentOffset: number, isInitial: boolean = false) => {
     if (isInitial) {
@@ -79,10 +71,9 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
     }
 
     try {
-      const category = selectedCategory === 'all' ? '' : `&category=${selectedCategory}`
       const langFilter = currentLanguage === 'en' ? '&lang=en' : ''
       const res = await fetch(
-        `/api/blog/posts?published=true${category}${langFilter}&limit=${POSTS_PER_PAGE}&offset=${currentOffset}`
+        `/api/blog/posts?published=true${langFilter}&limit=${POSTS_PER_PAGE}&offset=${currentOffset}`
       )
       const result = await res.json()
 
@@ -343,27 +334,16 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
         </div>
       </div>
 
-      {/* 카테고리 필터 */}
-      <div className="bg-black/80 backdrop-blur-sm sticky top-0 z-10">
+      {/* 단일 탭 헤더 */}
+      <div className="bg-black/80 backdrop-blur-sm sticky top-0 z-10 border-b border-gray-900">
         <div className="home-container mx-auto px-4 py-2.5">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            {categories.map(cat => {
-              const isActive = selectedCategory === cat.value
-              return (
-                <button
-                  key={cat.value}
-                  onClick={() => setSelectedCategory(cat.value)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-all text-sm font-medium shrink-0 ${
-                    isActive
-                      ? 'bg-gradient-to-r ' + cat.color + ' text-white shadow-lg'
-                      : 'bg-[#252829] text-gray-400 hover:bg-[#252829] hover:text-white border border-gray-800'
-                  }`}
-                >
-                  <span className="text-xs opacity-70">{cat.icon}</span>
-                  <span>{currentLanguage === 'ko' ? cat.labelKo : cat.labelEn}</span>
-                </button>
-              )
-            })}
+          <div className="flex items-center gap-2">
+            <button
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap text-sm font-medium shrink-0 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg cursor-default"
+            >
+              <span className="text-xs opacity-70">◉</span>
+              <span>{currentLanguage === 'ko' ? '전체 포스트' : 'All Posts'}</span>
+            </button>
 
             {/* 포스트 카운트 */}
             {totalCount > 0 && (
