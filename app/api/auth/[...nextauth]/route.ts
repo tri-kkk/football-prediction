@@ -34,6 +34,33 @@ async function getCountryFromIP(ip: string): Promise<{ country: string; countryC
   return { country: 'Unknown', countryCode: 'XX' }
 }
 
+// 📊 PostHog 서버 사이드 캡쳐 — 가입/로그인 정확하게 추적
+async function capturePostHog(
+  event: 'signup_completed' | 'login_completed',
+  distinctId: string,
+  properties: Record<string, any> = {}
+) {
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
+  if (!key) return
+  const host = (process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com').replace(/\/$/, '')
+  try {
+    await fetch(`${host}/capture/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: key,
+        event,
+        distinct_id: distinctId,
+        properties,
+        timestamp: new Date().toISOString(),
+      }),
+      signal: AbortSignal.timeout(3000),
+    })
+  } catch (e) {
+    console.warn('[PostHog capture failed]', (e as Error)?.message)
+  }
+}
+
 function safeStringify(value: any): string | null {
   if (value === null || value === undefined) return null
   if (typeof value === 'string') return value
@@ -122,6 +149,11 @@ const handler = NextAuth({
           }
           await supabase.from('users').update(updateData).eq('email', user.email.toLowerCase())
           console.log(`✅ Existing user login: ${user.email}`)
+          // 📊 기존 사용자 로그인
+          capturePostHog('login_completed', existingUser.id, {
+            provider: account?.provider,
+            email: user.email,
+          })
           return true
         }
 
@@ -171,7 +203,7 @@ const handler = NextAuth({
           || (profile as any)?.name
           || null
 
-        await supabase.from('pending_users').insert({
+        const { data: insertedPending } = await supabase.from('pending_users').insert({
           email: user.email,
           name: userName,
           avatar_url: user.image,
@@ -182,9 +214,15 @@ const handler = NextAuth({
           signup_country_code: countryCode,
           pending_promo: canGetPromo ? 'LAUNCH_2026' : null,
           expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        })
+        }).select('id').single()
 
         console.log(`🆕 New pending user: ${user.email}`)
+        // 📊 신규 가입 (DB 기반 정확한 판정)
+        capturePostHog('signup_completed', insertedPending?.id || user.email, {
+          provider: account?.provider,
+          email: user.email,
+          country: countryCode,
+        })
         return true
 
       } catch (error) {

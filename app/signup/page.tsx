@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { signIn } from 'next-auth/react'
 import { useState } from 'react'
@@ -114,6 +114,77 @@ export default function SignupPage() {
             </div>
           </div>
 
+
+          {/* 약관 동의 (OAuth 클릭 전 필수 체크) */}
+          <div className="mb-5 space-y-3">
+            {/* 이용약관 */}
+            <div
+              onClick={() => {
+                setAgreedTerms(!agreedTerms)
+                if (!agreedTerms) setShowError(false)
+              }}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                agreedTerms
+                  ? 'bg-green-500 border-green-500'
+                  : showError && !agreedTerms
+                  ? 'border-red-500'
+                  : 'border-gray-500 group-hover:border-gray-400'
+              }`}>
+                {agreedTerms && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <span className="text-gray-300 text-sm">
+                <a href="/terms" onClick={e => e.stopPropagation()} className="underline hover:text-white">
+                  {language === 'ko' ? '이용약관' : 'Terms of Service'}
+                </a>
+                {language === 'ko' ? ' 동의 (필수)' : ' (Required)'}
+              </span>
+            </div>
+
+            {/* 개인정보처리방침 */}
+            <div
+              onClick={() => {
+                setAgreedPrivacy(!agreedPrivacy)
+                if (!agreedPrivacy) setShowError(false)
+              }}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                agreedPrivacy
+                  ? 'bg-green-500 border-green-500'
+                  : showError && !agreedPrivacy
+                  ? 'border-red-500'
+                  : 'border-gray-500 group-hover:border-gray-400'
+              }`}>
+                {agreedPrivacy && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <span className="text-gray-300 text-sm">
+                <a href="/privacy" onClick={e => e.stopPropagation()} className="underline hover:text-white">
+                  {language === 'ko' ? '개인정보처리방침' : 'Privacy Policy'}
+                </a>
+                {language === 'ko' ? ' 동의 (필수)' : ' (Required)'}
+              </span>
+            </div>
+
+            {/* 에러 메시지 */}
+            {showError && (
+              <p className="text-red-400 text-sm">
+                {language === 'ko'
+                  ? '※ 필수 약관에 동의해주세요'
+                  : '※ Please agree to required terms'}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-3">
             {/* Google 가입 */}
             <button
@@ -149,76 +220,6 @@ export default function SignupPage() {
               )}
               {language === 'ko' ? 'Naver로 시작하기' : 'Continue with Naver'}
             </button>
-          </div>
-
-          {/* 약관 동의 */}
-          <div className="mt-6 space-y-3">
-            {/* 이용약관 */}
-            <div 
-              onClick={() => {
-                setAgreedTerms(!agreedTerms)
-                if (!agreedTerms) setShowError(false)
-              }}
-              className="flex items-center gap-3 cursor-pointer group"
-            >
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                agreedTerms 
-                  ? 'bg-green-500 border-green-500' 
-                  : showError && !agreedTerms 
-                  ? 'border-red-500'
-                  : 'border-gray-500 group-hover:border-gray-400'
-              }`}>
-                {agreedTerms && (
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </div>
-              <span className="text-gray-300 text-sm">
-                <a href="/terms" onClick={e => e.stopPropagation()} className="underline hover:text-white">
-                  {language === 'ko' ? '이용약관' : 'Terms of Service'}
-                </a>
-                {language === 'ko' ? ' 동의 (필수)' : ' (Required)'}
-              </span>
-            </div>
-
-            {/* 개인정보처리방침 */}
-            <div 
-              onClick={() => {
-                setAgreedPrivacy(!agreedPrivacy)
-                if (!agreedPrivacy) setShowError(false)
-              }}
-              className="flex items-center gap-3 cursor-pointer group"
-            >
-              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                agreedPrivacy 
-                  ? 'bg-green-500 border-green-500' 
-                  : showError && !agreedPrivacy 
-                  ? 'border-red-500'
-                  : 'border-gray-500 group-hover:border-gray-400'
-              }`}>
-                {agreedPrivacy && (
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </div>
-              <span className="text-gray-300 text-sm">
-                <a href="/privacy" onClick={e => e.stopPropagation()} className="underline hover:text-white">
-                  {language === 'ko' ? '개인정보처리방침' : 'Privacy Policy'}
-                </a>
-                {language === 'ko' ? ' 동의 (필수)' : ' (Required)'}
-              </span>
-            </div>
-
-            {/* 에러 메시지 */}
-            {showError && (
-              <p className="text-red-400 text-sm">
-                {language === 'ko' 
-                  ? '※ 필수 약관에 동의해주세요' 
-                  : '※ Please agree to required terms'}
-              </p>
-            )}
           </div>
 
           {/* 로그인 링크 */}

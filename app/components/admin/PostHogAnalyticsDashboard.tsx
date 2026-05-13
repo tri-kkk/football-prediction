@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * PostHog 분석 대시보드 (재사용 컴포넌트)
@@ -38,6 +38,13 @@ interface AnalyticsData {
     premium_cta_clicked?: number
     checkout_started?: number
     subscription_completed?: number
+  }
+  db?: {
+    usersTotal: number
+    usersInRange: number
+    pendingInRange: number
+    subsActive: number
+    subsInRange: number
   }
   generatedAt: string
 }
@@ -134,14 +141,26 @@ export default function PostHogAnalyticsDashboard() {
 
       {data && (
         <>
-          {/* 1. 요약 카드 */}
-          <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <Stat label="순방문자" value={fmt(data.summary.visitors)} />
-            <Stat label="페이지뷰" value={fmt(data.summary.pageviews)} />
-            <Stat label="식별 가입자" value={fmt(data.summary.users)} />
-            <Stat label="신규 가입" value={fmt(data.summary.signups)} accent="emerald" />
-            <Stat label="구독 결제" value={fmt(data.summary.subs)} accent="yellow" />
-            <Stat label="매출 추정" value={fmtKRW(data.summary.revenue)} accent="yellow" />
+          {/* 1. 핵심 지표 (DB 기반 실제 데이터 우선) */}
+          <section>
+            <div className="text-[11px] text-gray-500 mb-2 tracking-wider uppercase">
+              📊 실제 데이터 (Supabase DB)
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <Stat label="총 가입자 (누적)" value={fmt(data.db?.usersTotal)} accent="emerald" />
+              <Stat label={`신규 가입 (${range})`} value={fmt(data.db?.usersInRange)} accent="emerald" hint="users 테이블 신규" />
+              <Stat label="활성 구독" value={fmt(data.db?.subsActive)} accent="yellow" />
+              <Stat label={`구독 결제 (${range})`} value={fmt(data.db?.subsInRange)} accent="yellow" />
+            </div>
+
+            <div className="text-[11px] text-gray-500 mb-2 tracking-wider uppercase">
+              🌐 트래픽 (PostHog 추적)
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <Stat label="순방문자 (UV)" value={fmt(data.summary.visitors)} />
+              <Stat label="페이지뷰 (PV)" value={fmt(data.summary.pageviews)} />
+              <Stat label="가입 시작 (이벤트)" value={fmt(data.funnel.signup_started)} hint="signup_started 이벤트" />
+            </div>
           </section>
 
           {/* 2. 일자별 차트 */}
@@ -188,7 +207,7 @@ export default function PostHogAnalyticsDashboard() {
               title="회원가입 퍼널"
               steps={[
                 { label: '가입 시도', value: data.funnel.signup_started || 0 },
-                { label: '가입 완료', value: data.funnel.signup_completed || 0 },
+                { label: '가입 완료 (DB)', value: data.db?.usersInRange || 0 },
               ]}
             />
             <Funnel
@@ -197,7 +216,7 @@ export default function PostHogAnalyticsDashboard() {
                 { label: 'PICK 잠금 노출', value: data.funnel.pick_gated || 0 },
                 { label: '프리미엄 CTA 클릭', value: data.funnel.premium_cta_clicked || 0 },
                 { label: '결제 시작', value: data.funnel.checkout_started || 0 },
-                { label: '구독 완료', value: data.funnel.subscription_completed || 0 },
+                { label: '구독 완료 (DB)', value: data.db?.subsInRange || 0 },
               ]}
             />
           </section>
@@ -246,10 +265,12 @@ function Stat({
   label,
   value,
   accent,
+  hint,
 }: {
   label: string
   value: string
   accent?: 'emerald' | 'yellow'
+  hint?: string
 }) {
   const accentColor =
     accent === 'emerald'
@@ -258,9 +279,10 @@ function Stat({
         ? 'text-yellow-400'
         : 'text-white'
   return (
-    <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-4">
+    <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-4" title={hint}>
       <div className="text-[11px] text-gray-500 uppercase tracking-wider">{label}</div>
       <div className={`mt-1.5 text-2xl font-bold ${accentColor}`}>{value}</div>
+      {hint && <div className="text-[10px] text-gray-600 mt-1">{hint}</div>}
     </div>
   )
 }

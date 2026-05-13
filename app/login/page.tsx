@@ -181,10 +181,10 @@ export default function LoginPage() {
         {/* 로그인 카드 — 메인 톤 #252829 */}
         <div className="rounded-3xl p-7 sm:p-8 shadow-2xl border border-gray-800" style={{ backgroundColor: '#252829' }}>
           <h2 className="text-xl font-bold text-white text-center mb-2">
-            {language === 'ko' ? '로그인 / 회원가입' : 'Sign In / Sign Up'}
+            {language === 'ko' ? '로그인' : 'Sign In'}
           </h2>
           <p className="text-gray-500 text-sm text-center mb-8">
-            {language === 'ko' ? '소셜 계정으로 간편하게 시작하세요' : 'Get started with your social account'}
+            {language === 'ko' ? '소셜 계정으로 간편하게 로그인하세요' : 'Sign in with your social account'}
           </p>
 
           <div className="space-y-3">
@@ -249,8 +249,18 @@ export default function LoginPage() {
 
         </div>
 
-        {/* 홈으로 */}
+        {/* 회원가입 안내 */}
         <div className="text-center mt-6">
+          <span className="text-gray-500 text-sm">
+            {language === 'ko' ? '아직 회원이 아니신가요? ' : "Don't have an account? "}
+          </span>
+          <Link href="/signup" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium">
+            {language === 'ko' ? '회원가입 →' : 'Sign Up →'}
+          </Link>
+        </div>
+
+        {/* 홈으로 */}
+        <div className="text-center mt-4">
           <Link href="/" className="text-gray-600 hover:text-gray-400 text-sm transition-colors">
             ← {language === 'ko' ? '홈으로' : 'Home'}
           </Link>

@@ -108,18 +108,9 @@ function PostHogIdentify() {
         tier,
         provider,
       })
-
-      // 📊 신규 가입 vs 재방문 로그인 자동 구분 → 퍼널 정확도 ↑
-      try {
-        const knownKey = `ts_known_user_${userId}`
-        const isKnown = localStorage.getItem(knownKey) === '1'
-        if (!isKnown) {
-          ph.capture('signup_completed', { provider, userId })
-          localStorage.setItem(knownKey, '1')
-        } else {
-          ph.capture('login_completed', { provider, userId })
-        }
-      } catch {}
+      // 📌 signup_completed / login_completed 는 NextAuth 서버 콜백에서
+      //    DB 기반 신규/기존 판정 후 capture (route.ts events.signIn)
+      //    클라이언트는 identify 만 담당 — false positive 방지
     }
 
     if (status === 'unauthenticated') {
