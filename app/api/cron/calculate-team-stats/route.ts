@@ -6,6 +6,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Vercel function timeout: 기본 60s → 5분으로 확장
+// mode=all 시 13개 리그 × 4-5 시즌 처리에 60s 초과 → 부분 처리 방지
+export const maxDuration = 300
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
