@@ -4,6 +4,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { useLocale } from 'next-intl'
 import type { UnifiedMatch } from './types'
 import { LEAGUES } from '../../data/leagues'
 
@@ -83,6 +84,70 @@ const SHORT_NAME: Record<string, string> = {
   CPBL: 'CPBL',
 }
 
+// 영어 표기 (광고 송출 영어권 일반 대상)
+// 외부 컴포넌트(UnifiedMatchCard 등)에서 재사용하기 위해 export
+export const SHORT_NAME_EN: Record<string, string> = {
+  PL: 'EPL',
+  PD: 'La Liga',
+  BL1: 'Bundesliga',
+  SA: 'Serie A',
+  FL1: 'Ligue 1',
+  CL: 'UCL',
+  EL: 'UEL',
+  UECL: 'UECL',
+  PPL: 'Primeira',
+  DED: 'Eredivisie',
+  ELC: 'Championship',
+  SD: 'La Liga 2',
+  BL2: 'Bundesliga 2',
+  FL2: 'Ligue 2',
+  TSL: 'Süper Lig',
+  SPL: 'Scottish',
+  SSL: 'Swiss',
+  GSL: 'Greek',
+  DSL: 'Danish',
+  JPL: 'Belgian',
+  ABL: 'Austrian',
+  J1: 'J1 League',
+  J2: 'J2 League',
+  KL1: 'K League 1',
+  KL2: 'K League 2',
+  K1: 'K League 1',
+  K2: 'K League 2',
+  EGY: 'Egypt',
+  RSA: 'South Africa',
+  MAR: 'Morocco',
+  DZA: 'Algeria',
+  TUN: 'Tunisia',
+  SAL: 'Saudi',
+  CSL: 'China',
+  BSA: 'Brazil',
+  ARG: 'Argentina',
+  MLS: 'MLS',
+  LMX: 'Liga MX',
+  ALG: 'A-League',
+  ACL: 'ACL',
+  ACL2: 'ACL2',
+  FAC: 'FA Cup',
+  EFL: 'EFL Cup',
+  CDR: 'Copa del Rey',
+  CIT: 'Coppa Italia',
+  CDF: 'Coupe de France',
+  KNV: 'KNVB',
+  DFB: 'DFB-Pokal',
+  TDP: 'Taça de Portugal',
+  WC: 'World Cup',
+  UNL: 'UNL',
+  COP: 'Libertadores',
+  COS: 'Sudamericana',
+  AFCON: 'AFCON',
+  AMATCH: 'Intl. Friendly',
+  KBO: 'KBO',
+  MLB: 'MLB',
+  NPB: 'NPB',
+  CPBL: 'CPBL',
+}
+
 // 리그 코드 → 엠블럼 URL — LEAGUES (단일 소스) 에서 자동 생성 + 야구/별칭 보강
 const FALLBACK_LOGO: Record<string, string> = (() => {
   const map: Record<string, string> = {}
@@ -107,6 +172,8 @@ const FALLBACK_LOGO: Record<string, string> = (() => {
 const MAX_VISIBLE_DESKTOP = 10  // PC: 10개까지 노출, 그 이상은 접기
 
 export default function LeagueChips({ activeLeague, matches }: Props) {
+  const locale = useLocale()
+  const isEn = locale === 'en'
   const [expanded, setExpanded] = useState(false)
 
   // 매치 기반 동적 리그 리스트 (코드 + 로고 + 개수)
@@ -119,9 +186,10 @@ export default function LeagueChips({ activeLeague, matches }: Props) {
       if (existing) {
         existing.count += 1
       } else {
+        const labelMap = isEn ? SHORT_NAME_EN : SHORT_NAME
         map.set(code, {
           code,
-          label: SHORT_NAME[code] || m.leagueName || code,
+          label: labelMap[code] || m.leagueName || code,
           // 매치의 leagueLogo 우선 → 없으면 폴백 맵
           logo: m.leagueLogo || FALLBACK_LOGO[code],
           count: 1,
@@ -132,7 +200,7 @@ export default function LeagueChips({ activeLeague, matches }: Props) {
       if (a.count !== b.count) return b.count - a.count
       return a.code.localeCompare(b.code)
     })
-  }, [matches])
+  }, [matches, isEn])
 
   if (list.length === 0) return null
 
@@ -155,7 +223,7 @@ export default function LeagueChips({ activeLeague, matches }: Props) {
       <span className="w-5 h-5 rounded-md bg-gray-700 flex items-center justify-center shrink-0 text-[11px]">
         🌐
       </span>
-      <span>전체</span>
+      <span>{isEn ? 'All' : '전체'}</span>
     </Link>
   )
 
@@ -205,8 +273,8 @@ export default function LeagueChips({ activeLeague, matches }: Props) {
             className="shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors border bg-gray-900/60 text-gray-300 hover:bg-gray-800 border-gray-800 hover:text-white"
           >
             {expanded
-              ? `접기`
-              : `+${list.length - MAX_VISIBLE_DESKTOP}개 더`}
+              ? (isEn ? 'Collapse' : '접기')
+              : (isEn ? `+${list.length - MAX_VISIBLE_DESKTOP} more` : `+${list.length - MAX_VISIBLE_DESKTOP}개 더`)}
             <svg className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>

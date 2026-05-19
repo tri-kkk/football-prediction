@@ -4,6 +4,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useLocale } from 'next-intl'
 import UnifiedFeed from '../components/home/UnifiedFeed'
 import { readSportCookie } from '../components/home/SportTabs'
 import {
@@ -14,6 +15,8 @@ import type { SportFilter, UnifiedMatch } from '../components/home/types'
 import type { DateFilter } from '../components/home/DateTabs'
 
 function HomeInner() {
+  const locale = useLocale()
+  const isEn = locale === 'en'
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
@@ -134,9 +137,9 @@ function HomeInner() {
     <main className="home-container mx-auto px-3 sm:px-5 pt-3 pb-24 sm:pb-8 space-y-4">
       {/* 최상단 배너 (모바일 + 데스크탑) */}
       {!isPremium && (
-        <a href="/premium/pricing" className="block -mx-3 sm:mx-0 mb-2 rounded-xl overflow-hidden" aria-label="프리미엄 구독">
+        <a href="/premium/pricing" className="block -mx-3 sm:mx-0 mb-2 rounded-xl overflow-hidden" aria-label={isEn ? 'Premium subscription' : '프리미엄 구독'}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/1200x200.png" alt="프리미엄 구독" className="w-full h-auto" loading="eager" />
+          <img src="/1200x200.png" alt={isEn ? 'Premium subscription' : '프리미엄 구독'} className="w-full h-auto" loading="eager" />
         </a>
       )}
 
@@ -165,7 +168,7 @@ export default function HomePage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <div className="text-gray-500 text-sm">불러오는 중…</div>
+          <div className="text-gray-500 text-sm">Loading…</div>
         </div>
       }
     >

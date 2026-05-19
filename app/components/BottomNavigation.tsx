@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useLocale } from 'next-intl'
 
 export const MENU_OPEN_EVENT = 'trendsoccer:open-mobile-menu'
 
@@ -20,22 +21,24 @@ function emitMenuOpen() {
 
 export default function BottomNavigation() {
   const pathname = usePathname() || '/'
+  const locale = useLocale()
+  const isEn = locale === 'en'
   const HIDDEN_ROUTES = ['/login', '/signup-complete']
   if (HIDDEN_ROUTES.some((rp) => pathname === rp || pathname.startsWith(rp + '/'))) return null
 
   const items: NavItem[] = [
-    { href: '/', label: '홈', isHome: true, matches: (p) => p === '/' || p === '' },
-    { href: '/premium', label: '축구 분석', matches: (p) => p.startsWith('/premium') || p.startsWith('/football') || p.startsWith('/results') },
-    { href: '/baseball/analysis', label: '야구 분석', matches: (p) => p.startsWith('/baseball/analysis') || p.startsWith('/baseball/results') },
-    { href: '/baseball/multi-match', label: '야구 다경기', matches: (p) => p.startsWith('/baseball/multi-match') },
-    { label: '메뉴', onClick: emitMenuOpen },
+    { href: '/', label: isEn ? 'Home' : '홈', isHome: true, matches: (p) => p === '/' || p === '' },
+    { href: '/premium', label: isEn ? 'Football' : '축구 분석', matches: (p) => p.startsWith('/premium') || p.startsWith('/football') || p.startsWith('/results') },
+    { href: '/baseball/analysis', label: isEn ? 'Baseball' : '야구 분석', matches: (p) => p.startsWith('/baseball/analysis') || p.startsWith('/baseball/results') },
+    { href: '/baseball/multi-match', label: isEn ? 'Multi-Match' : '야구 다경기', matches: (p) => p.startsWith('/baseball/multi-match') },
+    { label: isEn ? 'Menu' : '메뉴', onClick: emitMenuOpen },
   ]
 
   return (
     <nav
       className="fixed bottom-0 inset-x-0 z-50 sm:hidden border-t border-gray-800 backdrop-blur-md"
       style={{ backgroundColor: 'rgba(10, 10, 10, 0.94)' }}
-      aria-label="모바일 하단 네비게이션"
+      aria-label={isEn ? 'Mobile bottom navigation' : '모바일 하단 네비게이션'}
     >
       <div className="grid grid-cols-5 h-14">
         {items.map((it, idx) => {

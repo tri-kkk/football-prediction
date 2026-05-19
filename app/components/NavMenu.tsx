@@ -3,10 +3,50 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { useLocale } from 'next-intl'
 import AuthButton from './AuthButton'
 
 interface SubItem { ko: string; href: string; logo?: string }
 interface MenuItem { ko: string; href?: string; matchPaths?: string[]; children?: SubItem[] }
+
+/**
+ * 한국어 라벨 → 영어 라벨 매핑 (NavMenu 전용)
+ *
+ * NavMenu 데이터는 `ko` 키 기준으로 유지하고, 표시 단계에서 locale에 따라 변환.
+ * 새 메뉴 항목 추가 시 여기에도 영어 라벨을 함께 추가하면 됩니다.
+ */
+const EN_LABELS: Record<string, string> = {
+  '홈': 'Home',
+  '경기 일정': 'Schedule',
+  '프리미어리그': 'Premier League',
+  '라리가': 'La Liga',
+  '분데스리가': 'Bundesliga',
+  '세리에A': 'Serie A',
+  '리그1': 'Ligue 1',
+  '챔피언스리그': 'Champions League',
+  'KBO': 'KBO',
+  'MLB': 'MLB',
+  'NPB': 'NPB',
+  '축구 전체': 'All Football',
+  '야구 전체': 'All Baseball',
+  'AI 분석': 'AI Analysis',
+  '축구 프리미엄': 'Football Premium',
+  '야구 분석': 'Baseball Analysis',
+  '야구 다경기 분석': 'Multi-Match Analysis',
+  '경기 결과': 'Results',
+  '축구 결과': 'Football Results',
+  '야구 결과': 'Baseball Results',
+  '하이라이트': 'Highlights',
+  '리포트': 'Reports',
+  '뉴스': 'News',
+  '메뉴': 'Menu',
+  '닫기 ✕': 'Close ✕',
+  '주 메뉴': 'Main menu',
+}
+
+function L(ko: string, locale: string): string {
+  return locale === 'en' ? (EN_LABELS[ko] ?? ko) : ko
+}
 
 const MENU: MenuItem[] = [
   { ko: '홈', href: '/' },
@@ -81,6 +121,7 @@ interface DesktopItemProps {
 function DesktopItem({ item, isOpen, onHover, onLeave, onClickToggle }: DesktopItemProps) {
   const pathname = usePathname() || '/'
   const search = useSearchParams() ?? new URLSearchParams()
+  const locale = useLocale()
   const ref = useRef<HTMLDivElement>(null)
   const active = isActive(pathname, item)
 
@@ -94,7 +135,7 @@ function DesktopItem({ item, isOpen, onHover, onLeave, onClickToggle }: DesktopI
   if (!item.children) {
     return (
       <Link href={item.href || '#'} className={['px-4 py-2 rounded-md font-bold text-sm uppercase tracking-wide transition-colors', active ? 'text-emerald-400' : 'text-gray-300 hover:text-white'].join(' ')}>
-        {item.ko}
+        {L(item.ko, locale)}
       </Link>
     )
   }
@@ -102,7 +143,7 @@ function DesktopItem({ item, isOpen, onHover, onLeave, onClickToggle }: DesktopI
   return (
     <div ref={ref} className="relative" onMouseEnter={onHover} onMouseLeave={onLeave}>
       <button type="button" onClick={onClickToggle} aria-expanded={isOpen} className={['flex items-center gap-1 px-4 py-2 rounded-md font-bold text-sm uppercase tracking-wide transition-colors', active ? 'text-emerald-400' : 'text-gray-300 hover:text-white'].join(' ')}>
-        <span>{item.ko}</span>
+        <span>{L(item.ko, locale)}</span>
         <svg className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
       </button>
       {isOpen && (
@@ -117,7 +158,7 @@ function DesktopItem({ item, isOpen, onHover, onLeave, onClickToggle }: DesktopI
                       <img src={sub.logo} alt="" className="max-w-full max-h-full object-contain" loading="lazy" />
                     </span>
                   ) : <span className="w-6" />}
-                  <span className="font-medium">{sub.ko}</span>
+                  <span className="font-medium">{L(sub.ko, locale)}</span>
                 </Link>
               )
             })}
@@ -131,6 +172,7 @@ function DesktopItem({ item, isOpen, onHover, onLeave, onClickToggle }: DesktopI
 export default function NavMenu() {
   const pathname = usePathname() || '/'
   const search = useSearchParams() ?? new URLSearchParams()
+  const locale = useLocale()
   const [openKey, setOpenKey] = useState<string | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -179,7 +221,7 @@ export default function NavMenu() {
           </Link>
           <AuthButton />
         </div>
-        <nav className="home-container mx-auto flex items-center gap-1 px-3 h-11 border-t border-gray-800/60" aria-label="주 메뉴">
+        <nav className="home-container mx-auto flex items-center gap-1 px-3 h-11 border-t border-gray-800/60" aria-label={L('주 메뉴', locale)}>
           {MENU.map((item) => (
             <DesktopItem
               key={item.ko}
@@ -198,8 +240,8 @@ export default function NavMenu() {
           <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setMobileOpen(false)} aria-hidden="true" />
           <div className="md:hidden fixed top-0 left-0 right-0 bg-[#0f0f0f] border-b border-gray-800 z-50 max-h-screen overflow-y-auto">
             <div className="sticky top-0 bg-[#0f0f0f]/95 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center justify-between">
-              <span className="text-sm font-bold text-gray-200">메뉴</span>
-              <button type="button" onClick={() => setMobileOpen(false)} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium">닫기 ✕</button>
+              <span className="text-sm font-bold text-gray-200">{L('메뉴', locale)}</span>
+              <button type="button" onClick={() => setMobileOpen(false)} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium">{L('닫기 ✕', locale)}</button>
             </div>
             <div className="px-4 py-3 space-y-3">
               {flat.length > 0 && (
@@ -207,7 +249,7 @@ export default function NavMenu() {
                   {flat.map((it) => {
                     const a = isActive(pathname, it)
                     return (
-                      <Link key={it.ko} href={it.href || '#'} onClick={() => setMobileOpen(false)} className={['block px-3 py-3 rounded-lg text-sm font-bold border', a ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'text-white hover:bg-gray-800/60 border-transparent'].join(' ')}>{it.ko}</Link>
+                      <Link key={it.ko} href={it.href || '#'} onClick={() => setMobileOpen(false)} className={['block px-3 py-3 rounded-lg text-sm font-bold border', a ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'text-white hover:bg-gray-800/60 border-transparent'].join(' ')}>{L(it.ko, locale)}</Link>
                     )
                   })}
                 </div>
@@ -218,7 +260,7 @@ export default function NavMenu() {
                   <div key={g.ko}>
                     <div className={['flex items-center gap-2 px-1 mb-2 pb-1.5 border-b', a ? 'border-emerald-500/30' : 'border-gray-800'].join(' ')}>
                       <span className={['inline-block w-1 h-4 rounded-full', a ? 'bg-emerald-500' : 'bg-gray-600'].join(' ')} />
-                      <span className={['text-sm font-bold tracking-wide', a ? 'text-emerald-300' : 'text-white'].join(' ')}>{g.ko}</span>
+                      <span className={['text-sm font-bold tracking-wide', a ? 'text-emerald-300' : 'text-white'].join(' ')}>{L(g.ko, locale)}</span>
                     </div>
                     <div className="space-y-0.5">
                       {g.children!.map((sub) => {
@@ -230,7 +272,7 @@ export default function NavMenu() {
                                 <img src={sub.logo} alt="" className="max-w-full max-h-full object-contain" loading="lazy" />
                               </span>
                             ) : <span className="w-6" />}
-                            <span>{sub.ko}</span>
+                            <span>{L(sub.ko, locale)}</span>
                           </Link>
                         )
                       })}

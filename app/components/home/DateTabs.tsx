@@ -1,6 +1,8 @@
 // 🔥 날짜 필터 탭 — 어제 / 오늘 / 내일 (BC.game 패턴)
 'use client'
 
+import { useLocale } from 'next-intl'
+
 export type DateFilter = 'yesterday' | 'today' | 'tomorrow' | 'all'
 
 interface Props {
@@ -9,13 +11,15 @@ interface Props {
   counts?: Partial<Record<DateFilter, number>>
 }
 
-const TABS: { key: DateFilter; labelKo: string }[] = [
-  { key: 'yesterday', labelKo: '어제' },
-  { key: 'today', labelKo: '오늘' },
-  { key: 'tomorrow', labelKo: '내일' },
+const TABS: { key: DateFilter; labelKo: string; labelEn: string }[] = [
+  { key: 'yesterday', labelKo: '어제', labelEn: 'Yesterday' },
+  { key: 'today', labelKo: '오늘', labelEn: 'Today' },
+  { key: 'tomorrow', labelKo: '내일', labelEn: 'Tomorrow' },
 ]
 
 export default function DateTabs({ value, onChange, counts }: Props) {
+  const locale = useLocale()
+  const isEn = locale === 'en'
   return (
     <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-gray-900/60 rounded-xl border border-gray-800 backdrop-blur-sm w-fit">
       {TABS.map((t) => {
@@ -34,7 +38,7 @@ export default function DateTabs({ value, onChange, counts }: Props) {
             ].join(' ')}
           >
             <span className="flex items-center gap-1.5">
-              <span>{t.labelKo}</span>
+              <span>{isEn ? t.labelEn : t.labelKo}</span>
               {typeof c === 'number' && c > 0 && (
                 <span
                   className={[

@@ -3,15 +3,17 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useLocale } from 'next-intl'
 import type { UnifiedMatch } from './types'
 import { isFinishedStatus, isLiveStatus, isPostponedStatus } from './normalizers'
+import { SHORT_NAME_EN } from './LeagueChips'
 import FootballMatchModal from './FootballMatchModal'
 
 interface Props {
   match: UnifiedMatch
 }
 
-function formatDate(timestamp: string | null, date: string): string {
+function formatDate(timestamp: string | null, date: string, isEn: boolean): string {
   const src = timestamp || date
   if (!src) return ''
   try {
@@ -19,8 +21,8 @@ function formatDate(timestamp: string | null, date: string): string {
     const today = new Date()
     const tomorrow = new Date(today.getTime() + 86400000)
     const ymd = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
-    if (ymd(d) === ymd(today)) return '오늘'
-    if (ymd(d) === ymd(tomorrow)) return '내일'
+    if (ymd(d) === ymd(today)) return isEn ? 'Today' : '오늘'
+    if (ymd(d) === ymd(tomorrow)) return isEn ? 'Tomorrow' : '내일'
     return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
   } catch {
     return src.slice(5, 10)
@@ -41,8 +43,11 @@ function formatTime(timestamp: string | null, time: string | null): string {
 const SPORT_ICON: Record<UnifiedMatch['sport'], string> = { football: '⚽', baseball: '⚾' }
 
 export default function UnifiedMatchCard({ match }: Props) {
-  const home = match.homeTeamKo || match.homeTeam
-  const away = match.awayTeamKo || match.awayTeam
+  const locale = useLocale()
+  const isEn = locale === 'en'
+  // 영어 locale: 가능하면 영문 팀명(homeTeam) 사용, 한국어: homeTeamKo 우선
+  const home = isEn ? (match.homeTeam || match.homeTeamKo) : (match.homeTeamKo || match.homeTeam)
+  const away = isEn ? (match.awayTeam || match.awayTeamKo) : (match.awayTeamKo || match.awayTeam)
   const live = isLiveStatus(match.status)
   const finished = isFinishedStatus(match.status)
   const postponed = isPostponedStatus(match.status)
@@ -67,18 +72,18 @@ export default function UnifiedMatchCard({ match }: Props) {
             ) : (
               <span className="text-base leading-none">{SPORT_ICON[match.sport]}</span>
             )}
-            <span className="truncate">{match.leagueName || match.league}</span>
+            <span className="truncate">{isEn ? (SHORT_NAME_EN[match.league] || match.leagueName || match.league) : (match.leagueName || match.league)}</span>
           </span>
           <span className="text-gray-400 tabular-nums shrink-0">
-            {formatDate(match.timestamp, match.date)}
+            {formatDate(match.timestamp, match.date, isEn)}
             {!finished && time && (<><span className="text-gray-600 mx-1">·</span>{time}</>)}
           </span>
         </div>
         {(live || finished || postponed) && (
           <div className="mt-1.5 flex justify-center">
             {live && <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold animate-pulse">● LIVE {match.status}</span>}
-            {finished && <span className="px-2 py-0.5 rounded-full bg-gray-700 text-gray-300 text-[10px] font-bold">종료</span>}
-            {postponed && <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold">연기</span>}
+            {finished && <span className="px-2 py-0.5 rounded-full bg-gray-700 text-gray-300 text-[10px] font-bold">{isEn ? 'FT' : '종료'}</span>}
+            {postponed && <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold">{isEn ? 'Postponed' : '연기'}</span>}
           </div>
         )}
       </div>

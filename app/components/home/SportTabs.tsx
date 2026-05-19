@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale } from 'next-intl'
 import type { SportFilter } from './types'
 
 const COOKIE_NAME = 'trendsoccer_last_sport'
@@ -30,15 +31,18 @@ interface SportTabsProps {
 }
 
 export default function SportTabs({ value, onChange, counts }: SportTabsProps) {
+  const locale = useLocale()
+  const isEn = locale === 'en'
+
   const handle = (next: SportFilter) => {
     writeSportCookie(next)
     onChange(next)
   }
 
   const tabs: { key: SportFilter; icon: string; label: string }[] = [
-    { key: 'all', icon: '🌐', label: '전체' },
-    { key: 'football', icon: '⚽', label: '축구' },
-    { key: 'baseball', icon: '⚾', label: '야구' },
+    { key: 'all', icon: '🌐', label: isEn ? 'All' : '전체' },
+    { key: 'football', icon: '⚽', label: isEn ? 'Football' : '축구' },
+    { key: 'baseball', icon: '⚾', label: isEn ? 'Baseball' : '야구' },
   ]
 
   return (

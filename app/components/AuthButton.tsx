@@ -87,7 +87,7 @@ export default function AuthButton() {
                   ? 'bg-yellow-500 text-black'
                   : 'bg-gray-600 text-gray-200'
               }`}>
-                {isPremium ? '프리미엄' : '무료'}
+                {isPremium ? (language === 'ko' ? '프리미엄' : 'Premium') : (language === 'ko' ? '무료' : 'Free')}
               </span>
 
               {/* 화살표 */}
