@@ -1,0 +1,18 @@
+{
+  "title": "Match Results",
+  "leagues": "Leagues",
+  "match": "Match",
+  "matches": "matches",
+  "result": "Result",
+  "time": "Time",
+  "probability": "Prob (1-X-2)",
+  "hit": "Hit",
+  "miss": "Miss",
+  "pick": "Pick",
+  "power": "Power",
+  "pattern": "Pattern",
+  "pending": "Pending",
+  "newTab": "New tab",
+  "highlightsSoon": "Highlights coming soon",
+  "noResults": "No match results"
+}

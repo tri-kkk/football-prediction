@@ -1,0 +1,18 @@
+{
+  "title": "경기 결과",
+  "leagues": "리그",
+  "match": "경기",
+  "matches": "경기",
+  "result": "결과",
+  "time": "시간",
+  "probability": "확률 (1-X-2)",
+  "hit": "적중",
+  "miss": "실패",
+  "pick": "예측",
+  "power": "파워",
+  "pattern": "패턴",
+  "pending": "진행중",
+  "newTab": "새 탭",
+  "highlightsSoon": "하이라이트 준비 중",
+  "noResults": "경기 결과가 없습니다"
+}

@@ -1,0 +1,15 @@
+{
+  "title": "블로그",
+  "loading": "로딩 중...",
+  "loadMore": "더보기",
+  "allLoaded": "모든 포스트를 불러왔습니다",
+  "noPosts": "아직 포스트가 없습니다",
+  "checkBackLater": "곧 흥미로운 콘텐츠로 찾아뵙겠습니다!",
+  "koOnly": "🇰🇷 한국어",
+  "categories": {
+    "all": "전체",
+    "weekly": "주간",
+    "preview": "프리뷰",
+    "analysis": "분석"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "title": "Standings",
+  "rank": "Rank",
+  "team": "Team",
+  "played": "P",
+  "won": "W",
+  "drawn": "D",
+  "lost": "L",
+  "points": "Pts",
+  "goalDiff": "GD",
+  "goals": "GD"
+}

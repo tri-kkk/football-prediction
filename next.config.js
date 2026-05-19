@@ -1,4 +1,10 @@
-﻿/** @type {import('next').NextConfig} */
+﻿const createNextIntlPlugin = require('next-intl/plugin')
+
+// next-intl 플러그인: i18n/request.ts 위치를 명시적으로 전달
+// (기본값도 './i18n/request.ts'지만 가독성을 위해 명시)
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -55,4 +61,4 @@ const nextConfig = {
     ]
   },
 }
-module.exports = nextConfig
+module.exports = withNextIntl(nextConfig)

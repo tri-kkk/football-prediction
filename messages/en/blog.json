@@ -1,0 +1,15 @@
+{
+  "title": "Blog",
+  "loading": "Loading...",
+  "loadMore": "Load More",
+  "allLoaded": "All posts loaded",
+  "noPosts": "No posts yet",
+  "checkBackLater": "Exciting content coming soon!",
+  "koOnly": "🇰🇷 Korean Only",
+  "categories": {
+    "all": "All",
+    "weekly": "Weekly",
+    "preview": "Preview",
+    "analysis": "Analysis"
+  }
+}

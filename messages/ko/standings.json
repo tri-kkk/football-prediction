@@ -1,0 +1,12 @@
+{
+  "title": "순위표",
+  "rank": "순위",
+  "team": "팀",
+  "played": "경기",
+  "won": "승",
+  "drawn": "무",
+  "lost": "패",
+  "points": "승점",
+  "goalDiff": "득실",
+  "goals": "득실"
+}
