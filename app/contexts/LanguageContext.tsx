@@ -1,6 +1,8 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { useLocale } from 'next-intl'
+import { useRouter, usePathname } from '@/i18n/navigation'
 
 // 번역 파일 import
 import ko from '../locales/ko.json'
@@ -64,30 +66,39 @@ function getNestedValue(obj: any, path: string): string | undefined {
 
 // Provider 컴포넌트
 export function LanguageProvider({ children, defaultLanguage = 'ko' }: LanguageProviderProps) {
-  const [language, setLanguageState] = useState<Language>(defaultLanguage)
-  
-  // 로컬스토리지에서 언어 설정 불러오기
+  /**
+   * v3.6 변경: next-intl URL 라우팅과 동기화
+   *
+   * - language 상태는 URL의 locale (next-intl의 useLocale)을 따라간다
+   * - setLanguage 호출 시 next-intl router로 URL prefix 변경 (페이지 이동)
+   * - 'fr'는 더 이상 next-intl 라우팅에선 지원 안 함 → 'en'으로 매핑
+   * - localStorage는 보조 캐시로만 유지 (선택)
+   */
+  const nextIntlLocale = useLocale() // 'ko' | 'en'
+  const router = useRouter()
+  const pathname = usePathname()
+
+  // next-intl locale을 Language 타입으로 매핑
+  const language: Language = (nextIntlLocale === 'en' ? 'en' : 'ko') as Language
+
+  // 사용자가 명시적으로 'fr' 선택했던 흔적이 있으면 localStorage 정리 (선택)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('trendsoccer-language') as Language
-      if (saved && ['ko', 'en', 'fr'].includes(saved)) {
-        setLanguageState(saved)
-      } else {
-        // 브라우저 언어 감지
-        const browserLang = navigator.language.split('-')[0]
-        if (browserLang === 'ko') setLanguageState('ko')
-        else if (browserLang === 'fr') setLanguageState('fr')
-        else setLanguageState('en')
-      }
+    if (typeof window === 'undefined') return
+    const saved = localStorage.getItem('trendsoccer-language')
+    if (saved === 'fr') {
+      localStorage.setItem('trendsoccer-language', 'en')
     }
   }, [])
-  
-  // 언어 변경 함수
+
+  // 언어 변경 함수 — URL 자체를 바꿔서 next-intl이 메시지/메타데이터 재계산하게 함
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang)
     if (typeof window !== 'undefined') {
       localStorage.setItem('trendsoccer-language', lang)
     }
+    // 'fr'는 next-intl 라우팅에 없으므로 'en'으로 처리
+    const target: 'ko' | 'en' = lang === 'ko' ? 'ko' : 'en'
+    // pathname은 locale prefix가 제거된 경로 (예: '/blog/foo')
+    router.replace(pathname, { locale: target })
   }
   
   // 번역 함수

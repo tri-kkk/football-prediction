@@ -1,0 +1,20 @@
+import type { Metadata } from 'next'
+import AnalysisSubNav from '../../../components/AnalysisSubNav'
+
+export const metadata: Metadata = {
+  title: '트렌드베이스볼 - 야구 데이터 조합 분석',
+  description: 'KBO, NPB, MLB 프로야구 데이터를 조합한 심층 분석 리포트를 제공합니다.',
+}
+
+export default function ComboPicksLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <>
+      <AnalysisSubNav />
+      {children}
+    </>
+  )
+}
