@@ -2251,25 +2251,26 @@ export default function PremiumPredictPage() {
   async function loadUpcomingMatches() {
     setLoading(true)
     try {
-      // 여러 리그 조회해서 합치기
+      // 여러 리그 조회해서 합치기 — ⚡ 병렬 호출 (이전엔 13개 직렬 → 6초+)
       const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'MLS', 'KL1', 'KL2', 'J1', 'J2', 'CL', 'EL']
-      let allMatches: any[] = []
-      
-      for (const league of leagueCodes) {
-        try {
-          // ⚡ 프리미엄 예정경기는 7일치 필요 (odds-from-db 기본 1일에서 옵트인)
-          const response = await fetch(`/api/odds-from-db?league=${league}&daysAhead=7`)
-          if (response.ok) {
-            const result = await response.json()
-            if (result.success && result.data) {
-              allMatches = [...allMatches, ...result.data]
-            }
-          }
-        } catch (e) {
-          console.error(`Error fetching ${league}:`, e)
+
+      // ⚡ 프리미엄 예정경기는 7일치 필요 (odds-from-db 기본 1일에서 옵트인)
+      const results = await Promise.allSettled(
+        leagueCodes.map(league =>
+          fetch(`/api/odds-from-db?league=${league}&daysAhead=7`)
+            .then(r => (r.ok ? r.json() : null))
+        )
+      )
+
+      const allMatches: any[] = []
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value?.success && Array.isArray(r.value.data)) {
+          allMatches.push(...r.value.data)
+        } else if (r.status === 'rejected') {
+          console.error(`Error fetching ${leagueCodes[i]}:`, r.reason)
         }
-      }
-      
+      })
+
       console.log('Total matches loaded:', allMatches.length)
       
       // 중복 제거
@@ -2299,11 +2300,17 @@ export default function PremiumPredictPage() {
 // ✅ PICK 적중률 로드 함수 (수정됨 - 서버 계산 사용)
   async function loadPickAccuracy() {
     try {
-      const response = await fetch('/api/pick-recommendations?period=all')
-      if (!response.ok) return
-      
+      // ⚡ 두 API를 병렬 호출 (이전엔 직렬)
+      const [recRes, premRes] = await Promise.allSettled([
+        fetch('/api/pick-recommendations?period=all'),
+        fetch('/api/premium-picks/history'),
+      ])
+
+      const response = recRes.status === 'fulfilled' ? recRes.value : null
+      if (!response || !response.ok) return
+
       const data = await response.json()
-      
+
       // ✅ 서버에서 계산된 리그별 적중률 사용
       if (data.leagueAccuracy) {
         // 🎯 주요 리그만 표시
@@ -2331,9 +2338,9 @@ export default function PremiumPredictPage() {
       }
       
       // ✅ 최근 적중 경기 추출 (롤링용) - premium_picks에서
-      // premium_picks API로 변경
-      const premiumResponse = await fetch('/api/premium-picks/history')
-      if (premiumResponse.ok) {
+      // ⚡ 위에서 병렬로 이미 받아둔 응답 사용
+      const premiumResponse = premRes.status === 'fulfilled' ? premRes.value : null
+      if (premiumResponse && premiumResponse.ok) {
         const premiumData = await premiumResponse.json()
         
         if (premiumData.picks && Array.isArray(premiumData.picks)) {
