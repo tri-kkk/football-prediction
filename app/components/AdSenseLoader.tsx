@@ -2,9 +2,24 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { usePathname } from 'next/navigation'
 import Script from 'next/script'
 
 const ADSENSE_CLIENT_ID = 'ca-pub-7853814871438044'
+
+// 🚫 광고 제외 경로 (관리자, 결제 등 광고 노출 부적합 경로)
+const AD_EXCLUDED_PATHS = [
+  '/admin',
+  '/api',
+  '/login',
+  '/payment',
+  '/checkout',
+]
+
+function isAdExcludedPath(pathname: string | null): boolean {
+  if (!pathname) return false
+  return AD_EXCLUDED_PATHS.some(prefix => pathname.startsWith(prefix))
+}
 
 // ========== 🛡️ 무효 트래픽 방지 함수들 ==========
 
@@ -78,15 +93,22 @@ function blockAds(reason: string): void {
 
 export default function AdSenseLoader() {
   const { data: session, status } = useSession()
+  const pathname = usePathname()
   const [isLoaded, setIsLoaded] = useState(false)
   const [shouldLoad, setShouldLoad] = useState(false)
 
   const isPremium = (session?.user as any)?.tier === 'premium'
+  const isExcluded = isAdExcludedPath(pathname)
 
   // 🛡️ 무효 트래픽 체크 + 로드 결정
   useEffect(() => {
     if (status === 'loading') return
     if (isPremium) return
+    // 🚫 광고 제외 경로 (관리자 등)
+    if (isExcluded) {
+      console.log('🚫 광고 제외 경로:', pathname)
+      return
+    }
     
     // ✅ 딜레이 500ms로 단축 (기존 1000ms)
     const timer = setTimeout(() => {
@@ -114,7 +136,7 @@ export default function AdSenseLoader() {
     }, 500)
     
     return () => clearTimeout(timer)
-  }, [status, isPremium])
+  }, [status, isPremium, isExcluded, pathname])
 
   // 디버그 로그
   useEffect(() => {
@@ -133,13 +155,14 @@ export default function AdSenseLoader() {
   if (status === 'loading') return null
   // 프리미엄 사용자
   if (isPremium) return null
+  // 🚫 광고 제외 경로 (관리자 등)
+  if (isExcluded) return null
   // 이미 로드됨
   if (isLoaded) return null
   // 🛡️ 보호 체크 미통과
   if (!shouldLoad) return null
 
-  // ✅ 핵심 변경: strategy를 afterInteractive로 변경
-  // lazyOnload는 너무 늦게 로드되어 수동 슬롯이 빈 박스로 남는 원인
+  // ✅ 핵심: strategy를 afterInteractive로
   return (
     <Script
       id="google-adsense"

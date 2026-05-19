@@ -14,9 +14,13 @@ interface MatchItem {
   match_date: string
   match_time: string
   display_name: string
-  pitcher_display: string
-  home_pitcher_era: number | null
-  away_pitcher_era: number | null
+  pitcher_display?: string
+  home_pitcher_era?: number | null
+  away_pitcher_era?: number | null
+  // 🆕 결과 글 용
+  home_score?: number
+  away_score?: number
+  status?: string
 }
 
 interface GeneratedBlog {
@@ -41,6 +45,8 @@ const LEAGUE_COLORS: Record<string, string> = {
 }
 
 export default function BaseballBlogPanel() {
+  // 🆕 글 종류: 프리뷰(preview, 내일 경기) / 결과(result, 오늘 종료 경기)
+  const [blogType, setBlogType] = useState<'preview' | 'result'>('preview')
   const [targetDate, setTargetDate] = useState('')
   const [grouped, setGrouped] = useState<Record<string, MatchItem[]>>({})
   const [total, setTotal] = useState(0)
@@ -52,18 +58,30 @@ export default function BaseballBlogPanel() {
   const [previewId, setPreviewId] = useState<string | null>(null)
   const previewRef = useRef<HTMLDivElement>(null)
 
+  // 🆕 blogType에 따라 API 엔드포인트 결정
+  const apiBase = blogType === 'result'
+    ? '/api/admin/blog/baseball-result'
+    : '/api/admin/blog/baseball-generate'
+
   useEffect(() => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const dateStr = tomorrow.toISOString().split('T')[0]
+    const target = new Date()
+    // 프리뷰: 내일 / 결과: 오늘
+    if (blogType === 'preview') {
+      target.setDate(target.getDate() + 1)
+    }
+    const dateStr = target.toISOString().split('T')[0]
     setTargetDate(dateStr)
     fetchMatches(dateStr)
-  }, [])
+    // 글 종류 바꾸면 선택/생성 상태 초기화
+    setSelected(new Set())
+    setPreviewId(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blogType])
 
   const fetchMatches = async (date: string) => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/blog/baseball-generate?date=${date}`)
+      const res = await fetch(`${apiBase}?date=${date}`)
       const result = await res.json()
       if (result.success) {
         setGrouped(result.data.grouped)
@@ -107,7 +125,7 @@ export default function BaseballBlogPanel() {
       if (blogs.has(matchId) && !confirm(`"${blogs.get(matchId)?.title}" 이미 생성됨. 재생성?`)) continue
       setGenerating(prev => new Set(prev).add(matchId))
       try {
-        const res = await fetch('/api/admin/blog/baseball-generate', {
+        const res = await fetch(apiBase, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ match_id: matchId }),
@@ -129,7 +147,7 @@ export default function BaseballBlogPanel() {
   const generateOne = async (matchId: string) => {
     setGenerating(prev => new Set(prev).add(matchId))
     try {
-      const res = await fetch('/api/admin/blog/baseball-generate', {
+      const res = await fetch(apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ match_id: matchId }),
@@ -181,6 +199,46 @@ export default function BaseballBlogPanel() {
 
   return (
     <div className="space-y-6">
+      {/* 🆕 글 종류 토글 (프리뷰 vs 결과 리뷰) */}
+      <div className="bg-gradient-to-r from-emerald-900/20 to-blue-900/20 rounded-xl p-4 border border-gray-700/50">
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          <span className="text-sm text-gray-300 font-medium">📝 글 종류:</span>
+          <div className="flex gap-1 bg-gray-900/50 p-1 rounded-lg">
+            <button
+              onClick={() => setBlogType('preview')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                blogType === 'preview'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              🔮 프리뷰 (예정 경기)
+            </button>
+            <button
+              onClick={() => setBlogType('result')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                blogType === 'result'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              📊 결과 리뷰 (종료 경기)
+            </button>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500 leading-relaxed">
+          {blogType === 'preview'
+            ? '💡 내일 예정 경기의 분석 프리뷰를 생성합니다. 선발·전적·승률 기반 분석.'
+            : '🔥 검색 트래픽이 프리뷰 대비 5~10배 큰 영역입니다. 종료된 경기의 결과·하이라이트 리뷰 글을 생성하세요.'}
+        </p>
+      </div>
+
+      {/* 🆕 발행 어뷰징 방지 안내 */}
+      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-xs text-yellow-200/80">
+        ⚠️ <strong>네이버 어뷰징 회피 팁:</strong> 한 번에 모두 발행하지 말고, 글 사이 <strong>30분~3시간</strong> 간격을 두세요.
+        제목·태그·본문 구조가 매번 다르게 생성되도록 v2로 개선되었지만, 발행 패턴도 분산해야 효과가 큽니다.
+      </div>
+
       {/* 날짜 선택 + 액션 바 */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2">
@@ -236,7 +294,6 @@ export default function BaseballBlogPanel() {
                     const isSelected = selected.has(match.match_id)
                     const isGenerating = generating.has(match.match_id)
                     const isGenerated = blogs.has(match.match_id)
-
                     return (
                       <div
                         key={match.match_id}
@@ -254,7 +311,11 @@ export default function BaseballBlogPanel() {
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-sm">{match.display_name}</div>
                           <div className="text-xs text-gray-500 mt-0.5">
-                            {match.match_time?.slice(0, 5)} | {match.pitcher_display}
+                            {match.match_time?.slice(0, 5)}
+                            {blogType === 'preview' && match.pitcher_display && ` | ${match.pitcher_display}`}
+                            {blogType === 'result' && match.status === 'FT' && (
+                              <span className="ml-2 text-blue-400 font-bold">FT</span>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -295,7 +356,6 @@ export default function BaseballBlogPanel() {
                 </div>
               </div>
             ))}
-
             {Object.keys(grouped).length === 0 && (
               <div className="text-center py-12 text-gray-500">
                 해당 날짜에 예정된 야구 경기가 없습니다.
@@ -335,13 +395,11 @@ export default function BaseballBlogPanel() {
                     {copied === `tags-${previewId}` ? '✓ 복사됨' : '🏷️ 태그 복사'}
                   </button>
                 </div>
-
                 {/* 제목 */}
                 <div className="px-4 py-2.5 border-b border-gray-700/50">
                   <div className="text-xs text-gray-500 mb-1">제목</div>
                   <div className="font-bold text-sm">{blogs.get(previewId)?.title}</div>
                 </div>
-
                 {/* 태그 */}
                 <div className="px-4 py-2 border-b border-gray-700/50 flex flex-wrap gap-1">
                   <span className="text-xs text-gray-500 mr-2">태그:</span>
@@ -351,7 +409,6 @@ export default function BaseballBlogPanel() {
                     </span>
                   ))}
                 </div>
-
                 {/* HTML 미리보기 */}
                 <div className="p-4 bg-white rounded-b-xl" ref={previewRef}>
                   <div

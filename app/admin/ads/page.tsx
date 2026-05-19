@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import BaseballBlogPanel from './BaseballBlogPanel'
 import PostHogAnalyticsDashboard from '../../components/admin/PostHogAnalyticsDashboard'
+import RetentionDashboard from '../../components/admin/RetentionDashboard'
 
 // ==================== 검색형 선발투수 콤보박스 ====================
 function PitcherCombobox({
@@ -366,6 +367,7 @@ const TABS = [
   { id: 'traffic', label: '트래픽 분석', icon: '📈' },
   { id: 'behavior', label: '행동/퍼널', icon: '🎯' },
   { id: 'users', label: '회원 관리', icon: '👥' },
+  { id: 'retention', label: '잔존율 분석', icon: '📉' },
   { id: 'subscriptions', label: '구독 관리', icon: '💳' },
   { id: 'ads', label: '광고 관리', icon: '📢' },
   { id: 'report', label: '광고 리포트', icon: '📉' },
@@ -682,6 +684,7 @@ export default function AdminDashboard() {
 
   // ===== 필터 상태 =====
   const [userFilter, setUserFilter] = useState<'all' | 'free' | 'premium'>('all')
+  const [activityFilter, setActivityFilter] = useState<'all' | 'active7' | 'dormant30' | 'dormant90'>('all')
   const [countryFilter, setCountryFilter] = useState<string>('all')
   const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'active' | 'cancelled' | 'expired'>('all')
   const [adFilter, setAdFilter] = useState<string>('all')
@@ -2122,27 +2125,60 @@ export default function AdminDashboard() {
 
   const filteredUsers = useMemo(() => {
     let result = users
-    
+
     if (userFilter !== 'all') {
       result = result.filter(u => u.tier === userFilter)
     }
-    
+
     if (countryFilter !== 'all') {
       result = result.filter(u => u.signup_country_code === countryFilter)
     }
-    
+
+    // 🆕 활동 상태 필터 (마지막 접속 기준)
+    if (activityFilter !== 'all') {
+      const now = Date.now()
+      const day7 = now - 7 * 86400000
+      const day30 = now - 30 * 86400000
+      const day90 = now - 90 * 86400000
+      result = result.filter(u => {
+        const last = u.last_login_at ? new Date(u.last_login_at).getTime() : 0
+        if (activityFilter === 'active7') return last >= day7
+        if (activityFilter === 'dormant30') return last && last < day30
+        if (activityFilter === 'dormant90') return last && last < day90
+        return true
+      })
+    }
+
     if (userSearch) {
       const search = userSearch.toLowerCase()
-      result = result.filter(u => 
+      result = result.filter(u =>
         u.email.toLowerCase().includes(search) ||
         (u.name && u.name.toLowerCase().includes(search))
       )
     }
-    
-    return result.sort((a, b) => 
+
+    return result.sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
-  }, [users, userFilter, countryFilter, userSearch])
+  }, [users, userFilter, countryFilter, userSearch, activityFilter])
+
+  // 🆕 회원 관리 탭 상단 요약 카드용 메모 계산
+  const userActivitySummary = useMemo(() => {
+    const now = Date.now()
+    const day7 = now - 7 * 86400000
+    const day30 = now - 30 * 86400000
+    const day90 = now - 90 * 86400000
+    let active7 = 0, active30 = 0, dormant30 = 0, dormant90 = 0
+    users.forEach(u => {
+      const last = u.last_login_at ? new Date(u.last_login_at).getTime() : 0
+      if (!last) return
+      if (last >= day7) active7++
+      if (last >= day30) active30++
+      if (last < day30) dormant30++
+      if (last < day90) dormant90++
+    })
+    return { active7, active30, dormant30, dormant90 }
+  }, [users])
 
   const filteredSubscriptions = useMemo(() => {
     let result = subscriptions
@@ -3169,6 +3205,61 @@ export default function AdminDashboard() {
             {/* 회원 관리 탭 */}
             {activeTab === 'users' && (
               <div className="space-y-6">
+                {/* 🆕 잔존율 요약 카드 */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 rounded-xl p-4 border border-emerald-500/30">
+                    <div className="text-xs text-gray-400 mb-1">🟢 7일 활성 (WAU)</div>
+                    <div className="text-2xl font-bold text-white">{userActivitySummary.active7.toLocaleString()}</div>
+                    <div className="text-[10px] text-gray-500 mt-1">
+                      {users.length ? ((userActivitySummary.active7 / users.length) * 100).toFixed(1) : 0}% of total
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 rounded-xl p-4 border border-blue-500/30">
+                    <div className="text-xs text-gray-400 mb-1">🔵 30일 활성 (MAU)</div>
+                    <div className="text-2xl font-bold text-white">{userActivitySummary.active30.toLocaleString()}</div>
+                    <div className="text-[10px] text-gray-500 mt-1">
+                      {users.length ? ((userActivitySummary.active30 / users.length) * 100).toFixed(1) : 0}% of total
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-800/20 rounded-xl p-4 border border-yellow-500/30">
+                    <div className="text-xs text-gray-400 mb-1">⚪ 휴면 (30d+)</div>
+                    <div className="text-2xl font-bold text-white">{userActivitySummary.dormant30.toLocaleString()}</div>
+                    <div className="text-[10px] text-gray-500 mt-1">
+                      {users.length ? ((userActivitySummary.dormant30 / users.length) * 100).toFixed(1) : 0}% of total
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-600/20 to-red-800/20 rounded-xl p-4 border border-red-500/30">
+                    <div className="text-xs text-gray-400 mb-1">⚫ 이탈 (90d+)</div>
+                    <div className="text-2xl font-bold text-white">{userActivitySummary.dormant90.toLocaleString()}</div>
+                    <div className="text-[10px] text-gray-500 mt-1">
+                      {users.length ? ((userActivitySummary.dormant90 / users.length) * 100).toFixed(1) : 0}% of total
+                    </div>
+                  </div>
+                </div>
+
+                {/* 🆕 활동 상태 필터 */}
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-gray-500 text-xs mr-1">활동 상태:</span>
+                  {([
+                    { id: 'all', label: '전체' },
+                    { id: 'active7', label: '🟢 7일 활성' },
+                    { id: 'dormant30', label: '⚪ 휴면 30d+' },
+                    { id: 'dormant90', label: '⚫ 이탈 90d+' },
+                  ] as const).map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => setActivityFilter(f.id as any)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        activityFilter === f.id
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* 필터 & 검색 */}
                 <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                   <div className="flex flex-wrap items-center gap-2">
@@ -3184,8 +3275,8 @@ export default function AdminDashboard() {
                       >
                         {filter === 'all' ? '전체' : filter === 'free' ? '무료' : '프리미엄'}
                         <span className="ml-2 text-xs opacity-70">
-                          ({filter === 'all' 
-                            ? (totalUserCount || users.length) 
+                          ({filter === 'all'
+                            ? (totalUserCount || users.length)
                             : users.filter(u => u.tier === filter).length})
                         </span>
                       </button>
@@ -3374,6 +3465,11 @@ export default function AdminDashboard() {
                   <span>총 {filteredUsers.length}명 {userFilter === 'all' && countryFilter === 'all' && !userSearch && totalUserCount > filteredUsers.length ? `(전체 ${totalUserCount}명)` : ''}</span>
                 </div>
               </div>
+            )}
+
+            {/* 🆕 잔존율 분석 탭 */}
+            {activeTab === 'retention' && (
+              <RetentionDashboard />
             )}
 
             {/* 구독 관리 탭 */}
