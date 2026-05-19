@@ -67,10 +67,14 @@ async function getTeamRollingStats(team: string, league: string = 'MLB') {
 
   for (const g of homeGames || []) {
     const inn = parseInningStats(g.innings_score)
+    // 🔒 방어: DB 점수가 문자열로 반환될 가능성 대비 ("12" > "3" === false 버그)
+    const _hs = Number(g.home_score)
+    const _as = Number(g.away_score)
+    const _valid = !isNaN(_hs) && !isNaN(_as)
     allGames.push({
-      scored: g.home_score, conceded: g.away_score,
+      scored: _hs, conceded: _as,
       hits: g.home_hits ?? 8,
-      won: g.home_score > g.away_score ? 1 : g.home_score === g.away_score ? -1 : 0,
+      won: !_valid ? -1 : (_hs > _as ? 1 : _hs === _as ? -1 : 0),
       is_home: 1, match_date: g.match_date,
       firstScorer: inn.firstScorer,
       homeComeback: inn.homeComeback, awayComeback: inn.awayComeback,
@@ -80,10 +84,13 @@ async function getTeamRollingStats(team: string, league: string = 'MLB') {
 
   for (const g of awayGames || []) {
     const inn = parseInningStats(g.innings_score)
+    const _hs = Number(g.home_score)
+    const _as = Number(g.away_score)
+    const _valid = !isNaN(_hs) && !isNaN(_as)
     allGames.push({
-      scored: g.away_score, conceded: g.home_score,
+      scored: _as, conceded: _hs,
       hits: g.away_hits ?? 8,
-      won: g.away_score > g.home_score ? 1 : g.away_score === g.home_score ? -1 : 0,
+      won: !_valid ? -1 : (_as > _hs ? 1 : _as === _hs ? -1 : 0),
       is_home: 0, match_date: g.match_date,
       firstScorer: inn.firstScorer,
       homeComeback: inn.awayComeback, awayComeback: inn.homeComeback,
@@ -137,8 +144,8 @@ async function getTeamRollingStats(team: string, league: string = 'MLB') {
     first_score_win_rate: firstScoreWinRate,
     comeback_rate: comebackRate,
     blown_lead_rate: blownLeadRate,
-    home_record: homeOnly.length > 0 ? `${(homeWinPct * 100).toFixed(0)}%` : 'N/A',
-    away_record: awayOnly.length > 0 ? `${(awayWinPct * 100).toFixed(0)}%` : 'N/A',
+    home_record: homeOnly.length > 0 ? `${(homeWinPct * 100).toFixed(0)}% (${homeOnly.filter(g => g.won === 1).length}W-${homeOnly.filter(g => g.won === 0).length}L)` : 'N/A',
+    away_record: awayOnly.length > 0 ? `${(awayWinPct * 100).toFixed(0)}% (${awayOnly.filter(g => g.won === 1).length}W-${awayOnly.filter(g => g.won === 0).length}L)` : 'N/A',
     recent_wins: recent.filter(g => g.won === 1).length,
     recent_total: recent.filter(g => g.won !== -1).length,
   }
