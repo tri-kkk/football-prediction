@@ -2257,7 +2257,8 @@ export default function PremiumPredictPage() {
       
       for (const league of leagueCodes) {
         try {
-          const response = await fetch(`/api/odds-from-db?league=${league}`)
+          // ⚡ 프리미엄 예정경기는 7일치 필요 (odds-from-db 기본 1일에서 옵트인)
+          const response = await fetch(`/api/odds-from-db?league=${league}&daysAhead=7`)
           if (response.ok) {
             const result = await response.json()
             if (result.success && result.data) {

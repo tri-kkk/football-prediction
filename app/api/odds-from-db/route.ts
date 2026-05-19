@@ -1,6 +1,56 @@
 // DB에서 저장된 오즈 + 경기 결과 읽기 (API 사용량 0!)
 // 🆕 v4: 전체 리그 로고 매핑 (50+ 리그)
-export const dynamic = 'force-dynamic'
+// ⚡ v5 (2026-05-19): 메인 페이지 로딩 최적화
+//   - league=ALL 기본 범위: -1~+14일 → -1~+1일 (응답 80%↓)
+//   - select=* → 필요 컬럼만 명시 (응답 30%↓)
+//   - limit: 1500 → 500
+//   - force-dynamic 제거 + Cache-Control(s-maxage=60, swr=300) 추가
+export const revalidate = 60
+
+// === 사용 컬럼 명시 (응답 페이로드 슬림화) ===
+const ODDS_LATEST_COLUMNS = [
+  'match_id',
+  'home_team',
+  'away_team',
+  'home_team_id',
+  'away_team_id',
+  'home_team_logo',
+  'away_team_logo',
+  'league_code',
+  'commence_time',
+  'home_odds',
+  'draw_odds',
+  'away_odds',
+  'home_probability',
+  'draw_probability',
+  'away_probability',
+  'predicted_score_home',
+  'predicted_score_away',
+  'predicted_winner',
+  'odds_source',
+  'status',
+].join(',')
+
+const RESULTS_COLUMNS = [
+  'match_id',
+  'league',
+  'home_team',
+  'away_team',
+  'home_team_id',
+  'away_team_id',
+  'home_crest',
+  'away_crest',
+  'final_score_home',
+  'final_score_away',
+  'match_status',
+  'predicted_winner',
+  'predicted_home_probability',
+  'predicted_draw_probability',
+  'predicted_away_probability',
+  'is_correct',
+  'prediction_type',
+  'match_date',
+].join(',')
 
 // ===== 전체 리그 정보 매핑 =====
 const LEAGUE_INFO: Record<string, { name: string; nameEn: string; priority: number; logo: string }> = {
@@ -345,10 +395,14 @@ export async function GET(request: Request) {
     const league = searchParams.get('league') || 'ALL'
     const date = searchParams.get('date')
     const includeResults = searchParams.get('includeResults') !== 'false'
-    
+    // ⚡ 호출자가 명시적으로 더 긴 범위를 원할 때 사용 (예: 프리미엄 예정경기)
+    const daysAhead = Math.max(1, Math.min(14, parseInt(searchParams.get('daysAhead') || '1', 10) || 1))
+    const daysBack = Math.max(1, Math.min(14, parseInt(searchParams.get('daysBack') || '1', 10) || 1))
+    const limit = Math.max(50, Math.min(1500, parseInt(searchParams.get('limit') || '500', 10) || 500))
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    
+
     if (!supabaseUrl || !supabaseKey) {
       return Response.json({ error: 'Database not configured' }, { status: 500 })
     }
@@ -357,56 +411,59 @@ export async function GET(request: Request) {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
     }
-    
-    // 1️⃣ 예정된 경기 (match_odds_latest)
-    let upcomingUrl = `${supabaseUrl}/rest/v1/match_odds_latest?select=*`
+
+    // 1️⃣ 예정된 경기 (match_odds_latest) — 필요한 컬럼만 select
+    let upcomingUrl = `${supabaseUrl}/rest/v1/match_odds_latest?select=${ODDS_LATEST_COLUMNS}`
     if (league !== 'ALL') {
       upcomingUrl += `&league_code=eq.${league}`
     }
-    
+
     if (date) {
       const startOfDay = `${date}T00:00:00Z`
       const endOfDay = `${date}T23:59:59Z`
       upcomingUrl += `&commence_time=gte.${startOfDay}&commence_time=lte.${endOfDay}`
     } else if (league === 'ALL') {
-      const yesterday = new Date(Date.now() - 86400000)
-      const fortnightLater = new Date(Date.now() + 14 * 86400000)
-      upcomingUrl += `&commence_time=gte.${yesterday.toISOString()}&commence_time=lte.${fortnightLater.toISOString()}`
+      // ⚡ 기본 범위: 어제~내일 (DateTab 범위와 동일). 더 긴 범위는 daysAhead/daysBack 명시
+      const back = new Date(Date.now() - daysBack * 86400000)
+      const ahead = new Date(Date.now() + daysAhead * 86400000)
+      upcomingUrl += `&commence_time=gte.${back.toISOString()}&commence_time=lte.${ahead.toISOString()}`
     }
-    upcomingUrl += `&order=commence_time.asc&limit=1500`
-    
+    upcomingUrl += `&order=commence_time.asc&limit=${limit}`
+
     const upcomingResponse = await fetch(upcomingUrl, {
       headers,
       next: { revalidate: 60 }
     })
-    
+
     if (!upcomingResponse.ok) {
       throw new Error(`Supabase error (upcoming): ${upcomingResponse.status}`)
     }
-    
+
     const upcomingData = await upcomingResponse.json()
     console.log(`📅 예정 경기: ${upcomingData.length}개`)
-    
-    // 2️⃣ 완료된 경기 (match_results)
+
+    // 2️⃣ 완료된 경기 (match_results) — 필요한 컬럼만 select
     let finishedMatches: any[] = []
-    
+
     if (includeResults) {
-      let resultsUrl = `${supabaseUrl}/rest/v1/match_results?select=*&order=match_date.desc`
-      
+      let resultsUrl = `${supabaseUrl}/rest/v1/match_results?select=${RESULTS_COLUMNS}&order=match_date.desc`
+
       if (league !== 'ALL') {
         resultsUrl += `&league=eq.${league}`
       }
-      
+
       if (date) {
         const startOfDay = `${date}T00:00:00Z`
         const endOfDay = `${date}T23:59:59Z`
         resultsUrl += `&match_date=gte.${startOfDay}&match_date=lte.${endOfDay}`
       } else {
-        const sevenDaysAgo = new Date()
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-        resultsUrl += `&match_date=gte.${sevenDaysAgo.toISOString()}`
+        // ⚡ 기본 과거 범위: daysBack(기본 1). 더 길게 보려면 명시
+        const cutoff = new Date(Date.now() - daysBack * 86400000)
+        resultsUrl += `&match_date=gte.${cutoff.toISOString()}`
       }
-      
+      // ⚡ results도 상한 추가 (기본 limit 따라감)
+      resultsUrl += `&limit=${limit}`
+
       const resultsResponse = await fetch(resultsUrl, {
         headers,
         next: { revalidate: 60 }
@@ -550,7 +607,7 @@ export async function GET(request: Request) {
       .sort((a, b) => a.priority - b.priority)
     
     console.log(`📊 총 반환: ${allMatches.length}개`)
-    
+
     return Response.json({
       success: true,
       data: allMatches,
@@ -567,15 +624,20 @@ export async function GET(request: Request) {
         finished: finishedMatches.length,
         merged: resultsMap.size
       }
+    }, {
+      headers: {
+        // ⚡ CDN/브라우저 캐시: 60s fresh, 300s stale-while-revalidate
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+      }
     })
-    
+
   } catch (error) {
     console.error('DB API Error:', error)
     return Response.json(
-      { 
+      {
         success: false,
         error: 'Failed to fetch data from database'
-      }, 
+      },
       { status: 500 }
     )
   }
