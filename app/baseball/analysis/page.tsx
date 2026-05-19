@@ -616,6 +616,10 @@ export default function BaseballPredictionsPage() {
         params.append('status', 'scheduled')
         if (selectedLeague !== 'ALL') params.append('league', selectedLeague)
         params.append('limit', '50')
+        // ⚡ 실시간 ML 호출 스킵: cron(batch-predict)이 DB에 ai_home_win_prob를
+        // 미리 저장하므로 calculatePrediction의 0순위 aiPrediction이 그대로 사용됨.
+        // 이전엔 50경기 × Railway 5s 타임아웃으로 페이지가 매우 느렸음.
+        params.append('skipML', 'true')
 
         const response = await fetch(`/api/baseball/matches?${params}`)
         const data = await response.json()

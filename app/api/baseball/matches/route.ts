@@ -352,6 +352,11 @@ export async function GET(request: NextRequest) {
           success: true, count: formattedMatches.length,
           filters: { league, status, limit, date },
           matches: formattedMatches,
+        }, {
+          headers: {
+            // ⚡ CDN/브라우저 캐시: 60s fresh, 300s stale-while-revalidate
+            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+          },
         })
       }
 
@@ -518,6 +523,11 @@ export async function GET(request: NextRequest) {
       count: formattedMatches.length,
       filters: { league, status, limit, date },
       matches: formattedMatches,
+    }, {
+      headers: {
+        // ⚡ CDN/브라우저 캐시: 60s fresh, 300s stale-while-revalidate
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+      },
     })
 
   } catch (error: any) {
