@@ -371,11 +371,76 @@ const LEAGUE_INFO: Record<string, { name: string; nameEn: string; priority: numb
     priority: 95, 
     logo: 'https://media.api-sports.io/football/leagues/253.png' 
   },
-  'MEX': { 
-    name: '멕시코리그', 
-    nameEn: 'Liga MX', 
-    priority: 96, 
-    logo: 'https://media.api-sports.io/football/leagues/262.png' 
+  'MEX': {
+    name: '멕시코리그',
+    nameEn: 'Liga MX',
+    priority: 96,
+    logo: 'https://media.api-sports.io/football/leagues/262.png'
+  },
+
+  // ===== 데이터 레이어 별칭 (DB가 ISO/대안 코드로 저장한 경우) =====
+  // 같은 리그를 다른 코드로 가리키는 alias들. 정규화는 v2 작업.
+  'DZA': {
+    name: '알제리리그',
+    nameEn: 'Ligue 1 Algeria',
+    priority: 84,
+    logo: 'https://media.api-sports.io/football/leagues/187.png'
+  },
+  'GSL': {
+    name: '그리스',
+    nameEn: 'Super League Greece',
+    priority: 67,
+    logo: 'https://media.api-sports.io/football/leagues/197.png'
+  },
+  'DSL': {
+    name: '덴마크',
+    nameEn: 'Danish Superliga',
+    priority: 68,
+    logo: 'https://media.api-sports.io/football/leagues/119.png'
+  },
+  'SSL': {
+    name: '스위스',
+    nameEn: 'Swiss Super League',
+    priority: 65,
+    logo: 'https://media.api-sports.io/football/leagues/207.png'
+  },
+  'JPL': {
+    name: '벨기에',
+    nameEn: 'Jupiler Pro League',
+    priority: 63,
+    logo: 'https://media.api-sports.io/football/leagues/144.png'
+  },
+  'LMX': {
+    name: '멕시코리그',
+    nameEn: 'Liga MX',
+    priority: 96,
+    logo: 'https://media.api-sports.io/football/leagues/262.png'
+  },
+  'ABL': {
+    name: '오스트리아',
+    nameEn: 'Austrian Bundesliga',
+    priority: 66,
+    logo: 'https://media.api-sports.io/football/leagues/218.png'
+  },
+  'BSA': {
+    name: '브라질리그',
+    nameEn: 'Brasileirão',
+    priority: 92,
+    logo: 'https://media.api-sports.io/football/leagues/71.png'
+  },
+
+  // ===== 추가 신규 (컵/대표팀) =====
+  'AMATCH': {
+    name: '국가대표 A매치',
+    nameEn: 'International Friendly',
+    priority: 5,
+    logo: 'https://media.api-sports.io/football/leagues/10.png'
+  },
+  'TDP': {
+    name: '타사 드 포르투갈',
+    nameEn: 'Taça de Portugal',
+    priority: 60,
+    logo: 'https://media.api-sports.io/football/leagues/96.png'
   },
 }
 
