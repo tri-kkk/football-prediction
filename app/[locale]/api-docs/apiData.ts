@@ -42,6 +42,7 @@ export const CATEGORIES: ApiCategory[] = [
   { id: 'baseball-content', label: '⚾ 야구 — 컨텐츠', description: '뉴스, 라인업, 다경기 분석' },
   { id: 'report', label: '📰 리포트', description: '블로그/리포트' },
   { id: 'auth-sub', label: '🔐 인증 / 구독 / 결제', description: '약관, 구독 상태, 결제 초기화' },
+  { id: 'mobile', label: '📱 모바일 앱 전용', description: 'Flutter 앱용 신규 엔드포인트 (v1/mobile/*)' },
   { id: 'misc', label: '📌 기타', description: '광고, 투표, 인사이트, 문의 등' },
 ]
 
@@ -52,11 +53,11 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'soccer-match',
     method: 'GET',
     path: '/api/matches',
-    description: '축구 경기 일정/결과 (Football-Data 기반, 5분 캐시)',
+    description: '⚠️ Deprecated — PL(프리미어리그) 데이터만 반환. 전체 리그용 아님. 신규 호출자는 /api/odds-from-db 사용.',
     auth: 'none',
     params: [
       { name: 'type', in: 'query', required: false, type: 'string', description: 'scheduled | results', default: 'scheduled' },
-      { name: 'league', in: 'query', required: false, type: 'string', description: 'PL / PD / BL1 / SA / FL1 / CL / ALL', default: 'ALL' },
+      { name: 'league', in: 'query', required: false, type: 'string', description: 'PL 만 의미 있음 (다른 코드 무시됨)', default: 'PL' },
     ],
     responseExample: `[
   {
@@ -78,7 +79,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
     "awayWinRate": 27
   }
 ]`,
-    notes: '최대 20경기. 데이터 출처: Football-Data.org',
+    notes: '⚠️ DEPRECATED — Premier League 한정. 전체 리그 일정은 반드시 /api/odds-from-db 사용. 데이터 출처: API-Football.',
     tryItDefaults: { type: 'scheduled', league: 'PL' },
   },
   {
@@ -86,38 +87,52 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'soccer-match',
     method: 'GET',
     path: '/api/odds-from-db',
-    description: 'DB에 저장된 경기/오즈 (60초 캐시, 외부 API 호출 없음)',
+    description: '★ 정식 축구 일정 엔드포인트 — DB 저장된 경기 + 오즈 + 예측 (60초 캐시, 외부 API 호출 없음). 50+ 리그 지원.',
     auth: 'none',
     params: [
-      { name: 'league', in: 'query', required: false, type: 'string', description: '리그 코드', default: 'ALL' },
-      { name: 'date', in: 'query', required: false, type: 'string', description: 'YYYY-MM-DD' },
-      { name: 'includeResults', in: 'query', required: false, type: 'boolean', description: '완료 경기 포함', default: 'true' },
+      { name: 'league', in: 'query', required: false, type: 'string', description: '리그 코드 (PL/PD/BL1/SA/FL1/CL/EL/KL1/J1 등) 또는 ALL', default: 'ALL' },
+      { name: 'date', in: 'query', required: false, type: 'string', description: 'YYYY-MM-DD. 지정 시 해당 날짜 00:00~23:59 UTC' },
+      { name: 'daysAhead', in: 'query', required: false, type: 'number', description: 'date 미지정 시 앞쪽 N일 (1~14)', default: '1' },
+      { name: 'daysBack', in: 'query', required: false, type: 'number', description: 'date 미지정 시 뒤쪽 N일 (1~14)', default: '1' },
+      { name: 'includeResults', in: 'query', required: false, type: 'boolean', description: 'match_results 병합 여부', default: 'true' },
+      { name: 'limit', in: 'query', required: false, type: 'number', description: '최대 반환 개수 (50~1500)', default: '500' },
     ],
     responseExample: `{
   "success": true,
   "data": [
     {
-      "match_id": 1234567,
+      "match_id": 1545025,
       "league_code": "PL",
       "leagueName": "프리미어리그",
-      "leagueLogo": "https://...",
-      "home_team": "Manchester United",
-      "away_team": "Arsenal",
-      "home_team_id": 33,
-      "away_team_id": 42,
-      "commence_time": "2026-04-27T21:00:00Z",
-      "home_probability": 45,
-      "draw_probability": 28,
-      "away_probability": 27,
+      "leagueNameEn": "Premier League",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/39.png",
+      "leaguePriority": 10,
+      "home_team": "Hull City",
+      "away_team": "Southampton",
+      "home_team_id": 49,
+      "away_team_id": 41,
+      "home_team_logo": "https://media.api-sports.io/football/teams/49.png",
+      "away_team_logo": "https://media.api-sports.io/football/teams/41.png",
+      "commence_time": "2026-05-23T15:30:00+00:00",
+      "home_odds": 2.4, "draw_odds": 3.3, "away_odds": 2.8,
+      "home_probability": 0.42, "draw_probability": 0.28, "away_probability": 0.30,
+      "matchStatus": "SCHEDULED",   // SCHEDULED | FT (라이브 갱신 안 됨 — /api/live-matches 폴링 필요)
+      "status": "NS",                 // DB raw status (참고용)
       "finalScoreHome": null,
       "finalScoreAway": null,
-      "status": "SCHEDULED"
+      "isCorrect": null
     }
   ],
-  "count": 5,
-  "meta": { "leagues": [{ "code": "PL", "name": "프리미어리그", "matchCount": 3, "priority": 10 }] }
+  "count": 87,
+  "source": "database",
+  "meta": {
+    "league": "ALL",
+    "date": "all",
+    "timezone": "KST (UTC+9)",
+    "leagues": [{ "code": "PL", "name": "프리미어리그", "nameEn": "Premier League", "matchCount": 10, "priority": 10, "logo": "..." }]
+  }
 }`,
-    notes: '메인 경기 리스트는 이 엔드포인트 사용 권장 (API quota 절약)',
+    notes: '⚠️ matchStatus는 SCHEDULED/FT 두 가지만 — 라이브 상태는 /api/live-matches 30초 폴링으로 오버레이. CDN 캐시 s-maxage=60, swr=300.',
     tryItDefaults: { league: 'ALL' },
   },
   {
@@ -141,28 +156,46 @@ export const ENDPOINTS: ApiEndpoint[] = [
     tryItDefaults: { matchId: '' },
   },
   {
-    id: 'live-match',
+    id: 'live-matches',
     category: 'soccer-match',
     method: 'GET',
-    path: '/api/live-matches/{matchId}',
-    description: '경기 상세 (이벤트, 통계, 라인업)',
+    path: '/api/live-matches',
+    description: '★ 축구 라이브 경기 일괄 조회 (전체 라이브 경기 + 이벤트 + 통계). 30초 폴링용.',
     auth: 'none',
     params: [
-      { name: 'matchId', in: 'path', required: true, type: 'number', description: '경기 ID' },
+      { name: 'test', in: 'query', required: false, type: 'boolean', description: 'true 시 테스트 데이터 반환', default: 'false' },
     ],
     responseExample: `{
   "success": true,
-  "match": {
-    "id": 1234567, "status": "FT", "elapsed": 90,
-    "homeTeam": "Manchester United", "awayTeam": "Arsenal",
-    "homeScore": 2, "awayScore": 1,
-    "events": [{ "time": 34, "type": "goal", "team": "home", "player": "Bruno Fernandes" }],
-    "stats": { "possession": { "home": 55, "away": 45 } },
-    "lineups": { "home": { "formation": "4-2-3-1", "startXI": [...] } }
-  }
+  "count": 8,
+  "matches": [
+    {
+      "id": 1545025,                 // ← odds-from-db.match_id 와 동일 (오버레이 키)
+      "fixtureId": 1545025,
+      "leagueCode": "PL",
+      "league": "Premier League",
+      "leagueLogo": "https://...",
+      "status": "2H",                // NS|1H|HT|2H|ET|BT|P|LIVE|FT|AET|PEN|PST|CANC|ABD|AWD|WO|SUSP|INT
+      "statusLong": "Second Half",
+      "elapsed": 67,
+      "homeTeam": "Hull City",
+      "awayTeam": "Southampton",
+      "homeTeamKR": "헐 시티",
+      "awayTeamKR": "사우샘프턴",
+      "homeCrest": "https://media.api-sports.io/football/teams/49.png",
+      "awayCrest": "https://media.api-sports.io/football/teams/41.png",
+      "homeScore": 1,
+      "awayScore": 0,
+      "halftimeHomeScore": 0,
+      "halftimeAwayScore": 0,
+      "events": [{ "time": 23, "type": "goal", "team": "home", "player": "...", "detail": "Normal Goal" }],
+      "stats": { "possession": { "home": 55, "away": 45 }, "shotsOnGoal": { "home": 5, "away": 3 } }
+    }
+  ],
+  "timestamp": "2026-05-26T15:30:00Z"
 }`,
-    notes: '실시간 — 캐시 없음 (no-store)',
-    tryItDefaults: { matchId: '' },
+    notes: '💸 API-Football 실시간 호출이라 quota 영향 큼. Fixture 탭 활성 시에만 30초 폴링, 백그라운드는 정지. 종료 판정: FT/AET/PEN.',
+    tryItDefaults: {},
   },
   {
     id: 'match-results',
@@ -203,11 +236,57 @@ export const ENDPOINTS: ApiEndpoint[] = [
     tryItDefaults: { fixtureId: '' },
   },
   {
+    id: 'predict-v2',
+    category: 'soccer-analysis',
+    method: 'POST',
+    path: '/api/predict-v2',
+    description: '★ 정식 축구 매치 분석 — 웹 Premium 페이지가 사용. 양팀+배당+리그 정보 전체를 body로 전달.',
+    auth: 'none',
+    params: [
+      { name: 'matchId', in: 'body', required: true, type: 'number', description: 'API-Football fixture id' },
+      { name: 'homeTeam', in: 'body', required: true, type: 'string', description: '홈팀 이름' },
+      { name: 'awayTeam', in: 'body', required: true, type: 'string', description: '원정팀 이름' },
+      { name: 'homeTeamId', in: 'body', required: true, type: 'number', description: 'API-Football home team id' },
+      { name: 'awayTeamId', in: 'body', required: true, type: 'number', description: 'API-Football away team id' },
+      { name: 'league', in: 'body', required: true, type: 'string', description: '리그 코드 (PL, PD, ...)' },
+      { name: 'leagueId', in: 'body', required: true, type: 'number', description: 'API-Football league id' },
+      { name: 'commenceTime', in: 'body', required: true, type: 'string', description: 'ISO 8601 UTC' },
+      { name: 'odds', in: 'body', required: true, type: 'object', description: '{home, draw, away} 3종 배당' },
+    ],
+    responseExample: `{
+  "prediction": {
+    // ⭐ UI 표시용 (이걸 바인딩)
+    "homeWinProb": 0.42, "drawProb": 0.28, "awayWinProb": 0.30,
+    "predictedScore": { "home": 2, "away": 1 },
+    "homePA": { "all": 1.51, "home": 1.8, "away": 1.2 },   // 득실비 (홈/원정 분리)
+    "awayPA": { "all": 0.81, "home": 0.9, "away": 0.7 },
+    "homeForm": ["W", "W", "D", "L", "W"],   // 최신 → 과거
+    "awayForm": ["L", "D", "W", "W", "L"],
+    "h2hSummary": { "wins": 3, "draws": 1, "losses": 1 },
+    "confidence": 72,
+    "aiComment": "...(한글 분석)",
+    "recommendation": {
+      "pick": "home",           // 'home' | 'draw' | 'away'
+      "grade": "PICK",          // PICK | GOOD | PASS (DB 컬럼 아님 — 동적 산출)
+      "reason": "..."
+    }
+  },
+  "debug": {
+    // 디버깅용 — 화면 표시에는 prediction.* 사용
+    "homeStats": {...},
+    "awayStats": {...},
+    "modelWeights": {...},
+    "dataSources": {...}
+  }
+}`,
+    notes: '⭐ 화면 표시용 데이터는 prediction.* (predict-v2 응답 매핑: homePA.all = 득실비, predictedScore = 예상 스코어, recommendation.grade = 픽 등급). debug.* 는 보조용.',
+  },
+  {
     id: 'predict',
     category: 'soccer-analysis',
     method: 'POST',
     path: '/api/predict',
-    description: '자체 알고리즘 분석 (배당+선제골+패턴)',
+    description: '⚠️ Deprecated — 신규 호출자는 /api/predict-v2 사용 (웹 Premium 페이지가 사용하는 정식 엔드포인트). 응답 구조 다름.',
     auth: 'none',
     params: [
       { name: 'homeTeam', in: 'body', required: true, type: 'string', description: '홈팀명' },
@@ -268,11 +347,67 @@ export const ENDPOINTS: ApiEndpoint[] = [
   "data": {
     "overall": { "totalMatches": 20, "homeWins": 9, "draws": 5, "awayWins": 6, "homeWinRate": 45, "avgTotalGoals": 2.6 },
     "recent5": { "trend": "balanced", "trendDescription": "최근 5경기는 균형..." },
+    "recentMatches": [
+      { "date": "2026-04-15", "homeTeam": "...", "awayTeam": "...", "homeScore": 2, "awayScore": 1 }
+      // ⭐ 통계 표시용으로 이 배열을 직접 계산해 사용 (scorePatterns는 별도 산식)
+    ],
     "scorePatterns": { "mostCommon": [{ "score": "1-1", "count": 4 }], "over25Rate": 60, "bttsRate": 55 },
     "insights": ["..."]
   },
   "source": "api-football"
 }`,
+    notes: '⭐ UI 통계 표시 (평균 골, O2.5, BTTS)는 scorePatterns가 아니라 recentMatches에서 클라이언트 계산: avg=(총골)/length, over25=count(총골>2.5)/length, btts=count(home>0 && away>0)/length. Math.round, toFixed(1).',
+  },
+  {
+    id: 'soccer-team-stats',
+    category: 'soccer-analysis',
+    method: 'GET',
+    path: '/api/team-stats',
+    description: '★ 축구 팀 상세 통계 — Premium 페이지 홈/원정 탭의 정식 데이터 소스. 매치당 홈/원정 각각 1회씩 호출.',
+    auth: 'none',
+    params: [
+      { name: 'team', in: 'query', required: false, type: 'string', description: '팀 이름 (영문 or 한글). team 또는 teamId 중 하나 필수' },
+      { name: 'teamId', in: 'query', required: false, type: 'number', description: 'API-Football team ID. ★ 권장 (정확한 매칭)' },
+      { name: 'league', in: 'query', required: false, type: 'string', description: '리그 코드 (PL/PD/BL1/...). 컵대회(CL/EL/UECL/FAC/DFB/CDR/CDF/EFL)는 자국 리그로 fallback' },
+    ],
+    responseExample: `{
+  "success": true,
+  "team": "Hull City",
+  "teamId": 49,
+  "league": "PL",
+  "season": "2025",
+  "source": "supabase",  // 또는 'api-football' (DB 미존재 시)
+  "data": {
+    "teamId": 49, "teamName": "Hull City", "teamNameKo": "헐 시티",
+    "leagueCode": "PL", "season": "2025",
+    "seasonStats":  { "played": 30, "wins": 12, "draws": 8, "losses": 10, "winRate": 40, "goalsFor": 38, "goalsAgainst": 35 },
+    "homeStats":    { "played": 15, "wins": 8, "draws": 4, "losses": 3, "winRate": 53, "goalsFor": 22, "goalsAgainst": 14 },
+    "awayStats":    { "played": 15, "wins": 4, "draws": 4, "losses": 7, "winRate": 27, "goalsFor": 16, "goalsAgainst": 21 },
+    "firstGoalStats":      { "home": { "games": 10, "wins": 8, "winRate": 80 }, "away": { "games": 6, "wins": 4, "winRate": 67 } },
+    "concededFirstStats":  { "home": { "games": 5, "wins": 1, "comebackRate": 20 }, "away": { "games": 9, "wins": 1, "comebackRate": 11 } },
+    "recentForm": {
+      "last5":  { "wins": 3, "draws": 1, "losses": 1, "results": ["W","W","D","L","W"] },   // 최신 → 과거
+      "last10": { "wins": 5, "draws": 2, "losses": 3, "goalsFor": 14, "goalsAgainst": 11 },
+      "currentStreak":  { "type": "W", "count": 2 },   // 'W'|'D'|'L'|'none'
+      "scoringStreak": 4, "cleanSheetStreak": 0
+    },
+    "markets": { "over25Rate": 60, "bttsRate": 50, "cleanSheetRate": 30, "scorelessRate": 20 },   // 최근 10경기 %
+    "strengths":  ["현재 2연승 중", "선제골 시 승률 80%"],
+    "weaknesses": ["원정 승률 저조 (27%)", "최근 10경기 중 3경기 무득점"],
+    "recentMatches": [
+      {
+        "date": "2026-05-18",
+        "opponent": "Toulouse", "opponentKo": "툴루즈",
+        "opponentTeamId": 96,
+        "opponentLogo": "https://media.api-sports.io/football/teams/96.png",   // ⭐ deterministic URL
+        "isHome": true, "goalsFor": 2, "goalsAgainst": 0, "result": "W"
+      }
+      // ... 최대 10개
+    ]
+  }
+}`,
+    notes: '⚠️ O1.5/O3.5는 응답에 없음 — recentMatches에서 클라가 계산. 홈/원정 분리 표시는 매치당 2회 병렬 호출. opponentLogo는 매우 드물게 팀 합병 시 404 가능 → onError 이니셜 fallback 권장.',
+    tryItDefaults: { teamId: '49', league: 'PL' },
   },
   {
     id: 'team-statistics',
@@ -520,60 +655,99 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'baseball-match',
     method: 'GET',
     path: '/api/baseball/matches',
-    description: '야구 경기 일정 + 분석 + 배당 통합',
+    description: '★ 야구 경기 일정 + 분석 + 배당 통합. ⚠️ date 사용 시 status 명시 필수.',
     auth: 'none',
     params: [
       { name: 'league', in: 'query', required: false, type: 'string', description: 'ALL | MLB | KBO | NPB | CPBL', default: 'ALL' },
-      { name: 'status', in: 'query', required: false, type: 'string', description: 'all | scheduled | finished | live | today', default: 'all' },
+      { name: 'status', in: 'query', required: false, type: 'string', description: '⚠️ date 사용 시 명시 필수. scheduled | live | finished | today | all (all은 date와 충돌 가능)', default: 'all' },
       { name: 'limit', in: 'query', required: false, type: 'number', description: '조회 개수', default: '50' },
-      { name: 'date', in: 'query', required: false, type: 'string', description: 'YYYY-MM-DD' },
+      { name: 'date', in: 'query', required: false, type: 'string', description: 'YYYY-MM-DD. status와 함께 사용 권장' },
       { name: 'skipML', in: 'query', required: false, type: 'boolean', description: 'true시 ML 분석 스킵 (속도↑)' },
-      { name: 'id', in: 'query', required: false, type: 'number', description: '특정 경기 ID' },
+      { name: 'id', in: 'query', required: false, type: 'number', description: '특정 경기 api_match_id (단일 매치 조회)' },
     ],
     responseExample: `{
   "success": true,
   "count": 10,
-  "filters": { "league": "ALL", "status": "all", "limit": 50, "date": "" },
+  "filters": { "league": "ALL", "status": "scheduled", "limit": 50, "date": "2026-05-27" },
   "matches": [
     {
-      "id": "api_match_id", "dbId": 123, "league": "MLB",
-      "date": "2026-04-27", "time": "19:05",
-      "homeTeam": "New York Yankees", "homeTeamKo": "뉴욕 양키스", "homeLogo": "...", "homeScore": null,
-      "awayTeam": "Boston Red Sox", "awayTeamKo": "보스턴 레드삭스", "awayLogo": "...", "awayScore": null,
-      "status": "NS", "innings": null,
-      "odds": { "homeWinProb": 55, "awayWinProb": 45, "overUnderLine": 8.5 },
-      "aiPick": "home", "aiPickConfidence": 65,
-      "homePitcher": "Gerrit Cole", "awayPitcher": "Nathan Eovaldi", "hasPitcherData": true
+      "id": 178830,              // ← api_match_id (정식 매치 ID — 라우팅/디테일 호출에 사용)
+      "dbId": 82236,             // ← 내부 DB autoincrement (legacy fallback)
+      "league": "MLB",
+      "date": "2026-05-27", "time": "07:10:00",
+      "timestamp": "2026-05-26T22:10:00+00:00",
+      "homeTeam": "Cleveland Guardians", "homeTeamKo": "클리블랜드 가디언스", "homeTeamId": 9,
+      "homeLogo": "https://media.api-sports.io/baseball/teams/9.png", "homeScore": null,
+      "awayTeam": "Washington Nationals", "awayTeamKo": "워싱턴 내셔널스", "awayTeamId": 37,
+      "awayLogo": "https://media.api-sports.io/baseball/teams/37.png", "awayScore": null,
+      "status": "NS",
+      "innings": { "home": {...}, "away": {...} },
+      "odds": {
+        "homeWinProb": 39.85, "awayWinProb": 60.15,
+        "homeWinOdds": 1.74, "awayWinOdds": 2.15,
+        "overUnderLine": 7.5, "overOdds": 1.87, "underOdds": 2.01,
+        "ouLines": [             // ⭐ 다중 O/U 라인 (6.5/7.0/7.5/8.0 등)
+          { "line": 7, "over": 1.64, "under": 2.32 },
+          { "line": 7.5, "over": 1.87, "under": 2.01 },
+          { "line": 8, "over": 2.02, "under": 1.84 }
+        ]
+      },
+      "mlPrediction": { "homeWinProb": 40, "awayWinProb": 60 },
+      "aiPick": "PASS", "aiPickConfidence": "LOW",
+      "homePitcher": "Tanner Bibee", "homePitcherId": 12345, "homePitcherKo": null,
+      "awayPitcher": "MacKenzie Gore", "hasPitcherData": true
     }
   ]
 }`,
-    tryItDefaults: { league: 'MLB', status: 'today', skipML: 'true' },
+    notes: '⚠️ 야구 status 코드 ≠ 축구. IN1~IN15, 1H~15H, BT=LIVE / FT/AET/POST/CANC/ABD/AWD/WO=종료 / INTR=중단(별도 처리). 라이브 폴링: status=live 30초 주기.',
+    tryItDefaults: { league: 'MLB', status: 'scheduled', skipML: 'true' },
   },
   {
     id: 'baseball-match-detail',
     category: 'baseball-match',
     method: 'GET',
     path: '/api/baseball/matches/{id}',
-    description: '야구 경기 상세 (이닝, 투수 스탯, 배당 트렌드, 관련 경기)',
+    description: '★ 야구 경기 상세 (이닝, 투수 스탯, 배당 트렌드, ouLines, 런라인, 관련 경기). 응답이 {match: {...}}로 한 번 더 래핑됨.',
     auth: 'none',
     params: [
-      { name: 'id', in: 'path', required: true, type: 'string', description: '경기 ID (api_match_id 또는 db id)' },
+      { name: 'id', in: 'path', required: true, type: 'string', description: '★ api_match_id 우선 (정식). 못 찾으면 내부 dbId로 fallback. 신규 호출자는 리스트 응답의 .id (= api_match_id) 사용' },
     ],
     responseExample: `{
   "success": true,
   "match": {
-    "id": "api_match_id", "league": "MLB", "date": "2026-04-27", "time": "19:05", "venue": "Yankee Stadium",
-    "home": { "id": 25, "team": "Yankees", "teamKo": "양키스", "score": 5, "hits": 8, "errors": 0 },
-    "away": { "id": 5, "team": "Red Sox", "teamKo": "레드삭스", "score": 3, "hits": 7, "errors": 1 },
-    "status": "FT",
-    "innings": { "home": { "1": 0, "2": 1, ...}, "away": { ... } },
-    "homePitcher": "Gerrit Cole", "homePitcherEra": 2.88, "homePitcherWhip": 1.05,
-    "odds": { "homeWinProb": 55, "awayWinProb": 45 },
+    "id": 178830,           // api_match_id
+    "dbId": 82236,          // 내부 autoincrement
+    "league": "MLB", "leagueName": "MLB", "season": "2026",
+    "date": "2026-05-27", "time": "07:10:00", "timestamp": "2026-05-26T22:10:00+00:00",
+    "venue": null,
+    "home": { "id": 9, "team": "Cleveland Guardians", "teamKo": "클리블랜드 가디언스", "logo": "...", "score": null, "hits": null, "errors": null },
+    "away": { "id": 37, "team": "Washington Nationals", "teamKo": "워싱턴 내셔널스", "logo": "...", "score": null, "hits": null, "errors": null },
+    "status": "NS",
+    "innings": { "home": {"1": null, ...}, "away": {"1": null, ...} },
+    "homePitcher": "Tanner Bibee", "homePitcherId": 12345, "homePitcherKo": null,
+    "homePitcherEra": null, "homePitcherWhip": null, "homePitcherK": null,
+    "awayPitcher": "MacKenzie Gore", "awayPitcherId": 23456, "awayPitcherKo": null,
+    "odds": {
+      "homeWinProb": 39.85, "awayWinProb": 60.15,
+      "homeWinOdds": 1.74, "awayWinOdds": 2.15,
+      "overUnderLine": 7.5, "overOdds": 1.87, "underOdds": 2.01,
+      "ouLines": [          // ⭐ 다중 O/U 라인
+        { "line": 7, "over": 1.64, "under": 2.32 },
+        { "line": 7.5, "over": 1.87, "under": 2.01 },
+        { "line": 8, "over": 2.02, "under": 1.84 }
+      ],
+      "runlineSpread": -1.5,           // ⭐ 런라인 (null 가능)
+      "homeRunlineOdds": 2.6,
+      "awayRunlineOdds": 2.75,
+      "bookmaker": "Bet365",
+      "updatedAt": "2026-05-24T23:00:38Z"
+    },
     "oddsTrend": [{ "time": "...", "homeProb": 52, "awayProb": 48 }],
-    "relatedMatches": [...]
+    "relatedMatches": [...]   // 같은 리그 다른 경기 (예정 위주)
   }
 }`,
-    tryItDefaults: { id: '' },
+    notes: 'H2H 전적은 별도 /api/baseball/h2h 호출. relatedMatches에는 H2H 안 들어감. 투수 스탯(전 시즌 포함)은 MLB는 statsapi.mlb.com 직접, KBO/NPB는 /api/baseball/kbo-pitcher-stats 사용.',
+    tryItDefaults: { id: '178830' },
   },
   {
     id: 'baseball-live',
@@ -628,27 +802,41 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'baseball-analysis',
     method: 'GET',
     path: '/api/baseball/h2h',
-    description: '야구 두 팀 상대전적 (DB, 최근 10경기)',
+    description: '★ 야구 두 팀 상대전적 (완료 경기만, 최근 10건, 양방향 자동 조회). 매치 상세의 relatedMatches와는 별개 — 그건 예정 경기.',
     auth: 'none',
     params: [
-      { name: 'homeTeam', in: 'query', required: false, type: 'string', description: '홈팀 영문명' },
-      { name: 'homeTeamId', in: 'query', required: false, type: 'number', description: '홈팀 ID' },
-      { name: 'awayTeam', in: 'query', required: false, type: 'string', description: '원정팀 영문명' },
-      { name: 'awayTeamId', in: 'query', required: false, type: 'number', description: '원정팀 ID' },
+      { name: 'homeTeamId', in: 'query', required: false, type: 'number', description: '★ 권장 — 정확한 매칭' },
+      { name: 'awayTeamId', in: 'query', required: false, type: 'number', description: '★ 권장' },
+      { name: 'homeTeam', in: 'query', required: false, type: 'string', description: '팀명 (teamId 미사용 시 대체)' },
+      { name: 'awayTeam', in: 'query', required: false, type: 'string', description: '팀명' },
     ],
     responseExample: `{
   "success": true,
   "count": 5,
   "matches": [
     {
-      "id": "...", "date": "2025-10-15",
-      "homeTeam": "New York Yankees", "homeTeamKo": "뉴욕 양키스", "homeScore": 4,
-      "awayTeam": "Boston Red Sox", "awayTeamKo": "보스턴 레드삭스", "awayScore": 2,
-      "winner": "home", "league": "MLB", "season": 2025, "status": "FT"
+      "id": 1234567,
+      "date": "2026-05-10",
+      "homeTeam": "Los Angeles Dodgers", "homeTeamKo": "로스앤젤레스 다저스",
+      "homeTeamId": 119, "homeTeamLogo": "https://media.api-sports.io/baseball/teams/119.png",
+      "awayTeam": "San Francisco Giants", "awayTeamKo": "샌프란시스코 자이언츠",
+      "awayTeamId": 137, "awayTeamLogo": "...",
+      "homeScore": 5, "awayScore": 3,
+      "winner": "home",                  // 'home' | 'away' | 'draw'
+      "league": "MLB", "season": "2026", "status": "FT"
     }
   ],
-  "summary": { "total": 5, "homeWins": 3, "awayWins": 2, "draws": 0 }
+  "summary": {
+    "total": 5,
+    "homeWins": 3,                       // ⚠️ 요청한 homeTeamId 기준 통산 (홈/원정 위치 스왑 포함)
+    "awayWins": 2,
+    "draws": 0,
+    "homeTeam": "...",
+    "awayTeam": "..."
+  }
 }`,
+    notes: 'team(Id) 둘 중 하나 (홈/원정 각각)는 필수. 데이터 없으면 count=0, matches=[] (에러 아님). 웹은 matches.slice(0, 5)로 표시.',
+    tryItDefaults: { homeTeamId: '119', awayTeamId: '137' },
   },
   {
     id: 'baseball-team-stats',
@@ -699,46 +887,59 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'baseball-analysis',
     method: 'GET',
     path: '/api/baseball/kbo-pitcher-stats',
-    description: 'KBO/NPB 투수 스탯 (DB)',
+    description: '★ KBO/NPB 투수 스탯 (DB) — 현 시즌 + 전 시즌(prev)을 한 번에 반환. MLB는 별도 (외부 statsapi.mlb.com 직접 호출).',
     auth: 'none',
     params: [
       { name: 'homePitcher', in: 'query', required: false, type: 'string', description: '홈 투수명 (한글)' },
       { name: 'awayPitcher', in: 'query', required: false, type: 'string', description: '원정 투수명 (한글)' },
-      { name: 'season', in: 'query', required: false, type: 'string', description: '시즌', default: '2025' },
+      { name: 'season', in: 'query', required: false, type: 'string', description: '현재 시즌 (전 시즌은 자동으로 -1년)', default: '2026' },
       { name: 'league', in: 'query', required: false, type: 'string', description: 'kbo | npb', default: 'kbo' },
-      { name: 'homeTeam', in: 'query', required: false, type: 'string', description: '동명이인 제외용' },
+      { name: 'homeTeam', in: 'query', required: false, type: 'string', description: '동명이인 제외용 (한글 팀명)' },
       { name: 'awayTeam', in: 'query', required: false, type: 'string', description: '동명이인 제외용' },
     ],
     responseExample: `{
-  "success": true, "season": "2025",
+  "success": true, "season": "2026",
   "homePitcher": {
-    "name": "고영표", "team": "한화", "era": 3.24, "wins": 10, "losses": 4,
-    "whip": 1.12, "strikeouts": 156, "strengths": [...], "weakness": [...], "summary": "..."
+    "name": "고영표", "team": "한화", "season": "2026",
+    "era": 3.24, "whip": 1.12,
+    "wins": 10, "losses": 4, "games": 22,
+    "strikeouts": 156, "walks": 35, "home_runs": 12,
+    "is_rookie": false, "pro_years": 12
   },
   "awayPitcher": { ... },
-  "homePitcherPrev": { ... },
+  "homePitcherPrev": {                  // ⭐ 전 시즌 자동 포함
+    "season": 2025,
+    "era": 3.45, "whip": 1.20, "strikeouts": 142, ...
+  },
   "awayPitcherPrev": { ... }
 }`,
+    notes: '⭐ MLB는 이 엔드포인트 사용 안 함. MLB 투수 스탯은 클라이언트가 statsapi.mlb.com을 직접 호출 (current + prev 둘 다). CPBL은 prev 미지원.',
+    tryItDefaults: { season: '2026', league: 'kbo' },
   },
   {
     id: 'baseball-pitcher-analysis',
     category: 'baseball-analysis',
     method: 'POST',
     path: '/api/baseball/pitcher-analysis',
-    description: 'Claude AI 투수 매치업 분석 (24h 캐시)',
+    description: '★ Claude AI 투수 매치업 분석 (24h 캐시). ⚠️ POST 전용 — GET 호출 시 405. body에 풀 payload 필요.',
     auth: 'none',
     params: [
-      { name: 'matchId', in: 'body', required: true, type: 'string', description: '경기 ID' },
-      { name: 'homeTeam', in: 'body', required: true, type: 'string', description: '홈팀명' },
-      { name: 'awayTeam', in: 'body', required: true, type: 'string', description: '원정팀명' },
-      { name: 'homePitcher', in: 'body', required: true, type: 'string', description: '홈 투수명' },
-      { name: 'awayPitcher', in: 'body', required: true, type: 'string', description: '원정 투수명' },
-      { name: 'homeStats', in: 'body', required: true, type: 'object', description: '홈 투수 스탯 객체' },
-      { name: 'awayStats', in: 'body', required: true, type: 'object', description: '원정 투수 스탯 객체' },
-      { name: 'league', in: 'body', required: false, type: 'string', description: 'MLB | KBO | NPB', default: 'MLB' },
-      { name: 'language', in: 'body', required: false, type: 'string', description: 'ko | en', default: 'ko' },
+      { name: 'matchId', in: 'body', required: false, type: 'number', description: 'api_match_id (캐시 키로 사용)' },
+      { name: 'homeTeam', in: 'body', required: true, type: 'string', description: '★ language=ko면 teamKo, en이면 team' },
+      { name: 'awayTeam', in: 'body', required: true, type: 'string', description: '동일' },
+      { name: 'homePitcher', in: 'body', required: false, type: 'string', description: '홈 투수명 (없으면 TBD 처리)' },
+      { name: 'awayPitcher', in: 'body', required: false, type: 'string', description: '원정 투수명' },
+      { name: 'homeStats', in: 'body', required: false, type: 'object', description: 'MLB: {current, prev, fullName} / KBO·NPB: flat {name, era, whip, ...}' },
+      { name: 'awayStats', in: 'body', required: false, type: 'object', description: '동일 구조' },
+      { name: 'league', in: 'body', required: false, type: 'string', description: 'MLB | KBO | NPB | CPBL', default: 'MLB' },
+      { name: 'language', in: 'body', required: false, type: 'string', description: 'ko | en — 응답 언어. 캐시도 언어별 분리', default: 'ko' },
     ],
-    responseExample: `{ "success": true, "analysis": "Gerrit Cole(ERA 2.88) vs Nathan Eovaldi(ERA 3.45)... 200자 분석", "cached": false }`,
+    responseExample: `{
+  "success": true,
+  "analysis": "선발 투수 매치업 분석...\\n홈팀 Gerrit Cole(ERA 2.88) vs 원정팀 Nathan Eovaldi(ERA 3.45)...",
+  "cached": true                  // 캐시 hit 시만 필드 존재
+}`,
+    notes: '에러: 400(homeTeam/awayTeam 누락) | 405(GET 호출) | 500(Claude API 키 누락/실패). MLB는 stats에 {current, prev, fullName} 키, KBO/NPB는 flat 객체 — 라우트가 자동 분기. 호출 타이밍: 투수 스탯 fetch 완료 후 1회만.',
   },
   {
     id: 'baseball-predict',
@@ -1214,5 +1415,122 @@ export const ENDPOINTS: ApiEndpoint[] = [
       { name: 'message', in: 'body', required: true, type: 'string', description: '내용' },
     ],
     responseExample: `{ "success": true, "message": "문의가 성공적으로 전송되었습니다." }`,
+  },
+
+  // ============ 📱 모바일 앱 전용 (Flutter v1) ============
+  {
+    id: 'mobile-auth-google',
+    category: 'mobile',
+    method: 'POST',
+    path: '/api/v1/mobile/auth/google',
+    description: '모바일 Google OAuth 로그인 — accessToken 검증 + NextAuth 호환 JWT 발급.',
+    auth: 'none',
+    params: [
+      { name: 'accessToken', in: 'body', required: true, type: 'string', description: 'Google OAuth access token (flutter google_sign_in)' },
+      { name: 'deviceInfo', in: 'body', required: false, type: 'object', description: '{ platform: "android"|"ios", appVersion }' },
+    ],
+    responseExample: `{
+  "success": true,
+  "data": {
+    "session": {
+      "accessToken": "<nextauth-compatible-jwt>",   // 모든 보호 API에 Bearer 헤더로 전송
+      "tokenType": "Bearer",
+      "expiresAt": "2026-06-25T11:30:00Z"
+    },
+    "user": {
+      "userId": "uuid",
+      "email": "user@example.com",
+      "name": "홍길동",
+      "avatarUrl": "https://...",
+      "tier": "free",                  // 'free' | 'premium'
+      "premiumExpiresAt": null,
+      "isNewUser": true,
+      "requiresConsent": true,         // true면 약관 화면으로
+      "pendingPromo": "LAUNCH_2026"
+    }
+  }
+}`,
+    notes: '에러: GOOGLE_TOKEN_INVALID(401) | EMAIL_REQUIRED(400) | COOLDOWN_ACTIVE(403, daysLeft 포함). isNewUser=true + requiresConsent=true면 /api/auth/agree-terms 호출 흐름으로.',
+  },
+  {
+    id: 'mobile-auth-naver',
+    category: 'mobile',
+    method: 'POST',
+    path: '/api/v1/mobile/auth/naver',
+    description: '모바일 Naver OAuth 로그인 — accessToken 검증 + NextAuth 호환 JWT 발급.',
+    auth: 'none',
+    params: [
+      { name: 'accessToken', in: 'body', required: true, type: 'string', description: 'Naver OAuth access token (flutter_naver_login)' },
+      { name: 'deviceInfo', in: 'body', required: false, type: 'object', description: '{ platform, appVersion }' },
+    ],
+    responseExample: `{
+  "success": true,
+  "data": {
+    "session": { "accessToken": "<jwt>", "tokenType": "Bearer", "expiresAt": "..." },
+    "user": { "userId": "...", "email": "...", "name": "...", "tier": "free", "isNewUser": false, "requiresConsent": false }
+  }
+}`,
+    notes: '에러: NAVER_TOKEN_INVALID(401) | EMAIL_REQUIRED(400) | COOLDOWN_ACTIVE(403).',
+  },
+  {
+    id: 'mobile-me',
+    category: 'mobile',
+    method: 'GET',
+    path: '/api/v1/mobile/me',
+    description: '★ 모바일 사용자 프로필 — tier 실시간 재산정, 활성 구독/체험판 정보 통합.',
+    auth: 'session',
+    responseExample: `{
+  "success": true,
+  "data": {
+    "user": {
+      "userId": "uuid",
+      "email": "user@example.com",
+      "name": "홍길동",
+      "avatarUrl": "https://...",
+      "tier": "premium",                    // 서버에서 DB 재조회 후 산정
+      "premiumExpiresAt": "2026-09-22T00:00:00Z",
+      "trial": { "used": true, "startedAt": "...", "endsAt": "..." },
+      "subscription": {                     // 활성 구독 (없으면 null)
+        "id": "uuid",
+        "plan": "monthly",                   // 'monthly' | 'quarterly'
+        "status": "active",                  // 'active' | 'cancelled' | 'expired'
+        "startedAt": "...",
+        "expiresAt": "...",
+        "daysLeft": 119
+      },
+      "consents": { "terms": true, "privacy": true, "marketing": false, "agreedAt": "..." },
+      "promo": { "code": "LAUNCH_2026", "appliedAt": "..." }
+    }
+  }
+}`,
+    notes: 'UNAUTHORIZED(401) | CONSENT_REQUIRED(409 — pending_users 상태). 폴링은 결제 직후 3초 × 10회만 권장.',
+  },
+  {
+    id: 'mobile-app-config',
+    category: 'mobile',
+    method: 'GET',
+    path: '/api/v1/mobile/app-config',
+    description: '앱 버전 관리 — 강제 업데이트, 유지보수, 스토어 URL. 앱 실행 시 최초 호출.',
+    auth: 'none',
+    params: [
+      { name: 'platform', in: 'query', required: false, type: 'string', description: 'android | ios. 플랫폼별 다른 storeUrl 반환' },
+      { name: 'version', in: 'query', required: false, type: 'string', description: '현재 앱 버전 (semver). 미달 시 forceUpdate=true' },
+    ],
+    responseExample: `{
+  "success": true,
+  "data": {
+    "minSupportedVersion": "1.0.0",
+    "latestVersion": "1.0.3",
+    "forceUpdate": false,
+    "updateMessage": "성능 개선 및 버그 수정",
+    "maintenanceMode": false,
+    "maintenanceMessage": null,
+    "storeUrl": "https://play.google.com/store/apps/details?id=com.trendsoccer.app",
+    "supportEmail": "support@trendsoccer.com",
+    "privacyPolicyUrl": "https://trendsoccer.com/privacy",
+    "termsUrl": "https://trendsoccer.com/terms"
+  }
+}`,
+    notes: '에러: APP_VERSION_OUTDATED(426). version 파라미터 비교는 semver 기준.',
   },
 ]
