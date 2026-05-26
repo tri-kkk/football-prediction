@@ -97,7 +97,7 @@ export default function ApiDocsPage() {
       <div className="max-w-[1400px] mx-auto px-6 py-6 flex flex-col lg:flex-row gap-6">
         {/* Sidebar */}
         <aside className="lg:w-72 lg:flex-shrink-0">
-          <nav className="lg:sticky lg:top-[100px] space-y-4">
+          <nav className="lg:sticky lg:top-[100px] lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto lg:pr-2 space-y-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-800 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-700">
             {CATEGORIES.map((cat) => {
               const items = grouped[cat.id] || []
               if (items.length === 0) return null
