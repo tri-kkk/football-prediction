@@ -130,6 +130,13 @@ export async function GET(
         overUnderLine: latestOdds.over_under_line,
         overOdds: latestOdds.over_odds,
         underOdds: latestOdds.under_odds,
+        // ⭐ 다중 O/U 라인 (6.5/7.0/7.5 등). null 가능.
+        // baseball_odds_latest.ou_lines (jsonb) — [{line, over, under}, ...]
+        ouLines: latestOdds.ou_lines ?? null,
+        // 런라인 (있을 때만)
+        runlineSpread: latestOdds.runline_spread ?? null,
+        homeRunlineOdds: latestOdds.home_runline_odds ?? null,
+        awayRunlineOdds: latestOdds.away_runline_odds ?? null,
         bookmaker: latestOdds.bookmaker,
         updatedAt: latestOdds.collected_at,
       } : null,
