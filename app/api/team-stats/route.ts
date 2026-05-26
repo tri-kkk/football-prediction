@@ -83,6 +83,8 @@ interface TeamSecretStats {
     date: string
     opponent: string
     opponentKo: string | null
+    opponentTeamId: number | null
+    opponentLogo: string | null  // API-Football 표준 로고 URL
     isHome: boolean
     goalsFor: number
     goalsAgainst: number
@@ -431,10 +433,19 @@ function calculateTeamStats(
     
     // 경기 목록
     if (recentMatchList.length < 10) {
+      const opponentTeamId = isHome
+        ? (match.away_team_id ?? null)
+        : (match.home_team_id ?? null)
+      const opponentLogo = opponentTeamId
+        ? `https://media.api-sports.io/football/teams/${opponentTeamId}.png`
+        : null
+
       recentMatchList.push({
         date: match.match_date,
         opponent: isHome ? match.away_team : match.home_team,
         opponentKo: isHome ? match.away_team_ko : match.home_team_ko,
+        opponentTeamId,
+        opponentLogo,
         isHome,
         goalsFor: ourGoals,
         goalsAgainst: theirGoals,
