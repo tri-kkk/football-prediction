@@ -23,17 +23,48 @@ export async function GET(
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    // 경기 정보 조회 (DB id 또는 api_match_id 둘 다 지원)
+    // 경기 정보 조회
+    // 정식 매치 ID = api_match_id (외부 노출/공유 ID). 먼저 시도.
+    // 내부 DB autoincrement id는 역호환용 fallback. 신규 호출자는 api_match_id 사용 권장.
+    // ⚠️ 이전 분기는 /^\d+$/ 체크로 항상 내부 id만 매칭됐던 버그가 있었음 (api_match_id도 숫자).
     const isNumericId = /^\d+$/.test(matchId)
-    const { data: match, error: matchError } = await supabase
-      .from('baseball_matches')
-      .select('*')
-      .eq(isNumericId ? 'id' : 'api_match_id', isNumericId ? parseInt(matchId) : matchId)
-      .maybeSingle()
+    let match: any = null
+    let matchError: any = null
+
+    if (isNumericId) {
+      // 1. api_match_id (정식 매치 ID)로 먼저 조회
+      const apiIdResult = await supabase
+        .from('baseball_matches')
+        .select('*')
+        .eq('api_match_id', parseInt(matchId))
+        .maybeSingle()
+
+      if (apiIdResult.data) {
+        match = apiIdResult.data
+      } else {
+        // 2. fallback: 내부 DB id로 조회 (legacy 호출자 호환)
+        const dbIdResult = await supabase
+          .from('baseball_matches')
+          .select('*')
+          .eq('id', parseInt(matchId))
+          .maybeSingle()
+        match = dbIdResult.data
+        matchError = dbIdResult.error || apiIdResult.error
+      }
+    } else {
+      // 숫자가 아니면 api_match_id로만 (string 형태 ID)
+      const result = await supabase
+        .from('baseball_matches')
+        .select('*')
+        .eq('api_match_id', matchId)
+        .maybeSingle()
+      match = result.data
+      matchError = result.error
+    }
 
     if (matchError || !match) {
-      return NextResponse.json({ 
-        error: 'Match not found' 
+      return NextResponse.json({
+        error: 'Match not found'
       }, { status: 404 })
     }
 
