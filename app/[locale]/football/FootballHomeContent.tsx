@@ -14,9 +14,7 @@ import MobileMatchReports from '../../components/MobileMatchReports'
 import { useSession } from 'next-auth/react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useReferral } from '../../hooks/useReferral'
-import Link from 'next/link'
-
-
+import { Link } from '@/i18n/navigation'
 // import TopHighlights from '../../components/TopHighlights'  // 🆕 제거됨 - 필터 버튼으로 대체
 import MatchPoll from '../../components/MatchPoll'
 

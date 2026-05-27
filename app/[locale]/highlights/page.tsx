@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import Link from 'next/link'
-
+import { Link } from '@/i18n/navigation'
 // 리그 정보
 const LEAGUES = [
   { code: 'ALL', name: '전체', nameEN: 'All', logo: null, gradient: 'linear-gradient(to right, #6b7280, #4b5563)' },

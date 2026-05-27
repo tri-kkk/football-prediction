@@ -2,7 +2,7 @@
 // PC: 한 줄 + 접기/펼치기 (10개 초과 시), 모바일: 가로 스크롤
 'use client'
 
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { useMemo, useState } from 'react'
 import { useLocale } from 'next-intl'
 import type { UnifiedMatch } from './types'

@@ -1,8 +1,8 @@
 ﻿'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useLocale } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 
 export const MENU_OPEN_EVENT = 'trendsoccer:open-mobile-menu'
 

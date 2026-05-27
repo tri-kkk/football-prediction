@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession, signOut } from 'next-auth/react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { createPortal } from 'react-dom'
 import { useState, useRef, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'

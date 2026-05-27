@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { useSession } from 'next-auth/react'
 import { useLanguage } from '../../../contexts/LanguageContext'
 import { useComboUnlock, type ComboLeague } from '../../../hooks/useComboUnlock'

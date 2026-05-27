@@ -1,7 +1,7 @@
 // 🔥 경기 결과 페이지 공통 서브 네비 (축구/야구 빠른 전환)
 'use client'
 
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { usePathname } from 'next/navigation'
 import { useLanguage } from '../contexts/LanguageContext'
 

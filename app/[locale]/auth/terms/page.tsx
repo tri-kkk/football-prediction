@@ -4,8 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '../../../contexts/LanguageContext'
-import Link from 'next/link'
-
+import { Link } from '@/i18n/navigation'
 export default function TermsPage() {
   const { language } = useLanguage()
   const { data: session, status } = useSession()  // ✅ update 제거!

@@ -5,7 +5,7 @@
  * /admin/ads 의 탭에서도 같은 PostHogAnalyticsDashboard 컴포넌트가 재사용됨.
  */
 
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import AdminProtect from '../../../components/AdminProtect'
 import PostHogAnalyticsDashboard from '../../../components/admin/PostHogAnalyticsDashboard'
 

@@ -1,9 +1,9 @@
 ﻿'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useLocale } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import AuthButton from './AuthButton'
 import LanguageToggle from './LanguageToggle'
 

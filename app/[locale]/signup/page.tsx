@@ -3,7 +3,7 @@
 import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useLanguage } from '../../contexts/LanguageContext'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { track } from '../../../lib/analytics'
 
 export default function SignupPage() {

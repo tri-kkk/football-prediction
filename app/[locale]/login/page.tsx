@@ -4,7 +4,7 @@ import { signIn, useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '../../contexts/LanguageContext'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { track } from '../../../lib/analytics'
 
 export default function LoginPage() {

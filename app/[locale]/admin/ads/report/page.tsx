@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
-
+import { Link } from '@/i18n/navigation'
 // 슬롯 타입 정보
 const SLOT_TYPES = [
   { value: 'all', label: '전체' },

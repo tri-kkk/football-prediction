@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { useLanguage } from '../../contexts/LanguageContext'
 import AdBanner from '../../components/AdBanner'
 import AdSenseAd from '../../components/AdSenseAd'

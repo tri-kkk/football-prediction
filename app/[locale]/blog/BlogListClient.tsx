@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { useLanguage } from '../../contexts/LanguageContext'
 import { useSession } from 'next-auth/react'
 import AdSenseAd from '../../components/AdSenseAd'

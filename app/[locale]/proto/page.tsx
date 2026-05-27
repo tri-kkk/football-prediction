@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
-import Link from 'next/link'
-
+import { Link } from '@/i18n/navigation'
 // 경기 타입
 interface ProtoMatch {
   matchSeq: number
