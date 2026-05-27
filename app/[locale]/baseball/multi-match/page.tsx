@@ -222,12 +222,13 @@ export default function ComboPicksPage() {
   const avgOdds = picks.length > 0 ? (picks.reduce((s, p) => s + (p.total_odds || 0), 0) / picks.length).toFixed(2) : '-'
 
   // 안전형/고배당 분리 적중률 (오늘 탭은 API에서 안 내려오므로 picks에서 직접 계산)
+  // 🆕 partial(일부 적중)도 조합 베팅 관점에서는 실패 → 분모에 포함
   const effectiveTypeStats = (() => {
     if (typeStats.safe.total > 0 || typeStats.high.total > 0) return typeStats
     const safe = { total: 0, wins: 0, rate: 0 }
     const high = { total: 0, wins: 0, rate: 0 }
     for (const p of picks) {
-      if (p.result === 'win' || p.result === 'lose') {
+      if (p.result === 'win' || p.result === 'lose' || p.result === 'partial') {
         const target = p.fold_count === 2 ? safe : high
         target.total++
         if (p.result === 'win') target.wins++
@@ -293,13 +294,22 @@ export default function ComboPicksPage() {
           {/* 1행: 전체 요약 */}
           <div className="grid grid-cols-3 gap-3 mb-3">
             {[
-              { label: tab === 'history' ? t('주간 조합', 'WEEKLY') : t('오늘 조합', 'COMBOS'), value: tab === 'history' ? String(picks.length) : String(todayCount), color: '#e2e8f0' },
-              { label: t('분석 일치도', 'ACCURACY'), value: totalStats.total > 0 ? `${winRate}%` : '-%', color: winRate > 0 ? '#10b981' : '#64748b' },
-              { label: t('평균 지수', 'AVG INDEX'), value: String(avgOdds), color: '#fbbf24' },
+              { label: tab === 'history' ? t('주간 조합', 'WEEKLY') : t('오늘 조합', 'COMBOS'), value: tab === 'history' ? String(picks.length) : String(todayCount), subValue: null as string | null, color: '#e2e8f0' },
+              {
+                label: t('분석 일치도', 'ACCURACY'),
+                value: totalStats.total > 0 ? `${winRate}%` : '-%',
+                // 🆕 분모(wins/total) 표시로 오해 방지
+                subValue: totalStats.total > 0 ? `${totalStats.wins}/${totalStats.total}` : null,
+                color: winRate > 0 ? '#10b981' : '#64748b',
+              },
+              { label: t('평균 지수', 'AVG INDEX'), value: String(avgOdds), subValue: null as string | null, color: '#fbbf24' },
             ].map((item, i) => (
               <div key={i} className="rounded-xl p-3.5 text-center" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.04)' }}>
                 <div className="text-[10px] font-semibold tracking-wider mb-1.5" style={{ color: '#64748b' }}>{item.label}</div>
                 <div className="text-2xl font-black" style={{ color: item.color }}>{item.value}</div>
+                {item.subValue && (
+                  <div className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>{item.subValue}</div>
+                )}
               </div>
             ))}
           </div>

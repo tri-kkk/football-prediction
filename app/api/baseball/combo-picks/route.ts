@@ -106,7 +106,8 @@ export async function GET(request: NextRequest) {
       for (const pick of enriched) {
         const key = `${pick.league}_${pick.fold_count}`
         if (!stats[key]) stats[key] = { total: 0, wins: 0, rate: 0 }
-        if (pick.result === 'win' || pick.result === 'lose') {
+        // 🆕 partial(일부 적중)도 조합 베팅 관점에서는 실패 → 분모에 포함
+        if (pick.result === 'win' || pick.result === 'lose' || pick.result === 'partial') {
           stats[key].total++
           if (pick.result === 'win') stats[key].wins++
           const target = pick.fold_count === 2 ? safeStats : highStats
@@ -159,7 +160,8 @@ export async function GET(request: NextRequest) {
     for (const pick of enriched) {
       const key = `${pick.league}_${pick.fold_count}`
       if (!stats[key]) stats[key] = { total: 0, wins: 0, rate: 0 }
-      if (pick.result === 'win' || pick.result === 'lose') {
+      // 🆕 partial(일부 적중)도 조합 베팅 관점에서는 실패 → 분모에 포함
+      if (pick.result === 'win' || pick.result === 'lose' || pick.result === 'partial') {
         stats[key].total++
         if (pick.result === 'win') stats[key].wins++
 
