@@ -198,7 +198,7 @@ interface PaymentStats {
 interface Advertisement {
   id: string
   name: string
-  slot_type: 'desktop_banner' | 'sidebar' | 'mobile_bottom'
+  slot_type: 'desktop_banner' | 'sidebar' | 'mobile_bottom' | 'baseball_odds_bottom'
   image_url: string
   link_url: string
   alt_text: string
@@ -360,6 +360,7 @@ const SLOT_TYPES = [
   { value: 'desktop_banner', label: '데스크톱 배너', size: '728×90' },
   { value: 'sidebar', label: '사이드바', size: '300×600' },
   { value: 'mobile_bottom', label: '모바일 하단', size: '320×50' },
+  { value: 'baseball_odds_bottom', label: '야구 배당률 하단', size: '320×50' },
 ]
 
 const TABS = [
@@ -2204,6 +2205,7 @@ export default function AdminDashboard() {
       desktop_banner: { width: 728, height: 90 },
       sidebar: { width: 300, height: 600 },
       mobile_bottom: { width: 320, height: 50 },
+      baseball_odds_bottom: { width: 320, height: 50 },
     }
     setAdFormData({
       ...adFormData,
@@ -4027,6 +4029,7 @@ export default function AdminDashboard() {
                                 <span className={`px-2 py-1 rounded text-xs ${
                                   perf.slot_type === 'desktop_banner' ? 'bg-blue-500/20 text-blue-400' :
                                   perf.slot_type === 'sidebar' ? 'bg-purple-500/20 text-purple-400' :
+                                  perf.slot_type === 'baseball_odds_bottom' ? 'bg-emerald-500/20 text-emerald-400' :
                                   'bg-orange-500/20 text-orange-400'
                                 }`}>
                                   {SLOT_TYPES.find(s => s.value === perf.slot_type)?.label}
@@ -4094,6 +4097,7 @@ export default function AdminDashboard() {
                                   <span className={`px-2 py-1 rounded text-xs ${
                                     stat.advertisements?.slot_type === 'desktop_banner' ? 'bg-blue-500/20 text-blue-400' :
                                     stat.advertisements?.slot_type === 'sidebar' ? 'bg-purple-500/20 text-purple-400' :
+                                    stat.advertisements?.slot_type === 'baseball_odds_bottom' ? 'bg-emerald-500/20 text-emerald-400' :
                                     'bg-orange-500/20 text-orange-400'
                                   }`}>
                                     {SLOT_TYPES.find(s => s.value === stat.advertisements?.slot_type)?.label || '-'}

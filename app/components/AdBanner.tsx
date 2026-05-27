@@ -16,7 +16,7 @@ interface Advertisement {
 }
 
 interface AdBannerProps {
-  slot: 'desktop_banner' | 'sidebar' | 'mobile_bottom'
+  slot: 'desktop_banner' | 'sidebar' | 'mobile_bottom' | 'baseball_odds_bottom'
   className?: string
   fallback?: React.ReactNode
   onClose?: () => void
@@ -96,6 +96,7 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
           ${slot === 'desktop_banner' ? 'h-[90px]' : ''}
           ${slot === 'sidebar' ? 'h-[600px]' : ''}
           ${slot === 'mobile_bottom' ? 'h-[50px]' : ''}
+          ${slot === 'baseball_odds_bottom' ? 'h-[50px]' : ''}
         `} />
       </div>
     )
@@ -116,6 +117,7 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
           ${slot === 'desktop_banner' ? 'h-[90px]' : ''}
           ${slot === 'sidebar' ? 'h-[600px]' : ''}
           ${slot === 'mobile_bottom' ? 'h-[50px]' : ''}
+          ${slot === 'baseball_odds_bottom' ? 'h-[50px]' : ''}
         `} />
       </div>
     )
@@ -130,6 +132,7 @@ export default function AdBanner({ slot, className = '', fallback, onClose }: Ad
     desktop_banner: 'w-full max-w-[728px] h-[90px]',
     sidebar: 'w-full max-w-[300px] h-auto',
     mobile_bottom: 'w-full max-w-[320px] h-[50px]',
+    baseball_odds_bottom: 'w-full max-w-[320px] h-[50px]',
   }
 
   return (

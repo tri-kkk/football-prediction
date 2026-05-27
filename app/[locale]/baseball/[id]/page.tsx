@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useLanguage } from '../../../contexts/LanguageContext'
 import BaseballAIPrediction from '../../../components/BaseballAIPrediction'
+import AdBanner from '../../../components/AdBanner'
 import { isLiveBaseballStatus, extractInningNumber } from '../../../../lib/baseballStatus'
 
 // =====================================================
@@ -1957,6 +1958,13 @@ export default function BaseballDetailPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* 🎯 배당률 하단 광고 (baseball_odds_bottom) */}
+        {match.odds && (
+          <div className="mx-4 mt-3 flex justify-center">
+            <AdBanner slot="baseball_odds_bottom" />
           </div>
         )}
 

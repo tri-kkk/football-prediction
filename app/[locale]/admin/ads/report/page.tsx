@@ -8,6 +8,7 @@ const SLOT_TYPES = [
   { value: 'desktop_banner', label: '데스크톱 배너', size: '728×90' },
   { value: 'sidebar', label: '사이드바', size: '300×600' },
   { value: 'mobile_bottom', label: '모바일 하단', size: '320×50' },
+  { value: 'baseball_odds_bottom', label: '야구 배당률 하단', size: '320×50' },
 ]
 
 interface DailyStat {
@@ -380,6 +381,7 @@ export default function AdReportPage() {
                             <span className={`px-2 py-1 rounded text-xs ${
                               ad.slot_type === 'desktop_banner' ? 'bg-blue-500/20 text-blue-400' :
                               ad.slot_type === 'sidebar' ? 'bg-purple-500/20 text-purple-400' :
+                              ad.slot_type === 'baseball_odds_bottom' ? 'bg-emerald-500/20 text-emerald-400' :
                               'bg-orange-500/20 text-orange-400'
                             }`}>
                               {getSlotLabel(ad.slot_type)}
