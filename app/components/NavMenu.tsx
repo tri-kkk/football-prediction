@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useLocale } from 'next-intl'
 import AuthButton from './AuthButton'
+import LanguageToggle from './LanguageToggle'
 
 interface SubItem { ko: string; href: string; logo?: string }
 interface MenuItem { ko: string; href?: string; matchPaths?: string[]; children?: SubItem[] }
@@ -210,7 +211,10 @@ export default function NavMenu() {
           <Link href="/" className="flex items-center" aria-label="TrendSoccer">
             <img src="/logo.svg" alt="TrendSoccer" className="h-7 w-auto" />
           </Link>
-          <AuthButton />
+          <div className="flex items-center gap-2">
+            <LanguageToggle />
+            <AuthButton />
+          </div>
         </div>
       </header>
 
@@ -219,7 +223,10 @@ export default function NavMenu() {
           <Link href="/" className="flex items-center" aria-label="TrendSoccer">
             <img src="/logo.svg" alt="TrendSoccer" className="h-9 w-auto" />
           </Link>
-          <AuthButton />
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <AuthButton />
+          </div>
         </div>
         <nav className="home-container mx-auto flex items-center gap-1 px-3 h-11 border-t border-gray-800/60" aria-label={L('주 메뉴', locale)}>
           {MENU.map((item) => (

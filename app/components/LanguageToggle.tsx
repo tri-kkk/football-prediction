@@ -19,13 +19,18 @@ export default function LanguageToggle() {
 
   const switchTo = (target: 'ko' | 'en') => {
     if (target === locale || isPending) return
+    // 사용자의 명시적 선택을 NEXT_LOCALE 쿠키에 즉시 저장
+    // (next-intl 미들웨어가 다음 요청부터 이 값을 우선 적용)
+    if (typeof document !== 'undefined') {
+      document.cookie = `NEXT_LOCALE=${target}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+    }
     startTransition(() => {
       router.replace(pathname, { locale: target })
     })
   }
 
   return (
-    <div className="hidden md:flex items-center gap-1 bg-gray-800/50 rounded-lg p-0.5">
+    <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-0.5">
       <button
         onClick={() => switchTo('ko')}
         disabled={isPending}
