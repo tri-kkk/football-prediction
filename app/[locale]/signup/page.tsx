@@ -41,9 +41,32 @@ export default function SignupPage() {
       <div className="w-full relative z-10" style={{ maxWidth: '420px' }}>
         {/* 회원가입 카드 */}
         <div className="bg-gradient-to-b from-[#1a1a1a] to-[#141414] rounded-3xl p-8 shadow-2xl border border-gray-800/50 backdrop-blur-sm">
-          <h2 className="text-xl font-bold text-white text-center mb-6">
+          <h2 className="text-xl font-bold text-white text-center mb-4">
             {language === 'ko' ? '회원가입' : 'Sign Up'}
           </h2>
+
+          {/* 🎁 신규 가입 혜택 강조 배너 — 48시간 프리미엄 무료 체험 */}
+          <div className="mb-5 rounded-xl overflow-hidden border border-yellow-500/40 bg-gradient-to-br from-yellow-500/15 via-amber-500/10 to-yellow-500/5 p-4 relative">
+            {/* 글로우 효과 */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex items-start gap-3 relative">
+              <div className="text-3xl shrink-0 leading-none mt-0.5">🎁</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <p className="text-yellow-300 text-[14px] font-extrabold tracking-tight">
+                    {language === 'ko'
+                      ? '신규 가입 시 48시간 프리미엄 무료!'
+                      : '48-Hour Free Premium Trial for New Users'}
+                  </p>
+                </div>
+                <p className="text-yellow-100/85 text-[12px] leading-relaxed">
+                  {language === 'ko'
+                    ? '가입 즉시 모든 프리미엄 기능을 이틀간 자유롭게 사용하실 수 있습니다. 결제 정보 입력 불필요.'
+                    : 'Unlock all premium features for 2 days right after signup. No credit card required.'}
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* 가입 혜택 - 무료 vs 프리미엄 2단 비교 (실제 구현 기준) */}
           <div className="mb-6 bg-[#0f0f0f] rounded-xl overflow-hidden border border-gray-800">
@@ -80,12 +103,15 @@ export default function SignupPage() {
               </div>
               {/* 프리미엄 */}
               <div className="py-2 bg-yellow-500/[0.03] -mx-4 px-4 rounded relative">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span className="text-yellow-400 text-sm font-bold">
                     {language === 'ko' ? '프리미엄' : 'Premium'}
                   </span>
                   <span className="text-[10px] text-yellow-400 bg-yellow-500/20 px-1.5 py-0.5 rounded font-bold">
                     {language === 'ko' ? '추천' : 'Recommended'}
+                  </span>
+                  <span className="text-[10px] text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded font-bold border border-emerald-500/40">
+                    {language === 'ko' ? '신규 가입 48h 무료' : 'Free 48h trial'}
                   </span>
                 </div>
                 <ul className="space-y-1">

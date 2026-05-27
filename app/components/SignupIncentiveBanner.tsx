@@ -43,14 +43,17 @@ export default function SignupIncentiveBanner() {
   if (!mounted || status !== 'unauthenticated' || isClosed) return null
 
   // 모바일/데스크톱 카피 분리 (모바일은 좁은 화면에서 truncate 방지)
+  // 신규 가입 48시간 프리미엄 무료 체험을 메인 후크로 사용 (전환율 ↑)
   const messageMobile =
-    language === 'ko' ? '무료 가입하고 더 깊이 보기' : 'Sign up for deeper analysis'
+    language === 'ko'
+      ? '🎁 가입하고 프리미엄 48시간 무료'
+      : '🎁 Sign up, get 48h Premium free'
   const messageDesktop =
     language === 'ko'
-      ? '무료 회원가입하고 AI 분석을 더 깊이 보세요'
-      : 'Sign up free for deeper AI analysis'
-  const ctaMobile = language === 'ko' ? '가입' : 'Sign up'
-  const ctaDesktop = language === 'ko' ? '무료 가입' : 'Sign up free'
+      ? '🎁 무료 회원가입 시 프리미엄 기능 48시간 무료 체험'
+      : '🎁 Sign up free — unlock Premium features for 48 hours, no credit card'
+  const ctaMobile = language === 'ko' ? '무료 체험' : 'Try free'
+  const ctaDesktop = language === 'ko' ? '48시간 무료 체험' : 'Start 48h free trial'
 
   return (
     <div
