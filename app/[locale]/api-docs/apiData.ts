@@ -863,11 +863,11 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'baseball-analysis',
     method: 'GET',
     path: '/api/baseball/pitcher-stats',
-    description: 'MLB 투수 상세 스탯 + 매치업 노트',
+    description: '⚠️ MLB 전용, 현재 시즌만 반환 — 이전 시즌(prev)이 필요하면 클라이언트가 statsapi.mlb.com 직접 호출 (아래 비고 참조). season 파라미터 미지원.',
     auth: 'none',
     params: [
-      { name: 'matchId', in: 'query', required: false, type: 'number', description: '경기 ID (자동 lookup)' },
-      { name: 'homePitcherId', in: 'query', required: false, type: 'number', description: '홈 투수 MLB ID' },
+      { name: 'matchId', in: 'query', required: false, type: 'number', description: '경기 ID (자동 lookup, MLB 투수 ID 추출)' },
+      { name: 'homePitcherId', in: 'query', required: false, type: 'number', description: '홈 투수 MLB ID (people 엔드포인트의 pitcher id)' },
       { name: 'awayPitcherId', in: 'query', required: false, type: 'number', description: '원정 투수 MLB ID' },
     ],
     responseExample: `{
@@ -881,6 +881,13 @@ export const ENDPOINTS: ApiEndpoint[] = [
   "awayPitcher": { ... },
   "matchupNote": "ERA 격차가 뚜렷한 매치업..."
 }`,
+    notes: `⚠️ 이전 시즌(prev)은 이 엔드포인트로 받을 수 없음 — 라우트에 SEASON 상수가 박혀있어 season 파라미터 무시. 웹도 이 API는 현재 시즌만, 이전 시즌은 statsapi.mlb.com을 클라이언트에서 직접 호출:
+
+  GET https://statsapi.mlb.com/api/v1/people/{pitcherId}?hydrate=stats(group=[pitching],type=[season],season=2025)
+
+  응답 경로: data.people[0].stats[0].splits[0].stat → { era, whip, strikeOuts, wins, losses, inningsPitched, ... }
+
+  웹 패턴 (baseball/[id]/page.tsx): current/prev 두 시즌을 Promise.all로 병렬 호출. timeout 5초. 인증 불필요, CORS 허용됨. KBO/NPB는 다름 → /api/baseball/kbo-pitcher-stats 사용 (prev 자동 포함).`,
   },
   {
     id: 'baseball-kbo-pitcher-stats',
