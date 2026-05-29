@@ -953,23 +953,38 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'baseball-analysis',
     method: 'POST',
     path: '/api/baseball/predict',
-    description: 'AI 야구 경기 분석 (Railway ML, 배당 블렌딩)',
+    description: '⚠️ 무거운 분석 엔드포인트 (Railway ML + 롤링 통계 + 배당 블렌딩). 매치 상세 표시에는 보통 불필요 — mlPrediction/aiPrediction이 이미 /api/baseball/matches/{id} 응답에 포함됨.',
     auth: 'none',
     params: [
-      { name: 'matchId', in: 'body', required: true, type: 'number', description: '경기 ID' },
-      { name: 'homeTeam', in: 'body', required: true, type: 'string', description: '홈팀명' },
-      { name: 'awayTeam', in: 'body', required: true, type: 'string', description: '원정팀명' },
-      { name: 'quick', in: 'body', required: false, type: 'boolean', description: 'true시 빠른 분석 (인사이트 생략)' },
+      { name: 'matchId', in: 'body', required: true, type: 'number', description: 'api_match_id' },
+      { name: 'homeTeam', in: 'body', required: true, type: 'string', description: '⚠️ 영문 원본 (DB home_team 컬럼 = 영문). "Los Angeles Dodgers" / "Lotte Giants" 등. 한글("LA 다저스") 보내면 매칭 0건 → reliable:false' },
+      { name: 'awayTeam', in: 'body', required: true, type: 'string', description: '⚠️ 영문 원본 (위와 동일)' },
+      { name: 'season', in: 'body', required: false, type: 'string', description: '시즌 (예: "2026"). 명시 권장. 미지정 시 현재 연도 사용' },
+      { name: 'quick', in: 'body', required: false, type: 'boolean', description: 'true시 Railway ML 스킵 + DB 기반 즉시 응답 (~300-500ms). false면 Railway ML까지 호출 (느림)', default: 'false' },
     ],
     responseExample: `{
   "success": true, "quick": false,
   "analysis": { "homeWinProb": 58, "awayWinProb": 42, "overProb": 55, "underProb": 45, "confidence": 72, "grade": "A" },
   "insights": {
     "keyFactors": [{ "name": "선발투수 ERA", "value": 2.88, "impact": 35, "description": "..." }],
-    "homeAdvantage": {...}, "recentForm": {...}, "summary": "Yankees 측 58% 확률로 우세..."
+    "homeAdvantage": {...}, "recentForm": {...}, "summary": "Dodgers 측 58% 확률로 우세..."
   },
-  "dataQuality": { "homeGamesPlayed": 18, "awayGamesPlayed": 16, "reliable": true, "hasPitcherData": true }
+  "dataQuality": {
+    "homeGamesPlayed": 18, "awayGamesPlayed": 16,
+    "reliable": true,            // ⚠️ false면 팀명 매칭 실패 또는 최근 경기 부족 — 한글 팀명 보냈는지 먼저 확인
+    "hasPitcherData": true
+  },
+  "teamSeason": { ... }           // KBO/NPB는 자주, MLB는 케이스별 (DB 적재 빈도 차이)
 }`,
+    notes: `⭐ 매치 상세 페이지용으론 이 API를 호출할 필요가 거의 없음:
+  • mlPrediction (Railway ML 결과) → 이미 /api/baseball/matches/{id} 응답의 mlPrediction에 포함
+  • aiPrediction (DB 저장된 최종 분석) → /api/baseball/matches/{id} 응답의 odds.* + aiPrediction에 포함
+  • 홈/원정 시즌 성적 → /api/baseball/team-stats?teamId=...
+  • H2H → /api/baseball/h2h
+  • 투수 → MLB는 statsapi.mlb.com 직접, KBO/NPB는 /api/baseball/kbo-pitcher-stats
+
+  predict는 분석 페이지(다경기 비교, 새로 강제 재산정)나 cron 배치용. 한글 팀명·season 누락 시 reliable:false 정상 응답.`,
+    tryItDefaults: { matchId: '178843', homeTeam: 'Los Angeles Dodgers', awayTeam: 'Colorado Rockies', season: '2026', quick: 'true' },
   },
   {
     id: 'baseball-ai-comment',
@@ -1202,6 +1217,30 @@ export const ENDPOINTS: ApiEndpoint[] = [
       { name: 'csrfToken', in: 'body', required: true, type: 'string', description: '/api/auth/csrf로 받은 토큰' },
     ],
     responseExample: `{ "url": "https://www.trendsoccer.com/login" }`,
+  },
+  {
+    id: 'user-delete',
+    category: 'auth-sub',
+    method: 'POST',
+    path: '/api/user/delete',
+    description: '★ 회원 탈퇴 — 모든 사용자 데이터 삭제 + deleted_users에 이메일 해시 기록 (재가입 시 프로모/체험판 중복 방지용)',
+    auth: 'none',
+    params: [
+      { name: 'email', in: 'body', required: true, type: 'string', description: '탈퇴할 사용자 이메일 (소문자 정규화됨)' },
+    ],
+    responseExample: `{
+  "success": true,
+  "message": "회원 탈퇴가 완료되었습니다."
+}`,
+    notes: `⚠️ 되돌릴 수 없음. 처리 순서:
+  1. users 테이블에서 프로모/체험/tier/만료일/결제이력 스냅샷 수집
+  2. deleted_users에 SHA-256(email) 해시로 기록 (재가입 시 7일 쿨다운 + 이전 프리미엄 이력 보존)
+  3. proto_slips, subscriptions, referral_history, referral_codes, user_settings, user_preferences 삭제 (FK 순서)
+  4. users 행 삭제
+
+  에러: 400(email 누락) | 404(사용자 없음) | 500(FK 제약/DB 오류).
+
+  ⚠️ 모바일 앱은 호출 전 반드시 확인 다이얼로그 + 비밀번호/생체인증 한 번 더 요구하는 게 안전.`,
   },
   {
     id: 'auth-check-terms',
@@ -1511,6 +1550,30 @@ export const ENDPOINTS: ApiEndpoint[] = [
   }
 }`,
     notes: 'UNAUTHORIZED(401) | CONSENT_REQUIRED(409 — pending_users 상태). 폴링은 결제 직후 3초 × 10회만 권장.',
+  },
+  {
+    id: 'mobile-withdraw',
+    category: 'mobile',
+    method: 'POST',
+    path: '/api/user/delete',
+    description: '★ 회원 탈퇴 (모바일 동일 엔드포인트) — 전체 데이터 삭제 + deleted_users 기록. 호출 후 클라이언트는 JWT 폐기 + 로그인 화면으로.',
+    auth: 'none',
+    params: [
+      { name: 'email', in: 'body', required: true, type: 'string', description: '/api/v1/mobile/me 응답의 user.email 그대로 전달' },
+    ],
+    responseExample: `{
+  "success": true,
+  "message": "회원 탈퇴가 완료되었습니다."
+}`,
+    notes: `⚠️ 호출 흐름 (모바일):
+  1. 설정 → 탈퇴 메뉴에서 확인 다이얼로그 (생체인증/비밀번호 권장)
+  2. POST /api/user/delete { email: user.email }
+  3. 성공 시: SecureStorage의 JWT 삭제 → 로그인 화면으로 이동
+  4. 재가입: 같은 이메일로 다시 OAuth 로그인 → 우리 백엔드가 deleted_users 확인:
+     - 7일 쿨다운 중이면: COOLDOWN_ACTIVE(403, daysLeft 포함) — 모바일은 안내 후 차단
+     - 7일 지났으면: 신규 가입처럼 진행 (단, 이전 트라이얼/프로모/프리미엄 사용 이력 보존되어 free로 시작)
+
+  에러: 400(email 누락) | 404(사용자 없음) | 500.`,
   },
   {
     id: 'mobile-app-config',
