@@ -4,6 +4,8 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ffmpeg-static은 빌드 시점에 __dirname을 잘못 치환하므로 번들에서 제외
+  serverExternalPackages: ['ffmpeg-static'],
   typescript: {
     ignoreBuildErrors: true,
   },

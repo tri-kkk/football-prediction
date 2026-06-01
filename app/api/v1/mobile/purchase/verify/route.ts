@@ -213,6 +213,7 @@ export async function POST(request: NextRequest) {
       expires_at: expiresAt.toISOString(),
       payment_id: purchaseToken,
       price: product.price,
+      payment_method: 'PLAY_IAP',
     })
     if (subError) {
       console.error('[purchase/verify] subscriptions insert error:', subError.message)

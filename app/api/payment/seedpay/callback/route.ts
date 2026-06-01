@@ -164,6 +164,7 @@ export async function POST(request: NextRequest) {
       expires_at: expiresAt,
       payment_id: ordNo,
       price: planAmount,
+      payment_method: 'CARD',
     })
 
     // 8️⃣ 사용자 정보 업데이트 (프리미엄)
