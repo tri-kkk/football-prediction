@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
       amount: product.price,
       buyer_email: userEmail,
       goods_name: product.label,
-      payment_method: 'google_play_iap',
+      payment_method: 'PLAY_IAP',
       order_date: startTime.toISOString(),
       raw_response: purchase,
     })
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
     )
 
     capturePostHogEvent('subscription_completed', userId, {
-      provider: 'google_play_iap',
+      provider: 'PLAY_IAP',
       plan: product.plan,
       price: product.price,
       productId,
