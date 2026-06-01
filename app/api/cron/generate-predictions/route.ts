@@ -15,7 +15,10 @@ const LEAGUE_IDS: { [key: string]: number } = {
   'UECL': 848,  // Conference League
   'UNL': 5,     // Nations League
   'AFCON': 6,   // Africa Cup of Nations
-  
+  'ACL': 17,    // AFC Champions League Elite
+  'ACL2': 18,   // AFC Champions League Two
+  'AMATCH': 10, // FIFA Friendlies (A매치)
+
   // ===== 🌍 아프리카 리그 (5개) - NEW! =====
   'EGY': 233,   // Egyptian Premier League
   'RSA': 288,   // South African Premier League
@@ -117,7 +120,8 @@ function getCurrentSeason(leagueCode: string): number {
   const month = now.getMonth() + 1
 
   // 아시아/남미/북미 리그는 단일 연도 시즌
-  const singleYearLeagues = ['KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL', 'LMX']
+  // 🔥 WC/AMATCH/UNL 추가 - 월드컵/국가대표 A매치/네이션스리그는 연도 기준
+  const singleYearLeagues = ['KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL', 'LMX', 'WC', 'AMATCH', 'UNL']
   if (singleYearLeagues.includes(leagueCode)) {
     return year
   }

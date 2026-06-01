@@ -564,6 +564,7 @@ const leagueIdMap: Record<string, number> = {
   'J1': 98,
   'J2': 99,
   'MLS': 253,
+  'WC': 1,
 }
 
 // ============================================
@@ -2252,7 +2253,7 @@ export default function PremiumPredictPage() {
     setLoading(true)
     try {
       // 여러 리그 조회해서 합치기 — ⚡ 병렬 호출 (이전엔 13개 직렬 → 6초+)
-      const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'MLS', 'KL1', 'KL2', 'J1', 'J2', 'CL', 'EL']
+      const leagueCodes = ['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED', 'MLS', 'KL1', 'KL2', 'J1', 'J2', 'CL', 'EL', 'WC']
 
       // ⚡ 프리미엄 예정경기는 7일치 필요 (odds-from-db 기본 1일에서 옵트인)
       const results = await Promise.allSettled(

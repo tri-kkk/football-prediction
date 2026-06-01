@@ -35,6 +35,8 @@ const LEAGUE_CODES = [
   'PL', 'PD', 'BL1', 'SA', 'FL1', 'DED',
   // 아시아
   'KL1', 'J1',
+  // 국제대회 (월드컵 2026)
+  'WC',
 ]
 
 export async function GET(request: Request) {

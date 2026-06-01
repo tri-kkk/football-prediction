@@ -22,7 +22,8 @@ const LEAGUES = [
   { code: 'AFCON', apiId: 6, name: 'Africa Cup of Nations' },
   { code: 'ACL', apiId: 17, name: 'AFC Champions League Elite' },
   { code: 'ACL2', apiId: 18, name: 'AFC Champions League Two' },
-  
+  { code: 'AMATCH', apiId: 10, name: 'Friendlies' },
+
   // ===== 🌍 아프리카 리그 (5개) - NEW! =====
   { code: 'EGY', apiId: 233, name: 'Egyptian Premier League' },
   { code: 'RSA', apiId: 288, name: 'South African Premier League' },
@@ -525,7 +526,8 @@ function getCurrentSeason(leagueCode: string): number {
 
   // 아시아/남미/북미 리그는 단일 연도 시즌
   // 🔥 LMX 제거! - 멕시코는 Apertura/Clausura 시스템 (유럽식 시즌)
-  const singleYearLeagues = ['WC', 'KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL']
+  // 🔥 AMATCH/UNL 추가 - 국가대표 A매치/네이션스리그는 연도 기준
+  const singleYearLeagues = ['WC', 'KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL', 'AMATCH', 'UNL']
   if (singleYearLeagues.includes(leagueCode)) {
     return year
   }
