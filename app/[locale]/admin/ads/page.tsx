@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import BaseballBlogPanel from './BaseballBlogPanel'
+import ShortsGenerator from './ShortsGenerator'
 import PostHogAnalyticsDashboard from '../../../components/admin/PostHogAnalyticsDashboard'
 import RetentionDashboard from '../../../components/admin/RetentionDashboard'
 
@@ -169,6 +170,7 @@ interface Subscription {
   cancelled_at: string | null
   payment_id: string | null
   price: number
+  payment_method?: 'CARD' | 'PLAY_IAP' | string | null   // CARD = SeedPay 웹 결제, PLAY_IAP = Google Play 인앱
 }
 
 interface Payment {
@@ -379,6 +381,7 @@ const TABS = [
   { id: 'revenue', label: '매출 관리', icon: '💵' },
   { id: 'pitcher', label: '선발 관리', icon: '⚾' },
   { id: 'baseball-blog', label: '야구 블로그', icon: '📰' },
+  { id: 'shorts', label: '쇼츠 생성', icon: '🎬' },
 ]
 
 /// 국기 이모지 매핑 - 확장
@@ -688,6 +691,7 @@ export default function AdminDashboard() {
   const [activityFilter, setActivityFilter] = useState<'all' | 'active7' | 'dormant30' | 'dormant90'>('all')
   const [countryFilter, setCountryFilter] = useState<string>('all')
   const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'active' | 'cancelled' | 'expired'>('all')
+  const [subscriptionChannelFilter, setSubscriptionChannelFilter] = useState<'all' | 'web' | 'mobile'>('all')
   const [adFilter, setAdFilter] = useState<string>('all')
   const [dateRange, setDateRange] = useState<'7' | '14' | '30'>('7')
   
@@ -2183,15 +2187,24 @@ export default function AdminDashboard() {
 
   const filteredSubscriptions = useMemo(() => {
     let result = subscriptions
-    
+
     if (subscriptionFilter !== 'all') {
       result = result.filter(s => s.status === subscriptionFilter)
     }
-    
-    return result.sort((a, b) => 
+
+    if (subscriptionChannelFilter !== 'all') {
+      result = result.filter(s => {
+        const m = s.payment_method || 'CARD'   // 과거 데이터(미설정)는 CARD로 간주
+        if (subscriptionChannelFilter === 'web') return m === 'CARD'
+        if (subscriptionChannelFilter === 'mobile') return m === 'PLAY_IAP'
+        return true
+      })
+    }
+
+    return result.sort((a, b) =>
       new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
     )
-  }, [subscriptions, subscriptionFilter])
+  }, [subscriptions, subscriptionFilter, subscriptionChannelFilter])
 
   const filteredAds = useMemo(() => {
     if (adFilter === 'all') return ads
@@ -3546,23 +3559,43 @@ export default function AdminDashboard() {
                   </div>
                 )}
 
-                {/* 구독 필터 */}
-                <div className="flex items-center gap-2">
-                  {(['all', 'active', 'cancelled', 'expired'] as const).map((filter) => (
-                    <button
-                      key={filter}
-                      onClick={() => setSubscriptionFilter(filter)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        subscriptionFilter === filter
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                      }`}
-                    >
-                      {filter === 'all' ? '전체' : 
-                       filter === 'active' ? '활성' : 
-                       filter === 'cancelled' ? '취소' : '만료'}
-                    </button>
-                  ))}
+                {/* 구독 필터 — 상태 + 채널 */}
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 mr-1">상태</span>
+                    {(['all', 'active', 'cancelled', 'expired'] as const).map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => setSubscriptionFilter(filter)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          subscriptionFilter === filter
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        }`}
+                      >
+                        {filter === 'all' ? '전체' :
+                         filter === 'active' ? '활성' :
+                         filter === 'cancelled' ? '취소' : '만료'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 mr-1">채널</span>
+                    {(['all', 'web', 'mobile'] as const).map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => setSubscriptionChannelFilter(filter)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          subscriptionChannelFilter === filter
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        }`}
+                      >
+                        {filter === 'all' ? '전체' :
+                         filter === 'web' ? '💳 웹 (SeedPay)' : '📱 모바일 (Play IAP)'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* 구독 테이블 */}
@@ -3573,6 +3606,7 @@ export default function AdminDashboard() {
                         <tr className="bg-gray-900/50">
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">회원</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">플랜</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">채널</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">상태</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">시작일</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">만료일</th>
@@ -3588,7 +3622,9 @@ export default function AdminDashboard() {
                             </td>
                           </tr>
                         ) : (
-                          filteredSubscriptions.map((sub) => (
+                          filteredSubscriptions.map((sub) => {
+                            const channel = sub.payment_method === 'PLAY_IAP' ? 'mobile' : 'web'
+                            return (
                             <tr key={sub.id} className="hover:bg-gray-700/20 transition-colors">
                               <td className="px-4 py-4">
                                 <div>
@@ -3598,25 +3634,34 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-4">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  sub.plan === 'quarterly' 
+                                  sub.plan === 'quarterly'
                                     ? 'bg-purple-500/20 text-purple-400'
                                     : sub.plan === 'yearly'
                                     ? 'bg-orange-500/20 text-orange-400'
                                     : 'bg-blue-500/20 text-blue-400'
                                 }`}>
-                                  {sub.plan === 'quarterly' ? '📅 3개월' : 
+                                  {sub.plan === 'quarterly' ? '📅 3개월' :
                                    sub.plan === 'yearly' ? '🗓️ 연간' : '📅 월간'}
                                 </span>
                               </td>
                               <td className="px-4 py-4">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  sub.status === 'active' 
+                                  channel === 'mobile'
+                                    ? 'bg-cyan-500/20 text-cyan-400'
+                                    : 'bg-gray-500/20 text-gray-300'
+                                }`}>
+                                  {channel === 'mobile' ? '📱 모바일' : '💳 웹'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  sub.status === 'active'
                                     ? 'bg-emerald-500/20 text-emerald-400'
                                     : sub.status === 'cancelled'
                                     ? 'bg-red-500/20 text-red-400'
                                     : 'bg-gray-500/20 text-gray-400'
                                 }`}>
-                                  {sub.status === 'active' ? '✅ 활성' : 
+                                  {sub.status === 'active' ? '✅ 활성' :
                                    sub.status === 'cancelled' ? '❌ 취소' : '⏰ 만료'}
                                 </span>
                               </td>
@@ -3640,18 +3685,19 @@ export default function AdminDashboard() {
                                 )}
                               </td>
                             </tr>
-                          ))
+                            )
+                          })
                         )}
                       </tbody>
                     </table>
                   </div>
                 </div>
 
-                {/* SeedPay 결제 내역 */}
+                {/* 결제 내역 (SeedPay + Play IAP 통합) */}
                 {payments.length > 0 && (
                   <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-700/50">
-                      <h3 className="text-white font-bold">💳 SeedPay 결제 내역</h3>
+                      <h3 className="text-white font-bold">💳 결제 내역 (전체 채널)</h3>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -3659,15 +3705,18 @@ export default function AdminDashboard() {
                           <tr className="bg-gray-900/50">
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">일시</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">이메일</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">채널</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">플랜</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">금액</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">상태</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">카드</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">카드/주문</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">승인번호</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-700/50">
-                          {payments.slice(0, 20).map((p) => (
+                          {payments.slice(0, 20).map((p) => {
+                            const isPlayIap = p.method === 'PLAY_IAP'
+                            return (
                             <tr key={p.id} className="hover:bg-gray-700/20 transition-colors">
                               <td className="px-4 py-3 text-sm text-gray-400">
                                 {formatDateTime(p.created_at)}
@@ -3677,7 +3726,16 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-3">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  p.plan === 'quarterly' 
+                                  isPlayIap
+                                    ? 'bg-cyan-500/20 text-cyan-400'
+                                    : 'bg-gray-500/20 text-gray-300'
+                                }`}>
+                                  {isPlayIap ? '📱 모바일' : '💳 웹'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  p.plan === 'quarterly'
                                     ? 'bg-purple-500/20 text-purple-400'
                                     : 'bg-blue-500/20 text-blue-400'
                                 }`}>
@@ -3689,7 +3747,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-3">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  p.status === 'success' 
+                                  p.status === 'success'
                                     ? 'bg-emerald-500/20 text-emerald-400'
                                     : 'bg-red-500/20 text-red-400'
                                 }`}>
@@ -3697,13 +3755,14 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-400">
-                                {p.card_name || '-'}
+                                {isPlayIap ? (p.order_id?.slice(0, 20) + (p.order_id && p.order_id.length > 20 ? '...' : '') || '-') : (p.card_name || '-')}
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-500 font-mono">
                                 {p.approval_number || '-'}
                               </td>
                             </tr>
-                          ))}
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -5367,6 +5426,13 @@ export default function AdminDashboard() {
       {activeTab === 'baseball-blog' && (
         <div className="w-full px-3 md:px-6 py-4 md:py-6 space-y-6">
           <BaseballBlogPanel />
+        </div>
+      )}
+
+      {/* 🎬 쇼츠 생성 탭 */}
+      {activeTab === 'shorts' && (
+        <div className="w-full px-3 md:px-6 py-4 md:py-6 space-y-6">
+          <ShortsGenerator />
         </div>
       )}
       </div>
