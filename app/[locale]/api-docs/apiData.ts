@@ -1603,4 +1603,73 @@ export const ENDPOINTS: ApiEndpoint[] = [
 }`,
     notes: '에러: APP_VERSION_OUTDATED(426). version 파라미터 비교는 semver 기준.',
   },
+  {
+    id: 'mobile-purchase-verify',
+    category: 'mobile',
+    method: 'POST',
+    path: '/api/v1/mobile/purchase/verify',
+    description: '★ Google Play 인앱 결제 토큰 백엔드 검증 + 구독 활성화. 결제 직후 1회 호출. JWT 인증 필수.',
+    auth: 'session',
+    params: [
+      { name: 'productId', in: 'body', required: true, type: 'string', description: 'premium_monthly | premium_quarterly (Play Console 등록 ID와 동일)' },
+      { name: 'productName', in: 'body', required: false, type: 'string', description: '로깅용 (옵션) — 매핑은 서버의 productId로 처리' },
+      { name: 'purchaseToken', in: 'body', required: true, type: 'string', description: 'Google Play Billing이 발급한 구매 토큰' },
+      { name: 'platform', in: 'body', required: false, type: 'string', description: 'android (현재 유일 지원)', default: 'android' },
+      { name: 'email', in: 'body', required: false, type: 'string', description: '로깅용. ★ 실제 사용자 식별은 JWT(Authorization: Bearer)로만 처리됨' },
+    ],
+    responseExample: `{
+  "success": true,
+  "data": {
+    "tier": "premium",
+    "plan": "quarterly",                      // 'monthly' | 'quarterly'
+    "expiresAt": "2026-09-01T00:00:00.000Z",
+    "startedAt": "2026-06-01T00:00:00.000Z",
+    "autoRenewing": true,
+    "alreadyProcessed": false                 // 같은 purchaseToken 재전송 시 true (멱등성)
+  }
+}`,
+    notes: `상품 매핑 (서버 PRODUCT_MAP):
+  • premium_monthly:   ₩4,900 / 1개월 / "TrendSoccer 프리미엄 1개월"
+  • premium_quarterly: ₩9,900 / 3개월 / "TrendSoccer 프리미엄 3개월"
+
+  처리 순서:
+  1) Bearer JWT로 사용자 식별 → body.email은 로깅용만
+  2) purchaseToken으로 멱등성 체크 (subscriptions.payment_id) — 같은 사용자 재전송: alreadyProcessed:true 반환 / 다른 사용자: TOKEN_ALREADY_USED(409)
+  3) Google Play Developer API로 purchases.subscriptions.get 호출 검증
+  4) paymentState 확인 (1=received, 2=trial 만 통과)
+  5) payments + subscriptions insert + users.tier='premium' + premium_expires_at 갱신
+  6) Google에 acknowledge (3일 내 안 하면 자동 환불됨 — 백그라운드 호출)
+  7) 텔레그램 매출 알림 + PostHog subscription_completed
+
+  에러: UNAUTHORIZED(401) | VALIDATION_ERROR(400) | INVALID_PRODUCT(400, allowed productId 포함) | GOOGLE_VERIFY_FAILED(400) | PAYMENT_PENDING(402, paymentState/retryAfterSec 포함) | TOKEN_ALREADY_USED(409) | INTERNAL_ERROR(500)`,
+  },
+  {
+    id: 'mobile-purchase-webhook',
+    category: 'mobile',
+    method: 'POST',
+    path: '/api/v1/mobile/purchase/webhook',
+    description: '★ Google Play RTDN(Real-time Developer Notifications) 수신 — Pub/Sub Push 구독이 호출. 자동 갱신/취소/환불 등을 자동 반영. 외주는 호출 불필요 (Google → 백엔드).',
+    auth: 'secret',
+    params: [
+      { name: 'token', in: 'query', required: true, type: 'string', description: 'Pub/Sub Push URL의 검증 토큰 (GOOGLE_PLAY_PUBSUB_VERIFY_TOKEN과 일치해야 함)' },
+      { name: 'message', in: 'body', required: true, type: 'object', description: 'Pub/Sub 메시지 봉투 {data: base64 JSON, attributes, messageId, publishTime}' },
+      { name: 'subscription', in: 'body', required: false, type: 'string', description: 'Pub/Sub 구독 경로 (자동)' },
+    ],
+    responseExample: `{
+  "success": true,
+  "handled": true,
+  "type": "renewed",             // 'renewed' | 'canceled' | 'revoked' | 'expired' | 'noop' | 'purchased'
+  "newExpiresAt": "2026-12-01T..."    // RENEWED일 때만
+}`,
+    notes: `notificationType 처리 (subscriptionNotification):
+  • 1 RECOVERED, 2 RENEWED, 7 RESTARTED → Google API 재검증 후 expires_at 갱신
+  • 3 CANCELED → cancelled_at 기록 (만료까지는 유지)
+  • 4 PURCHASED → verify가 처리 (무시)
+  • 12 REVOKED → 환불됨. 즉시 expires_at = now + 텔레그램 알림 + tier='free' 다운그레이드
+  • 13 EXPIRED → status='expired' + 활성 구독 없으면 tier='free'
+  • 5/6/9/10/11/8/20 → 로그만 (noop)
+
+  응답은 항상 HTTP 200 (Pub/Sub 재시도 방지) — 토큰 검증 실패 시만 401.
+  외주는 이 엔드포인트 직접 호출 X. Google이 보내준 알림을 우리가 받기만 함.`,
+  },
 ]
