@@ -3,15 +3,19 @@
  *
  * Google Play 인앱 결제 토큰을 백엔드에서 검증하고 구독 활성화.
  *
+ * 2026-06-01부터 신규 상품 구조 (productId='premium' + basePlanId) + Play Developer API v2 사용.
+ * 레거시 productId(premium_monthly/premium_quarterly)도 호환을 위해 허용.
+ *
  * 흐름:
  *  1. Bearer JWT로 사용자 식별
  *  2. body 검증 (productId, purchaseToken)
  *  3. purchaseToken 멱등성 체크 (이미 처리된 토큰이면 현재 상태 반환)
- *  4. Google Play Developer API로 토큰 검증
- *  5. paymentState 확인
- *  6. payments + subscriptions insert + users.tier 업데이트
- *  7. Google에 acknowledge (3일 내 안 하면 자동 환불됨)
- *  8. 텔레그램 매출 알림 + PostHog 캡처
+ *  4. purchases.subscriptionsv2.get으로 토큰 검증
+ *  5. basePlanId(신규) 또는 productId(레거시)로 요금제 결정
+ *  6. subscriptionState 확인 (ACTIVE 또는 IN_GRACE_PERIOD 통과)
+ *  7. payments + subscriptions insert + users.tier 업데이트
+ *  8. acknowledgeSubscriptionV2 (3일 내 안 하면 자동 환불됨)
+ *  9. 텔레그램 매출 알림 + PostHog 캡처
  */
 
 import { NextRequest } from 'next/server'
@@ -28,9 +32,16 @@ import {
   getServerSupabase,
 } from '@/lib/mobile-auth'
 import {
-  verifySubscription,
-  acknowledgeSubscription,
+  verifySubscriptionV2,
+  acknowledgeSubscriptionV2,
+  getProductInfoByBasePlan,
   getProductInfo,
+  extractBasePlanId,
+  extractExpiryTime,
+  isSubscriptionPayable,
+  PRODUCT_ID,
+  BASE_PLAN_MAP,
+  LEGACY_PRODUCT_MAP,
 } from '@/lib/google-play'
 
 async function sendTelegramNotification(message: string) {
@@ -88,13 +99,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const product = getProductInfo(productId)
-    if (!product) {
+    // productId 검증 — 신규(premium) 또는 레거시(premium_monthly/premium_quarterly) 허용
+    // 신규는 basePlanId로 요금제 구분, 레거시는 productId 자체로 구분
+    const isLegacyProduct = productId in LEGACY_PRODUCT_MAP
+    const isNewProduct = productId === PRODUCT_ID
+    if (!isLegacyProduct && !isNewProduct) {
       return errorResponse(
         400,
         ErrorCode.INVALID_PRODUCT,
         `Unknown productId: ${productId}`,
-        { allowed: Object.keys({ premium_monthly: 1, premium_quarterly: 1 }) }
+        {
+          allowed: [PRODUCT_ID, ...Object.keys(LEGACY_PRODUCT_MAP)],
+          recommended: PRODUCT_ID,
+          basePlans: Object.keys(BASE_PLAN_MAP),
+        }
       )
     }
 
@@ -145,12 +163,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 4. Google Play Developer API로 토큰 검증
+    // 4. Google Play Developer API v2로 토큰 검증
     let purchase
     try {
-      purchase = await verifySubscription(productId, purchaseToken)
+      purchase = await verifySubscriptionV2(purchaseToken)
     } catch (e: any) {
-      console.error('[purchase/verify] Google verify error:', e?.message)
+      console.error('[purchase/verify] Google verify v2 error:', e?.message)
       return errorResponse(
         400,
         ErrorCode.GOOGLE_VERIFY_FAILED,
@@ -159,24 +177,60 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 5. paymentState 확인
-    // 0 = Payment pending, 1 = Payment received, 2 = Free trial, 3 = Pending deferred upgrade
-    if (purchase.paymentState !== 1 && purchase.paymentState !== 2) {
+    // 5. 요금제 결정 — basePlanId 우선, 레거시면 productId fallback
+    let product
+    let basePlanIdUsed: string | null = null
+
+    if (isNewProduct) {
+      basePlanIdUsed = extractBasePlanId(purchase)
+      if (!basePlanIdUsed) {
+        return errorResponse(
+          400,
+          ErrorCode.GOOGLE_VERIFY_FAILED,
+          'Google 응답에 basePlanId가 없습니다. lineItems[0].offerDetails.basePlanId 확인.',
+          { subscriptionState: purchase.subscriptionState }
+        )
+      }
+      product = getProductInfoByBasePlan(basePlanIdUsed)
+      if (!product) {
+        return errorResponse(
+          400,
+          ErrorCode.INVALID_PRODUCT,
+          `Unknown basePlanId: ${basePlanIdUsed}`,
+          { allowedBasePlans: Object.keys(BASE_PLAN_MAP) }
+        )
+      }
+    } else {
+      // 레거시 productId — 이미 위에서 LEGACY_PRODUCT_MAP에 있음 확정
+      product = getProductInfo(productId)!
+    }
+
+    // 6. 구독 상태 확인 (ACTIVE 또는 IN_GRACE_PERIOD만 통과)
+    if (!isSubscriptionPayable(purchase)) {
       return errorResponse(
         402,
         ErrorCode.PAYMENT_PENDING,
-        '결제가 완료되지 않은 상태입니다.',
+        '구독이 활성 상태가 아닙니다.',
         {
-          paymentState: purchase.paymentState ?? null,
+          subscriptionState: purchase.subscriptionState,
           retryAfterSec: 60,
         }
       )
     }
 
-    const startTime = new Date(parseInt(purchase.startTimeMillis, 10))
-    const expiresAt = new Date(parseInt(purchase.expiryTimeMillis, 10))
-    const autoRenewing = !!purchase.autoRenewing
-    const orderId = purchase.orderId || purchaseToken
+    // 7. 시간/플랜 정보 추출 (v2는 ISO 8601 string)
+    const startTime = new Date(purchase.startTime)
+    const expiryTimeStr = extractExpiryTime(purchase)
+    if (!expiryTimeStr) {
+      return errorResponse(
+        400,
+        ErrorCode.GOOGLE_VERIFY_FAILED,
+        'Google 응답에 expiryTime이 없습니다.'
+      )
+    }
+    const expiresAt = new Date(expiryTimeStr)
+    const autoRenewing = !!purchase.lineItems?.[0]?.autoRenewingPlan?.autoRenewEnabled
+    const orderId = purchase.latestOrderId || purchaseToken
 
     // 6. payments + subscriptions insert + users 업데이트 (트랜잭션 대신 순차)
 
@@ -246,10 +300,10 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', userId)
 
-    // 7. Google Play에 acknowledge (3일 내 안 하면 자동 환불됨)
-    // acknowledgementState === 0이면 호출
-    if (purchase.acknowledgementState !== 1) {
-      acknowledgeSubscription(productId, purchaseToken).catch(() => {})
+    // 8. Google Play에 acknowledge (3일 내 안 하면 자동 환불됨)
+    // v2: 'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED'면 이미 ack됨, 그 외엔 호출
+    if (purchase.acknowledgementState !== 'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED') {
+      acknowledgeSubscriptionV2(purchaseToken).catch(() => {})
     }
 
     // 8. 텔레그램 알림 + PostHog
@@ -284,7 +338,9 @@ export async function POST(request: NextRequest) {
     // 9. 성공 응답
     return successResponse({
       tier: 'premium',
-      plan: product.plan,
+      plan: product.plan,                                // 'monthly' | 'quarterly'
+      productId: isNewProduct ? PRODUCT_ID : productId,  // 'premium' (신규) | 레거시 ID
+      basePlanId: basePlanIdUsed,                         // 신규 케이스만 채워짐. 레거시는 null
       expiresAt: newExpiresAt.toISOString(),
       startedAt: startTime.toISOString(),
       autoRenewing,

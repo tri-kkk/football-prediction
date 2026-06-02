@@ -28,7 +28,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   parseRTDNMessage,
   verifyWebhookToken,
-  verifySubscription,
+  verifySubscriptionV2,
+  extractExpiryTime,
   SubscriptionNotificationType,
 } from '@/lib/google-play'
 import { getServerSupabase } from '@/lib/mobile-auth'
@@ -80,10 +81,15 @@ async function handleSubscriptionNotification(
     case SubscriptionNotificationType.RENEWED:
     case SubscriptionNotificationType.RECOVERED:
     case SubscriptionNotificationType.RESTARTED: {
-      // 자동 갱신 → expires_at 갱신
+      // 자동 갱신 → expires_at 갱신 (v2 API 사용)
       try {
-        const purchase = await verifySubscription(productId, purchaseToken)
-        const newExpiresAt = new Date(parseInt(purchase.expiryTimeMillis, 10))
+        const purchase = await verifySubscriptionV2(purchaseToken)
+        const expiryStr = extractExpiryTime(purchase)
+        if (!expiryStr) {
+          console.warn(`[webhook] no expiryTime in v2 response — token=${purchaseToken.slice(0, 20)}...`)
+          return { handled: false, error: 'no_expiry_time' }
+        }
+        const newExpiresAt = new Date(expiryStr)
 
         await supabase
           .from('subscriptions')

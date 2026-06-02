@@ -1611,8 +1611,8 @@ export const ENDPOINTS: ApiEndpoint[] = [
     description: '★ Google Play 인앱 결제 토큰 백엔드 검증 + 구독 활성화. 결제 직후 1회 호출. JWT 인증 필수.',
     auth: 'session',
     params: [
-      { name: 'productId', in: 'body', required: true, type: 'string', description: 'premium_monthly | premium_quarterly (Play Console 등록 ID와 동일)' },
-      { name: 'productName', in: 'body', required: false, type: 'string', description: '로깅용 (옵션) — 매핑은 서버의 productId로 처리' },
+      { name: 'productId', in: 'body', required: true, type: 'string', description: '"premium" (단일 상품 + 요금제 구조). 레거시 premium_monthly/premium_quarterly도 허용' },
+      { name: 'productName', in: 'body', required: false, type: 'string', description: '로깅용 (옵션)' },
       { name: 'purchaseToken', in: 'body', required: true, type: 'string', description: 'Google Play Billing이 발급한 구매 토큰' },
       { name: 'platform', in: 'body', required: false, type: 'string', description: 'android (현재 유일 지원)', default: 'android' },
       { name: 'email', in: 'body', required: false, type: 'string', description: '로깅용. ★ 실제 사용자 식별은 JWT(Authorization: Bearer)로만 처리됨' },
@@ -1621,27 +1621,34 @@ export const ENDPOINTS: ApiEndpoint[] = [
   "success": true,
   "data": {
     "tier": "premium",
-    "plan": "quarterly",                      // 'monthly' | 'quarterly'
+    "plan": "quarterly",                      // 'monthly' | 'quarterly' (basePlanId로 결정)
+    "productId": "premium",                   // Play Console productId
+    "basePlanId": "quarterly-plan",           // 'monthly-plan' | 'quarterly-plan' (신규 구조에서만 채워짐. 레거시는 null)
     "expiresAt": "2026-09-01T00:00:00.000Z",
     "startedAt": "2026-06-01T00:00:00.000Z",
     "autoRenewing": true,
     "alreadyProcessed": false                 // 같은 purchaseToken 재전송 시 true (멱등성)
   }
 }`,
-    notes: `상품 매핑 (서버 PRODUCT_MAP):
-  • premium_monthly:   ₩4,900 / 1개월 / "TrendSoccer 프리미엄 1개월"
-  • premium_quarterly: ₩9,900 / 3개월 / "TrendSoccer 프리미엄 3개월"
+    notes: `★ 2026-06-01부터 Play Console 상품 구조 변경:
+  단일 productId 'premium' + 2개 basePlan
+    • monthly-plan:   ₩4,900 / 1개월 / "TrendSoccer 프리미엄 1개월"
+    • quarterly-plan: ₩9,900 / 3개월 / "TrendSoccer 프리미엄 3개월"
+
+  레거시 (deprecated, 호환만): premium_monthly / premium_quarterly — 이미 Play Console에서 비활성화. 신규 결제는 productId='premium'만 가능.
 
   처리 순서:
   1) Bearer JWT로 사용자 식별 → body.email은 로깅용만
   2) purchaseToken으로 멱등성 체크 (subscriptions.payment_id) — 같은 사용자 재전송: alreadyProcessed:true 반환 / 다른 사용자: TOKEN_ALREADY_USED(409)
-  3) Google Play Developer API로 purchases.subscriptions.get 호출 검증
-  4) paymentState 확인 (1=received, 2=trial 만 통과)
-  5) payments + subscriptions insert + users.tier='premium' + premium_expires_at 갱신
-  6) Google에 acknowledge (3일 내 안 하면 자동 환불됨 — 백그라운드 호출)
-  7) 텔레그램 매출 알림 + PostHog subscription_completed
+  3) Google Play Developer API v2 (purchases.subscriptionsv2.get) 호출 검증
+  4) 신규 case: 응답의 lineItems[0].offerDetails.basePlanId로 요금제 결정
+     레거시 case: productId 자체로 결정
+  5) subscriptionState 확인 (ACTIVE 또는 IN_GRACE_PERIOD만 통과)
+  6) payments + subscriptions insert (payment_method='PLAY_IAP') + users.tier='premium' + premium_expires_at 갱신
+  7) Google에 acknowledge v2 호출 (3일 내 안 하면 자동 환불됨)
+  8) 텔레그램 매출 알림 + PostHog subscription_completed
 
-  에러: UNAUTHORIZED(401) | VALIDATION_ERROR(400) | INVALID_PRODUCT(400, allowed productId 포함) | GOOGLE_VERIFY_FAILED(400) | PAYMENT_PENDING(402, paymentState/retryAfterSec 포함) | TOKEN_ALREADY_USED(409) | INTERNAL_ERROR(500)`,
+  에러: UNAUTHORIZED(401) | VALIDATION_ERROR(400) | INVALID_PRODUCT(400, allowed/recommended/basePlans 포함) | GOOGLE_VERIFY_FAILED(400, basePlanId 누락 등) | PAYMENT_PENDING(402, subscriptionState 포함) | TOKEN_ALREADY_USED(409) | INTERNAL_ERROR(500)`,
   },
   {
     id: 'mobile-purchase-webhook',

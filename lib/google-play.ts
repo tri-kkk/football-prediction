@@ -17,8 +17,15 @@
 import crypto from 'crypto'
 
 // ──────────────────────────────────────────────────────────────────
-// 상품 매핑
+// 상품/요금제 매핑
 // ──────────────────────────────────────────────────────────────────
+//
+// 2026-06-01 외주 요청으로 Play Console 상품 구조 변경:
+// - 이전: 2개 독립 상품 (premium_monthly, premium_quarterly) — Deprecated
+// - 현재: 단일 productId 'premium' + 2개 basePlan (monthly-plan, quarterly-plan)
+//
+// v2 API(`purchases.subscriptionsv2`)는 응답에 basePlanId가 포함되므로
+// productId가 'premium'만 와도 basePlanId로 요금제 구분 가능.
 
 export interface ProductInfo {
   plan: 'monthly' | 'quarterly'
@@ -28,15 +35,18 @@ export interface ProductInfo {
   labelEn: string
 }
 
-export const PRODUCT_MAP: Record<string, ProductInfo> = {
-  premium_monthly: {
+// 신규 (current): basePlanId 기준
+export const PRODUCT_ID = 'premium'
+
+export const BASE_PLAN_MAP: Record<string, ProductInfo> = {
+  'monthly-plan': {
     plan: 'monthly',
     months: 1,
     price: 4900,
     label: 'TrendSoccer 프리미엄 1개월',
     labelEn: 'TrendSoccer Premium 1 month',
   },
-  premium_quarterly: {
+  'quarterly-plan': {
     plan: 'quarterly',
     months: 3,
     price: 9900,
@@ -45,8 +55,19 @@ export const PRODUCT_MAP: Record<string, ProductInfo> = {
   },
 }
 
+// 레거시 (deprecated): 이미 등록된 결제(테스트 1건)와 호환 위해 유지
+export const LEGACY_PRODUCT_MAP: Record<string, ProductInfo> = {
+  premium_monthly: BASE_PLAN_MAP['monthly-plan'],
+  premium_quarterly: BASE_PLAN_MAP['quarterly-plan'],
+}
+
+export function getProductInfoByBasePlan(basePlanId: string): ProductInfo | null {
+  return BASE_PLAN_MAP[basePlanId] || null
+}
+
+// 레거시 호환용
 export function getProductInfo(productId: string): ProductInfo | null {
-  return PRODUCT_MAP[productId] || null
+  return LEGACY_PRODUCT_MAP[productId] || null
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -250,6 +271,140 @@ export async function acknowledgeSubscription(
     console.warn('[google-play] acknowledge failed (계속 진행):', res.status, text.slice(0, 200))
     // 실패해도 throw 안 함 — Google이 자동 환불 처리하면 webhook으로 알게 됨
   }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// v2 API — purchases.subscriptionsv2.get
+// ──────────────────────────────────────────────────────────────────
+//
+// 외주 요청에 따라 단일 productId 'premium' + basePlanId 구조 전환.
+// v2 응답에는 lineItems[].offerDetails.basePlanId가 포함되어 요금제 구분 가능.
+//
+// v1과 차이:
+// - URL: /purchases/subscriptions/{subscriptionId}/tokens/{token} → /purchases/subscriptionsv2/tokens/{token}
+//        (subscriptionId 불필요. 단일 token으로 조회)
+// - 응답 필드: startTimeMillis (string) → startTime (ISO 8601)
+//             expiryTimeMillis (string) → lineItems[].expiryTime (ISO 8601)
+//             paymentState (int) → subscriptionState (string enum)
+//             acknowledgementState (int) → acknowledgementState (string enum)
+
+export interface SubscriptionPurchaseV2 {
+  kind: string                       // 'androidpublisher#subscriptionPurchaseV2'
+  regionCode: string                 // 'KR'
+  lineItems: Array<{
+    productId: string                // 'premium'
+    expiryTime: string               // ISO 8601 — 만료 시점
+    autoRenewingPlan?: {
+      autoRenewEnabled?: boolean
+      recurringPrice?: { currencyCode: string; units: string; nanos?: number }
+      priceChangeDetails?: any
+    }
+    prepaidPlan?: {
+      allowExtendAfterTime?: string
+    }
+    offerDetails?: {
+      basePlanId: string             // 'monthly-plan' | 'quarterly-plan'
+      offerId?: string
+      offerTags?: string[]
+    }
+    deferredItemReplacement?: any
+  }>
+  startTime: string                  // ISO 8601 — 첫 구매 시점
+  subscriptionState:                 // 구독 상태 enum
+    | 'SUBSCRIPTION_STATE_UNSPECIFIED'
+    | 'SUBSCRIPTION_STATE_PENDING'
+    | 'SUBSCRIPTION_STATE_ACTIVE'
+    | 'SUBSCRIPTION_STATE_PAUSED'
+    | 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'
+    | 'SUBSCRIPTION_STATE_ON_HOLD'
+    | 'SUBSCRIPTION_STATE_CANCELED'
+    | 'SUBSCRIPTION_STATE_EXPIRED'
+  latestOrderId?: string             // 'GPA.xxxx-xxxx-xxxx'
+  linkedPurchaseToken?: string       // 갱신 시 이전 토큰
+  acknowledgementState?:
+    | 'ACKNOWLEDGEMENT_STATE_UNSPECIFIED'
+    | 'ACKNOWLEDGEMENT_STATE_PENDING'
+    | 'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED'
+  externalAccountIdentifiers?: {
+    externalAccountId?: string
+    obfuscatedExternalAccountId?: string
+    obfuscatedExternalProfileId?: string
+  }
+  subscribeWithGoogleInfo?: any
+  testPurchase?: { kind: string }    // 테스트 결제이면 객체 존재
+  pausedStateContext?: any
+  canceledStateContext?: any
+}
+
+export async function verifySubscriptionV2(
+  purchaseToken: string
+): Promise<SubscriptionPurchaseV2> {
+  const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME
+  if (!packageName) {
+    throw new Error('GOOGLE_PLAY_PACKAGE_NAME env var is missing')
+  }
+
+  const token = await getAccessToken()
+  const url =
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+    `${encodeURIComponent(packageName)}/purchases/subscriptionsv2/tokens/` +
+    `${encodeURIComponent(purchaseToken)}`
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(10000),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Google Play v2 verify failed: ${res.status} ${text.slice(0, 500)}`)
+  }
+
+  return (await res.json()) as SubscriptionPurchaseV2
+}
+
+export async function acknowledgeSubscriptionV2(
+  purchaseToken: string
+): Promise<void> {
+  const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME!
+  const token = await getAccessToken()
+  const url =
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+    `${encodeURIComponent(packageName)}/purchases/subscriptionsv2/tokens/` +
+    `${encodeURIComponent(purchaseToken)}:acknowledge`
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: '{}',
+    signal: AbortSignal.timeout(8000),
+  })
+
+  if (!res.ok && res.status !== 204) {
+    const text = await res.text()
+    console.warn('[google-play v2] acknowledge failed (계속 진행):', res.status, text.slice(0, 200))
+  }
+}
+
+// 응답에서 첫 lineItem의 basePlanId 추출 (편의 함수)
+export function extractBasePlanId(purchase: SubscriptionPurchaseV2): string | null {
+  return purchase.lineItems?.[0]?.offerDetails?.basePlanId ?? null
+}
+
+// 응답에서 첫 lineItem의 expiryTime 추출
+export function extractExpiryTime(purchase: SubscriptionPurchaseV2): string | null {
+  return purchase.lineItems?.[0]?.expiryTime ?? null
+}
+
+// 결제 완료/유효 상태인지 (구독 활성화 가능 상태)
+export function isSubscriptionPayable(purchase: SubscriptionPurchaseV2): boolean {
+  return (
+    purchase.subscriptionState === 'SUBSCRIPTION_STATE_ACTIVE' ||
+    purchase.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'
+  )
 }
 
 // ──────────────────────────────────────────────────────────────────
