@@ -1576,6 +1576,106 @@ export const ENDPOINTS: ApiEndpoint[] = [
   에러: 400(email 누락) | 404(사용자 없음) | 500.`,
   },
   {
+    id: 'mobile-devices-register',
+    category: 'mobile',
+    method: 'POST',
+    path: '/api/v1/mobile/devices',
+    description: '★ FCM 디바이스 토큰 등록/갱신 (upsert). 앱 시작 시 + Firebase 토큰 갱신 시 호출. JWT 인증 필수.',
+    auth: 'session',
+    params: [
+      { name: 'token', in: 'body', required: true, type: 'string', description: 'FCM device token (firebase-messaging에서 발급)' },
+      { name: 'platform', in: 'body', required: true, type: 'string', description: '"android" | "ios"' },
+      { name: 'appVersion', in: 'body', required: false, type: 'string', description: '앱 버전 (semver). 옵션' },
+      { name: 'locale', in: 'body', required: false, type: 'string', description: '"ko" | "en". 알림 언어 결정용' },
+    ],
+    responseExample: `{
+  "success": true,
+  "data": {
+    "deviceId": "uuid",
+    "platform": "android",
+    "registeredAt": "2026-06-01T..."
+  }
+}`,
+    notes: `같은 token을 다른 사용자가 등록하면 (= 같은 기기 재로그인) user_id가 새 사용자로 갱신됨. 한 사용자가 여러 기기에서 로그인하면 각각 별도 row.`,
+  },
+  {
+    id: 'mobile-devices-delete',
+    category: 'mobile',
+    method: 'DELETE',
+    path: '/api/v1/mobile/devices',
+    description: 'FCM 디바이스 토큰 폐기. 로그아웃 / 알림 끔 / 앱 삭제 직전.',
+    auth: 'session',
+    params: [
+      { name: 'token', in: 'body', required: false, type: 'string', description: '특정 기기 토큰만 폐기 시 입력. 생략하면 이 사용자의 모든 기기 토큰 일괄 폐기 (탈퇴/전체 로그아웃용).' },
+    ],
+    responseExample: `{
+  "success": true,
+  "data": {
+    "removed": 1,
+    "scope": "single"             // 'single' (token 지정) | 'all_user_devices' (token 생략)
+  }
+}`,
+  },
+  {
+    id: 'mobile-notification-match-get',
+    category: 'mobile',
+    method: 'GET',
+    path: '/api/v1/mobile/notifications/match/{matchId}',
+    description: '경기 알림 설정 조회. 미설정 시 default (enabled=false, 모든 이벤트 false) 반환.',
+    auth: 'session',
+    params: [
+      { name: 'matchId', in: 'path', required: true, type: 'number', description: 'api_match_id (축구 fixture id, 야구 api_match_id)' },
+      { name: 'sport', in: 'query', required: true, type: 'string', description: '"soccer" | "baseball"' },
+    ],
+    responseExample: `{
+  "success": true,
+  "data": {
+    "matchId": 1545025,
+    "sport": "soccer",
+    "enabled": true,
+    "events": {
+      "kickoff": true,
+      "goal": true,
+      "halftime": false,
+      "fulltime": true,
+      "yellowCard": false,
+      "redCard": true,
+      "substitution": false
+    },
+    "configured": true,           // false면 사용자가 한 번도 설정 안 함 (default 값)
+    "updatedAt": "2026-06-01T..."
+  }
+}`,
+    notes: `이벤트 키 (soccer): kickoff, goal, halftime, fulltime, yellowCard, redCard, substitution
+이벤트 키 (baseball): firstPitch, score, inningChange, homerun, gameEnd
+응답은 항상 모든 키를 default 채워서 반환. 클라가 누락 키 처리 신경 안 써도 됨.`,
+  },
+  {
+    id: 'mobile-notification-match-put',
+    category: 'mobile',
+    method: 'PUT',
+    path: '/api/v1/mobile/notifications/match/{matchId}',
+    description: '경기 알림 설정 저장/갱신 (upsert).',
+    auth: 'session',
+    params: [
+      { name: 'matchId', in: 'path', required: true, type: 'number', description: 'api_match_id' },
+      { name: 'sport', in: 'body', required: true, type: 'string', description: '"soccer" | "baseball"' },
+      { name: 'enabled', in: 'body', required: false, type: 'boolean', description: '경기 알림 전체 ON/OFF. 생략 시 true.', default: 'true' },
+      { name: 'events', in: 'body', required: false, type: 'object', description: '이벤트별 ON/OFF 객체. 모르는 키는 무시. 미명시 키는 false 처리.' },
+    ],
+    responseExample: `{
+  "success": true,
+  "data": {
+    "matchId": 1545025,
+    "sport": "soccer",
+    "enabled": true,
+    "events": { "kickoff": true, "goal": true, "halftime": false, "fulltime": true, "yellowCard": false, "redCard": true, "substitution": false },
+    "updatedAt": "2026-06-01T..."
+  }
+}`,
+    notes: `unique key: (user_id, match_id, sport). 같은 매치에 PUT 여러 번 호출해도 항상 마지막 값으로 갱신됨.`,
+  },
+  {
     id: 'mobile-app-config',
     category: 'mobile',
     method: 'GET',
