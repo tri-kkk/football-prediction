@@ -169,6 +169,66 @@ export function requireAuth(session: MobileSession | null): NextResponse | null 
   return null
 }
 
+// ──────────────────────────────────────────────────────────────────
+// 신원(identity) — 익명 디바이스도 허용
+// ──────────────────────────────────────────────────────────────────
+//
+// FCM 알림 등 비로그인 사용자도 접근 가능한 엔드포인트용.
+// 우선순위: JWT (사용자 식별, 더 강력) > X-Device-Token 헤더 (익명 디바이스)
+//
+// 'X-Device-Token' 헤더 값은 FCM device token. 토큰 자체가 인증 역할을 하므로
+// 도용 시 알림 설정 변조 가능 — 영향 범위가 작아 수용 가능한 트레이드오프.
+
+export interface MobileIdentity {
+  type: 'user' | 'device'
+  userId: string | null
+  deviceToken: string | null
+  // 사용자 모드면 세션도 함께 (tier 체크 등에 사용 가능)
+  session?: MobileSession
+}
+
+export async function getMobileIdentity(
+  request: NextRequest
+): Promise<MobileIdentity | null> {
+  // 1순위: JWT
+  const session = await getMobileSession(request)
+  if (session && session.termsAgreed) {
+    return {
+      type: 'user',
+      userId: session.userId,
+      deviceToken: null,
+      session,
+    }
+  }
+
+  // 2순위: X-Device-Token 헤더
+  const deviceToken = request.headers.get('x-device-token')
+  if (deviceToken && deviceToken.length >= 10) {
+    return {
+      type: 'device',
+      userId: null,
+      deviceToken,
+      session: undefined,
+    }
+  }
+
+  return null
+}
+
+/**
+ * 신원 필수 (사용자 또는 익명 디바이스) — 둘 다 없으면 401
+ */
+export function requireIdentity(identity: MobileIdentity | null): NextResponse | null {
+  if (!identity) {
+    return errorResponse(
+      401,
+      ErrorCode.UNAUTHORIZED,
+      'Authentication required (JWT or X-Device-Token header)'
+    )
+  }
+  return null
+}
+
 /**
  * 프리미엄 필요 — 인증 + 프리미엄 검증
  */

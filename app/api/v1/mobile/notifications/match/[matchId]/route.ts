@@ -1,16 +1,15 @@
 /**
  * Mobile Match Notification API
  *
- * GET /api/v1/mobile/notifications/match/{matchId}?sport=soccer|baseball
- *   — 해당 매치의 알림 설정 조회. 미설정 시 기본값 응답 (enabled=false, 모든 이벤트 false).
+ * 식별 방식 (우선순위):
+ *  1) Authorization: Bearer <JWT>   → 사용자 단위 설정
+ *  2) X-Device-Token: <FCM token>   → 익명 디바이스 단위 설정
  *
+ * GET /api/v1/mobile/notifications/match/{matchId}?sport=soccer|baseball
  * PUT /api/v1/mobile/notifications/match/{matchId}
  *   Body: { sport: 'soccer'|'baseball', enabled?: boolean, events?: object }
- *   — 알림 설정 저장/갱신 (upsert).
  *
- * matchId = api_match_id (축구는 API-Football fixture id, 야구는 API-Baseball api_match_id)
- *
- * 인증: Bearer JWT 필수.
+ * matchId = api_match_id (축구: API-Football fixture id, 야구: API-Baseball api_match_id)
  */
 
 import { NextRequest } from 'next/server'
@@ -21,8 +20,8 @@ import {
   successResponse,
 } from '@/lib/mobile-api'
 import {
-  getMobileSession,
-  requireAuth,
+  getMobileIdentity,
+  requireIdentity,
   getServerSupabase,
 } from '@/lib/mobile-auth'
 
@@ -30,7 +29,7 @@ import {
 const SPORTS = ['soccer', 'baseball'] as const
 type Sport = (typeof SPORTS)[number]
 
-// 이벤트 키 화이트리스트 — 알 수 없는 키가 들어오면 무시
+// 이벤트 키 화이트리스트
 const SOCCER_EVENT_KEYS = ['kickoff', 'goal', 'halftime', 'fulltime', 'yellowCard', 'redCard', 'substitution']
 const BASEBALL_EVENT_KEYS = ['firstPitch', 'score', 'inningChange', 'homerun', 'gameEnd']
 
@@ -60,7 +59,7 @@ function parseSport(value: string | null): Sport | null {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// GET — 설정 조회 (없으면 default)
+// GET
 // ──────────────────────────────────────────────────────────────────
 
 export async function GET(
@@ -68,10 +67,9 @@ export async function GET(
   { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
-    const session = await getMobileSession(request)
-    const authError = requireAuth(session)
-    if (authError) return authError
-    const userId = session!.userId
+    const identity = await getMobileIdentity(request)
+    const idError = requireIdentity(identity)
+    if (idError) return idError
 
     const { matchId: matchIdRaw } = await params
     const matchId = parseMatchId(matchIdRaw)
@@ -90,13 +88,19 @@ export async function GET(
     }
 
     const supabase = getServerSupabase()
-    const { data, error } = await supabase
+    let query = supabase
       .from('match_notifications')
-      .select('id, enabled, events, updated_at')
-      .eq('user_id', userId)
+      .select('id, enabled, events, updated_at, user_id, device_token')
       .eq('match_id', matchId)
       .eq('sport', sport)
-      .maybeSingle()
+
+    if (identity!.type === 'user') {
+      query = query.eq('user_id', identity!.userId)
+    } else {
+      query = query.eq('device_token', identity!.deviceToken).is('user_id', null)
+    }
+
+    const { data, error } = await query.maybeSingle()
 
     if (error) {
       console.error('[notifications/match GET] error:', error.message)
@@ -106,13 +110,13 @@ export async function GET(
     }
 
     if (!data) {
-      // 미설정 — 기본값 반환 (앱이 default 표시)
       return successResponse({
         matchId,
         sport,
         enabled: false,
         events: defaultEvents(sport),
         configured: false,
+        identity: identity!.type,
       })
     }
 
@@ -122,6 +126,7 @@ export async function GET(
       enabled: data.enabled,
       events: { ...defaultEvents(sport), ...(data.events as Record<string, boolean>) },
       configured: true,
+      identity: identity!.type,
       updatedAt: data.updated_at,
     })
   } catch (error) {
@@ -131,7 +136,7 @@ export async function GET(
 }
 
 // ──────────────────────────────────────────────────────────────────
-// PUT — 저장/갱신 (upsert)
+// PUT
 // ──────────────────────────────────────────────────────────────────
 
 export async function PUT(
@@ -139,10 +144,9 @@ export async function PUT(
   { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
-    const session = await getMobileSession(request)
-    const authError = requireAuth(session)
-    if (authError) return authError
-    const userId = session!.userId
+    const identity = await getMobileIdentity(request)
+    const idError = requireIdentity(identity)
+    if (idError) return idError
 
     const { matchId: matchIdRaw } = await params
     const matchId = parseMatchId(matchIdRaw)
@@ -172,20 +176,23 @@ export async function PUT(
     const supabase = getServerSupabase()
     const now = new Date().toISOString()
 
+    const baseRow = {
+      match_id: matchId,
+      sport,
+      enabled,
+      events,
+      updated_at: now,
+      user_id: identity!.type === 'user' ? identity!.userId : null,
+      device_token: identity!.type === 'device' ? identity!.deviceToken : null,
+    }
+
+    const conflictTarget =
+      identity!.type === 'user' ? 'user_id,match_id,sport' : 'device_token,match_id,sport'
+
     const { data, error } = await supabase
       .from('match_notifications')
-      .upsert(
-        {
-          user_id: userId,
-          match_id: matchId,
-          sport,
-          enabled,
-          events,
-          updated_at: now,
-        },
-        { onConflict: 'user_id,match_id,sport' }
-      )
-      .select('id, enabled, events, updated_at')
+      .upsert(baseRow, { onConflict: conflictTarget })
+      .select('id, enabled, events, updated_at, user_id, device_token')
       .single()
 
     if (error) {
@@ -200,6 +207,7 @@ export async function PUT(
       sport,
       enabled: data.enabled,
       events: data.events,
+      identity: identity!.type,
       updatedAt: data.updated_at,
     })
   } catch (error) {

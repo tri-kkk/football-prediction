@@ -1,14 +1,13 @@
 /**
  * Mobile Device Token API
  *
- * POST   /api/v1/mobile/devices    — 토큰 등록 (upsert) — 앱 시작 시 + 토큰 갱신 시
- * DELETE /api/v1/mobile/devices    — 토큰 삭제          — 로그아웃 / 알림 끔 / 앱 삭제 직전
+ * POST   /api/v1/mobile/devices    — 토큰 등록 (upsert). JWT 옵셔널 (익명 디바이스 허용)
+ * DELETE /api/v1/mobile/devices    — 토큰 폐기. JWT 또는 X-Device-Token 또는 body.token
  *
- * 토큰은 사용자 단위로 관리. 같은 사용자가 여러 기기에서 로그인하면
- * 각 기기마다 토큰이 추가됨. 한 토큰은 unique — Firebase가 같은 토큰을 다른
- * 사용자에게 발급하는 경우는 거의 없음.
- *
- * 인증: Bearer JWT 필수 (앱 사용자 식별 위해).
+ * 익명 모드:
+ *  - JWT 없이 POST하면 user_id=NULL로 등록
+ *  - 이후 로그인 시 POST /api/v1/mobile/notifications/migrate 호출하면
+ *    해당 device_token의 user_id가 갱신됨 (병합)
  */
 
 import { NextRequest } from 'next/server'
@@ -20,20 +19,18 @@ import {
 } from '@/lib/mobile-api'
 import {
   getMobileSession,
-  requireAuth,
   getServerSupabase,
 } from '@/lib/mobile-auth'
 
 // ──────────────────────────────────────────────────────────────────
-// POST — 등록/갱신 (upsert)
+// POST — 등록/갱신 (upsert). JWT 옵셔널.
 // ──────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
+    // JWT는 옵셔널 — 있으면 user_id 채움, 없으면 익명
     const session = await getMobileSession(request)
-    const authError = requireAuth(session)
-    if (authError) return authError
-    const userId = session!.userId
+    const userId = session?.termsAgreed ? session.userId : null
 
     let body: any
     try {
@@ -44,8 +41,8 @@ export async function POST(request: NextRequest) {
 
     const { token, platform, appVersion, locale } = body || {}
 
-    if (!token || typeof token !== 'string') {
-      return errorResponse(400, ErrorCode.VALIDATION_ERROR, 'token is required')
+    if (!token || typeof token !== 'string' || token.length < 10) {
+      return errorResponse(400, ErrorCode.VALIDATION_ERROR, 'token is required (min 10 chars)')
     }
     if (!platform || (platform !== 'android' && platform !== 'ios')) {
       return errorResponse(
@@ -58,13 +55,11 @@ export async function POST(request: NextRequest) {
     const supabase = getServerSupabase()
     const now = new Date().toISOString()
 
-    // upsert — 같은 token이 이미 다른 사용자에 등록되어 있으면 user_id를 갱신
-    // (사용자 A에서 로그아웃 → 사용자 B 로그인한 같은 기기 케이스)
     const { data, error } = await supabase
       .from('device_tokens')
       .upsert(
         {
-          user_id: userId,
+          user_id: userId,            // null이면 익명
           token,
           platform,
           app_version: appVersion ?? null,
@@ -74,7 +69,7 @@ export async function POST(request: NextRequest) {
         },
         { onConflict: 'token' }
       )
-      .select('id, platform, created_at')
+      .select('id, platform, user_id, created_at')
       .single()
 
     if (error) {
@@ -87,6 +82,7 @@ export async function POST(request: NextRequest) {
     return successResponse({
       deviceId: data?.id,
       platform: data?.platform,
+      anonymous: data?.user_id === null,
       registeredAt: data?.created_at,
     })
   } catch (error) {
@@ -98,44 +94,75 @@ export async function POST(request: NextRequest) {
 // ──────────────────────────────────────────────────────────────────
 // DELETE — 토큰 폐기
 // ──────────────────────────────────────────────────────────────────
+//
+// 우선순위:
+//  1) body.token 지정 → 해당 token 1개 삭제
+//  2) JWT 있고 body.token 없음 → 그 user의 모든 토큰 일괄 삭제
+//  3) X-Device-Token 헤더 → 해당 token 1개 삭제 (익명 모드 로그아웃)
+//  4) 위 셋 다 없음 → 400 VALIDATION_ERROR
 
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getMobileSession(request)
-    const authError = requireAuth(session)
-    if (authError) return authError
-    const userId = session!.userId
+    const userId = session?.termsAgreed ? session.userId : null
 
-    // 두 가지 호출 방식 지원:
-    //   1) body에 { token: "..." } — 특정 기기 토큰만 폐기 (로그아웃 시 일반적)
-    //   2) body 없음 — 이 사용자의 모든 기기 토큰 폐기 (계정 탈퇴/전체 로그아웃 시)
-    let token: string | null = null
+    let bodyToken: string | null = null
     try {
       const body = await request.json()
-      token = body?.token ?? null
+      bodyToken = typeof body?.token === 'string' ? body.token : null
     } catch {
-      // 빈 body — 전체 폐기 모드
+      /* body 없음 OK */
     }
+
+    const headerToken = request.headers.get('x-device-token')
+    const tokenToDelete = bodyToken ?? headerToken
 
     const supabase = getServerSupabase()
-    let query = supabase.from('device_tokens').delete().eq('user_id', userId)
 
-    if (token) {
-      query = query.eq('token', token)
+    if (tokenToDelete) {
+      const { error, count } = await supabase
+        .from('device_tokens')
+        .delete()
+        .eq('token', tokenToDelete)
+        .select('id', { count: 'exact' })
+
+      if (error) {
+        console.error('[devices DELETE] error:', error.message)
+        return errorResponse(500, ErrorCode.INTERNAL_ERROR, 'Failed to delete device', {
+          details: error.message,
+        })
+      }
+      return successResponse({
+        removed: count ?? 0,
+        scope: 'single_token',
+      })
     }
 
-    const { error, count } = await query.select('id', { count: 'exact' })
+    // body.token도 없고 헤더도 없음 → JWT 있어야 전체 삭제 가능
+    if (!userId) {
+      return errorResponse(
+        400,
+        ErrorCode.VALIDATION_ERROR,
+        'Provide body.token, X-Device-Token header, or Authorization (Bearer) for bulk delete'
+      )
+    }
+
+    const { error, count } = await supabase
+      .from('device_tokens')
+      .delete()
+      .eq('user_id', userId)
+      .select('id', { count: 'exact' })
 
     if (error) {
-      console.error('[devices DELETE] error:', error.message)
-      return errorResponse(500, ErrorCode.INTERNAL_ERROR, 'Failed to delete device', {
+      console.error('[devices DELETE bulk] error:', error.message)
+      return errorResponse(500, ErrorCode.INTERNAL_ERROR, 'Failed to delete devices', {
         details: error.message,
       })
     }
 
     return successResponse({
       removed: count ?? 0,
-      scope: token ? 'single' : 'all_user_devices',
+      scope: 'all_user_devices',
     })
   } catch (error) {
     console.error('[devices DELETE] unexpected error:', error)

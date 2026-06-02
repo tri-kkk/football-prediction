@@ -1580,8 +1580,8 @@ export const ENDPOINTS: ApiEndpoint[] = [
     category: 'mobile',
     method: 'POST',
     path: '/api/v1/mobile/devices',
-    description: '★ FCM 디바이스 토큰 등록/갱신 (upsert). 앱 시작 시 + Firebase 토큰 갱신 시 호출. JWT 인증 필수.',
-    auth: 'session',
+    description: '★ FCM 디바이스 토큰 등록/갱신 (upsert). 앱 시작 시 + Firebase 토큰 갱신 시 호출. ⭐ JWT 옵셔널 — 비로그인 사용자도 등록 가능 (익명 디바이스).',
+    auth: 'none',
     params: [
       { name: 'token', in: 'body', required: true, type: 'string', description: 'FCM device token (firebase-messaging에서 발급)' },
       { name: 'platform', in: 'body', required: true, type: 'string', description: '"android" | "ios"' },
@@ -1593,10 +1593,17 @@ export const ENDPOINTS: ApiEndpoint[] = [
   "data": {
     "deviceId": "uuid",
     "platform": "android",
+    "anonymous": true,           // JWT 없이 호출했으면 true (익명 등록)
     "registeredAt": "2026-06-01T..."
   }
 }`,
-    notes: `같은 token을 다른 사용자가 등록하면 (= 같은 기기 재로그인) user_id가 새 사용자로 갱신됨. 한 사용자가 여러 기기에서 로그인하면 각각 별도 row.`,
+    notes: `JWT 옵셔널:
+  • JWT 있음 → user_id 채움
+  • JWT 없음 → 익명 등록 (anonymous=true)
+
+  같은 token을 다른 사용자/익명이 재등록하면 user_id가 새 값으로 갱신됨 (upsert). 한 사용자가 여러 기기 등록하면 각각 별도 row.
+
+  로그인 후 익명 → 사용자 병합은 POST /api/v1/mobile/notifications/migrate 사용.`,
   },
   {
     id: 'mobile-devices-delete',
@@ -1604,17 +1611,20 @@ export const ENDPOINTS: ApiEndpoint[] = [
     method: 'DELETE',
     path: '/api/v1/mobile/devices',
     description: 'FCM 디바이스 토큰 폐기. 로그아웃 / 알림 끔 / 앱 삭제 직전.',
-    auth: 'session',
+    auth: 'none',
     params: [
-      { name: 'token', in: 'body', required: false, type: 'string', description: '특정 기기 토큰만 폐기 시 입력. 생략하면 이 사용자의 모든 기기 토큰 일괄 폐기 (탈퇴/전체 로그아웃용).' },
+      { name: 'token', in: 'body', required: false, type: 'string', description: '특정 기기 토큰 폐기 시. body.token 우선, 없으면 X-Device-Token 헤더, 둘 다 없으면 JWT의 사용자 전체 토큰 일괄 폐기.' },
     ],
     responseExample: `{
   "success": true,
   "data": {
     "removed": 1,
-    "scope": "single"             // 'single' (token 지정) | 'all_user_devices' (token 생략)
+    "scope": "single_token"        // 'single_token' | 'all_user_devices'
   }
 }`,
+    notes: `우선순위: body.token > X-Device-Token 헤더 > JWT(전체 폐기).
+  body나 헤더에 token이 있으면 해당 token row 1개 삭제 (JWT 불필요 — 익명 모드 로그아웃용).
+  셋 다 없으면 400.`,
   },
   {
     id: 'mobile-notification-match-get',
@@ -1622,7 +1632,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
     method: 'GET',
     path: '/api/v1/mobile/notifications/match/{matchId}',
     description: '경기 알림 설정 조회. 미설정 시 default (enabled=false, 모든 이벤트 false) 반환.',
-    auth: 'session',
+    auth: 'none',
     params: [
       { name: 'matchId', in: 'path', required: true, type: 'number', description: 'api_match_id (축구 fixture id, 야구 api_match_id)' },
       { name: 'sport', in: 'query', required: true, type: 'string', description: '"soccer" | "baseball"' },
@@ -1642,26 +1652,30 @@ export const ENDPOINTS: ApiEndpoint[] = [
       "redCard": true,
       "substitution": false
     },
-    "configured": true,           // false면 사용자가 한 번도 설정 안 함 (default 값)
+    "configured": true,           // false면 한 번도 설정 안 함 (default 값)
+    "identity": "user",            // 'user' (JWT 인증) | 'device' (X-Device-Token 익명)
     "updatedAt": "2026-06-01T..."
   }
 }`,
-    notes: `이벤트 키 (soccer): kickoff, goal, halftime, fulltime, yellowCard, redCard, substitution
-이벤트 키 (baseball): firstPitch, score, inningChange, homerun, gameEnd
-응답은 항상 모든 키를 default 채워서 반환. 클라가 누락 키 처리 신경 안 써도 됨.`,
+    notes: `식별 우선순위: Authorization: Bearer <JWT> > X-Device-Token 헤더.
+  둘 다 없으면 401 UNAUTHORIZED.
+
+  이벤트 키 (soccer): kickoff, goal, halftime, fulltime, yellowCard, redCard, substitution
+  이벤트 키 (baseball): firstPitch, score, inningChange, homerun, gameEnd
+  응답은 항상 모든 키를 default 채워서 반환.`,
   },
   {
     id: 'mobile-notification-match-put',
     category: 'mobile',
     method: 'PUT',
     path: '/api/v1/mobile/notifications/match/{matchId}',
-    description: '경기 알림 설정 저장/갱신 (upsert).',
-    auth: 'session',
+    description: '경기 알림 설정 저장/갱신 (upsert). JWT 또는 X-Device-Token 헤더로 식별.',
+    auth: 'none',
     params: [
       { name: 'matchId', in: 'path', required: true, type: 'number', description: 'api_match_id' },
       { name: 'sport', in: 'body', required: true, type: 'string', description: '"soccer" | "baseball"' },
       { name: 'enabled', in: 'body', required: false, type: 'boolean', description: '경기 알림 전체 ON/OFF. 생략 시 true.', default: 'true' },
-      { name: 'events', in: 'body', required: false, type: 'object', description: '이벤트별 ON/OFF 객체. 모르는 키는 무시. 미명시 키는 false 처리.' },
+      { name: 'events', in: 'body', required: false, type: 'object', description: '이벤트별 ON/OFF. 모르는 키는 무시. 미명시 키는 false.' },
     ],
     responseExample: `{
   "success": true,
@@ -1670,10 +1684,42 @@ export const ENDPOINTS: ApiEndpoint[] = [
     "sport": "soccer",
     "enabled": true,
     "events": { "kickoff": true, "goal": true, "halftime": false, "fulltime": true, "yellowCard": false, "redCard": true, "substitution": false },
+    "identity": "user",
     "updatedAt": "2026-06-01T..."
   }
 }`,
-    notes: `unique key: (user_id, match_id, sport). 같은 매치에 PUT 여러 번 호출해도 항상 마지막 값으로 갱신됨.`,
+    notes: `unique key:
+  • 사용자 모드: (user_id, match_id, sport)
+  • 익명 모드: (device_token, match_id, sport)
+
+  같은 매치에 PUT 여러 번 호출해도 항상 마지막 값으로 갱신됨.`,
+  },
+  {
+    id: 'mobile-notification-migrate',
+    category: 'mobile',
+    method: 'POST',
+    path: '/api/v1/mobile/notifications/migrate',
+    description: '★ 익명 디바이스 알림 설정을 로그인한 사용자에게 병합. 로그인 직후 1회 호출 권장.',
+    auth: 'session',
+    params: [
+      { name: 'token', in: 'body', required: true, type: 'string', description: '병합할 FCM device token (익명 모드로 등록된 것)' },
+    ],
+    responseExample: `{
+  "success": true,
+  "data": {
+    "deviceLinked": true,         // device_tokens 행의 user_id가 채워졌는지
+    "migrated": 3,                // 익명→사용자로 이전된 알림 설정 수
+    "skippedConflict": 1          // 사용자가 이미 같은 매치 설정을 가지고 있어 익명 설정 폐기된 수
+  }
+}`,
+    notes: `JWT 필수. body.token (FCM)으로 익명 설정 식별.
+
+  처리:
+  1) device_tokens(token=X) row의 user_id를 현재 user로 채움
+  2) match_notifications에서 device_token=X & user_id IS NULL 행들을 순회:
+     - 사용자가 이미 같은 (match_id, sport) 설정 있음 → 익명 row 삭제 (사용자 설정 우선)
+     - 없음 → user_id 채움 + device_token NULL로 (사용자 모드 전환)
+  3) 멱등 — 여러 번 호출해도 안전 (이미 마이그레이션된 거 다시 처리 안 함)`,
   },
   {
     id: 'mobile-app-config',
