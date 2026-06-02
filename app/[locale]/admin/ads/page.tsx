@@ -5586,13 +5586,17 @@ export default function AdminDashboard() {
                   링크 URL <span className="text-red-400">*</span>
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={adFormData.link_url}
                   onChange={(e) => setAdFormData({ ...adFormData, link_url: e.target.value })}
-                  placeholder="https://example.com/landing"
+                  placeholder="https://... (외부) 또는 /baseball/178830 (앱 내부 라우트)"
                   className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                   required
                 />
+                <p className="mt-1.5 text-xs text-gray-500">
+                  • <span className="text-emerald-400">https:// 또는 http://</span> 로 시작 → 외부 브라우저로 이동<br/>
+                  • <span className="text-blue-400">/</span> 로 시작 → 앱 내 라우트 (모바일 앱 슬롯에서만 의미 있음)
+                </p>
               </div>
 
               <div>
