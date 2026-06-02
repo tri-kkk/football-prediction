@@ -200,7 +200,7 @@ interface PaymentStats {
 interface Advertisement {
   id: string
   name: string
-  slot_type: 'desktop_banner' | 'sidebar' | 'mobile_bottom' | 'baseball_odds_bottom'
+  slot_type: 'desktop_banner' | 'sidebar' | 'mobile_bottom' | 'baseball_odds_bottom' | 'mobile_app_main_top' | 'mobile_app_main_bottom'
   image_url: string
   link_url: string
   alt_text: string
@@ -363,6 +363,8 @@ const SLOT_TYPES = [
   { value: 'sidebar', label: '사이드바', size: '300×600' },
   { value: 'mobile_bottom', label: '모바일 하단', size: '320×50' },
   { value: 'baseball_odds_bottom', label: '야구 배당률 하단', size: '320×50' },
+  { value: 'mobile_app_main_top', label: '📱 모바일앱 메인 상단', size: '380×380' },
+  { value: 'mobile_app_main_bottom', label: '📱 모바일앱 메인 하단', size: '380×160' },
 ]
 
 const TABS = [
@@ -2219,6 +2221,8 @@ export default function AdminDashboard() {
       sidebar: { width: 300, height: 600 },
       mobile_bottom: { width: 320, height: 50 },
       baseball_odds_bottom: { width: 320, height: 50 },
+      mobile_app_main_top: { width: 380, height: 380 },
+      mobile_app_main_bottom: { width: 380, height: 160 },
     }
     setAdFormData({
       ...adFormData,
