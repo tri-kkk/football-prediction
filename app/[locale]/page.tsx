@@ -1,7 +1,7 @@
-// 🔥 통합 홈 — 종목 탭 + 리그 칩 + 날짜 탭 (BC.game 패턴, 차콜 톤)
+// 🔥 통합 홈 — 종합 스포츠 포털형 (히어로 + PICK + 통합 피드 + 종합 뉴스 + 하이라이트 + 매거진)
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useLocale } from 'next-intl'
@@ -10,9 +10,46 @@ import { readSportCookie } from '../components/home/SportTabs'
 import {
   normalizeFootballMatch,
   normalizeBaseballMatch,
+  isLiveStatus,
 } from '../components/home/normalizers'
 import type { SportFilter, UnifiedMatch } from '../components/home/types'
 import type { DateFilter } from '../components/home/DateTabs'
+import HeroBanner from '../components/home/HeroBanner'
+import TodayPickCard from '../components/home/TodayPickCard'
+import NewsGrid from '../components/home/NewsGrid'
+import TopHighlights from '../components/TopHighlights'
+import MagazineRow from '../components/home/MagazineRow'
+
+const LIVE_REFRESH_MS = 20000 // 라이브 스코어 자동 갱신 주기
+
+// 팀명 정규화 키 (대소문자/공백/특수문자 제거)
+const teamKey = (s?: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+// /api/live-matches 응답 → 진행 중(축구) 경기를 팀명 키 맵으로
+function buildLiveMap(liveValue: any): Map<string, any> {
+  const map = new Map<string, any>()
+  const ll = (liveValue?.matches as any[]) || []
+  ll.forEach((lm) => {
+    if (isLiveStatus(lm?.status)) map.set(`${teamKey(lm.homeTeam)}|${teamKey(lm.awayTeam)}`, lm)
+  })
+  return map
+}
+
+// 기본(일정) 매치에 라이브 상태·스코어를 병합
+function applyLiveMerge(base: UnifiedMatch[], liveMap: Map<string, any>): UnifiedMatch[] {
+  if (liveMap.size === 0) return base
+  return base.map((m) => {
+    if (m.sport !== 'football') return m
+    const lm = liveMap.get(`${teamKey(m.homeTeam)}|${teamKey(m.awayTeam)}`)
+    if (!lm) return m
+    return {
+      ...m,
+      status: lm.status, // 1H/2H/HT/LIVE → isLiveStatus 통과
+      homeScore: typeof lm.homeScore === 'number' ? lm.homeScore : m.homeScore,
+      awayScore: typeof lm.awayScore === 'number' ? lm.awayScore : m.awayScore,
+    }
+  })
+}
 
 function HomeInner() {
   const locale = useLocale()
@@ -41,6 +78,8 @@ function HomeInner() {
 
   const [matches, setMatches] = useState<UnifiedMatch[]>([])
   const [loading, setLoading] = useState(true)
+  // 라이브 병합 전 기본(일정) 매치 — 주기 갱신 시 재병합 기준
+  const baseRef = useRef<UnifiedMatch[]>([])
 
   // 마운트 시 쿠키 동기화 (URL sport 파라미터가 없을 때만)
   useEffect(() => {
@@ -51,15 +90,17 @@ function HomeInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 데이터 페치 — 축구 + 야구 병렬
+  // 데이터 페치 — 축구 + 야구 + 라이브(축구) 병렬, 이후 라이브만 주기 갱신
   useEffect(() => {
     let cancel = false
+
     const load = async () => {
       setLoading(true)
       try {
-        const [fbRes, bbRes] = await Promise.allSettled([
+        const [fbRes, bbRes, liveRes] = await Promise.allSettled([
           fetch('/api/odds-from-db?league=ALL').then((r) => r.json()),
           fetch('/api/baseball/matches?skipML=true').then((r) => r.json()),
+          fetch('/api/live-matches').then((r) => r.json()),
         ])
 
         const next: UnifiedMatch[] = []
@@ -101,7 +142,9 @@ function HomeInner() {
           return true
         })
 
-        if (!cancel) setMatches(unique)
+        baseRef.current = unique
+        const liveMap = liveRes.status === 'fulfilled' ? buildLiveMap(liveRes.value) : new Map()
+        if (!cancel) setMatches(applyLiveMerge(unique, liveMap))
       } catch (e) {
         console.error('match fetch error', e)
         if (!cancel) setMatches([])
@@ -109,9 +152,23 @@ function HomeInner() {
         if (!cancel) setLoading(false)
       }
     }
+
+    // 라이브만 가볍게 재페치 → 기본 매치에 재병합
+    const refreshLive = async () => {
+      if (baseRef.current.length === 0) return
+      try {
+        const live = await fetch('/api/live-matches').then((r) => r.json())
+        if (!cancel) setMatches(applyLiveMerge(baseRef.current, buildLiveMap(live)))
+      } catch {
+        /* noop */
+      }
+    }
+
     load()
+    const iv = setInterval(refreshLive, LIVE_REFRESH_MS)
     return () => {
       cancel = true
+      clearInterval(iv)
     }
   }, [])
 
@@ -135,15 +192,32 @@ function HomeInner() {
 
   return (
     <main className="home-container mx-auto px-3 sm:px-5 pt-3 pb-24 sm:pb-8 space-y-4">
-      {/* 최상단 배너 (모바일 + 데스크탑) */}
+      {/* 최상단 프리미엄 배너 */}
       {!isPremium && (
-        <a href="/premium/pricing" className="block -mx-3 sm:mx-0 mb-2 rounded-xl overflow-hidden" aria-label={isEn ? 'Premium subscription' : '프리미엄 구독'}>
+        <a
+          href="/premium/pricing"
+          className="block -mx-3 sm:mx-0 rounded-xl overflow-hidden"
+          aria-label={isEn ? 'Premium subscription' : '프리미엄 구독'}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/1200x200.png" alt={isEn ? 'Premium subscription' : '프리미엄 구독'} className="w-full h-auto" loading="eager" />
+          <img
+            src="/1200x200.png"
+            alt={isEn ? 'Premium subscription' : '프리미엄 구독'}
+            className="w-full h-auto"
+            loading="eager"
+          />
         </a>
       )}
 
+      {/* ①②  히어로 + 오늘의 PICK */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.85fr_1fr]">
+        <HeroBanner locale={locale} />
+        <TodayPickCard locale={locale} isPremium={isPremium} />
+      </div>
+
+      {/* ③  통합 경기 피드 (홈은 3줄로 축소, 라이브 경기는 상단 정렬) */}
       <UnifiedFeed
+        initialLimit={9}
         matches={matches}
         filter={sportFilter}
         onFilterChange={(s) => {
@@ -159,6 +233,15 @@ function HomeInner() {
           updateUrl({ date: d })
         }}
       />
+
+      {/* ④  종합 뉴스 (전체 폭) */}
+      <NewsGrid locale={locale} />
+
+      {/* ⑤  영상 하이라이트 */}
+      <TopHighlights darkMode />
+
+      {/* ⑥  매거진 / 매치 리포트 (컴팩트 카드) */}
+      <MagazineRow locale={locale} />
     </main>
   )
 }

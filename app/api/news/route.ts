@@ -213,15 +213,51 @@ export async function GET(request: NextRequest) {
     
     // 🔹 사이드바용: 단순 기사 목록
     if (lang) {
-      const search = lang === 'ko' ? '축구 프리미어리그 K리그' : 'football Premier League'
-      const articles = await fetchNews(search, lang, 10)
-      
-      // 이미지 있는 기사 우선
-      const sorted = [
-        ...articles.filter(a => a.imageUrl),
-        ...articles.filter(a => !a.imageUrl)
-      ].slice(0, 6)
-      
+      // 축구 + 야구 뉴스를 함께 가져와 섞음 (히어로/그리드 종목 확장)
+      const fbSearch = lang === 'ko' ? '축구 | 손흥민 | 프리미어리그 | K리그 | 챔피언스리그' : 'football | soccer | Premier League | Champions League'
+      const bbSearch = lang === 'ko' ? '야구 | KBO | 메이저리그 | 류현진 | 김하성 | 이정후' : 'baseball | MLB | KBO'
+      const enFb = 'football | soccer | Premier League | Champions League'
+      const enBb = 'baseball | MLB | KBO'
+      const withImage = (arr: ProcessedArticle[]) => arr.filter((a) => a.imageUrl)
+      const dkey = (a: ProcessedArticle) => a.title.toLowerCase().slice(0, 40)
+
+      let [fb, bb] = await Promise.all([
+        fetchNews(fbSearch, lang, 10).then(filterArticles),
+        fetchNews(bbSearch, lang, 8).then(filterArticles),
+      ])
+
+      if (lang === 'ko' && withImage(fb).length < 4) {
+        const more = filterArticles(await fetchNews(enFb, 'en', 10))
+        const seen = new Set(fb.map(dkey))
+        fb = [...fb, ...more.filter((a) => !seen.has(dkey(a)))]
+      }
+      if (lang === 'ko' && withImage(bb).length < 3) {
+        const more = filterArticles(await fetchNews(enBb, 'en', 8))
+        const seen = new Set(bb.map(dkey))
+        bb = [...bb, ...more.filter((a) => !seen.has(dkey(a)))]
+      }
+
+      const fbImg = withImage(fb)
+      const bbImg = withImage(bb)
+      const startBb =
+        bbImg.length > 0 &&
+        (fbImg.length === 0 ||
+          new Date(bbImg[0].publishedAt).getTime() > new Date(fbImg[0].publishedAt).getTime())
+      const firstArr = startBb ? bbImg : fbImg
+      const secondArr = startBb ? fbImg : bbImg
+      const interleaved: ProcessedArticle[] = []
+      const seenKey = new Set<string>()
+      for (let i = 0; i < Math.max(firstArr.length, secondArr.length); i++) {
+        for (const a of [firstArr[i], secondArr[i]]) {
+          if (a && !seenKey.has(dkey(a))) {
+            seenKey.add(dkey(a))
+            interleaved.push(a)
+          }
+        }
+      }
+      const noImg = [...fb, ...bb].filter((a) => !a.imageUrl && !seenKey.has(dkey(a)))
+      const sorted = [...interleaved, ...noImg].slice(0, 14)
+
       return NextResponse.json({
         success: true,
         articles: sorted,

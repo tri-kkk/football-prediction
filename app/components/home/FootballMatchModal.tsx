@@ -157,21 +157,6 @@ export default function FootballMatchModal({ match, onClose }: Props) {
             </div>
           </div>
         )}
-
-        {/* 액션 — 프리미엄 분석으로 */}
-        <div className="px-4 pb-4">
-          <Link
-            href="/premium"
-            onClick={onClose}
-            className="block w-full text-center font-bold text-sm py-3 rounded-xl transition-all"
-            style={{
-              background: 'linear-gradient(90deg, #6dff5c 0%, #36e07a 100%)',
-              color: '#0a0a0a',
-            }}
-          >
-            프리미엄 상세 분석 →
-          </Link>
-        </div>
       </div>
     </>
   )

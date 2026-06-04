@@ -21,6 +21,7 @@ interface Props {
   onDateFilterChange?: (next: DateFilter) => void
   insertAfter?: number
   insertSlot?: React.ReactNode
+  initialLimit?: number
 }
 
 const DEFAULT_LIMIT = 15
@@ -33,7 +34,7 @@ function isUpcoming(m: UnifiedMatch): boolean {
   return new Date(m.timestamp).getTime() > Date.now() - 30 * 60000
 }
 
-export default function UnifiedFeed({ matches, filter, onFilterChange, loading, leagueFilter, onClearLeagueFilter, dateFilter = 'all', onDateFilterChange, insertAfter, insertSlot }: Props) {
+export default function UnifiedFeed({ matches, filter, onFilterChange, loading, leagueFilter, onClearLeagueFilter, dateFilter = 'all', onDateFilterChange, insertAfter, insertSlot, initialLimit }: Props) {
   const locale = useLocale()
   const isEn = locale === 'en'
   const [expanded, setExpanded] = useState(false)
@@ -85,7 +86,8 @@ export default function UnifiedFeed({ matches, filter, onFilterChange, loading, 
     return { live, upcoming, rest }
   }, [filtered])
 
-  const limit = expanded ? EXPANDED_LIMIT : DEFAULT_LIMIT
+  const baseLimit = initialLimit ?? DEFAULT_LIMIT
+  const limit = expanded ? Math.max(EXPANDED_LIMIT, baseLimit) : baseLimit
   const displayList = useMemo(() => [...curated.live, ...curated.upcoming, ...curated.rest].slice(0, limit), [curated, limit])
   const totalShowable = curated.live.length + curated.upcoming.length + curated.rest.length
   const hasMore = totalShowable > displayList.length
@@ -124,7 +126,7 @@ export default function UnifiedFeed({ matches, filter, onFilterChange, loading, 
         )}
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <SportTabs value={filter} onChange={onFilterChange} counts={counts} />
-          {onDateFilterChange && (<div className="w-full sm:w-auto flex justify-center"><DateTabs value={dateFilter} onChange={onDateFilterChange} counts={dateCounts} /></div>)}
+          {onDateFilterChange && (<div className="w-full sm:w-auto flex justify-start sm:justify-center"><DateTabs value={dateFilter} onChange={onDateFilterChange} counts={dateCounts} /></div>)}
         </div>
       </header>
 

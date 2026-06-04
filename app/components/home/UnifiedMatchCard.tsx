@@ -8,6 +8,7 @@ import type { UnifiedMatch } from './types'
 import { isFinishedStatus, isLiveStatus, isPostponedStatus } from './normalizers'
 import { SHORT_NAME_EN } from './LeagueChips'
 import FootballMatchModal from './FootballMatchModal'
+import FootballResultModal from './FootballResultModal'
 
 interface Props {
   match: UnifiedMatch
@@ -117,13 +118,21 @@ export default function UnifiedMatchCard({ match }: Props) {
     </>
   )
 
+  // 야구: 야구 상세 페이지로 이동
   if (isBaseball) {
     return <Link href={`/baseball/${match.id}`} className={cardClass} style={cardStyle}>{content}</Link>
   }
+
+  // 축구 라이브: 축구 전용 라이브 페이지로 이동
+  if (live) {
+    return <Link href="/live" className={cardClass} style={cardStyle}>{content}</Link>
+  }
+
+  // 축구 (예정/종료 등): 분석 모달
   return (
     <>
       <button type="button" onClick={() => setModalOpen(true)} className={`${cardClass} text-left w-full`} style={cardStyle}>{content}</button>
-      {modalOpen && <FootballMatchModal match={match} onClose={() => setModalOpen(false)} />}
+      {modalOpen && (finished ? <FootballResultModal match={match} onClose={() => setModalOpen(false)} /> : <FootballMatchModal match={match} onClose={() => setModalOpen(false)} />)}
     </>
   )
 }

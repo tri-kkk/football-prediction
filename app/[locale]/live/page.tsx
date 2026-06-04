@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import LineupWidget from '../../components/LineupWidget'
+import LiveMatchCard from '../../components/live/LiveMatchCard'
 import { useLanguage } from '../../contexts/LanguageContext'
 
 interface MatchEvent {
@@ -404,72 +405,33 @@ export default function LivePage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white pb-20">
       {/* 헤더 */}
-      <div className="bg-[#1a1a1a] border-b border-gray-700 sticky top-0 z-10">
+      <div className="bg-[#111] border-b border-gray-800 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                <h1 className="text-lg font-semibold text-white">
-                  {language === 'ko' ? '실시간 경기' : 'Live Matches'}
-                </h1>
-                <span className="text-sm text-gray-400 font-medium">
-                  ({filteredMatches.length})
-                </span>
-              </div>
-            </div>
-
+          <div className="flex items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
-              <button
-                onClick={fetchLiveMatches}
-                className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 rounded text-xs transition-colors"
-              >
-                🔄
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+              <h1 className="text-lg font-semibold text-white">{language === 'ko' ? '실시간 경기' : 'Live'}</h1>
+              <span className="px-1.5 py-0.5 rounded-md bg-gray-800 text-gray-300 text-xs font-medium tabular-nums">{filteredMatches.length}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span className="hidden sm:flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>{language === 'ko' ? '15초 자동 갱신' : 'Auto 15s'}</span>
+              {lastUpdate && <span className="font-mono text-gray-600 tabular-nums">{lastUpdate}</span>}
+              <button onClick={fetchLiveMatches} aria-label={language === 'ko' ? '새로고침' : 'Refresh'} className="w-7 h-7 rounded-lg bg-[#1c1c1c] hover:bg-[#262626] text-gray-400 hover:text-gray-200 flex items-center justify-center transition-colors">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
               </button>
             </div>
           </div>
-
-          {/* 🆕 개선된 리그 필터 - 인기 리그 + 더보기 */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
-            {popularLeagues.map(league => (
-              <button
-                key={league.code}
-                onClick={() => setSelectedLeague(league.code)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                  selectedLeague === league.code
-                    ? 'bg-green-600 text-white shadow-lg'
-                    : 'bg-[#2a2a2a] text-gray-300 hover:bg-[#333] active:bg-[#444]'
-                }`}
-              >
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {popularLeagues.map((league) => (
+              <button key={league.code} onClick={() => setSelectedLeague(league.code)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${selectedLeague === league.code ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30' : 'bg-[#1c1c1c] text-gray-400 hover:text-gray-200 hover:bg-[#262626]'}`}>
                 {language === 'ko' ? league.nameKo : league.nameEn}
               </button>
             ))}
-            
-            {/* 더보기 버튼 */}
-            <button
-              onClick={() => setShowLeagueModal(true)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                !popularLeagues.find(l => l.code === selectedLeague)
-                  ? 'bg-green-600 text-white shadow-lg'
-                  : 'bg-[#2a2a2a] text-gray-300 hover:bg-[#333] active:bg-[#444]'
-              }`}
-            >
-              {!popularLeagues.find(l => l.code === selectedLeague) && (
-                <span>{getSelectedLeagueName()}</span>
-              )}
-              <span>⋯</span>
-              <span className="text-xs opacity-70">
-                {language === 'ko' ? '더보기' : 'More'}
-              </span>
+            <button onClick={() => setShowLeagueModal(true)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${!popularLeagues.find((l) => l.code === selectedLeague) ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30' : 'bg-[#1c1c1c] text-gray-400 hover:text-gray-200 hover:bg-[#262626]'}`}>
+              {!popularLeagues.find((l) => l.code === selectedLeague) && <span>{getSelectedLeagueName()}</span>}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>
+              <span className="text-xs opacity-80">{language === 'ko' ? '더보기' : 'More'}</span>
             </button>
-          </div>
-
-          <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-              {language === 'ko' ? '15초 자동 업데이트' : 'Auto-refresh every 15s'}
-            </span>
-            <span className="ml-auto font-mono">{lastUpdate}</span>
           </div>
         </div>
       </div>
@@ -620,196 +582,7 @@ export default function LivePage() {
         ) : (
           <div className="space-y-4">
             {filteredMatches.map((match) => (
-              <div
-                key={match.id}
-                className="bg-[#1a1a1a] border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-colors"
-              >
-                {/* 경기 메인 카드 */}
-                <div className="p-5">
-                  {/* 리그 & 상태 헤더 */}
-                  <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-800">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center p-1.5 shadow-sm">
-                        <Image
-                          src={match.leagueLogo}
-                          alt={match.league}
-                          width={24}
-                          height={24}
-                          className="object-contain"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-sm font-semibold text-white">{match.league}</span>
-                        <div className="text-xs text-gray-500 mt-0.5">{match.country}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {match.elapsed && (
-                        <div className="text-right">
-                          <span className="text-2xl font-bold text-white tabular-nums">{match.elapsed}'</span>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {language === 'ko' ? '경과' : 'Elapsed'}
-                          </div>
-                        </div>
-                      )}
-                      <span className={`px-3 py-1.5 ${getStatusColor(match.status)} text-white text-xs font-bold rounded-lg shadow-lg`}>
-                        {getStatusKR(match.status)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 팀 정보 */}
-                  <div className="space-y-4">
-                    {/* 홈팀 */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Image
-                          src={match.homeCrest}
-                          alt={match.homeTeam}
-                          width={40}
-                          height={40}
-                          className="object-contain"
-                        />
-                        <div>
-                          <div className="font-semibold text-white">{language === 'ko' ? match.homeTeamKR : match.homeTeam}</div>
-                          <div className="text-xs text-gray-500">HOME</div>
-                        </div>
-                      </div>
-                      <span className="text-3xl font-bold text-white tabular-nums">{match.homeScore}</span>
-                    </div>
-
-                    {/* 어웨이팀 */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Image
-                          src={match.awayCrest}
-                          alt={match.awayTeam}
-                          width={40}
-                          height={40}
-                          className="object-contain"
-                        />
-                        <div>
-                          <div className="font-semibold text-white">{language === 'ko' ? match.awayTeamKR : match.awayTeam}</div>
-                          <div className="text-xs text-gray-500">AWAY</div>
-                        </div>
-                      </div>
-                      <span className="text-3xl font-bold text-white tabular-nums">{match.awayScore}</span>
-                    </div>
-                  </div>
-
-                  {/* 전반 종료 스코어 (해당되는 경우에만) */}
-                  {shouldShowHalftimeScore(match) && (
-                    <div className="mt-4 pt-3 border-t border-gray-800 flex justify-between items-center text-sm">
-                      <span className="text-gray-500">
-                        {language === 'ko' ? '전반 종료' : 'Half Time'}
-                      </span>
-                      <span className="text-gray-400 font-medium">
-                        {match.halftimeHomeScore} - {match.halftimeAwayScore}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* 상세 정보 토글 버튼 */}
-                <button
-                  onClick={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
-                  className="w-full py-3 bg-[#222] hover:bg-[#2a2a2a] text-gray-400 text-sm font-medium transition-colors border-t border-gray-800"
-                >
-                  {expandedMatch === match.id 
-                    ? (language === 'ko' ? '접기 ▲' : 'Collapse ▲')
-                    : (language === 'ko' ? '상세 정보 ▼' : 'Details ▼')}
-                </button>
-
-                {/* 확장된 상세 정보 */}
-                {expandedMatch === match.id && (
-                  <div className="bg-[#151515] border-t border-gray-800">
-                    {/* 탭 메뉴 */}
-                    <div className="flex border-b border-gray-800">
-                      {(['overview', 'stats', 'lineup'] as const).map(tab => (
-                        <button
-                          key={tab}
-                          onClick={() => setActiveTab(tab)}
-                          className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                            activeTab === tab
-                              ? 'text-green-500 border-b-2 border-green-500'
-                              : 'text-gray-500 hover:text-gray-300'
-                          }`}
-                        >
-                          {tab === 'overview' && (language === 'ko' ? '이벤트' : 'Events')}
-                          {tab === 'stats' && (language === 'ko' ? '통계' : 'Stats')}
-                          {tab === 'lineup' && (language === 'ko' ? '라인업' : 'Lineup')}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* 탭 컨텐츠 */}
-                    <div className="p-4">
-                      {activeTab === 'overview' && match.events && (
-                        <div className="space-y-2">
-                          {match.events.length === 0 ? (
-                            <p className="text-gray-500 text-center py-4">
-                              {language === 'ko' ? '아직 이벤트가 없습니다' : 'No events yet'}
-                            </p>
-                          ) : (
-                            match.events.map((event, idx) => (
-                              <div
-                                key={idx}
-                                className={`flex items-center gap-3 p-2 rounded ${
-                                  event.team === 'home' ? 'bg-blue-500/10' : 'bg-red-500/10'
-                                }`}
-                              >
-                                <span className="text-xs text-gray-400 w-8">{event.time}'</span>
-                                <span>{getEventIcon(event.type)}</span>
-                                <span className="text-sm text-white">{event.player}</span>
-                                {event.detail && (
-                                  <span className="text-xs text-gray-500">({event.detail})</span>
-                                )}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-
-                      {activeTab === 'stats' && match.stats && (
-                        <div className="space-y-3">
-                          {Object.entries(statsLabels).map(([key, label]) => {
-                            const stat = match.stats?.[key as keyof MatchStats]
-                            if (!stat) return null
-                            const total = stat.home + stat.away || 1
-                            const homePercent = (stat.home / total) * 100
-                            
-                            return (
-                              <div key={key} className="space-y-1">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-white font-medium">{stat.home}</span>
-                                  <span className="text-gray-400">
-                                    {language === 'ko' ? label.ko : label.en}
-                                  </span>
-                                  <span className="text-white font-medium">{stat.away}</span>
-                                </div>
-                                <div className="flex h-2 bg-gray-700 rounded overflow-hidden">
-                                  <div 
-                                    className="bg-blue-500 transition-all"
-                                    style={{ width: `${homePercent}%` }}
-                                  />
-                                  <div 
-                                    className="bg-red-500 transition-all"
-                                    style={{ width: `${100 - homePercent}%` }}
-                                  />
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-
-                      {activeTab === 'lineup' && match.fixtureId && (
-                        <LineupWidget fixtureId={match.fixtureId} />
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <LiveMatchCard key={match.id} match={match} language={language} />
             ))}
           </div>
         )}

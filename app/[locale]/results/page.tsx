@@ -12,6 +12,10 @@ const LEAGUES = [
   { code: 'ALL', nameKo: '전체', nameEn: 'All', logo: '🌍', isEmoji: true },
   
   // ===== 🏆 국제대회 (7개) =====
+  { code: 'WC', nameKo: '월드컵', nameEn: 'World Cup', logo: 'https://media.api-sports.io/football/leagues/1.png', isEmoji: false },
+  { code: 'AMATCH', nameKo: 'A매치', nameEn: 'Friendlies', logo: 'https://media.api-sports.io/football/leagues/10.png', isEmoji: false },
+  { code: 'ACL', nameKo: '아챔', nameEn: 'AFC CL', logo: 'https://media.api-sports.io/football/leagues/17.png', isEmoji: false },
+  { code: 'ACL2', nameKo: '아챔2', nameEn: 'AFC CL2', logo: 'https://media.api-sports.io/football/leagues/18.png', isEmoji: false },
   { code: 'CL', nameKo: '챔스', nameEn: 'UCL', logo: 'https://media.api-sports.io/football/leagues/2.png', isEmoji: false },
   { code: 'EL', nameKo: '유로파', nameEn: 'UEL', logo: 'https://media.api-sports.io/football/leagues/3.png', isEmoji: false },
   { code: 'UECL', nameKo: '컨퍼런스', nameEn: 'UECL', logo: 'https://media.api-sports.io/football/leagues/848.png', isEmoji: false },
@@ -101,6 +105,10 @@ const LEAGUE_GROUPS = [
     region: '국제대회',
     regionEn: 'International',
     leagues: [
+      { code: 'WC', nameKo: '월드컵', nameEn: 'World Cup', logo: 'https://media.api-sports.io/football/leagues/1.png' },
+      { code: 'AMATCH', nameKo: 'A매치', nameEn: 'Friendlies', logo: 'https://media.api-sports.io/football/leagues/10.png' },
+      { code: 'ACL', nameKo: '아챔', nameEn: 'AFC CL', logo: 'https://media.api-sports.io/football/leagues/17.png' },
+      { code: 'ACL2', nameKo: '아챔2', nameEn: 'AFC CL2', logo: 'https://media.api-sports.io/football/leagues/18.png' },
       { code: 'CL', nameKo: '챔스', nameEn: 'UCL', logo: 'https://media.api-sports.io/football/leagues/2.png' },
       { code: 'EL', nameKo: '유로파', nameEn: 'UEL', logo: 'https://media.api-sports.io/football/leagues/3.png' },
       { code: 'UECL', nameKo: '컨퍼런스', nameEn: 'UECL', logo: 'https://media.api-sports.io/football/leagues/848.png' },
