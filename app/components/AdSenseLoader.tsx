@@ -12,13 +12,16 @@ const AD_EXCLUDED_PATHS = [
   '/admin',
   '/api',
   '/login',
+  '/signup',
+  '/auth',
   '/payment',
   '/checkout',
 ]
 
 function isAdExcludedPath(pathname: string | null): boolean {
   if (!pathname) return false
-  return AD_EXCLUDED_PATHS.some(prefix => pathname.startsWith(prefix))
+  const p = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/'
+  return AD_EXCLUDED_PATHS.some((prefix) => p.startsWith(prefix))
 }
 
 // ========== 🛡️ 무효 트래픽 방지 함수들 ==========
