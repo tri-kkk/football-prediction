@@ -86,7 +86,7 @@ export default function SignupPage() {
                   </li>
                   <li className="text-gray-300 text-[12px] flex items-start gap-1.5">
                     <span className="text-green-400 mt-0.5">·</span>
-                    <span>{language === 'ko' ? '광고 시청 시 야구 다경기 분석 열람' : 'Baseball multi-match analysis via ad view'}</span>
+                    <span>{language === 'ko' ? '광고 시청 시 야구 조합 분석 열람' : 'Baseball multi-match analysis via ad view'}</span>
                   </li>
                   <li className="text-gray-300 text-[12px] flex items-start gap-1.5">
                     <span className="text-green-400 mt-0.5">·</span>
@@ -114,7 +114,7 @@ export default function SignupPage() {
                   </li>
                   <li className="text-yellow-100 text-[12px] flex items-start gap-1.5 font-medium">
                     <span className="text-yellow-400 mt-0.5">★</span>
-                    <span>{language === 'ko' ? '야구 다경기 분석 무제한 (KBO·MLB·NPB)' : 'Baseball multi-match analysis unlimited (KBO·MLB·NPB)'}</span>
+                    <span>{language === 'ko' ? '야구 조합 분석 무제한 (KBO·MLB·NPB)' : 'Baseball multi-match analysis unlimited (KBO·MLB·NPB)'}</span>
                   </li>
                   <li className="text-yellow-100/90 text-[12px] flex items-start gap-1.5">
                     <span className="text-yellow-400 mt-0.5">·</span>

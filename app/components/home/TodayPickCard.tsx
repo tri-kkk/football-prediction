@@ -166,7 +166,7 @@ export default function TodayPickCard({
       <div className="flex items-center gap-2">
         <span className="h-1.5 w-1.5 rounded-full bg-[#A3FF4C]" />
         <span className="text-xs font-semibold tracking-wide text-gray-200">
-          {isKo ? '오늘의 PICK' : "Today's PICK"}
+          {isKo ? '오늘의 추천 경기' : 'Recommended match'}
         </span>
         {view && (
           <span className="rounded-md bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
@@ -199,7 +199,7 @@ export default function TodayPickCard({
       <div className="flex h-full min-h-[230px] flex-col gap-3 rounded-2xl border border-gray-800 bg-gray-900 p-4">
         {Header}
         <div className="flex flex-1 items-center justify-center text-center text-sm text-gray-500">
-          {isKo ? '오늘 추천 PICK 준비 중입니다' : 'No PICK available today'}
+          {isKo ? '오늘 추천 경기 준비 중입니다' : 'No recommended match today'}
         </div>
       </div>
     )
@@ -267,7 +267,7 @@ export default function TodayPickCard({
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
           <span className="px-4 text-sm font-semibold text-white">
-            {isLoggedIn ? (isKo ? '프리미엄으로 오늘의 PICK 확인' : 'Unlock with Premium') : (isKo ? '회원가입하고 오늘의 PICK 확인' : 'Sign up to see the PICK')}
+            {isLoggedIn ? (isKo ? '프리미엄으로 추천 경기 확인' : 'Unlock with Premium') : (isKo ? '회원가입하고 추천 경기 확인' : 'Sign up to see the PICK')}
           </span>
           <span className="rounded-full bg-[#A3FF4C] px-4 py-1.5 text-xs font-bold text-black">
             {isLoggedIn ? (isKo ? '구독하기' : 'Subscribe') : (isKo ? '무료 가입' : 'Sign up')}

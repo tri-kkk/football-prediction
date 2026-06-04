@@ -485,16 +485,16 @@ export default function ComboPicksPage() {
           onComplete={() => { if (adModalLeague) unlock(adModalLeague) }}
           countdownSec={15}
           title={adModalLeague
-            ? t(`${adModalLeague} 다경기 분석 잠금 해제`, `Unlock ${adModalLeague} multi-match analysis`)
+            ? t(`${adModalLeague} 조합 분석 잠금 해제`, `Unlock ${adModalLeague} multi-match analysis`)
             : t('잠금 해제', 'Unlock')}
           subtitle={adModalLeague
             ? t(
-                `아래 광고를 끝까지 보시면 오늘 자정(KST)까지 ${adModalLeague} 다경기 분석이 무료로 풀립니다.`,
+                `아래 광고를 끝까지 보시면 오늘 자정(KST)까지 ${adModalLeague} 조합 분석이 무료로 풀립니다.`,
                 `Watch the ad to unlock ${adModalLeague} multi-match analysis until midnight KST.`
               )
             : ''}
           rewardLabel={adModalLeague
-            ? t(`${adModalLeague} 다경기 분석 잠금 해제`, `Unlock ${adModalLeague} multi-match analysis`)
+            ? t(`${adModalLeague} 조합 분석 잠금 해제`, `Unlock ${adModalLeague} multi-match analysis`)
             : t('잠금 해제', 'Unlock')}
         />
 

@@ -30,7 +30,7 @@ export default function BottomNavigation() {
     { href: '/', label: isEn ? 'Home' : '홈', isHome: true, matches: (p) => p === '/' || p === '' },
     { href: '/premium', label: isEn ? 'Football' : '축구 분석', matches: (p) => p.startsWith('/premium') || p.startsWith('/football') || p.startsWith('/results') },
     { href: '/baseball/analysis', label: isEn ? 'Baseball' : '야구 분석', matches: (p) => p.startsWith('/baseball/analysis') || p.startsWith('/baseball/results') },
-    { href: '/baseball/multi-match', label: isEn ? 'Multi-Match' : '야구 다경기', matches: (p) => p.startsWith('/baseball/multi-match') },
+    { href: '/baseball/multi-match', label: isEn ? 'Multi-Match' : '야구 조합', matches: (p) => p.startsWith('/baseball/multi-match') },
     { label: isEn ? 'Menu' : '메뉴', onClick: emitMenuOpen },
   ]
 

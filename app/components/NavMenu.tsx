@@ -33,7 +33,7 @@ const EN_LABELS: Record<string, string> = {
   'AI 분석': 'AI Analysis',
   '축구 프리미엄': 'Football Premium',
   '야구 분석': 'Baseball Analysis',
-  '야구 다경기 분석': 'Multi-Match Analysis',
+  '야구 조합 분석': 'Multi-Match Analysis',
   '경기 결과': 'Results',
   '축구 결과': 'Football Results',
   '야구 결과': 'Baseball Results',
@@ -74,7 +74,7 @@ const MENU: MenuItem[] = [
     children: [
       { ko: '축구 프리미엄', href: '/premium' },
       { ko: '야구 분석', href: '/baseball/analysis' },
-      { ko: '야구 다경기 분석', href: '/baseball/multi-match' },
+      { ko: '야구 조합 분석', href: '/baseball/multi-match' },
     ],
   },
   {

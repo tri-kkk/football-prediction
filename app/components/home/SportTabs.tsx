@@ -46,7 +46,7 @@ export default function SportTabs({ value, onChange, counts }: SportTabsProps) {
   ]
 
   return (
-    <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-gray-900/60 rounded-xl backdrop-blur-sm border border-gray-800 w-fit">
+    <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-gray-900/60 rounded-xl backdrop-blur-sm border border-gray-800 w-full sm:w-fit">
       {tabs.map((t) => {
         const active = value === t.key
         const count = counts?.[t.key]
@@ -56,7 +56,7 @@ export default function SportTabs({ value, onChange, counts }: SportTabsProps) {
             onClick={() => handle(t.key)}
             aria-pressed={active}
             className={[
-              'relative px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap shrink-0',
+              'relative px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap flex items-center justify-center flex-1 sm:flex-none',
               active
                 ? 'bg-white/10 text-white'
                 : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50',
