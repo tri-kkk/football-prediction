@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
+import { sendTelegram } from '@/lib/telegram'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,18 +20,6 @@ function getGAClient() {
 
   return new BetaAnalyticsDataClient({
     credentials: { client_email: clientEmail, private_key: privateKey },
-  })
-}
-
-async function sendTelegram(message: string) {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
-  const chatId = process.env.TELEGRAM_CHAT_ID
-  if (!botToken || !chatId) return
-
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'HTML' }),
   })
 }
 

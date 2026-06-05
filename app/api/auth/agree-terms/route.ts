@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+import { sendTelegram } from '@/lib/telegram'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -193,6 +194,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ users 삽입 완료:', newUser.id)
+
+    // 📨 신규 가입 텔레그램 알림 (비차단)
+    const tierLabel = promoCode ? '프로모션' : trialUsed ? '48시간 체험' : tier === 'premium' ? '프리미엄' : '무료'
+    sendTelegram(
+      `🎉 <b>신규 가입!</b>\n\n` +
+      `👤 ${pendingUser.name || emailLower}\n` +
+      `🌍 ${pendingUser.signup_country || '-'}\n` +
+      `🎫 ${tierLabel}`
+    ).catch(() => {})
 
     // ✅ pending_users 삭제
     const { error: deleteError } = await supabase
