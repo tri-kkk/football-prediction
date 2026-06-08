@@ -1825,4 +1825,83 @@ export const ENDPOINTS: ApiEndpoint[] = [
   응답은 항상 HTTP 200 (Pub/Sub 재시도 방지) — 토큰 검증 실패 시만 401.
   외주는 이 엔드포인트 직접 호출 X. Google이 보내준 알림을 우리가 받기만 함.`,
   },
+  {
+    id: 'cron-push-soccer-events',
+    category: 'mobile',
+    method: 'GET',
+    path: '/api/cron/push-soccer-events',
+    description: '⚙️ 백엔드 cron 전용 — 축구 라이브 이벤트 감지 + FCM 발송. Supabase pg_cron 1분 주기.',
+    auth: 'none',
+    responseExample: `{
+  "success": true,
+  "matches": 5,
+  "events": 3,
+  "sent": 48,
+  "failed": 0,
+  "cleanedInvalidTokens": 0,
+  "elapsedMs": 4123
+}`,
+    notes: `외주 직접 호출 불필요. /api/live-matches의 events 배열을 diff 감지:
+  • NS→1H = kickoff, ?→HT = halftime, ?→FT/AET/PEN = fulltime
+  • events 배열의 goal/card/subst (time+type+player+team으로 dedup)
+
+  발송 대상: match_notifications에서 해당 매치 + 이벤트 ON + enabled=true
+  locale별로 ko/en 메시지 분기. invalid token 자동 cleanup.`,
+  },
+  {
+    id: 'cron-push-baseball-events',
+    category: 'mobile',
+    method: 'GET',
+    path: '/api/cron/push-baseball-events',
+    description: '⚙️ 백엔드 cron 전용 — 야구 라이브 이벤트 감지 + FCM 발송. Supabase pg_cron 1분 주기.',
+    auth: 'none',
+    responseExample: `{
+  "success": true,
+  "matches": 100,
+  "events": 5,
+  "sent": 32,
+  "failed": 0,
+  "cleanedInvalidTokens": 0,
+  "elapsedMs": 25142
+}`,
+    notes: `외주 직접 호출 불필요. baseball_matches DB diff:
+  • NS→라이브 = firstPitch
+  • ?→FT/AET/POST/CANC/... = gameEnd
+  • 이닝 번호 증가 (IN1→IN2 등) = inningChange (IN1 진입은 firstPitch가 잡음)
+  • home/away_score 증가 = score (scoringTeam 포함)
+  • homerun: 현재 score로 통합 처리 (API 데이터 부족)
+
+  첫 인지 매치는 알림 발송 X (false-positive 방지) — state만 baseline 기록.`,
+  },
+  {
+    id: 'admin-push-send-topic',
+    category: 'mobile',
+    method: 'POST',
+    path: '/api/admin/push/send-topic',
+    description: '★ 관리자 토픽 푸시 발송 (공지/마케팅). ko/en 동시 발송.',
+    auth: 'secret',
+    params: [
+      { name: 'topic', in: 'body', required: true, type: 'string', description: '"app_general" | "match_events" | "marketing"' },
+      { name: 'ko', in: 'body', required: true, type: 'object', description: '{ title: string, body: string }' },
+      { name: 'en', in: 'body', required: false, type: 'object', description: '{ title, body }. 없으면 ko만 발송' },
+      { name: 'data', in: 'body', required: false, type: 'object', description: '추가 payload (deeplink path 등)' },
+    ],
+    responseExample: `{
+  "success": true,
+  "results": [
+    { "locale": "ko", "topic": "app_general_ko", "ok": true, "messageId": "projects/trendsoccer/messages/..." },
+    { "locale": "en", "topic": "app_general_en", "ok": true, "messageId": "projects/trendsoccer/messages/..." }
+  ]
+}`,
+    notes: `인증: Authorization: Bearer <ADMIN_PUSH_SECRET> 헤더 필수.
+
+  토픽 네이밍 규칙: <topic>_<locale> (예: app_general_ko, app_general_en).
+  앱 클라이언트가 locale별로 따로 구독해야 함:
+    FirebaseMessaging.instance.subscribeToTopic('app_general_ko');
+    FirebaseMessaging.instance.subscribeToTopic('match_events_ko');
+    // marketing은 사용자 동의 후 별도 구독
+
+  허용 topic: app_general, match_events, marketing.
+  에러: UNAUTHORIZED(401, Bearer 누락/잘못됨) | VALIDATION_ERROR(400).`,
+  },
 ]
