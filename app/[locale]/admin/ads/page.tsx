@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import BaseballBlogPanel from './BaseballBlogPanel'
 import ShortsGenerator from './ShortsGenerator'
+import PushSendPanel from './PushSendPanel'
 import PostHogAnalyticsDashboard from '../../../components/admin/PostHogAnalyticsDashboard'
 import RetentionDashboard from '../../../components/admin/RetentionDashboard'
 
@@ -380,6 +381,7 @@ const TABS = [
   { id: 'proto', label: '프로토 관리', icon: '🎫' },
   { id: 'export', label: '분석 Export', icon: '📤' },
   { id: 'notices', label: '공지 관리', icon: '📣' },
+  { id: 'push', label: '푸시 발송', icon: '🔔' },
   { id: 'revenue', label: '매출 관리', icon: '💵' },
   { id: 'pitcher', label: '선발 관리', icon: '⚾' },
   { id: 'baseball-blog', label: '야구 블로그', icon: '📰' },
@@ -5423,6 +5425,13 @@ export default function AdminDashboard() {
               <span className="text-gray-600 ml-1">✕</span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 🔔 푸시 발송 탭 */}
+      {activeTab === 'push' && (
+        <div className="w-full px-3 md:px-6 py-4 md:py-6">
+          <PushSendPanel />
         </div>
       )}
 
