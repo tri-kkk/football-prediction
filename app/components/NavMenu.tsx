@@ -186,6 +186,12 @@ export default function NavMenu() {
     }
   }, [])
 
+  // 경로/쿼리 변경 시 모바일 드로어 자동 닫기 (하단 네비 등 외부 이동 대응)
+  useEffect(() => {
+    setMobileOpen(false)
+    setOpenKey(null)
+  }, [pathname, search.toString()])
+
   const HIDDEN_ROUTES = ['/login', '/signup-complete', '/premium/pricing']
   if (HIDDEN_ROUTES.some((rp) => pathname === rp || pathname.startsWith(rp + '/'))) return null
 

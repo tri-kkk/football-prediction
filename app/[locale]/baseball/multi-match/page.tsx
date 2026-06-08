@@ -313,14 +313,14 @@ export default function ComboPicksPage() {
               </div>
             ))}
           </div>
-          {/* 2행: 전력 우위형/접전형 분석 일치도 분리 */}
+          {/* 2행: 전력 우위형/접전형 분석 일치도 분리 — 모바일 세로, 데스크톱 가로 */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ background: '#10b981' }} />
-                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('전력 우위형', 'STABLE')}</span>
+            <div className="rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#10b981' }} />
+                <span className="text-[11px] sm:text-xs font-bold whitespace-nowrap" style={{ color: '#94a3b8' }}>{t('전력 우위형', 'STABLE')}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-baseline gap-1.5">
                 <span className="text-lg font-black" style={{ color: '#10b981' }}>
                   {effectiveTypeStats.safe.total > 0 ? `${effectiveTypeStats.safe.rate}%` : '-%'}
                 </span>
@@ -329,12 +329,12 @@ export default function ComboPicksPage() {
                 </span>
               </div>
             </div>
-            <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ background: '#f59e0b' }} />
-                <span className="text-xs font-bold" style={{ color: '#94a3b8' }}>{t('접전형', 'VOLATILE')}</span>
+            <div className="rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#f59e0b' }} />
+                <span className="text-[11px] sm:text-xs font-bold whitespace-nowrap" style={{ color: '#94a3b8' }}>{t('접전형', 'VOLATILE')}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-baseline gap-1.5">
                 <span className="text-lg font-black" style={{ color: '#f59e0b' }}>
                   {effectiveTypeStats.high.total > 0 ? `${effectiveTypeStats.high.rate}%` : '-%'}
                 </span>

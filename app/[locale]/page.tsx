@@ -17,6 +17,7 @@ import type { DateFilter } from '../components/home/DateTabs'
 import HeroBanner from '../components/home/HeroBanner'
 import TodayPickCard from '../components/home/TodayPickCard'
 import NewsGrid from '../components/home/NewsGrid'
+import PredictionTrackRecord from '../components/home/PredictionTrackRecord'
 import TopHighlights from '../components/TopHighlights'
 import MagazineRow from '../components/home/MagazineRow'
 
@@ -233,6 +234,9 @@ function HomeInner() {
           updateUrl({ date: d })
         }}
       />
+
+      {/* ③-b  AI 예측 성적표 (적중/실패 + 전체 적중률, 무료 가입 CTA) */}
+      <PredictionTrackRecord locale={locale} />
 
       {/* ④  종합 뉴스 (전체 폭) */}
       <NewsGrid locale={locale} />

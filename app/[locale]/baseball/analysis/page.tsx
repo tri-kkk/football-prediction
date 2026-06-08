@@ -344,28 +344,28 @@ function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
         </button>
       </div>
 
-      {/* 등급별 통계 카드 */}
-      <div className={`grid gap-3 ${stats.analyzing > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-        <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.12)' }}>
-          <GradeBadge grade="PICK" size="lg" />
-          <p className="text-2xl font-black text-white mt-2">{stats.pick}</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">{language === 'ko' ? '확률차 20%↑' : 'Diff 20%↑'}</p>
+      {/* 등급별 통계 카드 — 모바일: 전체폭 가로줄 / 데스크톱(sm+): 세로 카드 */}
+      <div className={`grid grid-cols-1 gap-2 sm:gap-3 ${stats.analyzing > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
+        <div className="rounded-xl p-3 flex items-center justify-between gap-2 sm:flex-col sm:justify-center sm:text-center" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.12)' }}>
+          <span className="order-1"><GradeBadge grade="PICK" size="lg" /></span>
+          <p className="text-2xl font-black text-white order-3 sm:order-2 sm:mt-2">{stats.pick}</p>
+          <p className="text-[10px] text-gray-500 order-2 sm:order-3 sm:mt-0.5">{language === 'ko' ? '확률차 20%↑' : 'Diff 20%↑'}</p>
         </div>
-        <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.12)' }}>
-          <GradeBadge grade="GOOD" size="lg" />
-          <p className="text-2xl font-black text-white mt-2">{stats.good}</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">{language === 'ko' ? '확률차 10-20%' : 'Diff 10-20%'}</p>
+        <div className="rounded-xl p-3 flex items-center justify-between gap-2 sm:flex-col sm:justify-center sm:text-center" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.12)' }}>
+          <span className="order-1"><GradeBadge grade="GOOD" size="lg" /></span>
+          <p className="text-2xl font-black text-white order-3 sm:order-2 sm:mt-2">{stats.good}</p>
+          <p className="text-[10px] text-gray-500 order-2 sm:order-3 sm:mt-0.5">{language === 'ko' ? '확률차 10-20%' : 'Diff 10-20%'}</p>
         </div>
-        <div className="rounded-xl p-3 text-center" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <GradeBadge grade="PASS" size="lg" />
-          <p className="text-2xl font-black text-white mt-2">{stats.pass}</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">{language === 'ko' ? '확률차 10%↓' : 'Diff 10%↓'}</p>
+        <div className="rounded-xl p-3 flex items-center justify-between gap-2 sm:flex-col sm:justify-center sm:text-center" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <span className="order-1"><GradeBadge grade="PASS" size="lg" /></span>
+          <p className="text-2xl font-black text-white order-3 sm:order-2 sm:mt-2">{stats.pass}</p>
+          <p className="text-[10px] text-gray-500 order-2 sm:order-3 sm:mt-0.5">{language === 'ko' ? '확률차 10%↓' : 'Diff 10%↓'}</p>
         </div>
         {stats.analyzing > 0 && (
-          <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(148,163,184,0.04)', border: '1px solid rgba(148,163,184,0.12)' }}>
-            <GradeBadge grade="PASS" size="lg" analyzing={true} language={language} />
-            <p className="text-2xl font-black text-white mt-2">{stats.analyzing}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">{language === 'ko' ? '투수 반영 대기' : 'Awaiting pitchers'}</p>
+          <div className="rounded-xl p-3 flex items-center justify-between gap-2 sm:flex-col sm:justify-center sm:text-center" style={{ background: 'rgba(148,163,184,0.04)', border: '1px solid rgba(148,163,184,0.12)' }}>
+            <span className="order-1"><GradeBadge grade="PASS" size="lg" analyzing={true} language={language} /></span>
+            <p className="text-2xl font-black text-white order-3 sm:order-2 sm:mt-2">{stats.analyzing}</p>
+            <p className="text-[10px] text-gray-500 order-2 sm:order-3 sm:mt-0.5">{language === 'ko' ? '투수 반영 대기' : 'Awaiting pitchers'}</p>
           </div>
         )}
       </div>
