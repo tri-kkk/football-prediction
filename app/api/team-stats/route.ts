@@ -224,6 +224,7 @@ export async function GET(request: NextRequest) {
   const teamName = searchParams.get('team')
   const teamId = searchParams.get('teamId')
   const leagueCode = searchParams.get('league')
+  const lang: 'ko' | 'en' = searchParams.get('lang') === 'en' ? 'en' : 'ko'
   
   if (!teamName && !teamId) {
     return NextResponse.json({ error: 'team or teamId is required' }, { status: 400 })
@@ -323,7 +324,8 @@ export async function GET(request: NextRequest) {
       statsData,
       matchesData,
       teamName || '',
-      teamId ? parseInt(teamId) : null
+      teamId ? parseInt(teamId) : null,
+      lang
     )
 
     return NextResponse.json({
@@ -332,6 +334,7 @@ export async function GET(request: NextRequest) {
       teamId: statsData?.team_id || teamId,
       league: statsData?.league_code || leagueCode,
       season: statsData?.season,
+      language: lang,
       data: stats,
       source: apiFootballSource ? 'api-football' : 'supabase'
     })
@@ -346,11 +349,41 @@ export async function GET(request: NextRequest) {
 }
 
 function calculateTeamStats(
-  dbStats: any, 
-  recentMatches: any[], 
+  dbStats: any,
+  recentMatches: any[],
   teamName: string,
-  teamId: number | null
+  teamId: number | null,
+  lang: 'ko' | 'en' = 'ko'
 ): TeamSecretStats {
+  // 인사이트 문구 템플릿 (ko/en 양언어)
+  const T = {
+    poorRecent5: (w: number, d: number, l: number) =>
+      lang === 'en'
+        ? `Poor form in last 5 (${w}W ${d}D ${l}L)`
+        : `최근 5경기 부진 (${w}승 ${d}무 ${l}패)`,
+    goodRecent5: (w: number) =>
+      lang === 'en'
+        ? `Strong form in last 5 (${w}W)`
+        : `최근 5경기 호조 (${w}승)`,
+    losingStreak: (n: number) =>
+      lang === 'en' ? `On a ${n}-game losing streak` : `현재 ${n}연패 중`,
+    winningStreak: (n: number) =>
+      lang === 'en' ? `On a ${n}-game winning streak` : `현재 ${n}연승 중`,
+    poorAwayWinRate: (p: number) =>
+      lang === 'en' ? `Weak away win rate (${p}%)` : `원정 승률 저조 (${p}%)`,
+    strongFirstGoal: (p: number) =>
+      lang === 'en'
+        ? `Win rate ${p}% when scoring first`
+        : `선제골 시 승률 ${p}%`,
+    poorComeback: (p: number) =>
+      lang === 'en'
+        ? `Poor comeback ability (${p}%)`
+        : `역전 능력 부족 (${p}%)`,
+    scoreless: (n: number) =>
+      lang === 'en'
+        ? `${n} scoreless games in last 10`
+        : `최근 10경기 중 ${n}경기 무득점`,
+  }
   
   // 팀 식별 함수
   const isOurTeam = (match: any, checkHome: boolean) => {
@@ -483,48 +516,51 @@ function calculateTeamStats(
   const strengths: string[] = []
   
   // 최근 폼 기반 분석
-  const last5WinRate = last5Results.filter(r => r === 'W').length / 5
+  const wins5 = last5Results.filter(r => r === 'W').length
+  const draws5 = last5Results.filter(r => r === 'D').length
+  const losses5 = last5Results.filter(r => r === 'L').length
+  const last5WinRate = wins5 / 5
   if (last5WinRate <= 0.2) {
-    weaknesses.push(`최근 5경기 부진 (${last5Results.filter(r => r === 'W').length}승 ${last5Results.filter(r => r === 'D').length}무 ${last5Results.filter(r => r === 'L').length}패)`)
+    weaknesses.push(T.poorRecent5(wins5, draws5, losses5))
   } else if (last5WinRate >= 0.6) {
-    strengths.push(`최근 5경기 호조 (${last5Results.filter(r => r === 'W').length}승)`)
+    strengths.push(T.goodRecent5(wins5))
   }
-  
+
   // 연패 중이면 약점
   if (currentStreakType === 'L' && currentStreakCount >= 3) {
-    weaknesses.push(`현재 ${currentStreakCount}연패 중`)
+    weaknesses.push(T.losingStreak(currentStreakCount))
   }
-  
+
   // 연승 중이면 강점
   if (currentStreakType === 'W' && currentStreakCount >= 3) {
-    strengths.push(`현재 ${currentStreakCount}연승 중`)
+    strengths.push(T.winningStreak(currentStreakCount))
   }
-  
+
   // 원정 승률
   const awayWinRate = dbStats ? (dbStats.away_wins || 0) / awayPlayed : 0
   if (awayWinRate < 0.2) {
-    weaknesses.push(`원정 승률 저조 (${Math.round(awayWinRate * 100)}%)`)
+    weaknesses.push(T.poorAwayWinRate(Math.round(awayWinRate * 100)))
   }
-  
+
   // 선제골 효율
   const homeFirstGoalWinRate = dbStats?.home_first_goal_games > 0
     ? (dbStats.home_first_goal_wins / dbStats.home_first_goal_games)
     : 0
   if (homeFirstGoalWinRate >= 0.8 && dbStats?.home_first_goal_games >= 3) {
-    strengths.push(`선제골 시 승률 ${Math.round(homeFirstGoalWinRate * 100)}%`)
+    strengths.push(T.strongFirstGoal(Math.round(homeFirstGoalWinRate * 100)))
   }
-  
+
   // 역전 능력 부족
   const homeComebackRate = dbStats?.home_concede_first_games > 0
     ? (dbStats.home_concede_first_wins / dbStats.home_concede_first_games)
     : 0
   if (homeComebackRate < 0.15 && dbStats?.home_concede_first_games >= 3) {
-    weaknesses.push(`역전 능력 부족 (${Math.round(homeComebackRate * 100)}%)`)
+    weaknesses.push(T.poorComeback(Math.round(homeComebackRate * 100)))
   }
-  
+
   // 득점력 부족
   if (scorelessCount >= 3) {
-    weaknesses.push(`최근 10경기 중 ${scorelessCount}경기 무득점`)
+    weaknesses.push(T.scoreless(scorelessCount))
   }
   
   return {

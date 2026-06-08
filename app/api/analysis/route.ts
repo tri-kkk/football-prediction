@@ -1,31 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
-  try {
-    const { match } = await request.json()
+// Claude AI 매치 분석 (마크다운 응답).
+// body.language === 'en' 이면 영문 prompt + 영문 응답. 기본은 'ko'.
 
-    if (!match) {
-      return NextResponse.json(
-        { error: '경기 정보가 필요합니다' },
-        { status: 400 }
-      )
-    }
+function buildPrompt(match: any, lang: 'ko' | 'en'): string {
+  if (lang === 'en') {
+    return `Provide a professional analysis of the following football match:
 
-    // API 키 확인
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    
-    if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY가 설정되지 않았습니다')
-      return NextResponse.json(
-        { error: 'API 키가 설정되지 않았습니다. .env.local 파일을 확인해주세요.' },
-        { status: 500 }
-      )
-    }
+Match info:
+- League: ${match.league}
+- Home team: ${match.homeTeam}
+- Away team: ${match.awayTeam}
+- Date: ${match.date}
+- Time: ${match.time}
 
-    console.log('API 키 확인:', apiKey.substring(0, 10) + '...')
+Use the following format (start each section with a ## heading) and respond in English:
 
-    // Claude API를 사용한 AI 분석
-    const prompt = `다음 축구 경기에 대한 전문적인 분석을 제공해주세요:
+## 1. Squad Strength Comparison
+Compare current strength of home and away sides.
+
+## 2. Recent Form
+Analyse last 5 matches and recent performance.
+
+## 3. Key Player Status
+Condition and injury status of important players.
+
+## 4. Tactical Matchup
+Tactical styles of both teams and how they match up.
+
+## 5. Predicted Outcome
+- Home win: XX%
+- Draw: XX%
+- Away win: XX%
+
+## 6. Key Betting Points
+Important factors to consider when betting.
+
+Keep each section concise (2-3 sentences). Stay professional and objective.`
+  }
+
+  return `다음 축구 경기에 대한 전문적인 분석을 제공해주세요:
 
 경기 정보:
 - 리그: ${match.league}
@@ -57,6 +71,35 @@ export async function POST(request: NextRequest) {
 베팅 시 고려할 핵심 요소들
 
 각 섹션은 2-3문장으로 간결하게 작성하고, 전문적이고 객관적인 분석을 제공해주세요.`
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { match, language } = body || {}
+    const lang: 'ko' | 'en' = language === 'en' ? 'en' : 'ko'
+
+    if (!match) {
+      return NextResponse.json(
+        { error: lang === 'en' ? 'Match info is required' : '경기 정보가 필요합니다' },
+        { status: 400 }
+      )
+    }
+
+    // API 키 확인
+    const apiKey = process.env.ANTHROPIC_API_KEY
+
+    if (!apiKey) {
+      console.error('ANTHROPIC_API_KEY가 설정되지 않았습니다')
+      return NextResponse.json(
+        { error: lang === 'en'
+          ? 'API key not configured. Check .env.local'
+          : 'API 키가 설정되지 않았습니다. .env.local 파일을 확인해주세요.' },
+        { status: 500 }
+      )
+    }
+
+    const prompt = buildPrompt(match, lang)
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -80,28 +123,30 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('Claude API 오류 응답:', errorText)
-      
+
       if (response.status === 401) {
         return NextResponse.json(
-          { error: 'API 키가 유효하지 않습니다. Anthropic 콘솔에서 새 키를 발급받아주세요.' },
+          { error: lang === 'en'
+            ? 'Invalid API key. Issue a new one from Anthropic console.'
+            : 'API 키가 유효하지 않습니다. Anthropic 콘솔에서 새 키를 발급받아주세요.' },
           { status: 401 }
         )
       }
-      
+
       throw new Error(`Claude API 오류: ${response.status}`)
     }
 
     const data = await response.json()
     const analysis = data.content[0].text
 
-    return NextResponse.json({ analysis })
+    return NextResponse.json({ analysis, language: lang })
 
   } catch (error: any) {
     console.error('분석 API 오류:', error)
     return NextResponse.json(
-      { 
+      {
         error: '분석을 생성하는데 실패했습니다',
-        details: error.message 
+        details: error.message
       },
       { status: 500 }
     )

@@ -15,10 +15,11 @@ export async function GET(request: NextRequest) {
   const awayTeam = searchParams.get('awayTeam')
   const homeTeamId = searchParams.get('homeTeamId')
   const awayTeamId = searchParams.get('awayTeamId')
-  
+  const lang: 'ko' | 'en' = searchParams.get('lang') === 'en' ? 'en' : 'ko'
+
   if (!homeTeam || !awayTeam) {
-    return NextResponse.json({ 
-      error: 'homeTeam & awayTeam required' 
+    return NextResponse.json({
+      error: 'homeTeam & awayTeam required'
     }, { status: 400 })
   }
   
@@ -63,8 +64,8 @@ export async function GET(request: NextRequest) {
         const h2hResult = await h2hResponse.json()
         
         if (h2hResult.response && h2hResult.response.length > 0) {
-          const analysis = analyzeH2H(h2hResult.response, hTeamId, homeTeam, awayTeam)
-          
+          const analysis = analyzeH2H(h2hResult.response, hTeamId, homeTeam, awayTeam, lang)
+
           return NextResponse.json({
             success: true,
             homeTeam,
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest) {
             homeTeamId: hTeamId,
             awayTeamId: aTeamId,
             totalMatches: h2hResult.response.length,
+            language: lang,
             data: analysis,
             source: 'api-football'
           })
@@ -91,13 +93,14 @@ export async function GET(request: NextRequest) {
       .limit(20)
     
     if (dbMatches && dbMatches.length > 0) {
-      const analysis = analyzeDBMatches(dbMatches, hTeamId || 0, homeTeam, awayTeam)
-      
+      const analysis = analyzeDBMatches(dbMatches, hTeamId || 0, homeTeam, awayTeam, lang)
+
       return NextResponse.json({
         success: true,
         homeTeam,
         awayTeam,
         totalMatches: dbMatches.length,
+        language: lang,
         data: analysis,
         source: 'database'
       })
@@ -121,8 +124,42 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// 인사이트 문구 템플릿 빌더 (양언어)
+function buildH2HTextPatterns(lang: 'ko' | 'en', homeTeam: string, awayTeam: string) {
+  return {
+    homeDominance: (w: number, d: number, l: number) =>
+      lang === 'en'
+        ? `H2H record: ${homeTeam} leads (${w}W ${d}D ${l}L)`
+        : `역대 전적: ${homeTeam} 우세 (${w}승 ${d}무 ${l}패)`,
+    awayDominance: (w: number, d: number, l: number) =>
+      lang === 'en'
+        ? `H2H record: ${awayTeam} leads (${w}W ${d}D ${l}L)`
+        : `역대 전적: ${awayTeam} 우세 (${w}승 ${d}무 ${l}패)`,
+    even: (w: number, d: number, l: number) =>
+      lang === 'en'
+        ? `H2H record: evenly matched (${w}W ${d}D ${l}L)`
+        : `역대 전적: 호각세 (${w}승 ${d}무 ${l}패)`,
+    recentHomeWins: (n: number) =>
+      lang === 'en' ? `${homeTeam} won ${n} of last 5` : `최근 5경기 ${homeTeam} ${n}승`,
+    recentAwayWins: (n: number) =>
+      lang === 'en' ? `${awayTeam} won ${n} of last 5` : `최근 5경기 ${awayTeam} ${n}승`,
+    recentDraws: (n: number) =>
+      lang === 'en' ? `${n} draws in last 5` : `최근 5경기 중 ${n}무승부`,
+    recentTight: lang === 'en' ? 'Tight contests in last 5' : '최근 5경기 팽팽한 접전',
+    highScoring: (avg: number) =>
+      lang === 'en'
+        ? `Attack-heavy matchup (avg ${avg.toFixed(1)} goals)`
+        : `두 팀 맞대결은 공격적 (평균 ${avg.toFixed(1)}골)`,
+    lowScoring: (avg: number) =>
+      lang === 'en'
+        ? `Defensive matchup (avg ${avg.toFixed(1)} goals)`
+        : `두 팀 맞대결은 수비적 (평균 ${avg.toFixed(1)}골)`,
+  }
+}
+
 // API-Football 응답 분석
-function analyzeH2H(matches: any[], homeTeamId: number, homeTeam: string, awayTeam: string) {
+function analyzeH2H(matches: any[], homeTeamId: number, homeTeam: string, awayTeam: string, lang: 'ko' | 'en' = 'ko') {
+  const T = buildH2HTextPatterns(lang, homeTeam, awayTeam)
   let homeWins = 0
   let draws = 0
   let awayWins = 0
@@ -218,16 +255,16 @@ function analyzeH2H(matches: any[], homeTeamId: number, homeTeam: string, awayTe
   
   if (recent5HomeWins >= 3) {
     trend = 'home_dominant'
-    trendDescription = `최근 5경기 ${homeTeam} ${recent5HomeWins}승`
+    trendDescription = T.recentHomeWins(recent5HomeWins)
   } else if (recent5AwayWins >= 3) {
     trend = 'away_dominant'
-    trendDescription = `최근 5경기 ${awayTeam} ${recent5AwayWins}승`
+    trendDescription = T.recentAwayWins(recent5AwayWins)
   } else if (recent5Draws >= 2) {
     trend = 'many_draws'
-    trendDescription = `최근 5경기 중 ${recent5Draws}무승부`
+    trendDescription = T.recentDraws(recent5Draws)
   } else {
     trend = 'balanced'
-    trendDescription = '최근 5경기 팽팽한 접전'
+    trendDescription = T.recentTight
   }
   
   // 스코어 패턴 정렬
@@ -240,11 +277,11 @@ function analyzeH2H(matches: any[], homeTeamId: number, homeTeam: string, awayTe
   const insights: string[] = []
   
   if (homeWins > awayWins * 1.5) {
-    insights.push(`역대 전적: ${homeTeam} 우세 (${homeWins}승 ${draws}무 ${awayWins}패)`)
+    insights.push(T.homeDominance(homeWins, draws, awayWins))
   } else if (awayWins > homeWins * 1.5) {
-    insights.push(`역대 전적: ${awayTeam} 우세 (${awayWins}승 ${draws}무 ${homeWins}패)`)
+    insights.push(T.awayDominance(awayWins, draws, homeWins))
   } else {
-    insights.push(`역대 전적: 호각세 (${homeWins}승 ${draws}무 ${awayWins}패)`)
+    insights.push(T.even(homeWins, draws, awayWins))
   }
   
   if (trendDescription) {
@@ -253,9 +290,9 @@ function analyzeH2H(matches: any[], homeTeamId: number, homeTeam: string, awayTe
   
   const avgTotal = (homeGoals + awayGoals) / total
    if (avgTotal >= 2.5) {
-    insights.push(`두 팀 맞대결은 공격적 (평균 ${avgTotal.toFixed(1)}골)`)
+    insights.push(T.highScoring(avgTotal))
   } else {
-    insights.push(`두 팀 맞대결은 수비적 (평균 ${avgTotal.toFixed(1)}골)`)
+    insights.push(T.lowScoring(avgTotal))
   }
   
   return {
@@ -306,7 +343,8 @@ function analyzeH2H(matches: any[], homeTeamId: number, homeTeam: string, awayTe
 }
 
 // DB 매치 분석 (fallback)
-function analyzeDBMatches(matches: any[], homeTeamId: number, homeTeam: string, awayTeam: string) {
+function analyzeDBMatches(matches: any[], homeTeamId: number, homeTeam: string, awayTeam: string, lang: 'ko' | 'en' = 'ko') {
+  const T = buildH2HTextPatterns(lang, homeTeam, awayTeam)
   let homeWins = 0
   let draws = 0
   let awayWins = 0
@@ -382,11 +420,11 @@ function analyzeDBMatches(matches: any[], homeTeamId: number, homeTeam: string, 
   
   const insights: string[] = []
   if (homeWins > awayWins) {
-    insights.push(`역대 전적: ${homeTeam} 우세 (${homeWins}승 ${draws}무 ${awayWins}패)`)
+    insights.push(T.homeDominance(homeWins, draws, awayWins))
   } else if (awayWins > homeWins) {
-    insights.push(`역대 전적: ${awayTeam} 우세 (${awayWins}승 ${draws}무 ${homeWins}패)`)
+    insights.push(T.awayDominance(awayWins, draws, homeWins))
   } else {
-    insights.push(`역대 전적: 호각세 (${homeWins}승 ${draws}무 ${awayWins}패)`)
+    insights.push(T.even(homeWins, draws, awayWins))
   }
   
   return {
