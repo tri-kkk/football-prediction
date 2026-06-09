@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Link } from '@/i18n/navigation'
 import WorldCupHighlights from '../../components/highlights/WorldCupHighlights'
+import { useLanguage } from '../../contexts/LanguageContext'
 // 리그 정보
 const LEAGUES = [
   { code: 'ALL', name: '전체', nameEN: 'All', logo: null, gradient: 'linear-gradient(to right, #6b7280, #4b5563)' },
@@ -45,7 +46,9 @@ export default function HighlightsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
-  const [language, setLanguage] = useState<'ko' | 'en'>('ko')
+  // 🌐 URL의 locale(/en/, /ko/)이 자동 반영되는 전역 LanguageContext 사용
+  // 기존 useState로 'ko' 고정되던 버그 fix
+  const { language } = useLanguage()
 
   // 티어 관련 상태
   const [viewsRemaining, setViewsRemaining] = useState<number | null>(null)
