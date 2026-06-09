@@ -172,7 +172,7 @@ export default function ComboPicksPage() {
     return `${formatShortDate(weekRange.start)} ~ ${formatShortDate(weekRange.end)}`
   }
 
-  useEffect(() => { fetchPicks() }, [league, tab, weekOffset])
+  useEffect(() => { fetchPicks() }, [league, tab, weekOffset, language])
 
   const fetchPicks = async () => {
     setLoading(true)
@@ -191,6 +191,8 @@ export default function ComboPicksPage() {
         params.set('start_date', range.start)
         params.set('end_date', range.end)
       }
+      // 🌐 영문 환경 — API에 language=en 전달 (ai_analysis + picks[].reason 영문화)
+      if (language === 'en') params.set('language', 'en')
       const res = await fetch(`/api/baseball/combo-picks?${params}`)
       const data = await res.json()
       setPicks(data.picks || [])
@@ -642,7 +644,7 @@ function ComboCard({ combo, t, language, cleanMd }: {
       {/* 경기 리스트 */}
       <div className="px-5 py-3 space-y-1">
         {combo.picks.map((pick, i) => (
-          <MatchRow key={i} pick={pick} index={i} t={t} isLast={i === combo.picks.length - 1} />
+          <MatchRow key={i} pick={pick} index={i} t={t} isLast={i === combo.picks.length - 1} language={language} />
         ))}
       </div>
 
@@ -739,11 +741,16 @@ function ComboCard({ combo, t, language, cleanMd }: {
 // =====================================================
 // 경기 매치업 행
 // =====================================================
-function MatchRow({ pick, index, t, isLast }: {
-  pick: PickItem; index: number; t: (ko: string, en: string) => string; isLast: boolean
+function MatchRow({ pick, index, t, isLast, language }: {
+  pick: PickItem; index: number; t: (ko: string, en: string) => string; isLast: boolean; language: string
 }) {
   const isPickHome = pick.pick === 'home'
   const pickProb = pick.winProb
+  // 🌐 영문 환경 — 팀명 영문 우선, fallback 한글
+  const isEn = language === 'en'
+  const awayName = isEn ? (pick.awayTeam || pick.awayTeamKo) : (pick.awayTeamKo || pick.awayTeam)
+  const homeName = isEn ? (pick.homeTeam || pick.homeTeamKo) : (pick.homeTeamKo || pick.homeTeam)
+  const pickName = isEn ? (pick.pickTeam || pick.pickTeamKo) : (pick.pickTeamKo || pick.pickTeam)
 
   const awayAbbr = TEAM_ABBR[pick.awayTeam] || pick.awayTeamKo?.slice(0, 2) || pick.awayTeam?.slice(0, 3)
   const homeAbbr = TEAM_ABBR[pick.homeTeam] || pick.homeTeamKo?.slice(0, 2) || pick.homeTeam?.slice(0, 3)
@@ -758,7 +765,7 @@ function MatchRow({ pick, index, t, isLast }: {
         <div className={`flex-1 flex flex-col items-center gap-1.5 transition-opacity ${!isPickHome ? '' : 'opacity-35'}`}>
           <TeamLogo logo={pick.awayLogo} team={pick.awayTeam} abbr={awayAbbr} size={44} isPicked={!isPickHome} />
           <span className={`text-[11px] font-bold text-center leading-tight ${!isPickHome ? 'text-white' : 'text-gray-600'}`}>
-            {pick.awayTeamKo}
+            {awayName}
           </span>
           {!isPickHome && (
             <span className="text-[8px] font-black px-2.5 py-0.5 rounded-full tracking-wide"
@@ -806,7 +813,7 @@ function MatchRow({ pick, index, t, isLast }: {
         <div className={`flex-1 flex flex-col items-center gap-1.5 transition-opacity ${isPickHome ? '' : 'opacity-35'}`}>
           <TeamLogo logo={pick.homeLogo} team={pick.homeTeam} abbr={homeAbbr} size={44} isPicked={isPickHome} />
           <span className={`text-[11px] font-bold text-center leading-tight ${isPickHome ? 'text-white' : 'text-gray-600'}`}>
-            {pick.homeTeamKo}
+            {homeName}
           </span>
           {isPickHome && (
             <span className="text-[8px] font-black px-2.5 py-0.5 rounded-full tracking-wide"
@@ -819,7 +826,7 @@ function MatchRow({ pick, index, t, isLast }: {
       <div className="flex items-center justify-between mt-2.5 mx-1">
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-medium" style={{ color: '#64748b' }}>{t('분석', 'Analysis')}</span>
-          <span className="text-[10px] font-bold text-amber-400">{pick.pickTeamKo} {t('승', 'W')}</span>
+          <span className="text-[10px] font-bold text-amber-400">{pickName} {t('승', 'W')}</span>
           <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded" style={{ background: `${barColor}15` }}>
             <span className="text-[10px] font-black" style={{ color: barColor }}>{pickProb}%</span>
           </div>
