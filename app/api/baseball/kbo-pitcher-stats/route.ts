@@ -91,9 +91,13 @@ function normalizeTeam(team: string, league: string): string {
   return KBO_TEAM_NORMALIZE[team] ?? team
 }
 
-function buildAnalysis(s: any): { strengths: string[]; weakness: string[]; summary: string } {
+function buildAnalysis(
+  s: any,
+  language: 'ko' | 'en' = 'ko'
+): { strengths: string[]; weakness: string[]; summary: string } {
   const strengths: string[] = []
   const weakness: string[] = []
+  const en = language === 'en'
 
   const era  = s.era  ?? null
   const whip = s.whip ?? null
@@ -102,47 +106,61 @@ function buildAnalysis(s: any): { strengths: string[]; weakness: string[]; summa
   const g    = s.games ?? 0
 
   if (era !== null) {
-    if (era <= 3.00)       strengths.push(`에이스급 ERA (${era.toFixed(2)})`)
-    else if (era <= 3.75)  strengths.push(`안정적인 ERA (${era.toFixed(2)})`)
-    else if (era >= 5.50)  weakness.push(`높은 ERA (${era.toFixed(2)})`)
+    const eraStr = era.toFixed(2)
+    if (era <= 3.00)       strengths.push(en ? `Ace-level ERA (${eraStr})` : `에이스급 ERA (${eraStr})`)
+    else if (era <= 3.75)  strengths.push(en ? `Stable ERA (${eraStr})` : `안정적인 ERA (${eraStr})`)
+    else if (era >= 5.50)  weakness.push(en ? `High ERA (${eraStr})` : `높은 ERA (${eraStr})`)
   }
 
   if (whip !== null) {
-    if (whip <= 1.10)      strengths.push(`출루 억제 탁월 (WHIP ${whip.toFixed(2)})`)
-    else if (whip >= 1.50) weakness.push(`주자 허용 많음 (WHIP ${whip.toFixed(2)})`)
+    const whipStr = whip.toFixed(2)
+    if (whip <= 1.10)      strengths.push(en ? `Excellent WHIP (${whipStr})` : `출루 억제 탁월 (WHIP ${whipStr})`)
+    else if (whip >= 1.50) weakness.push(en ? `Many baserunners (WHIP ${whipStr})` : `주자 허용 많음 (WHIP ${whipStr})`)
   }
 
   if (k > 0 && g > 0) {
     const kPerGame = parseFloat((k / g).toFixed(1))
-    if (kPerGame >= 7)      strengths.push(`탈삼진 능력 우수 (경기당 ${kPerGame}K)`)
-    else if (kPerGame < 4)  weakness.push(`낮은 삼진율 (경기당 ${kPerGame}K)`)
+    if (kPerGame >= 7)      strengths.push(en ? `Strong K rate (${kPerGame} K/G)` : `탈삼진 능력 우수 (경기당 ${kPerGame}K)`)
+    else if (kPerGame < 4)  weakness.push(en ? `Low K rate (${kPerGame} K/G)` : `낮은 삼진율 (경기당 ${kPerGame}K)`)
   }
 
   if (bb > 0 && k > 0) {
     const kbb = parseFloat((k / bb).toFixed(1))
-    if (kbb >= 3.0)         strengths.push(`제구력 우수 (K/BB ${kbb})`)
-    else if (kbb < 1.5)     weakness.push(`볼넷 허용 잦음 (K/BB ${kbb})`)
+    if (kbb >= 3.0)         strengths.push(en ? `Good command (K/BB ${kbb})` : `제구력 우수 (K/BB ${kbb})`)
+    else if (kbb < 1.5)     weakness.push(en ? `High walk rate (K/BB ${kbb})` : `볼넷 허용 잦음 (K/BB ${kbb})`)
   }
 
   if (s.home_runs && g > 0) {
     const hrPerGame = parseFloat((s.home_runs / g).toFixed(2))
-    if (hrPerGame >= 0.5)   weakness.push(`홈런 허용 주의 (경기당 ${hrPerGame}HR)`)
+    if (hrPerGame >= 0.5)   weakness.push(en ? `HR vulnerability (${hrPerGame} HR/G)` : `홈런 허용 주의 (경기당 ${hrPerGame}HR)`)
   }
 
   const w = s.wins ?? 0
   const l = s.losses ?? 0
   let summary = `${s.name}`
   if (era !== null && g > 0) {
-    summary += `은 ${w}승 ${l}패 ERA ${era.toFixed(2)}`
-    if (era <= 3.75)       summary += '로 안정적인 피칭을 보여주고 있습니다.'
-    else if (era >= 5.50)  summary += '로 다소 고전 중입니다.'
-    else                   summary += '를 기록 중입니다.'
-    if (k > 0 && g > 0) {
-      const kPerGame = parseFloat((k / g).toFixed(1))
-      if (kPerGame >= 7)   summary += ` 경기당 ${kPerGame}개의 탈삼진으로 지배적인 피칭을 보여줍니다.`
+    const eraStr = era.toFixed(2)
+    if (en) {
+      summary += ` has a ${w}W-${l}L record with a ${eraStr} ERA`
+      if (era <= 3.75)       summary += ', showing stable pitching.'
+      else if (era >= 5.50)  summary += ', currently struggling.'
+      else                   summary += '.'
+      if (k > 0 && g > 0) {
+        const kPerGame = parseFloat((k / g).toFixed(1))
+        if (kPerGame >= 7)   summary += ` Posting ${kPerGame} K/G — dominant stuff.`
+      }
+    } else {
+      summary += `은 ${w}승 ${l}패 ERA ${eraStr}`
+      if (era <= 3.75)       summary += '로 안정적인 피칭을 보여주고 있습니다.'
+      else if (era >= 5.50)  summary += '로 다소 고전 중입니다.'
+      else                   summary += '를 기록 중입니다.'
+      if (k > 0 && g > 0) {
+        const kPerGame = parseFloat((k / g).toFixed(1))
+        if (kPerGame >= 7)   summary += ` 경기당 ${kPerGame}개의 탈삼진으로 지배적인 피칭을 보여줍니다.`
+      }
     }
   } else {
-    summary += ' — 이번 시즌 기록 집계 중입니다.'
+    summary += en ? ' — season stats being compiled.' : ' — 이번 시즌 기록 집계 중입니다.'
   }
 
   return { strengths, weakness, summary }
@@ -152,7 +170,8 @@ async function fetchKboPitcherStat(
   name: string,
   season: string,
   league: string = 'kbo',
-  team?: string
+  team?: string,
+  language: 'ko' | 'en' = 'ko'
 ): Promise<KboPitcherStat | null> {
   if (!name) return null
   const table = league === 'npb' ? 'npb_pitcher_stats' : 'kbo_pitcher_stats'
@@ -183,11 +202,11 @@ async function fetchKboPitcherStat(
 
     if (!fallback) return null
 
-    const { strengths, weakness, summary } = buildAnalysis(fallback)
+    const { strengths, weakness, summary } = buildAnalysis(fallback, language)
     return { ...fallback, strengths, weakness, summary }
   }
 
-  const { strengths, weakness, summary } = buildAnalysis(data)
+  const { strengths, weakness, summary } = buildAnalysis(data, language)
   return { ...data, strengths, weakness, summary }
 }
 
@@ -199,6 +218,9 @@ export async function GET(request: NextRequest) {
   const league      = searchParams.get('league') ?? 'kbo'
   const homeTeamRaw = searchParams.get('homeTeam') ?? ''
   const awayTeamRaw = searchParams.get('awayTeam') ?? ''
+  // 🌐 language=en|ko (lang도 fallback으로 받음, Accept-Language 헤더는 미지원 — 명시적 파라미터만)
+  const langParam = (searchParams.get('language') ?? searchParams.get('lang') ?? 'ko').toLowerCase()
+  const language: 'ko' | 'en' = langParam === 'en' ? 'en' : 'ko'
 
   // 팀명 정규화 (한화 이글스 → 한화 등)
   const homeTeam = homeTeamRaw ? normalizeTeam(homeTeamRaw, league) : ''
@@ -215,10 +237,10 @@ export async function GET(request: NextRequest) {
     const prevSeason = String(parseInt(season) - 1)
 
     const [homeStats, awayStats, homePrevStats, awayPrevStats] = await Promise.all([
-      homePitcher ? fetchKboPitcherStat(homePitcher, season, league, homeTeam || undefined) : Promise.resolve(null),
-      awayPitcher ? fetchKboPitcherStat(awayPitcher, season, league, awayTeam || undefined) : Promise.resolve(null),
-      homePitcher ? fetchKboPitcherStat(homePitcher, prevSeason, league, homeTeam || undefined) : Promise.resolve(null),
-      awayPitcher ? fetchKboPitcherStat(awayPitcher, prevSeason, league, awayTeam || undefined) : Promise.resolve(null),
+      homePitcher ? fetchKboPitcherStat(homePitcher, season, league, homeTeam || undefined, language) : Promise.resolve(null),
+      awayPitcher ? fetchKboPitcherStat(awayPitcher, season, league, awayTeam || undefined, language) : Promise.resolve(null),
+      homePitcher ? fetchKboPitcherStat(homePitcher, prevSeason, league, homeTeam || undefined, language) : Promise.resolve(null),
+      awayPitcher ? fetchKboPitcherStat(awayPitcher, prevSeason, league, awayTeam || undefined, language) : Promise.resolve(null),
     ])
 
     return NextResponse.json({
