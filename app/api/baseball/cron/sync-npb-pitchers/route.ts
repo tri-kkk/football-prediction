@@ -12,12 +12,120 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import Anthropic from '@anthropic-ai/sdk'
 import { scrapeYahooNpbStarters } from './yahoo-scraper'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+// 🌐 NPB 한국어 투수명 → 영문(헵번 로마자) 변환 (Claude Haiku)
+//   - sync 후 home_pitcher 가 비어있고 home_pitcher_ko 만 채워진 NPB 매치를 영문화
+//   - 동일 이름은 한 번만 호출 (unique 처리)
+//   - 실패해도 sync 자체는 정상 (catch 후 로그만)
+async function backfillNpbPitcherEnglish(): Promise<{ translated: number; failed: number; skipped: boolean }> {
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
+  if (!ANTHROPIC_KEY) {
+    console.warn('[npb-english] ANTHROPIC_API_KEY 없음 — 영문 변환 skip')
+    return { translated: 0, failed: 0, skipped: true }
+  }
+
+  // 최근 30일 NPB 매치 가져온 뒤 JS-side에서 필터 (PostgREST OR+AND 중첩 회피)
+  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const { data: rawRows, error } = await supabase
+    .from('baseball_matches')
+    .select('id, home_pitcher, home_pitcher_ko, away_pitcher, away_pitcher_ko')
+    .eq('league', 'NPB')
+    .gte('match_date', cutoff)
+    .limit(500)
+
+  if (error) {
+    console.warn('[npb-english] fetch error:', error.message)
+    return { translated: 0, failed: 0, skipped: true }
+  }
+  const rows = (rawRows || []).filter(r =>
+    (!r.home_pitcher && r.home_pitcher_ko) || (!r.away_pitcher && r.away_pitcher_ko)
+  ).slice(0, 100)
+  if (rows.length === 0) {
+    return { translated: 0, failed: 0, skipped: false }
+  }
+
+  const koreanNames = new Set<string>()
+  for (const r of rows) {
+    if (!r.home_pitcher && r.home_pitcher_ko) koreanNames.add(r.home_pitcher_ko.trim())
+    if (!r.away_pitcher && r.away_pitcher_ko) koreanNames.add(r.away_pitcher_ko.trim())
+  }
+  const uniqueList = Array.from(koreanNames).filter(Boolean)
+  if (uniqueList.length === 0) return { translated: 0, failed: 0, skipped: false }
+
+  console.log(`[npb-english] 변환 대상 매치 ${rows.length}건 / unique 이름 ${uniqueList.length}명`)
+
+  const anthropic = new Anthropic({ apiKey: ANTHROPIC_KEY })
+  const map: Record<string, string> = {}
+  const BATCH = 30
+
+  for (let i = 0; i < uniqueList.length; i += BATCH) {
+    const chunk = uniqueList.slice(i, i + BATCH)
+    const prompt = `다음은 NPB(일본 프로야구) 투수의 한국어 표기 이름 목록입니다. 각 이름을 영문(헵번 로마자, 영어권 NPB 보도 기준 표기)으로 변환해 주세요.
+
+규칙:
+- 일본 이름은 영어식 "FirstName LastName" 순서. 예: "야마모토 요시노부" → "Yoshinobu Yamamoto"
+- 외국인 선수는 본인 영문 등록명. 예: "쿠리 아렌" → "Aren Kuri"
+- 정확한 영문 등록명을 모르면 한국어 발음을 헵번 로마자로 변환
+- JSON만 출력, 다른 텍스트/마크다운 금지
+
+입력: ${JSON.stringify(chunk)}
+
+출력 형식: {"한글이름1": "English Name 1", ...}`
+
+    try {
+      const res = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }],
+      })
+      const text = res.content[0]?.type === 'text' ? res.content[0].text : ''
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        console.warn(`[npb-english] JSON parse 실패 (chunk ${i}):`, text.slice(0, 200))
+        continue
+      }
+      const parsed = JSON.parse(jsonMatch[0])
+      for (const [ko, en] of Object.entries(parsed)) {
+        if (typeof en === 'string' && en.trim()) map[ko] = en.trim()
+      }
+    } catch (e) {
+      console.error(`[npb-english] Claude batch ${i} 실패:`, (e as Error).message)
+    }
+  }
+
+  let translated = 0
+  let failed = 0
+  for (const r of rows) {
+    const update: Record<string, any> = {}
+    if (!r.home_pitcher && r.home_pitcher_ko && map[r.home_pitcher_ko.trim()]) {
+      update.home_pitcher = map[r.home_pitcher_ko.trim()]
+    }
+    if (!r.away_pitcher && r.away_pitcher_ko && map[r.away_pitcher_ko.trim()]) {
+      update.away_pitcher = map[r.away_pitcher_ko.trim()]
+    }
+    if (Object.keys(update).length === 0) continue
+    const { error: updErr } = await supabase
+      .from('baseball_matches')
+      .update(update)
+      .eq('id', r.id)
+    if (updErr) {
+      failed++
+      console.warn(`[npb-english] update 실패 id=${r.id}:`, updErr.message)
+    } else {
+      translated++
+    }
+  }
+
+  console.log(`[npb-english] 완료: translated=${translated}, failed=${failed}`)
+  return { translated, failed, skipped: false }
+}
 
 // ===================================================================
 // 1. 일본어 팀명 → DB 팀 이름 매핑 (api-sports.io 기준 영문명)
@@ -1621,6 +1729,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Step 5: NPB 한국어 투수명 → 영문 자동 변환 (Claude Haiku) — dryRun이면 skip
+    let englishBackfill: { translated: number; failed: number; skipped: boolean } | undefined
+    if (!dryRun) {
+      try {
+        englishBackfill = await backfillNpbPitcherEnglish()
+      } catch (e: any) {
+        console.warn('[npb-english] 변환 step 전체 실패:', e.message)
+        englishBackfill = { translated: 0, failed: 0, skipped: true }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       date,
@@ -1632,6 +1751,7 @@ export async function GET(request: NextRequest) {
       updated: updatedCount,
       results,
       statsResults: statsResults.length > 0 ? statsResults : undefined,
+      englishBackfill,
       rawHtmlPreview: dryRun ? rawHtml?.substring(0, 1000) : undefined,
     })
 
