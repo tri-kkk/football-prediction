@@ -5,7 +5,16 @@
 //   - select=* → 필요 컬럼만 명시 (응답 30%↓)
 //   - limit: 1500 → 500
 //   - force-dynamic 제거 + Cache-Control(s-maxage=60, swr=300) 추가
+// 🌐 v6 (2026-06-09): 한글 팀명 필드 추가 (home_team_ko / away_team_ko)
+//   - 매핑 없는 팀은 영문 그대로 fallback
+import { TEAM_NAME_KR } from '../../teamLogos'
+
 export const revalidate = 60
+
+function getTeamKo(name: string | null | undefined): string | null {
+  if (!name) return null
+  return TEAM_NAME_KR[name] ?? null
+}
 
 // === 사용 컬럼 명시 (응답 페이로드 슬림화) ===
 const ODDS_LATEST_COLUMNS = [
@@ -549,6 +558,8 @@ export async function GET(request: Request) {
             leagueLogo: leagueInfo.logo,
             home_team: match.home_team,
             away_team: match.away_team,
+            home_team_ko: getTeamKo(match.home_team),
+            away_team_ko: getTeamKo(match.away_team),
             home_team_id: match.home_team_id,
             away_team_id: match.away_team_id,
             home_crest: match.home_crest,
@@ -590,6 +601,8 @@ export async function GET(request: Request) {
         return {
           ...match,
           match_id: matchId,
+          home_team_ko: getTeamKo(match.home_team),
+          away_team_ko: getTeamKo(match.away_team),
           leagueName: leagueInfo.name,
           leagueNameEn: leagueInfo.nameEn,
           leaguePriority: leagueInfo.priority,
@@ -603,11 +616,13 @@ export async function GET(request: Request) {
           predictedWinner: result.predictedWinner
         }
       }
-      
+
       const dbStatus = match.status || 'NS'
       return {
         ...match,
         match_id: matchId,
+        home_team_ko: getTeamKo(match.home_team),
+        away_team_ko: getTeamKo(match.away_team),
         leagueName: leagueInfo.name,
         leagueNameEn: leagueInfo.nameEn,
         leaguePriority: leagueInfo.priority,
@@ -682,18 +697,18 @@ export async function GET(request: Request) {
         league,
         date: date || 'all',
         timezone: 'KST (UTC+9)',
-        leagues: leaguesMeta
+        leagues: leaguesMeta,
       },
       stats: {
         upcoming: upcomingData.length,
         finished: finishedMatches.length,
-        merged: resultsMap.size
-      }
+        merged: resultsMap.size,
+      },
     }, {
       headers: {
         // ⚡ CDN/브라우저 캐시: 60s fresh, 300s stale-while-revalidate
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-      }
+      },
     })
 
   } catch (error) {
@@ -701,9 +716,9 @@ export async function GET(request: Request) {
     return Response.json(
       {
         success: false,
-        error: 'Failed to fetch data from database'
+        error: 'Failed to fetch data from database',
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
