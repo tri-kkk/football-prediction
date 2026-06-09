@@ -14,6 +14,28 @@ const supabase = createClient(
 
 const TEAM_NEWS_TTL_HOURS = 1 // 6h → 1h (잘못된 요약이 오래 남지 않도록 단축)
 
+// 주요 아시아 선수 정확한 한글 표기 맵 (영문 기사 → 올바른 한국어 이름)
+// 모델이 음역을 추측해 엉뚱한 이름(예: Jung Hoo Lee → "정호영")을 만드는 것을 방지.
+// 기사 본문(영문)에 키가 등장하면 해당 한글 표기를 강제. 필요 시 자유롭게 추가하세요.
+const KNOWN_PLAYER_KO: Record<string, string> = {
+  // 한국인 MLB
+  'jung hoo lee': '이정후',
+  'jung-hoo lee': '이정후',
+  'ha-seong kim': '김하성',
+  'haseong kim': '김하성',
+  'hyeseong kim': '김혜성',
+  'hyun jin ryu': '류현진',
+  // 일본인 MLB 주요 선수
+  'shohei ohtani': '오타니 쇼헤이',
+  'yoshinobu yamamoto': '야마모토 요시노부',
+  'seiya suzuki': '스즈키 세이야',
+  'masataka yoshida': '요시다 마사타카',
+  'yu darvish': '다르빗슈 유',
+  'shota imanaga': '이마나가 쇼타',
+  'kodai senga': '센가 코다이',
+  'roki sasaki': '사사키 로키',
+}
+
 // 일반 단어 닉네임 — 도시명/리그 키워드 없이는 다른 스포츠 기사로 오탐 위험
 const AMBIGUOUS_NICKNAMES = new Set([
   // MLB
@@ -196,6 +218,15 @@ async function summarizeNews(
   const leagueLabel = league === 'KBO' ? 'KBO' : league === 'NPB' ? 'NPB' : league === 'CPBL' ? 'CPBL' : 'MLB'
   const today = new Date().toISOString().split('T')[0]
 
+  // 기사 본문에 등장하는 주요 선수의 정확한 한글 표기 힌트 구성
+  const lowerArticles = articleText.toLowerCase()
+  const nameHints = Object.entries(KNOWN_PLAYER_KO)
+    .filter(([en]) => lowerArticles.includes(en))
+    .map(([en, ko]) => `"${en}" → ${ko}`)
+  const nameHintBlock = nameHints.length > 0
+    ? `\n\n[인물 이름 정확한 한글 표기 — 아래 인물이 등장하면 반드시 이 표기를 사용]\n${nameHints.join('\n')}`
+    : ''
+
   const prompt = uiLanguage === 'en'
     ? `Today is ${today}. Below are recent news articles possibly about ${leagueLabel} team "${teamName}".
 
@@ -219,9 +250,10 @@ ${articleText}
 - 중요: 각 기사의 날짜를 확인하세요. 며칠 전 기사라면 "기사 기준" 또는 "당시"라는 표현을 사용하세요.
 - 중요: 이미 다른 팀(예: MLB)으로 이적한 선수의 소식은 이 팀 뉴스에 포함하지 마세요. 현재 이 팀 소속 선수 소식만 요약하세요.
 - 마크다운 금지, 번호 매기기 금지
-- 반드시 100% 한국어로만 작성하세요. 일본어, 영어 등 외국어가 섞이면 안 됩니다. 선수 이름도 한국어 표기로 작성하세요.
+- 문장은 한국어로 작성하세요. 단, 선수·감독 등 인물 이름은 그 사람의 정확한 한국어 표기를 확실히 아는 경우에만 한국어로 쓰고, 확실하지 않으면 기사 원문의 표기(영문 등)를 그대로 사용하세요. 절대로 한국어 이름을 추측해서 만들어내지 마세요. (예: 'Jung Hoo Lee'의 정확한 표기를 모르면 '정호영'처럼 임의로 바꾸지 말고 'Jung Hoo Lee' 그대로 둘 것)
+- 기사에 명시되지 않은 선수 기록·통계·사건은 절대 지어내지 마세요. 기사에 실제로 적힌 사실만 요약하세요.
 - 각 문장을 줄바꿈(\\n)으로 구분하세요.
-- 이 팀과 무관한 기사만 있다면 "최근 주요 뉴스가 없습니다."라고만 작성`
+- 이 팀과 무관한 기사만 있다면 "최근 주요 뉴스가 없습니다."라고만 작성${nameHintBlock}`
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
