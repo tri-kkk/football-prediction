@@ -287,13 +287,16 @@ export async function GET(_request: NextRequest) {
       .toISOString()
       .split('T')[0]
 
+    // ⚡ limit 100 → 300으로 확대 + updated_at 최신순 정렬
+    // 변화 있는 매치는 update-results cron이 갱신하므로 updated_at 최근 = 라이브/방금 종료
     const { data: matches, error } = await supabase
       .from('baseball_matches')
       .select(
         'api_match_id, league, status, home_team, away_team, home_team_ko, away_team_ko, home_team_logo, away_team_logo, home_score, away_score, updated_at'
       )
       .gte('match_date', yesterday)
-      .limit(100)
+      .order('updated_at', { ascending: false })
+      .limit(300)
 
     if (error) {
       console.error('[push-baseball] DB query error:', error.message)
