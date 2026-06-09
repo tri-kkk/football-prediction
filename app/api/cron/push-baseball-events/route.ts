@@ -410,6 +410,27 @@ export async function GET(_request: NextRequest) {
       }
     }
 
+    // 디버그: 첫 라이브 매치의 prev vs current 비교
+    const liveMatch = (matches as DBMatch[]).find((m) => m.status.startsWith('IN'))
+    const debug = liveMatch
+      ? (() => {
+          const prev = prevMap.get(liveMatch.api_match_id) ?? {}
+          return {
+            matchId: liveMatch.api_match_id,
+            prevExists: prevMap.has(liveMatch.api_match_id),
+            prevKeys: Object.keys(prev),
+            prev_status: prev.last_status,
+            current_status: liveMatch.status,
+            status_neq: prev.last_status !== liveMatch.status,
+            prev_home: prev.last_home_score,
+            current_home: liveMatch.home_score ?? 0,
+            home_neq: prev.last_home_score !== (liveMatch.home_score ?? 0),
+            prev_inning: prev.last_inning,
+            current_inning: extractInningNumber(liveMatch.status),
+          }
+        })()
+      : null
+
     return NextResponse.json({
       success: true,
       matches: matches.length,
@@ -422,6 +443,7 @@ export async function GET(_request: NextRequest) {
       sent: totalSent,
       failed: totalFailed,
       cleanedInvalidTokens: totalCleaned,
+      debug,
       elapsedMs: Date.now() - startedAt,
     })
   } catch (error: any) {
