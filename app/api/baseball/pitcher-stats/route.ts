@@ -2,7 +2,8 @@
 // DB baseball_matches의 home_pitcher_id / away_pitcher_id 기반으로
 // MLB Stats API에서 상세 투수 스탯 조회
 //
-// GET /api/baseball/pitcher-stats?matchId=123
+// GET /api/baseball/pitcher-stats?matchId=123          ← DB 내부 PK 또는 api_match_id (자동 fallback)
+// GET /api/baseball/pitcher-stats?apiMatchId=179016    ← 명시적으로 api_match_id (MLB Game ID)
 // GET /api/baseball/pitcher-stats?homePitcherId=592450&awayPitcherId=660271
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -166,6 +167,7 @@ function buildMatchupNote(home: PitcherStat | null, away: PitcherStat | null): s
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const matchId = searchParams.get('matchId')
+  const apiMatchIdParam = searchParams.get('apiMatchId')
   const homePitcherId = searchParams.get('homePitcherId')
   const awayPitcherId = searchParams.get('awayPitcherId')
 
@@ -173,20 +175,44 @@ export async function GET(request: NextRequest) {
     let homeId: number | null = null
     let awayId: number | null = null
 
-    if (matchId) {
-      // DB에서 pitcher_id 조회
-      const { data: match, error } = await supabase
-        .from('baseball_matches')
-        .select('home_pitcher_id, away_pitcher_id, home_pitcher, away_pitcher')
-        .eq('id', matchId)
-        .maybeSingle()
-
-      if (error) throw error
+    if (matchId || apiMatchIdParam) {
+      // 우선순위: apiMatchId 명시 > matchId
+      // matchId가 들어왔을 때도 내부 PK(id)로 먼저 시도, 못 찾으면 api_match_id로 fallback
+      // (외주 앱이 api_match_id를 matchId 자리에 넣어서 보내는 케이스 호환)
+      let match: any = null
+      if (apiMatchIdParam) {
+        const r = await supabase
+          .from('baseball_matches')
+          .select('home_pitcher_id, away_pitcher_id, home_pitcher, away_pitcher')
+          .eq('api_match_id', apiMatchIdParam)
+          .maybeSingle()
+        if (r.error) throw r.error
+        match = r.data
+      } else if (matchId) {
+        // 1차: 내부 PK
+        const r1 = await supabase
+          .from('baseball_matches')
+          .select('home_pitcher_id, away_pitcher_id, home_pitcher, away_pitcher')
+          .eq('id', matchId)
+          .maybeSingle()
+        if (r1.error) throw r1.error
+        match = r1.data
+        // 2차 fallback: api_match_id (앱이 잘못 보낸 케이스 자동 보정)
+        if (!match) {
+          const r2 = await supabase
+            .from('baseball_matches')
+            .select('home_pitcher_id, away_pitcher_id, home_pitcher, away_pitcher')
+            .eq('api_match_id', matchId)
+            .maybeSingle()
+          if (r2.error) throw r2.error
+          match = r2.data
+        }
+      }
 
       homeId = match?.home_pitcher_id ?? null
       awayId = match?.away_pitcher_id ?? null
 
-      // pitcher_id 없으면 이름만 반환 (선발 미발표)
+      // pitcher_id 없으면 이름만 반환 (선발 미발표 OR KBO/NPB처럼 MLB Stats API ID 부재)
       if (!homeId && !awayId) {
         return NextResponse.json({
           success: true,
@@ -194,7 +220,9 @@ export async function GET(request: NextRequest) {
           awayPitcher: null,
           homePitcherName: match?.home_pitcher ?? null,
           awayPitcherName: match?.away_pitcher ?? null,
-          matchupNote: '선발투수가 아직 발표되지 않았습니다.',
+          matchupNote: match
+            ? '선발투수가 아직 발표되지 않았습니다.'
+            : 'match not found — matchId 또는 apiMatchId가 DB와 매칭되지 않습니다.',
         })
       }
     } else {
