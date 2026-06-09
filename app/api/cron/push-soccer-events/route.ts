@@ -48,6 +48,8 @@ interface LiveMatch {
   awayTeam: string
   homeTeamKR?: string
   awayTeamKR?: string
+  homeCrest?: string                   // 팀 로고 URL
+  awayCrest?: string
   homeScore: number
   awayScore: number
   events?: Array<{
@@ -57,6 +59,36 @@ interface LiveMatch {
     player: string
     detail?: string
   }>
+}
+
+// 외주 규약대로 이벤트별 로고 결정
+function getSoccerTeamLogo(
+  event: SoccerEvent,
+  match: LiveMatch,
+  scoringTeam?: 'home' | 'away'
+): string | null {
+  const homeLogo = match.homeCrest || null
+  const awayLogo = match.awayCrest || null
+
+  switch (event) {
+    case 'goal':
+      return scoringTeam === 'away' ? awayLogo : homeLogo
+    case 'kickoff':
+      return homeLogo
+    case 'fulltime': {
+      const hs = match.homeScore ?? 0
+      const as = match.awayScore ?? 0
+      if (hs > as) return homeLogo
+      if (as > hs) return awayLogo
+      return homeLogo                  // 무승부 → 홈팀
+    }
+    case 'halftime':
+    case 'yellowCard':
+    case 'redCard':
+    case 'substitution':
+    default:
+      return homeLogo
+  }
 }
 
 interface DetectedEvent {
@@ -207,13 +239,16 @@ async function loadTargetTokens(
 async function dispatchEvent(
   supabase: any,
   matchId: number,
-  detected: DetectedEvent
+  detected: DetectedEvent,
+  match: LiveMatch
 ): Promise<{ sent: number; failed: number; cleaned: number }> {
   const tokens = await loadTargetTokens(supabase, matchId, detected.event)
   if (!tokens.length) return { sent: 0, failed: 0, cleaned: 0 }
 
   const byLocale: Record<Locale, string[]> = { ko: [], en: [] }
   for (const t of tokens) byLocale[t.locale].push(t.token)
+
+  const teamLogo = getSoccerTeamLogo(detected.event, match, detected.ctx.scoringTeam)
 
   const data = toFCMData(
     buildEventPayload({
@@ -225,6 +260,7 @@ async function dispatchEvent(
         awayTeam: detected.ctx.awayTeam,
         homeScore: detected.ctx.homeScore,
         awayScore: detected.ctx.awayScore,
+        teamLogo,
       },
     })
   )
@@ -327,7 +363,7 @@ export async function GET(request: NextRequest) {
       }
 
       for (const ev of detected) {
-        const result = await dispatchEvent(supabase, match.id, ev)
+        const result = await dispatchEvent(supabase, match.id, ev, match)
         totalEvents++
         totalSent += result.sent
         totalFailed += result.failed

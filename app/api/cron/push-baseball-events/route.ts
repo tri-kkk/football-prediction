@@ -43,9 +43,44 @@ interface DBMatch {
   away_team: string
   home_team_ko: string | null
   away_team_ko: string | null
+  home_team_logo: string | null
+  away_team_logo: string | null
   home_score: number | null
   away_score: number | null
   updated_at: string
+}
+
+// 외주 규약대로 이벤트별 로고 결정
+// - score/homerun: 득점한 팀
+// - firstPitch: 홈팀
+// - inningChange: 공격 시작 팀 = 원정팀 (이닝 시작은 방문팀 공격부터)
+// - gameEnd: 승리 팀 (무승부면 홈팀)
+function getBaseballTeamLogo(
+  event: BaseballEvent,
+  match: DBMatch,
+  scoringTeam?: 'home' | 'away'
+): string | null {
+  const homeLogo = match.home_team_logo || null
+  const awayLogo = match.away_team_logo || null
+
+  switch (event) {
+    case 'score':
+    case 'homerun':
+      return scoringTeam === 'away' ? awayLogo : homeLogo
+    case 'firstPitch':
+      return homeLogo
+    case 'inningChange':
+      return awayLogo
+    case 'gameEnd': {
+      const hs = match.home_score ?? 0
+      const as = match.away_score ?? 0
+      if (hs > as) return homeLogo
+      if (as > hs) return awayLogo
+      return homeLogo                  // 무승부 → 홈팀
+    }
+    default:
+      return homeLogo
+  }
 }
 
 interface DetectedEvent {
@@ -174,13 +209,16 @@ async function loadTargetTokens(
 async function dispatchEvent(
   supabase: any,
   matchId: number,
-  detected: DetectedEvent
+  detected: DetectedEvent,
+  match: DBMatch
 ): Promise<{ sent: number; failed: number; cleaned: number }> {
   const tokens = await loadTargetTokens(supabase, matchId, detected.event)
   if (!tokens.length) return { sent: 0, failed: 0, cleaned: 0 }
 
   const byLocale: Record<Locale, string[]> = { ko: [], en: [] }
   for (const t of tokens) byLocale[t.locale].push(t.token)
+
+  const teamLogo = getBaseballTeamLogo(detected.event, match, detected.ctx.scoringTeam)
 
   const data = toFCMData(
     buildEventPayload({
@@ -193,6 +231,7 @@ async function dispatchEvent(
         homeScore: detected.ctx.homeScore,
         awayScore: detected.ctx.awayScore,
         inning: detected.ctx.inning,
+        teamLogo,
       },
     })
   )
@@ -251,7 +290,7 @@ export async function GET(_request: NextRequest) {
     const { data: matches, error } = await supabase
       .from('baseball_matches')
       .select(
-        'api_match_id, league, status, home_team, away_team, home_team_ko, away_team_ko, home_score, away_score, updated_at'
+        'api_match_id, league, status, home_team, away_team, home_team_ko, away_team_ko, home_team_logo, away_team_logo, home_score, away_score, updated_at'
       )
       .gte('match_date', yesterday)
       .limit(100)
@@ -295,7 +334,7 @@ export async function GET(_request: NextRequest) {
 
       if (!isFirstSeen && detected.length > 0) {
         for (const ev of detected) {
-          const result = await dispatchEvent(supabase, match.api_match_id, ev)
+          const result = await dispatchEvent(supabase, match.api_match_id, ev, match)
           totalEvents++
           totalSent += result.sent
           totalFailed += result.failed
