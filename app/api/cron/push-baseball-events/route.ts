@@ -324,6 +324,9 @@ export async function GET(_request: NextRequest) {
     let totalFailed = 0
     let totalCleaned = 0
 
+    // ⚡ 최적화: state upsert는 변화 있을 때만 + 한 번에 batch
+    const statesToUpsert: any[] = []
+
     for (const match of matches as DBMatch[]) {
       const prev = prevMap.get(match.api_match_id) ?? {}
       const detected = detectEvents(match, prev)
@@ -347,19 +350,40 @@ export async function GET(_request: NextRequest) {
       }
 
       const currentInning = extractInningNumber(match.status)
-      await supabase.from('match_event_state').upsert(
-        {
+      const currentHome = match.home_score ?? 0
+      const currentAway = match.away_score ?? 0
+
+      // ⚡ state 변화 있을 때만 upsert (NS/FT 머무는 매치 95% skip)
+      const hasChange =
+        isFirstSeen ||
+        prev.last_status !== match.status ||
+        prev.last_home_score !== currentHome ||
+        prev.last_away_score !== currentAway ||
+        prev.last_inning !== currentInning ||
+        detected.length > 0
+
+      if (hasChange) {
+        statesToUpsert.push({
           match_id: match.api_match_id,
           sport: 'baseball',
           last_status: match.status,
-          last_home_score: match.home_score ?? 0,
-          last_away_score: match.away_score ?? 0,
+          last_home_score: currentHome,
+          last_away_score: currentAway,
           last_inning: currentInning,
-          last_event_ids: [],   // 야구는 events 배열 안 쓰므로 빈 채로
+          last_event_ids: [],
           last_run_at: new Date().toISOString(),
-        },
-        { onConflict: 'match_id,sport' }
-      )
+        })
+      }
+    }
+
+    // 한 번에 batch upsert
+    if (statesToUpsert.length > 0) {
+      const { error: upsertErr } = await supabase
+        .from('match_event_state')
+        .upsert(statesToUpsert, { onConflict: 'match_id,sport' })
+      if (upsertErr) {
+        console.warn('[push-baseball] batch state upsert error:', upsertErr.message)
+      }
     }
 
     return NextResponse.json({

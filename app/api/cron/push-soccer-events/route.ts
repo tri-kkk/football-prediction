@@ -342,25 +342,12 @@ export async function GET(request: NextRequest) {
     let totalFailed = 0
     let totalCleaned = 0
 
+    // ⚡ 최적화: state upsert는 변화 있을 때만 + batch
+    const statesToUpsert: any[] = []
+
     for (const match of matches) {
       const prev = prevMap.get(match.id) ?? {}
       const detected = detectEvents(match, prev)
-      if (detected.length === 0) {
-        // 상태 변화는 없지만 last_run_at은 갱신
-        await supabase.from('match_event_state').upsert(
-          {
-            match_id: match.id,
-            sport: 'soccer',
-            last_status: match.status,
-            last_home_score: match.homeScore,
-            last_away_score: match.awayScore,
-            last_event_ids: prev.last_event_ids ?? [],
-            last_run_at: new Date().toISOString(),
-          },
-          { onConflict: 'match_id,sport' }
-        )
-        continue
-      }
 
       for (const ev of detected) {
         const result = await dispatchEvent(supabase, match.id, ev, match)
@@ -379,10 +366,17 @@ export async function GET(request: NextRequest) {
         ? prev.last_event_ids
         : []
       const newIds = detected.map((d) => d.eventId).filter(Boolean) as string[]
-      const mergedIds = [...prevIds, ...newIds].slice(-200)
+      const mergedIds = newIds.length > 0 ? [...prevIds, ...newIds].slice(-200) : prevIds
 
-      await supabase.from('match_event_state').upsert(
-        {
+      // ⚡ 변화 있을 때만 upsert
+      const hasChange =
+        prev.last_status !== match.status ||
+        prev.last_home_score !== match.homeScore ||
+        prev.last_away_score !== match.awayScore ||
+        detected.length > 0
+
+      if (hasChange) {
+        statesToUpsert.push({
           match_id: match.id,
           sport: 'soccer',
           last_status: match.status,
@@ -390,9 +384,18 @@ export async function GET(request: NextRequest) {
           last_away_score: match.awayScore,
           last_event_ids: mergedIds,
           last_run_at: new Date().toISOString(),
-        },
-        { onConflict: 'match_id,sport' }
-      )
+        })
+      }
+    }
+
+    // 한 번에 batch upsert
+    if (statesToUpsert.length > 0) {
+      const { error: upsertErr } = await supabase
+        .from('match_event_state')
+        .upsert(statesToUpsert, { onConflict: 'match_id,sport' })
+      if (upsertErr) {
+        console.warn('[push-soccer] batch state upsert error:', upsertErr.message)
+      }
     }
 
     return NextResponse.json({
