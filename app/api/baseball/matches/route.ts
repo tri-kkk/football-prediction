@@ -340,8 +340,9 @@ export async function GET(request: NextRequest) {
               grade: matchOdds.ai_grade ?? null,
               updatedAt: matchOdds.ai_updated_at ?? null,
             } : null,
-            homePitcher: match.home_pitcher ?? null, homePitcherId: match.home_pitcher_id ?? null, homePitcherKo: match.home_pitcher_ko ?? null,
-            awayPitcher: match.away_pitcher ?? null, awayPitcherId: match.away_pitcher_id ?? null, awayPitcherKo: match.away_pitcher_ko ?? null,
+            // 🌐 양방향 fallback: MLB는 영문만/NPB는 한글만 채워지는 경우 보완
+            homePitcher: match.home_pitcher ?? match.home_pitcher_ko ?? null, homePitcherId: match.home_pitcher_id ?? null, homePitcherKo: match.home_pitcher_ko ?? match.home_pitcher ?? null,
+            awayPitcher: match.away_pitcher ?? match.away_pitcher_ko ?? null, awayPitcherId: match.away_pitcher_id ?? null, awayPitcherKo: match.away_pitcher_ko ?? match.away_pitcher ?? null,
             hasPitcherData: (match.league === 'MLB' || match.league === 'CPBL')
               ? true
               : ((match.home_pitcher_ko != null || match.home_pitcher_era != null) && (match.away_pitcher_ko != null || match.away_pitcher_era != null)),
@@ -503,13 +504,13 @@ export async function GET(request: NextRequest) {
           updatedAt: matchOdds.ai_updated_at ?? null,
         } : null,
 
-        // ✅ 선발 투수 (MLB만, sync-pitchers API가 채워줌)
-        homePitcher: match.home_pitcher ?? null,
+        // ✅ 선발 투수 (MLB는 영문만 / NPB는 한글만 채워지므로 양방향 fallback)
+        homePitcher: match.home_pitcher ?? match.home_pitcher_ko ?? null,
         homePitcherId: match.home_pitcher_id ?? null,
-        homePitcherKo: match.home_pitcher_ko ?? null,
-        awayPitcher: match.away_pitcher ?? null,
+        homePitcherKo: match.home_pitcher_ko ?? match.home_pitcher ?? null,
+        awayPitcher: match.away_pitcher ?? match.away_pitcher_ko ?? null,
         awayPitcherId: match.away_pitcher_id ?? null,
-        awayPitcherKo: match.away_pitcher_ko ?? null,
+        awayPitcherKo: match.away_pitcher_ko ?? match.away_pitcher ?? null,
 
         // ✅ 투수 데이터 반영 여부 (KBO/NPB는 투수 이름 또는 ERA 있으면 true)
         hasPitcherData: (match.league === 'MLB' || match.league === 'CPBL')

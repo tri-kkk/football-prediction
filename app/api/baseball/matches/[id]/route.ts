@@ -139,15 +139,17 @@ export async function GET(
       innings: match.innings_score,
 
       // 선발 투수
-      homePitcher: match.home_pitcher ?? null,
+      // 🌐 양방향 fallback: MLB는 home_pitcher만, NPB는 home_pitcher_ko만 채워지는 경우가 있어서
+      //   영문 응답이 비면 한글로, 한글 응답이 비면 영문으로 보완해 다국어 환경에서 빈 값/혼동 방지
+      homePitcher: match.home_pitcher ?? match.home_pitcher_ko ?? null,
       homePitcherId: match.home_pitcher_id ?? null,
-      homePitcherKo: match.home_pitcher_ko ?? null,
+      homePitcherKo: match.home_pitcher_ko ?? match.home_pitcher ?? null,
       homePitcherEra: match.home_pitcher_era ?? null,
       homePitcherWhip: match.home_pitcher_whip ?? null,
       homePitcherK: match.home_pitcher_k ?? null,
-      awayPitcher: match.away_pitcher ?? null,
+      awayPitcher: match.away_pitcher ?? match.away_pitcher_ko ?? null,
       awayPitcherId: match.away_pitcher_id ?? null,
-      awayPitcherKo: match.away_pitcher_ko ?? null,
+      awayPitcherKo: match.away_pitcher_ko ?? match.away_pitcher ?? null,
       awayPitcherEra: match.away_pitcher_era ?? null,
       awayPitcherWhip: match.away_pitcher_whip ?? null,
       awayPitcherK: match.away_pitcher_k ?? null,
