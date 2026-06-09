@@ -324,7 +324,7 @@ export async function GET(_request: NextRequest) {
     let totalFailed = 0
     let totalCleaned = 0
 
-    // ⚡ 최적화: state upsert는 변화 있을 때만 + 한 번에 batch
+    // ⚡ 최적화: state upsert는 변화 있을 때만 + 병렬 호출 (Promise.all)
     const statesToUpsert: any[] = []
 
     for (const match of matches as DBMatch[]) {
@@ -376,13 +376,23 @@ export async function GET(_request: NextRequest) {
       }
     }
 
-    // 한 번에 batch upsert
+    // 변화 있는 매치만 병렬 upsert (Promise.all)
     if (statesToUpsert.length > 0) {
-      const { error: upsertErr } = await supabase
-        .from('match_event_state')
-        .upsert(statesToUpsert, { onConflict: 'match_id,sport' })
-      if (upsertErr) {
-        console.warn('[push-baseball] batch state upsert error:', upsertErr.message)
+      const results = await Promise.all(
+        statesToUpsert.map((row) =>
+          supabase
+            .from('match_event_state')
+            .upsert(row, { onConflict: 'match_id,sport' })
+            .then((r) => r.error)
+            .catch((e) => e as Error)
+        )
+      )
+      const errs = results.filter(Boolean)
+      if (errs.length) {
+        console.warn(
+          `[push-baseball] ${errs.length}/${statesToUpsert.length} state upsert errors. First:`,
+          (errs[0] as any)?.message ?? String(errs[0])
+        )
       }
     }
 
