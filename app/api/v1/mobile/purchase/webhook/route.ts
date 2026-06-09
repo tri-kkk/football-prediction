@@ -96,6 +96,9 @@ async function handleSubscriptionNotification(
           .update({
             status: 'active',
             expires_at: newExpiresAt.toISOString(),
+            // 갱신 성공 시 자동갱신 ON으로 복귀 (cancelled_at은 그대로 두되, 재가입 시점이라 클리어)
+            auto_renew: true,
+            cancelled_at: null,
           })
           .eq('id', sub.id)
 
@@ -133,10 +136,11 @@ async function handleSubscriptionNotification(
         .from('subscriptions')
         .update({
           cancelled_at: new Date().toISOString(),
+          auto_renew: false,
         })
         .eq('id', sub.id)
 
-      console.log(`[webhook] CANCELED — user=${sub.user_id}, expires_at unchanged`)
+      console.log(`[webhook] CANCELED — user=${sub.user_id}, expires_at unchanged, auto_renew=false`)
       return { handled: true, type: 'canceled' }
     }
 
@@ -148,6 +152,7 @@ async function handleSubscriptionNotification(
           status: 'cancelled',
           cancelled_at: new Date().toISOString(),
           expires_at: new Date().toISOString(),
+          auto_renew: false,
         })
         .eq('id', sub.id)
 
@@ -184,7 +189,7 @@ async function handleSubscriptionNotification(
       // 정상 만료 — DB 정리만
       await supabase
         .from('subscriptions')
-        .update({ status: 'expired' })
+        .update({ status: 'expired', auto_renew: false })
         .eq('id', sub.id)
 
       // 다른 활성 구독 없으면 free 다운그레이드

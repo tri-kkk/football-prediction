@@ -55,7 +55,9 @@ export async function GET(request: NextRequest) {
       if (tier === 'premium') {
         const { data: sub } = await supabase
           .from('subscriptions')
-          .select('plan, status, started_at, expires_at, price')
+          .select(
+            'plan, status, started_at, expires_at, price, auto_renew, cancelled_at'
+          )
           .eq('user_id', user.id)
           .eq('status', 'active')
           .order('created_at', { ascending: false })
@@ -64,11 +66,23 @@ export async function GET(request: NextRequest) {
 
         if (sub) {
           const expiresAt = new Date(sub.expires_at as string)
+          // auto_renew 컬럼이 없는 레거시 행은 true 로 간주 (Play 결제는 기본 자동갱신)
+          const autoRenewing =
+            sub.auto_renew === null || sub.auto_renew === undefined
+              ? true
+              : !!sub.auto_renew
+          // 자동갱신 ON: 다음 결제일 = 만료일(자동 결제 시점)
+          // 자동갱신 OFF(취소): null
+          const nextBillingDate = autoRenewing ? sub.expires_at : null
           subscription = {
+            tier: 'premium',
             plan: sub.plan,
             status: sub.status,
             startedAt: sub.started_at,
             expiresAt: sub.expires_at,
+            nextBillingDate,
+            autoRenewing,
+            cancelledAt: sub.cancelled_at ?? null,
             price: sub.price ?? null,
             daysLeft: Math.max(
               0,

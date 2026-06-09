@@ -268,6 +268,7 @@ export async function POST(request: NextRequest) {
       payment_id: purchaseToken,
       price: product.price,
       payment_method: 'PLAY_IAP',
+      auto_renew: true, // Play 구독은 기본 자동갱신 ON, 취소 시 webhook이 false로 전환
     })
     if (subError) {
       console.error('[purchase/verify] subscriptions insert error:', subError.message)
