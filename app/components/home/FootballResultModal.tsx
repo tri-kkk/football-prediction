@@ -3,6 +3,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '../../contexts/LanguageContext'
 import type { UnifiedMatch } from './types'
 
 interface Props {
@@ -16,13 +17,13 @@ interface TeamStats {
   stats: Record<string, any>
 }
 
-const STAT_ROWS: { key: string; label: string; bar?: boolean }[] = [
-  { key: 'possession', label: '점유율', bar: true },
-  { key: 'totalShots', label: '슈팅' },
-  { key: 'shotsOnTarget', label: '유효 슈팅' },
-  { key: 'cornerKicks', label: '코너킥' },
-  { key: 'fouls', label: '파울' },
-  { key: 'yellowCards', label: '경고' },
+const STAT_ROWS: { key: string; labelKo: string; labelEn: string; bar?: boolean }[] = [
+  { key: 'possession', labelKo: '점유율', labelEn: 'Possession', bar: true },
+  { key: 'totalShots', labelKo: '슈팅', labelEn: 'Shots' },
+  { key: 'shotsOnTarget', labelKo: '유효 슈팅', labelEn: 'Shots on Target' },
+  { key: 'cornerKicks', labelKo: '코너킥', labelEn: 'Corners' },
+  { key: 'fouls', labelKo: '파울', labelEn: 'Fouls' },
+  { key: 'yellowCards', labelKo: '경고', labelEn: 'Yellow Cards' },
 ]
 
 const numVal = (v: any): number | null => {
@@ -35,6 +36,10 @@ const dispVal = (v: any): string => (v == null || v === '-' ? '-' : String(v))
 export default function FootballResultModal({ match, onClose }: Props) {
   const [stats, setStats] = useState<{ home: TeamStats; away: TeamStats } | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
+  // 🌐 영문 환경 분기
+  const { language } = useLanguage()
+  const isEn = language === 'en'
+  const t = (ko: string, en: string) => (isEn ? en : ko)
 
   useEffect(() => {
     if (!match) return
@@ -69,15 +74,18 @@ export default function FootballResultModal({ match, onClose }: Props) {
 
   if (!match) return null
 
-  const home = match.homeTeamKo || match.homeTeam
-  const away = match.awayTeamKo || match.awayTeam
+  const home = isEn ? (match.homeTeam || match.homeTeamKo) : (match.homeTeamKo || match.homeTeam)
+  const away = isEn ? (match.awayTeam || match.awayTeamKo) : (match.awayTeamKo || match.awayTeam)
+  const leagueLabel = isEn
+    ? ((match as any).leagueNameEn || match.leagueName || match.league)
+    : (match.leagueName || (match as any).leagueNameEn || match.league)
   const fh = match.homeScore
   const fa = match.awayScore
   const actualWinner = fh != null && fa != null ? (fh > fa ? 'home' : fa > fh ? 'away' : 'draw') : null
   const predicted = match.predictedWinner
   const correct = predicted && actualWinner ? predicted === actualWinner : null
   const predLabel =
-    predicted === 'home' ? home : predicted === 'away' ? away : predicted === 'draw' ? '무승부' : null
+    predicted === 'home' ? home : predicted === 'away' ? away : predicted === 'draw' ? t('무승부', 'Draw') : null
 
   const visibleRows = STAT_ROWS.filter((row) => {
     if (!stats) return false
@@ -102,17 +110,17 @@ export default function FootballResultModal({ match, onClose }: Props) {
                 <img src={match.leagueLogo} alt="" className="max-w-full max-h-full object-contain" />
               </span>
             )}
-            <span className="font-bold text-gray-200 truncate">{match.leagueName || match.league}</span>
+            <span className="font-bold text-gray-200 truncate">{leagueLabel}</span>
             <span className="text-gray-500 text-xs tabular-nums shrink-0">
               {match.timestamp
-                ? new Date(match.timestamp).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit' })
+                ? new Date(match.timestamp).toLocaleString(isEn ? 'en-US' : 'ko-KR', { month: '2-digit', day: '2-digit' })
                 : ''}
             </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="닫기"
+            aria-label={t('닫기', 'Close')}
             className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors shrink-0"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,7 +140,7 @@ export default function FootballResultModal({ match, onClose }: Props) {
               <span className="text-sm font-semibold text-white text-center truncate w-full">{home}</span>
             </div>
             <div className="text-center px-1">
-              <span className="inline-block mb-1.5 px-2 py-0.5 rounded-full bg-gray-700 text-gray-300 text-[10px] font-bold">종료</span>
+              <span className="inline-block mb-1.5 px-2 py-0.5 rounded-full bg-gray-700 text-gray-300 text-[10px] font-bold">{t('종료', 'FT')}</span>
               <div className="text-4xl font-black tabular-nums text-white leading-none">
                 {fh ?? '-'}<span className="text-gray-600 mx-2">:</span>{fa ?? '-'}
               </div>
@@ -152,20 +160,20 @@ export default function FootballResultModal({ match, onClose }: Props) {
           <div className="px-4 pb-4">
             <div className="rounded-xl border border-gray-800 bg-[#1c1f20] p-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">AI 예측 결과</span>
+                <span className="text-xs text-gray-400">{t('AI 예측 결과', 'AI Prediction Result')}</span>
                 {correct != null && (
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${correct ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>
-                    {correct ? '적중' : '실패'}
+                    {correct ? t('적중', 'Hit') : t('실패', 'Miss')}
                   </span>
                 )}
               </div>
               <div className="mt-1.5 flex items-center justify-between text-sm">
                 <span className="text-gray-300">
-                  예측 승자 <b className="text-[#A3FF4C]">{predLabel}</b>
+                  {t('예측 승자', 'Predicted Winner')} <b className="text-[#A3FF4C]">{predLabel}</b>
                 </span>
                 {match.predictedScoreHome != null && match.predictedScoreAway != null && (
                   <span className="text-gray-400 text-xs">
-                    예측 스코어 {match.predictedScoreHome} : {match.predictedScoreAway}
+                    {t('예측 스코어', 'Predicted Score')} {match.predictedScoreHome} : {match.predictedScoreAway}
                   </span>
                 )}
               </div>
@@ -175,13 +183,13 @@ export default function FootballResultModal({ match, onClose }: Props) {
 
         {/* 경기 통계 */}
         <div className="px-4 pb-5">
-          <div className="text-xs text-gray-400 mb-2">경기 통계</div>
+          <div className="text-xs text-gray-400 mb-2">{t('경기 통계', 'Match Stats')}</div>
           {loadingStats ? (
             <div className="flex justify-center py-4">
               <span className="h-6 w-6 animate-spin rounded-full border-2 border-gray-700 border-t-emerald-400" />
             </div>
           ) : visibleRows.length === 0 ? (
-            <p className="text-center text-sm text-gray-500 py-4">통계 정보가 없습니다</p>
+            <p className="text-center text-sm text-gray-500 py-4">{t('통계 정보가 없습니다', 'No stats available')}</p>
           ) : (
             <div className="space-y-2.5">
               {visibleRows.map((row) => {
@@ -195,7 +203,7 @@ export default function FootballResultModal({ match, onClose }: Props) {
                   <div key={row.key}>
                     <div className="flex justify-between text-xs mb-1">
                       <span className="text-white font-medium">{dispVal(h)}</span>
-                      <span className="text-gray-400">{row.label}</span>
+                      <span className="text-gray-400">{isEn ? row.labelEn : row.labelKo}</span>
                       <span className="text-white font-medium">{dispVal(a)}</span>
                     </div>
                     <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-800">
