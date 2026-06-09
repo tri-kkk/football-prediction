@@ -1,15 +1,15 @@
 // scripts/backfill_npb_pitcher_english.mjs
 //
-// NPB 매치의 home_pitcher / away_pitcher(영문) 컬럼 백필.
-// - 대상: baseball_matches WHERE league='NPB' AND (home_pitcher IS NULL AND home_pitcher_ko IS NOT NULL)
+// NPB/KBO 매치의 home_pitcher / away_pitcher(영문) 컬럼 백필.
+// - 대상: baseball_matches WHERE league=<리그> AND (home_pitcher IS NULL AND home_pitcher_ko IS NOT NULL)
 //   또는 away_pitcher 쪽 동일 조건
-// - 방식: 한국어 표기 → Claude Haiku로 일본 이름(헵번 로마자) 변환 → DB UPDATE
+// - 방식: 한국어 표기 → Claude Haiku로 영문 변환 → DB UPDATE
 // - 배치: 한 번 호출에 30명까지 묶음 (토큰 비용·시간 최적화)
 //
 // 사용 (Node 20.6+ 내장 --env-file 옵션 사용):
-//   node --env-file=.env.local scripts/backfill_npb_pitcher_english.mjs --dry-run --limit 10
-//   node --env-file=.env.local scripts/backfill_npb_pitcher_english.mjs
-//   node --env-file=.env.local scripts/backfill_npb_pitcher_english.mjs --limit 100
+//   node --env-file=.env.local scripts/backfill_npb_pitcher_english.mjs --dry-run --limit 10            # NPB (기본)
+//   node --env-file=.env.local scripts/backfill_npb_pitcher_english.mjs --league KBO --dry-run --limit 10
+//   node --env-file=.env.local scripts/backfill_npb_pitcher_english.mjs --league KBO
 //
 // 환경변수 (.env.local 또는 셸 환경):
 //   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY
@@ -37,10 +37,17 @@ const args = process.argv.slice(2)
 const DRY_RUN = args.includes('--dry-run')
 const limitIdx = args.indexOf('--limit')
 const LIMIT = limitIdx >= 0 ? parseInt(args[limitIdx + 1], 10) : null
+const leagueIdx = args.indexOf('--league')
+const LEAGUE = leagueIdx >= 0 ? args[leagueIdx + 1].toUpperCase() : 'NPB'
 
-console.log(`🚀 NPB 투수 영문 백필 시작 ${DRY_RUN ? '(DRY RUN)' : ''}${LIMIT ? ` [limit=${LIMIT}]` : ''}`)
+if (!['NPB', 'KBO'].includes(LEAGUE)) {
+  console.error(`❌ --league는 NPB 또는 KBO. 입력: ${LEAGUE}`)
+  process.exit(1)
+}
 
-// 1) 대상 매치 가져오기 — NPB 전체에서 한쪽 ko가 있는 행만 (페이지네이션)
+console.log(`🚀 ${LEAGUE} 투수 영문 백필 시작 ${DRY_RUN ? '(DRY RUN)' : ''}${LIMIT ? ` [limit=${LIMIT}]` : ''}`)
+
+// 1) 대상 매치 가져오기 — 리그 전체에서 한쪽 ko가 있는 행만 (페이지네이션)
 const ALL_ROWS = []
 const PAGE = 1000
 let offset = 0
@@ -48,7 +55,7 @@ while (true) {
   const { data, error: fetchErr } = await supabase
     .from('baseball_matches')
     .select('id, api_match_id, match_date, home_team, away_team, home_pitcher, home_pitcher_ko, away_pitcher, away_pitcher_ko')
-    .eq('league', 'NPB')
+    .eq('league', LEAGUE)
     .order('match_date', { ascending: false })
     .range(offset, offset + PAGE - 1)
   if (fetchErr) {
@@ -102,7 +109,7 @@ let rows = ALL_ROWS.filter(r =>
   ((!r.away_pitcher || r.away_pitcher === '') && r.away_pitcher_ko)
 )
 if (LIMIT) rows = rows.slice(0, LIMIT)
-console.log(`📋 전체 NPB ${ALL_ROWS.length}건 → 변환 대상 ${rows.length}건${LIMIT ? ` (limit=${LIMIT})` : ''}`)
+console.log(`📋 전체 ${LEAGUE} ${ALL_ROWS.length}건 → 변환 대상 ${rows.length}건${LIMIT ? ` (limit=${LIMIT})` : ''}`)
 
 // 2) unique 한글 투수명 추출 (중복 제거)
 const koreanNames = new Set()
@@ -126,13 +133,27 @@ for (let i = 0; i < uniqueList.length; i += BATCH) {
   const chunk = uniqueList.slice(i, i + BATCH)
   console.log(`\n🤖 Claude 변환 ${i + 1} ~ ${i + chunk.length} / ${uniqueList.length}`)
 
-  const prompt = `다음은 NPB(일본 프로야구) 투수의 한국어 표기 이름 목록입니다. 각 이름을 영문(헵번 로마자, 영어권 NPB 보도 기준 표기)으로 변환해 주세요.
+  const prompt = LEAGUE === 'NPB'
+    ? `다음은 NPB(일본 프로야구) 투수의 한국어 표기 이름 목록입니다. 각 이름을 영문(헵번 로마자, 영어권 NPB 보도 기준 표기)으로 변환해 주세요.
 
 규칙:
 - 일본 이름 순서는 "FirstName LastName" (영어식). 예: "야마모토 요시노부" → "Yoshinobu Yamamoto"
 - 외국인 선수는 본인 영문 등록명 그대로. 예: "쿠리 아렌" → "Aren Kuri" (성·이름 영어권 순서)
 - 정확한 영문 등록명을 모르겠으면 한국어 발음을 최대한 헵번 로마자로 변환
 - 공백 1개로 first/last 구분
+- JSON만 출력, 다른 텍스트/마크다운 금지
+
+입력: ${JSON.stringify(chunk)}
+
+출력 형식: {"이름1": "English Name 1", "이름2": "English Name 2", ...}`
+    : `다음은 KBO(한국 프로야구) 투수의 한국어 이름 목록입니다. 각 이름을 영문(공식 KBO 영문 표기 또는 RR 로마자 표기법)으로 변환해 주세요.
+
+규칙:
+- 한국 이름은 "FirstName LastName" (영어식 순서). 예: "안권수" → "Kwon-soo Ahn", "양현종" → "Hyun-jong Yang"
+- 성과 이름 사이 공백 1개. 한국 이름의 first name(이름)은 두 글자면 하이픈으로 연결: "Hyun-jong"
+- 외국인 선수는 본인 영문 등록명 그대로. 예: "라이언 라이블리" → "Ryan Lively"
+- KBO 공식 사이트나 영문 보도 기준 표기를 우선
+- 모르면 RR(개정 로마자 표기법, Revised Romanization) 기준
 - JSON만 출력, 다른 텍스트/마크다운 금지
 
 입력: ${JSON.stringify(chunk)}

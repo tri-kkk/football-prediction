@@ -13,11 +13,116 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import Anthropic from '@anthropic-ai/sdk'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+// 🌐 KBO 한국어 투수명 → 영문(RR 로마자/공식 등록명) 변환 (Claude Haiku)
+async function backfillKboPitcherEnglish(): Promise<{ translated: number; failed: number; skipped: boolean }> {
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
+  if (!ANTHROPIC_KEY) {
+    console.warn('[kbo-english] ANTHROPIC_API_KEY 없음 — 영문 변환 skip')
+    return { translated: 0, failed: 0, skipped: true }
+  }
+
+  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const { data: rawRows, error } = await supabase
+    .from('baseball_matches')
+    .select('id, home_pitcher, home_pitcher_ko, away_pitcher, away_pitcher_ko')
+    .eq('league', 'KBO')
+    .gte('match_date', cutoff)
+    .limit(500)
+
+  if (error) {
+    console.warn('[kbo-english] fetch error:', error.message)
+    return { translated: 0, failed: 0, skipped: true }
+  }
+  const rows = (rawRows || []).filter(r =>
+    (!r.home_pitcher && r.home_pitcher_ko) || (!r.away_pitcher && r.away_pitcher_ko)
+  ).slice(0, 100)
+  if (rows.length === 0) {
+    return { translated: 0, failed: 0, skipped: false }
+  }
+
+  const koreanNames = new Set<string>()
+  for (const r of rows) {
+    if (!r.home_pitcher && r.home_pitcher_ko) koreanNames.add(r.home_pitcher_ko.trim())
+    if (!r.away_pitcher && r.away_pitcher_ko) koreanNames.add(r.away_pitcher_ko.trim())
+  }
+  const uniqueList = Array.from(koreanNames).filter(Boolean)
+  if (uniqueList.length === 0) return { translated: 0, failed: 0, skipped: false }
+
+  console.log(`[kbo-english] 변환 대상 매치 ${rows.length}건 / unique 이름 ${uniqueList.length}명`)
+
+  const anthropic = new Anthropic({ apiKey: ANTHROPIC_KEY })
+  const map: Record<string, string> = {}
+  const BATCH = 30
+
+  for (let i = 0; i < uniqueList.length; i += BATCH) {
+    const chunk = uniqueList.slice(i, i + BATCH)
+    const prompt = `다음은 KBO(한국 프로야구) 투수의 한국어 이름 목록입니다. 각 이름을 영문(공식 KBO 영문 표기 또는 RR 로마자)으로 변환해 주세요.
+
+규칙:
+- 한국 이름은 "FirstName LastName" 영어식 순서. 예: "안권수" → "Kwon-soo Ahn", "양현종" → "Hyun-jong Yang"
+- 한국 이름의 first name이 두 글자면 하이픈 연결: "Hyun-jong"
+- 외국인 선수는 본인 영문 등록명. 예: "라이언 라이블리" → "Ryan Lively"
+- KBO 공식/영문 보도 기준 표기 우선, 모르면 RR 로마자
+- JSON만 출력, 다른 텍스트/마크다운 금지
+
+입력: ${JSON.stringify(chunk)}
+
+출력 형식: {"한글이름1": "English Name 1", ...}`
+
+    try {
+      const res = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }],
+      })
+      const text = res.content[0]?.type === 'text' ? res.content[0].text : ''
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        console.warn(`[kbo-english] JSON parse 실패 (chunk ${i}):`, text.slice(0, 200))
+        continue
+      }
+      const parsed = JSON.parse(jsonMatch[0])
+      for (const [ko, en] of Object.entries(parsed)) {
+        if (typeof en === 'string' && en.trim()) map[ko] = en.trim()
+      }
+    } catch (e) {
+      console.error(`[kbo-english] Claude batch ${i} 실패:`, (e as Error).message)
+    }
+  }
+
+  let translated = 0
+  let failed = 0
+  for (const r of rows) {
+    const update: Record<string, any> = {}
+    if (!r.home_pitcher && r.home_pitcher_ko && map[r.home_pitcher_ko.trim()]) {
+      update.home_pitcher = map[r.home_pitcher_ko.trim()]
+    }
+    if (!r.away_pitcher && r.away_pitcher_ko && map[r.away_pitcher_ko.trim()]) {
+      update.away_pitcher = map[r.away_pitcher_ko.trim()]
+    }
+    if (Object.keys(update).length === 0) continue
+    const { error: updErr } = await supabase
+      .from('baseball_matches')
+      .update(update)
+      .eq('id', r.id)
+    if (updErr) {
+      failed++
+      console.warn(`[kbo-english] update 실패 id=${r.id}:`, updErr.message)
+    } else {
+      translated++
+    }
+  }
+
+  console.log(`[kbo-english] 완료: translated=${translated}, failed=${failed}`)
+  return { translated, failed, skipped: false }
+}
 
 // ===================================================================
 // 1. KBO 팀명 매핑
@@ -778,6 +883,17 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ KBO Sync Done — Pitchers: ${updatedPitchers}, Stats: ${updatedStats}, MatchStats: ${updatedMatchStats}`)
 
+    // 🌐 KBO 한국어 투수명 → 영문 자동 변환 (dry 모드면 skip)
+    let englishBackfill: { translated: number; failed: number; skipped: boolean } | undefined
+    if (!isDry) {
+      try {
+        englishBackfill = await backfillKboPitcherEnglish()
+      } catch (e: any) {
+        console.warn('[kbo-english] 변환 step 전체 실패:', e.message)
+        englishBackfill = { translated: 0, failed: 0, skipped: true }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       date,
@@ -794,6 +910,7 @@ export async function GET(request: NextRequest) {
         results: statsResults,
       },
       matchStatsUpdated: updatedMatchStats,
+      englishBackfill,
     })
   } catch (error: any) {
     console.error('❌ KBO sync error:', error)
