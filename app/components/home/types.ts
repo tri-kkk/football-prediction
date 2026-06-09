@@ -10,6 +10,7 @@ export interface UnifiedMatch {
   sport: Sport
   league: string         // PL, PD, KBO, MLB, NPB...
   leagueName?: string    // 표시용 (야구 응답에 있음)
+  leagueNameEn?: string  // 영문 표시용 (odds-from-db 응답 nameEn 매핑)
   leagueLogo?: string    // 리그 엠블럼 이미지 URL
 
   // 시간

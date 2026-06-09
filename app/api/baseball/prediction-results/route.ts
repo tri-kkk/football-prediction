@@ -18,6 +18,11 @@ export async function GET(request: NextRequest) {
   const days = Math.min(60, Math.max(1, parseInt(searchParams.get('days') || '14', 10)))
   const limit = Math.min(30, Math.max(1, parseInt(searchParams.get('limit') || '8', 10)))
   const leagueParam = (searchParams.get('league') || 'ALL').toUpperCase() // ALL | MLB | KBO | NPB
+  // 🌐 language=en|ko (lang fallback) — en이면 영문 팀명 우선
+  const langParam = (searchParams.get('language') ?? searchParams.get('lang') ?? 'ko').toLowerCase()
+  const isEn = langParam === 'en'
+  const pickName = (en: string | null | undefined, ko: string | null | undefined) =>
+    isEn ? (en || ko || '') : (ko || en || '')
 
   try {
     const now = new Date()
@@ -64,11 +69,11 @@ export async function GET(request: NextRequest) {
       evalGames.push({
         league: m.league,
         date: m.match_date,
-        homeTeam: m.home_team_ko || m.home_team,
-        awayTeam: m.away_team_ko || m.away_team,
+        homeTeam: pickName(m.home_team, m.home_team_ko),
+        awayTeam: pickName(m.away_team, m.away_team_ko),
         homeScore: m.home_score,
         awayScore: m.away_score,
-        pickedTeam: predHome ? m.home_team_ko || m.home_team : m.away_team_ko || m.away_team,
+        pickedTeam: predHome ? pickName(m.home_team, m.home_team_ko) : pickName(m.away_team, m.away_team_ko),
         confidence: Math.round(Math.max(o.ai_home_win_prob, o.ai_away_win_prob)),
         grade: o.ai_grade ?? null,
         correct,

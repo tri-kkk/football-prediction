@@ -90,7 +90,7 @@ export default function PredictionTrackRecord({ locale = 'ko' }: { locale?: stri
   useEffect(() => {
     let cancel = false
     setLoading(true)
-    fetch(`/api/baseball/prediction-results?days=7&limit=6&league=${league}`)
+    fetch(`/api/baseball/prediction-results?days=7&limit=6&league=${league}${isKo ? '' : '&language=en'}`)
       .then((r) => r.json())
       .then((j) => {
         if (cancel || !j?.success) return
@@ -107,7 +107,7 @@ export default function PredictionTrackRecord({ locale = 'ko' }: { locale?: stri
     return () => {
       cancel = true
     }
-  }, [league])
+  }, [league, isKo])
 
   // 첫 로드 전 또는 데이터 없음 → 숨김
   if (!firstLoaded) return null

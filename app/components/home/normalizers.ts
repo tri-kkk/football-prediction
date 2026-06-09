@@ -51,6 +51,7 @@ export function normalizeFootballMatch(m: any): UnifiedMatch {
     sport: 'football',
     league: m.league_code ?? 'UNKNOWN',
     leagueName: m.leagueName,
+    leagueNameEn: m.leagueNameEn,
     leagueLogo: m.leagueLogo,
     date: (m.commence_time ?? '').slice(0, 10),
     time: m.commence_time ? new Date(m.commence_time).toISOString().slice(11, 16) : null,
