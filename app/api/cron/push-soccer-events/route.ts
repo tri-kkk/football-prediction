@@ -388,22 +388,36 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 변화 있는 매치만 병렬 upsert (Promise.all)
+    // 변화 있는 매치만 병렬 upsert (명시적 async/await)
+    let upsertOk = 0
+    let upsertFail = 0
+    let firstUpsertErr: string | null = null
+
     if (statesToUpsert.length > 0) {
       const results = await Promise.all(
-        statesToUpsert.map((row) =>
-          supabase
-            .from('match_event_state')
-            .upsert(row, { onConflict: 'match_id,sport' })
-            .then((r) => r.error)
-            .catch((e) => e as Error)
-        )
+        statesToUpsert.map(async (row) => {
+          try {
+            const { error } = await supabase
+              .from('match_event_state')
+              .upsert(row, { onConflict: 'match_id,sport' })
+            return error
+          } catch (e: any) {
+            return new Error(e?.message ?? String(e))
+          }
+        })
       )
-      const errs = results.filter(Boolean)
-      if (errs.length) {
+      for (const e of results) {
+        if (e) {
+          upsertFail++
+          if (!firstUpsertErr) firstUpsertErr = (e as any)?.message ?? String(e)
+        } else {
+          upsertOk++
+        }
+      }
+      if (upsertFail > 0) {
         console.warn(
-          `[push-soccer] ${errs.length}/${statesToUpsert.length} state upsert errors. First:`,
-          (errs[0] as any)?.message ?? String(errs[0])
+          `[push-soccer] state upsert: ${upsertOk} ok / ${upsertFail} fail. First err:`,
+          firstUpsertErr
         )
       }
     }
@@ -411,6 +425,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       matches: matches.length,
+      prevStatesCount: prevStates?.length ?? 0,
+      statesToUpsert: statesToUpsert.length,
+      stateUpsertOk: upsertOk,
+      stateUpsertFail: upsertFail,
+      firstUpsertErr,
       events: totalEvents,
       sent: totalSent,
       failed: totalFailed,
