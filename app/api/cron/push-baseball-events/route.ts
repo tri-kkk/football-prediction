@@ -130,15 +130,11 @@ function detectEvents(
     return detected
   }
 
-  // 1. firstPitch — NS → 라이브성 상태 (IN1만, 큰 점프는 가드 3에서 별도 처리)
+  // 1. firstPitch — NS → 라이브성 상태
+  // 🔁 v2: score/inningChange/homerun 등 풍부한 이벤트는 push-rich-events(events 테이블)가 담당
+  //       이 라우트는 매치 상태 기반 firstPitch/gameEnd만 발송
   if (prevStatus === 'NS' && isLiveBaseballStatus(match.status)) {
-    // 🛡️ 가드 3: 큰 inning 점프(NS → IN3+)는 cron 다운타임 catch-up
-    // firstPitch만 발송, inningChange/score 알림은 skip (false-positive 폭주 방지)
-    const inningNum = currentInning ? parseInt(currentInning, 10) : 1
     detected.push({ event: 'firstPitch', ctx: baseCtx })
-    if (inningNum > 2) {
-      return detected // IN3+ 진입은 firstPitch 1개만
-    }
   }
 
   // 2. gameEnd — 미종료 → 종료
@@ -149,31 +145,11 @@ function detectEvents(
     detected.push({ event: 'gameEnd', ctx: baseCtx })
   }
 
-  // 3. inningChange — 이닝 번호 증가 (1 단계씩만, 큰 점프는 skip)
-  if (currentInning && currentInning !== prevInning) {
-    const inningNum = parseInt(currentInning, 10)
-    const prevInningNum = prevInning ? parseInt(prevInning, 10) : 0
-    // 첫 이닝(IN1) 진입은 firstPitch에서 잡았으므로 inningChange는 IN2부터
-    // 또한 점프가 2 이닝 이상이면 catch-up이라 skip (예: IN3 → IN6는 알림 X)
-    if (inningNum > 1 && (prevInningNum === 0 || inningNum - prevInningNum === 1)) {
-      detected.push({ event: 'inningChange', ctx: baseCtx })
-    }
-  }
-
-  // 4. score — home_score 또는 away_score 변화 (1점 차이일 때만 알림)
-  // 큰 점수 점프(catch-up)는 score 알림 skip — false-positive 폭주 방지
-  if (homeScore > prevHome && homeScore - prevHome <= 4) {
-    detected.push({
-      event: 'score',
-      ctx: { ...baseCtx, scoringTeam: 'home' },
-    })
-  }
-  if (awayScore > prevAway && awayScore - prevAway <= 4) {
-    detected.push({
-      event: 'score',
-      ctx: { ...baseCtx, scoringTeam: 'away' },
-    })
-  }
+  // 🔁 v2: 아래 detect는 push-rich-events로 이전됨
+  //   - inningChange (baseball_events.type='inningChange')
+  //   - score (baseball_events.type='score')
+  //   - homerun (baseball_events.type='homerun')
+  // 풍부한 player/inning/detail 정보 포함된 알림으로 발송
 
   return detected
 }

@@ -148,36 +148,11 @@ function detectEvents(
     detected.push({ event: 'fulltime', ctx: baseCtx })
   }
 
-  // 2. events 배열 diff (goal/card/subst)
-  const seen = new Set(prevEventIds)
-  for (const e of match.events ?? []) {
-    const id = `${e.time}-${e.type}-${e.player}-${e.team}`
-    if (seen.has(id)) continue
-    seen.add(id)
-
-    let pushEvent: SoccerEvent | null = null
-    if (e.type === 'goal') pushEvent = 'goal'
-    else if (e.type === 'card') {
-      pushEvent = (e.detail ?? '').toLowerCase().includes('red')
-        ? 'redCard'
-        : 'yellowCard'
-    } else if (e.type === 'subst') {
-      pushEvent = 'substitution'
-    }
-
-    if (pushEvent) {
-      detected.push({
-        event: pushEvent,
-        eventId: id,
-        ctx: {
-          ...baseCtx,
-          elapsed: e.time,
-          player: e.player,
-          scoringTeam: e.team,
-        },
-      })
-    }
-  }
+  // 🔁 v2: goal/yellowCard/redCard/substitution detect는 push-rich-events(football_events 테이블)로 이전
+  //   - api-football /fixtures/events에서 sync-football-events cron이 적재
+  //   - push-rich-events가 player/assist/minute 포함된 풍부한 메시지로 발송
+  //   - 이 라우트는 매치 상태 기반 kickoff/halftime/fulltime만 담당
+  void prevEventIds // 사용 안 함 — 호환을 위해 state는 유지
 
   return detected
 }
