@@ -149,20 +149,31 @@ interface DBMatch {
   status: string
 }
 
-async function fetchLiveFeed(gamePk: number): Promise<MlbPlay[]> {
+// feed/live 결과 + 응답의 teams.home/away 이름 반환 (gamePk 검증용)
+async function fetchLiveFeed(gamePk: number): Promise<{
+  plays: MlbPlay[]
+  homeTeamName: string | null
+  awayTeamName: string | null
+  gameState: string | null
+}> {
   try {
     const res = await fetch(`${MLB_API}/game/${gamePk}/feed/live`, {
       signal: AbortSignal.timeout(8000),
     })
     if (!res.ok) {
       console.warn(`[sync-baseball-events] feed/live failed gamePk=${gamePk}:`, res.status)
-      return []
+      return { plays: [], homeTeamName: null, awayTeamName: null, gameState: null }
     }
     const data = await res.json()
-    return data?.liveData?.plays?.allPlays ?? []
+    return {
+      plays: data?.liveData?.plays?.allPlays ?? [],
+      homeTeamName: data?.gameData?.teams?.home?.name ?? null,
+      awayTeamName: data?.gameData?.teams?.away?.name ?? null,
+      gameState: data?.gameData?.status?.abstractGameState ?? null,
+    }
   } catch (e) {
     console.warn(`[sync-baseball-events] feed/live error gamePk=${gamePk}:`, (e as Error).message)
-    return []
+    return { plays: [], homeTeamName: null, awayTeamName: null, gameState: null }
   }
 }
 
@@ -315,6 +326,8 @@ export async function GET(_req: NextRequest) {
     let eventsSkipped = 0
     let processed = 0
 
+    let mismatchedReset = 0
+
     // 2) 각 매치별 feed/live 가져와 events 적재 (mlb_game_pk 있는 매치만)
     const CONCURRENCY = 5
     for (let i = 0; i < liveMatches.length; i += CONCURRENCY) {
@@ -322,14 +335,40 @@ export async function GET(_req: NextRequest) {
       await Promise.all(
         chunk.map(async (m) => {
           // 기존 mlb_game_pk 또는 방금 backfill한 값 사용
-          const gamePk = m.mlb_game_pk ?? backfillMap.get(m.api_match_id) ?? null
+          let gamePk = m.mlb_game_pk ?? backfillMap.get(m.api_match_id) ?? null
           if (!gamePk) return
 
-          const plays = await fetchLiveFeed(gamePk)
-          if (plays.length === 0) return
+          const feed = await fetchLiveFeed(gamePk)
 
-          const eventRows = playsToEventRows(m.api_match_id, plays)
-          const inningRows = detectInningChangeRows(m.api_match_id, plays)
+          // 🛡️ 검증: feed/live 응답의 teams.home/away가 DB 매치와 일치하는지 확인
+          //   불일치면 잘못 매핑된 케이스 — mlb_game_pk 리셋 후 재매핑 시도
+          const feedHomeNorm = normalizeTeamName(feed.homeTeamName)
+          const feedAwayNorm = normalizeTeamName(feed.awayTeamName)
+          const dbHomeNorm = normalizeTeamName(m.home_team)
+          const dbAwayNorm = normalizeTeamName(m.away_team)
+          const teamsMatch =
+            feedHomeNorm && feedAwayNorm &&
+            feedHomeNorm === dbHomeNorm && feedAwayNorm === dbAwayNorm
+
+          if (!teamsMatch) {
+            console.warn(
+              `[sync-baseball-events] mlb_game_pk 불일치 match=${m.api_match_id} ` +
+              `(DB: ${m.home_team} vs ${m.away_team} / feed: ${feed.homeTeamName} vs ${feed.awayTeamName}) ` +
+              `→ 리셋 후 재매핑`,
+            )
+            // 잘못된 mlb_game_pk 리셋 (다음 cron에서 재매핑됨)
+            await supabase
+              .from('baseball_matches')
+              .update({ mlb_game_pk: null })
+              .eq('id', m.id)
+            mismatchedReset++
+            return
+          }
+
+          if (feed.plays.length === 0) return
+
+          const eventRows = playsToEventRows(m.api_match_id, feed.plays)
+          const inningRows = detectInningChangeRows(m.api_match_id, feed.plays)
           const rows = [...eventRows, ...inningRows]
           if (rows.length === 0) return
 
@@ -355,6 +394,7 @@ export async function GET(_req: NextRequest) {
       liveGames: liveMatches.length,
       backfilled,
       processed,
+      mismatchedReset,
       eventsInserted,
       eventsSkipped,
       elapsedMs: Date.now() - startedAt,
