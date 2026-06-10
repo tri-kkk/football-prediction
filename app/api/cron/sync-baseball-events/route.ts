@@ -46,8 +46,8 @@ function normalizeTeamName(name: string | null | undefined): string {
     .trim()
 }
 
-// MLB Stats API schedule → 그날 게임들의 gamePk + teams 매핑
-async function fetchMlbSchedule(date: string): Promise<Array<{ gamePk: number; home: string; away: string }>> {
+// MLB Stats API schedule → 그날 게임들의 gamePk + teams + gameState 매핑
+async function fetchMlbSchedule(date: string): Promise<Array<{ gamePk: number; home: string; away: string; gameState: string }>> {
   try {
     const res = await fetch(
       `${MLB_API_V1}/schedule?sportId=1&date=${date}`,
@@ -60,11 +60,27 @@ async function fetchMlbSchedule(date: string): Promise<Array<{ gamePk: number; h
       gamePk: g.gamePk,
       home: g.teams?.home?.team?.name ?? '',
       away: g.teams?.away?.team?.name ?? '',
+      gameState: g.status?.abstractGameState ?? '',
     })).filter((g) => g.gamePk)
   } catch (e) {
     console.warn('[sync-baseball-events] schedule fetch failed:', (e as Error).message)
     return []
   }
+}
+
+// 오늘+어제 schedule에서 abstractGameState='Live' 게임의 gamePk 집합 반환
+async function fetchLiveGamePks(): Promise<Set<number>> {
+  const today = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+  const [todayGames, yesterdayGames] = await Promise.all([
+    fetchMlbSchedule(today),
+    fetchMlbSchedule(yesterday),
+  ])
+  const liveSet = new Set<number>()
+  for (const g of [...todayGames, ...yesterdayGames]) {
+    if (g.gameState === 'Live') liveSet.add(g.gamePk)
+  }
+  return liveSet
 }
 
 // mlb_game_pk 없는 라이브 매치들에 매핑 채워줌
@@ -319,21 +335,48 @@ export async function GET(_req: NextRequest) {
   const startedAt = Date.now()
 
   try {
-    // 1) 라이브 MLB 매치 (status가 IN1~IN15) 가져옴 — mlb_game_pk 비어도 일단 가져와서 backfill 시도
-    const { data: liveMatches, error } = await supabase
+    // 0) MLB 공식 schedule에서 진짜 라이브 게임 gamePk 집합 (status=Live)
+    //    우리 DB가 NS/IN%으로 잘못 표시된 stale 매치도 정정하기 위해 schedule 신뢰
+    const liveGamePks = await fetchLiveGamePks()
+
+    // 1) 라이브 매치 대상: status가 IN% (정상 표시) ∪ mlb_game_pk가 schedule Live에 포함된 매치 (stale 정정)
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+
+    // 1-a) DB에 IN% 표시된 매치
+    const { data: inMatches, error: e1 } = await supabase
       .from('baseball_matches')
       .select('id, api_match_id, mlb_game_pk, match_date, home_team, away_team, status')
       .eq('league', 'MLB')
       .like('status', 'IN%')
+      .gte('match_date', yesterday)
       .limit(50)
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    if (e1) {
+      return NextResponse.json({ success: false, error: e1.message }, { status: 500 })
     }
+
+    // 1-b) schedule이 Live라고 알려준 gamePk와 매핑된 매치 (NS로 잘못 stale된 매치 포함)
+    let scheduleLiveMatches: any[] = []
+    if (liveGamePks.size > 0) {
+      const { data, error: e2 } = await supabase
+        .from('baseball_matches')
+        .select('id, api_match_id, mlb_game_pk, match_date, home_team, away_team, status')
+        .eq('league', 'MLB')
+        .in('mlb_game_pk', Array.from(liveGamePks))
+        .gte('match_date', yesterday)
+      if (e2) console.warn('[sync-baseball-events] schedule 매치 조회 실패:', e2.message)
+      else scheduleLiveMatches = data ?? []
+    }
+
+    // union — id 기준 중복 제거
+    const merged = new Map<number, any>()
+    for (const m of [...(inMatches ?? []), ...scheduleLiveMatches]) merged.set(m.id, m)
+    const liveMatches = Array.from(merged.values())
+
     if (!liveMatches || liveMatches.length === 0) {
       return NextResponse.json({
         success: true,
         liveGames: 0,
+        liveGamePksFromSchedule: liveGamePks.size,
         backfilled: 0,
         eventsInserted: 0,
         eventsSkipped: 0,
