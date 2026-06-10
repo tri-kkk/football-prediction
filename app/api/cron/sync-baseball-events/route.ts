@@ -47,7 +47,7 @@ function normalizeTeamName(name: string | null | undefined): string {
 }
 
 // MLB Stats API schedule → 그날 게임들의 gamePk + teams + gameState 매핑
-async function fetchMlbSchedule(date: string): Promise<Array<{ gamePk: number; home: string; away: string; gameState: string }>> {
+async function fetchMlbSchedule(date: string): Promise<Array<{ gamePk: number; home: string; away: string; gameState: string; gameDate: string }>> {
   try {
     const res = await fetch(
       `${MLB_API_V1}/schedule?sportId=1&date=${date}`,
@@ -61,6 +61,7 @@ async function fetchMlbSchedule(date: string): Promise<Array<{ gamePk: number; h
       home: g.teams?.home?.team?.name ?? '',
       away: g.teams?.away?.team?.name ?? '',
       gameState: g.status?.abstractGameState ?? '',
+      gameDate: g.gameDate ?? '',
     })).filter((g) => g.gamePk)
   } catch (e) {
     console.warn('[sync-baseball-events] schedule fetch failed:', (e as Error).message)
@@ -91,8 +92,14 @@ async function backfillGamePks(matches: any[]): Promise<Map<number, number>> {
   if (missing.length === 0) return result
 
   // 날짜별로 그룹핑 (schedule 호출 최소화)
+  // ⚠️ 우리 match_date는 KST 기준이라 미국 저녁 경기는 MLB 스케줄(미국 날짜)에선 전날에 있음.
+  //    → match_date 와 그 전날을 모두 조회해 매칭한다.
+  const prevDay = (d: string) => new Date(new Date(d).getTime() - 86_400_000).toISOString().slice(0, 10)
   const datesSet = new Set<string>()
-  for (const m of missing) datesSet.add(m.match_date)
+  for (const m of missing) {
+    datesSet.add(m.match_date)
+    datesSet.add(prevDay(m.match_date))
+  }
 
   // 날짜별 schedule 가져옴
   const dateSchedules = new Map<string, Array<{ gamePk: number; home: string; away: string }>>()
@@ -101,13 +108,16 @@ async function backfillGamePks(matches: any[]): Promise<Map<number, number>> {
     dateSchedules.set(d, games)
   }
 
-  // 매핑: 날짜 + (home/away team) 일치하는 게임 찾음
+  // 매핑: (match_date 또는 전날) + (home/away team) 일치하는 게임 찾음
   const updates: Array<{ id: number; gamePk: number }> = []
   for (const m of missing) {
-    const games = dateSchedules.get(m.match_date) ?? []
     const home = normalizeTeamName(m.home_team)
     const away = normalizeTeamName(m.away_team)
-    const found = games.find(
+    const candidateGames = [
+      ...(dateSchedules.get(m.match_date) ?? []),
+      ...(dateSchedules.get(prevDay(m.match_date)) ?? []),
+    ]
+    const found = candidateGames.find(
       (g) => normalizeTeamName(g.home) === home && normalizeTeamName(g.away) === away,
     )
     if (found) {
@@ -160,6 +170,7 @@ interface DBMatch {
   api_match_id: number
   mlb_game_pk: number | null
   match_date: string
+  match_timestamp?: string | null
   home_team: string
   away_team: string
   status: string
@@ -212,7 +223,7 @@ async function fetchLiveFeed(gamePk: number): Promise<{
 function mapGameStateToStatus(gameState: string | null, inning: number | null): string | null {
   if (gameState === 'Final') return 'FT'
   if (gameState === 'Preview') return 'NS'
-  if (gameState === 'Live' && inning != null) return `IN${inning}`
+  if (gameState === 'Live') return inning != null ? `IN${inning}` : 'LIVE' // 이닝 파싱 실패해도 라이브로 갱신(NS 박힘 방지)
   return null
 }
 
@@ -345,7 +356,7 @@ export async function GET(_req: NextRequest) {
     // 1-a) DB에 IN% 표시된 매치
     const { data: inMatches, error: e1 } = await supabase
       .from('baseball_matches')
-      .select('id, api_match_id, mlb_game_pk, match_date, home_team, away_team, status')
+      .select('id, api_match_id, mlb_game_pk, match_date, match_timestamp, home_team, away_team, status')
       .eq('league', 'MLB')
       .like('status', 'IN%')
       .gte('match_date', yesterday)
@@ -359,7 +370,7 @@ export async function GET(_req: NextRequest) {
     if (liveGamePks.size > 0) {
       const { data, error: e2 } = await supabase
         .from('baseball_matches')
-        .select('id, api_match_id, mlb_game_pk, match_date, home_team, away_team, status')
+        .select('id, api_match_id, mlb_game_pk, match_date, match_timestamp, home_team, away_team, status')
         .eq('league', 'MLB')
         .in('mlb_game_pk', Array.from(liveGamePks))
         .gte('match_date', yesterday)
@@ -367,9 +378,22 @@ export async function GET(_req: NextRequest) {
       else scheduleLiveMatches = data ?? []
     }
 
+    // 1-c) 시작 시간이 지났는데 아직 종료(FT 등) 처리 안 된 MLB 경기 — stuck NS/부분 점수 최종화
+    //   (MLB 피드는 종료 경기에도 최종 점수를 주므로 여기서 FT+최종점수로 보정됨)
+    const nowIso = new Date().toISOString()
+    const { data: startedMatches, error: e3 } = await supabase
+      .from('baseball_matches')
+      .select('id, api_match_id, mlb_game_pk, match_date, match_timestamp, home_team, away_team, status')
+      .eq('league', 'MLB')
+      .gte('match_date', yesterday)
+      .lte('match_timestamp', nowIso)
+      .not('status', 'in', '(FT,AET,POST,CANC,ABD,AWD,WO)')
+      .limit(40)
+    if (e3) console.warn('[sync-baseball-events] started 매치 조회 실패:', e3.message)
+
     // union — id 기준 중복 제거
     const merged = new Map<number, any>()
-    for (const m of [...(inMatches ?? []), ...scheduleLiveMatches]) merged.set(m.id, m)
+    for (const m of [...(inMatches ?? []), ...scheduleLiveMatches, ...(startedMatches ?? [])]) merged.set(m.id, m)
     const liveMatches = Array.from(merged.values())
 
     if (!liveMatches || liveMatches.length === 0) {
@@ -387,6 +411,46 @@ export async function GET(_req: NextRequest) {
     // 1-b) mlb_game_pk 비어있는 매치들 자동 매핑 (MLB schedule에서 team_name 매칭)
     const backfillMap = await backfillGamePks(liveMatches as DBMatch[])
     const backfilled = backfillMap.size
+
+    // 🩹 1-c) gamePk 시각 보정: 같은 팀이 연속일에 경기하면 팀명만으로는 엉뚱한(다음날 Preview) gamePk가
+    //   매핑될 수 있음 → 팀 + 경기시각(match_timestamp ≈ gameDate)으로 올바른 gamePk를 재해석.
+    let pkTimeFixed = 0
+    {
+      const prevDay = (d: string) => new Date(new Date(d).getTime() - 86_400_000).toISOString().slice(0, 10)
+      const dates = new Set<string>()
+      for (const m of liveMatches) {
+        if (m.match_date) { dates.add(m.match_date); dates.add(prevDay(m.match_date)) }
+      }
+      const sched = new Map<string, Awaited<ReturnType<typeof fetchMlbSchedule>>>()
+      await Promise.all(Array.from(dates).map(async (d) => { sched.set(d, await fetchMlbSchedule(d)) }))
+
+      const pkUpdates: Array<{ id: number; pk: number }> = []
+      for (const m of liveMatches) {
+        if (!m.match_timestamp || !m.match_date) continue
+        const tsMs = new Date(m.match_timestamp).getTime()
+        const home = normalizeTeamName(m.home_team)
+        const away = normalizeTeamName(m.away_team)
+        const cands = [...(sched.get(m.match_date) ?? []), ...(sched.get(prevDay(m.match_date)) ?? [])]
+          .filter((g) => normalizeTeamName(g.home) === home && normalizeTeamName(g.away) === away && g.gameDate)
+        if (cands.length === 0) continue
+        let best = cands[0]
+        let bestDiff = Math.abs(new Date(best.gameDate).getTime() - tsMs)
+        for (const g of cands.slice(1)) {
+          const diff = Math.abs(new Date(g.gameDate).getTime() - tsMs)
+          if (diff < bestDiff) { best = g; bestDiff = diff }
+        }
+        // 경기 시각이 1시간 이내로 일치하는 게임만 신뢰 (연속일 중복 경기 구분)
+        if (bestDiff <= 60 * 60 * 1000 && best.gamePk !== m.mlb_game_pk) {
+          pkUpdates.push({ id: m.id, pk: best.gamePk })
+          m.mlb_game_pk = best.gamePk
+        }
+      }
+      if (pkUpdates.length > 0) {
+        await Promise.all(pkUpdates.map((u) => supabase.from('baseball_matches').update({ mlb_game_pk: u.pk }).eq('id', u.id)))
+        pkTimeFixed = pkUpdates.length
+        console.log(`[sync-baseball-events] gamePk 시각보정 ${pkTimeFixed}건`)
+      }
+    }
 
     let eventsInserted = 0
     let eventsSkipped = 0
@@ -479,6 +543,8 @@ export async function GET(_req: NextRequest) {
       mismatchedReset,
       eventsInserted,
       eventsSkipped,
+      startedCount: startedMatches?.length ?? 0,
+      pkTimeFixed,
       elapsedMs: Date.now() - startedAt,
     })
   } catch (error: any) {
