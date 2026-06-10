@@ -186,6 +186,7 @@ async function fetchLiveFeed(gamePk: number): Promise<{
   inningHalf: string | null              // 'Top' | 'Bottom'
   homeRuns: number | null                // 현재 홈팀 점수
   awayRuns: number | null                // 현재 원정팀 점수
+  inningsArr: Array<{ num: number; home: number | null; away: number | null }> // 이닝별 득점(연장 포함)
 }> {
   try {
     const res = await fetch(`${MLB_API}/game/${gamePk}/feed/live`, {
@@ -195,7 +196,7 @@ async function fetchLiveFeed(gamePk: number): Promise<{
       console.warn(`[sync-baseball-events] feed/live failed gamePk=${gamePk}:`, res.status)
       return {
         plays: [], homeTeamName: null, awayTeamName: null, gameState: null,
-        currentInning: null, inningHalf: null, homeRuns: null, awayRuns: null,
+        currentInning: null, inningHalf: null, homeRuns: null, awayRuns: null, inningsArr: [],
       }
     }
     const data = await res.json()
@@ -207,6 +208,9 @@ async function fetchLiveFeed(gamePk: number): Promise<{
       gameState: data?.gameData?.status?.abstractGameState ?? null,
       currentInning: linescore?.currentInning ?? null,
       inningHalf: linescore?.inningHalf ?? null,
+      inningsArr: Array.isArray(linescore?.innings)
+        ? linescore.innings.map((i: any) => ({ num: i.num, home: i.home?.runs ?? null, away: i.away?.runs ?? null }))
+        : [],
       homeRuns: linescore?.teams?.home?.runs ?? null,
       awayRuns: linescore?.teams?.away?.runs ?? null,
     }
@@ -214,9 +218,32 @@ async function fetchLiveFeed(gamePk: number): Promise<{
     console.warn(`[sync-baseball-events] feed/live error gamePk=${gamePk}:`, (e as Error).message)
     return {
       plays: [], homeTeamName: null, awayTeamName: null, gameState: null,
-      currentInning: null, inningHalf: null, homeRuns: null, awayRuns: null,
+      currentInning: null, inningHalf: null, homeRuns: null, awayRuns: null, inningsArr: [],
     }
   }
+}
+
+// MLB 이닝 배열 → DB inning 포맷 { home:{'1'..'9','extra'}, away:{...} }. 10회+는 extra로 합산.
+function buildInningData(
+  inningsArr: Array<{ num: number; home: number | null; away: number | null }>,
+): { home: Record<string, number | null>; away: Record<string, number | null> } | null {
+  if (!inningsArr || inningsArr.length === 0) return null
+  const home: Record<string, number | null> = {}
+  const away: Record<string, number | null> = {}
+  let extraHome: number | null = null
+  let extraAway: number | null = null
+  for (const i of inningsArr) {
+    if (i.num <= 9) {
+      home[String(i.num)] = i.home
+      away[String(i.num)] = i.away
+    } else {
+      extraHome = (extraHome ?? 0) + (i.home ?? 0)
+      extraAway = (extraAway ?? 0) + (i.away ?? 0)
+    }
+  }
+  home.extra = extraHome
+  away.extra = extraAway
+  return { home, away }
 }
 
 // gameState → 우리 DB status 변환
@@ -378,8 +405,8 @@ export async function GET(_req: NextRequest) {
       else scheduleLiveMatches = data ?? []
     }
 
-    // 1-c) 시작 시간이 지났는데 아직 종료(FT 등) 처리 안 된 MLB 경기 — stuck NS/부분 점수 최종화
-    //   (MLB 피드는 종료 경기에도 최종 점수를 주므로 여기서 FT+최종점수로 보정됨)
+    // 1-c) 시작 시간이 지난 최근 MLB 경기 — status 무관하게 MLB 원본으로 재검증/최종화.
+    //   (api-sports가 FT로 잘못된 점수/9회 데이터를 박은 케이스도 MLB 원본으로 교정)
     const nowIso = new Date().toISOString()
     const { data: startedMatches, error: e3 } = await supabase
       .from('baseball_matches')
@@ -387,7 +414,7 @@ export async function GET(_req: NextRequest) {
       .eq('league', 'MLB')
       .gte('match_date', yesterday)
       .lte('match_timestamp', nowIso)
-      .not('status', 'in', '(FT,AET,POST,CANC,ABD,AWD,WO)')
+      .order('match_timestamp', { ascending: false })
       .limit(40)
     if (e3) console.warn('[sync-baseball-events] started 매치 조회 실패:', e3.message)
 
@@ -502,6 +529,9 @@ export async function GET(_req: NextRequest) {
           if (newStatus && newStatus !== m.status) updateMatch.status = newStatus
           if (feed.homeRuns != null) updateMatch.home_score = feed.homeRuns
           if (feed.awayRuns != null) updateMatch.away_score = feed.awayRuns
+          // 이닝별 스코어(연장 포함) — MLB 원본을 권위로 사용
+          const inningData = buildInningData(feed.inningsArr)
+          if (inningData) updateMatch.inning = inningData
           if (Object.keys(updateMatch).length > 0) {
             updateMatch.updated_at = new Date().toISOString()
             await supabase.from('baseball_matches').update(updateMatch).eq('id', m.id)
