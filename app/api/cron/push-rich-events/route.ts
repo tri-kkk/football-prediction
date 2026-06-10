@@ -23,13 +23,12 @@ import {
   buildEventPayload,
   renderSoccerNotification,
   renderBaseballNotification,
-  toFCMData,
   type Locale,
   type SoccerEvent,
   type BaseballEvent,
   type EventContext,
 } from '@/lib/push-templates'
-import { sendToTokens } from '@/lib/fcm'
+import { sendToTokens, toFCMData } from '@/lib/fcm'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
