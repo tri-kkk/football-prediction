@@ -24,9 +24,10 @@ export interface EventContext {
   awayScore?: number
   elapsed?: number                    // 축구 경기 분 (예: 67)
   inning?: string                     // 야구 이닝 (예: '5', '5T', '5B')
-  player?: string                     // 골/카드 선수명
+  player?: string                     // 골/카드 선수명, 타자명
+  assist?: string                     // 어시스트 선수명 (축구 골)
   scoringTeam?: 'home' | 'away'       // 득점/카드 발생 팀
-  detail?: string                     // 추가 상세 (옵션)
+  detail?: string                     // 'Normal Goal' | 'Penalty' | 'Own Goal' | 야구 'Solo HR' 등
 }
 
 interface NotificationText {
@@ -66,20 +67,35 @@ const SOCCER_TEMPLATES: Record<
     }),
   },
   goal: {
-    ko: (c) => ({
-      title: `⚽ 골! ${scoringTeamLabel(c, 'ko')}`,
-      body:
-        (c.player ? `${c.player} ` : '') +
-        (c.elapsed ? `${c.elapsed}' · ` : '') +
-        `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
-    }),
-    en: (c) => ({
-      title: `⚽ Goal! ${scoringTeamLabel(c, 'en')}`,
-      body:
-        (c.player ? `${c.player} ` : '') +
-        (c.elapsed ? `${c.elapsed}' · ` : '') +
-        `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
-    }),
+    ko: (c) => {
+      // detail 분기: Own Goal / Penalty / Normal Goal
+      const isOwnGoal = c.detail?.toLowerCase().includes('own')
+      const isPenalty = c.detail?.toLowerCase().includes('penalty')
+      const titlePrefix = isOwnGoal ? '⚽ 자책골' : isPenalty ? '⚽ PK 골!' : '⚽ 골!'
+      const playerPart = c.player ? `${c.player}` : ''
+      const assistPart = c.assist && !isOwnGoal ? ` (도움: ${c.assist})` : ''
+      const minutePart = c.elapsed ? ` ${c.elapsed}'` : ''
+      return {
+        title: `${titlePrefix} ${scoringTeamLabel(c, 'ko')}`,
+        body:
+          (playerPart || minutePart ? `${playerPart}${assistPart}${minutePart} · ` : '') +
+          `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
+      }
+    },
+    en: (c) => {
+      const isOwnGoal = c.detail?.toLowerCase().includes('own')
+      const isPenalty = c.detail?.toLowerCase().includes('penalty')
+      const titlePrefix = isOwnGoal ? '⚽ Own Goal' : isPenalty ? '⚽ Penalty Goal!' : '⚽ Goal!'
+      const playerPart = c.player ? `${c.player}` : ''
+      const assistPart = c.assist && !isOwnGoal ? ` (assist: ${c.assist})` : ''
+      const minutePart = c.elapsed ? ` ${c.elapsed}'` : ''
+      return {
+        title: `${titlePrefix} ${scoringTeamLabel(c, 'en')}`,
+        body:
+          (playerPart || minutePart ? `${playerPart}${assistPart}${minutePart} · ` : '') +
+          `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
+      }
+    },
   },
   halftime: {
     ko: (c) => ({

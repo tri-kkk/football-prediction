@@ -213,12 +213,13 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
         ? 'home'
         : 'away'
 
-    // 한·영 context (팀명 분기)
+    // 한·영 context (팀명 분기 + assist 포함)
     const ctxKo: EventContext = {
       homeTeam: match.home_team_ko || match.home_team,
       awayTeam: match.away_team_ko || match.away_team,
       elapsed: e.minute ?? undefined,
       player: e.player_name ?? undefined,
+      assist: e.assist_name ?? undefined,
       scoringTeam,
       detail: e.detail ?? undefined,
     }
@@ -227,6 +228,7 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
       awayTeam: match.away_team,
       elapsed: e.minute ?? undefined,
       player: e.player_name ?? undefined,
+      assist: e.assist_name ?? undefined,
       scoringTeam,
       detail: e.detail ?? undefined,
     }
