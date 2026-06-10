@@ -34,6 +34,83 @@ const supabase = createClient(
 )
 
 const MLB_API = 'https://statsapi.mlb.com/api/v1.1'
+const MLB_API_V1 = 'https://statsapi.mlb.com/api/v1'
+
+// 팀명 정규화 — 비교용 (api-sports vs MLB Stats가 약간씩 표기 다름)
+function normalizeTeamName(name: string | null | undefined): string {
+  if (!name) return ''
+  return name.toLowerCase()
+    .replace(/\./g, '')
+    .replace(/the\s+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// MLB Stats API schedule → 그날 게임들의 gamePk + teams 매핑
+async function fetchMlbSchedule(date: string): Promise<Array<{ gamePk: number; home: string; away: string }>> {
+  try {
+    const res = await fetch(
+      `${MLB_API_V1}/schedule?sportId=1&date=${date}`,
+      { signal: AbortSignal.timeout(8000) },
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    const games: any[] = data?.dates?.[0]?.games ?? []
+    return games.map((g) => ({
+      gamePk: g.gamePk,
+      home: g.teams?.home?.team?.name ?? '',
+      away: g.teams?.away?.team?.name ?? '',
+    })).filter((g) => g.gamePk)
+  } catch (e) {
+    console.warn('[sync-baseball-events] schedule fetch failed:', (e as Error).message)
+    return []
+  }
+}
+
+// mlb_game_pk 없는 라이브 매치들에 매핑 채워줌
+async function backfillGamePks(matches: any[]): Promise<Map<number, number>> {
+  // api_match_id → gamePk 매핑
+  const result = new Map<number, number>()
+  const missing = matches.filter((m) => !m.mlb_game_pk)
+  if (missing.length === 0) return result
+
+  // 날짜별로 그룹핑 (schedule 호출 최소화)
+  const datesSet = new Set<string>()
+  for (const m of missing) datesSet.add(m.match_date)
+
+  // 날짜별 schedule 가져옴
+  const dateSchedules = new Map<string, Array<{ gamePk: number; home: string; away: string }>>()
+  for (const d of datesSet) {
+    const games = await fetchMlbSchedule(d)
+    dateSchedules.set(d, games)
+  }
+
+  // 매핑: 날짜 + (home/away team) 일치하는 게임 찾음
+  const updates: Array<{ id: number; gamePk: number }> = []
+  for (const m of missing) {
+    const games = dateSchedules.get(m.match_date) ?? []
+    const home = normalizeTeamName(m.home_team)
+    const away = normalizeTeamName(m.away_team)
+    const found = games.find(
+      (g) => normalizeTeamName(g.home) === home && normalizeTeamName(g.away) === away,
+    )
+    if (found) {
+      result.set(m.api_match_id, found.gamePk)
+      updates.push({ id: m.id, gamePk: found.gamePk })
+    }
+  }
+
+  // DB에 한 번에 업데이트 (Promise.all)
+  if (updates.length > 0) {
+    await Promise.all(
+      updates.map((u) =>
+        supabase.from('baseball_matches').update({ mlb_game_pk: u.gamePk }).eq('id', u.id),
+      ),
+    )
+    console.log(`[sync-baseball-events] mlb_game_pk 매핑 ${updates.length}건 보강`)
+  }
+  return result
+}
 
 interface MlbPlay {
   result?: {
@@ -63,8 +140,12 @@ interface MlbPlay {
 }
 
 interface DBMatch {
+  id: number
   api_match_id: number
   mlb_game_pk: number | null
+  match_date: string
+  home_team: string
+  away_team: string
   status: string
 }
 
@@ -204,13 +285,12 @@ export async function GET(_req: NextRequest) {
   const startedAt = Date.now()
 
   try {
-    // 1) 라이브 MLB 매치 (status가 IN1~IN15) 가져옴
+    // 1) 라이브 MLB 매치 (status가 IN1~IN15) 가져옴 — mlb_game_pk 비어도 일단 가져와서 backfill 시도
     const { data: liveMatches, error } = await supabase
       .from('baseball_matches')
-      .select('api_match_id, mlb_game_pk, status')
+      .select('id, api_match_id, mlb_game_pk, match_date, home_team, away_team, status')
       .eq('league', 'MLB')
       .like('status', 'IN%')
-      .not('mlb_game_pk', 'is', null)
       .limit(50)
 
     if (error) {
@@ -220,23 +300,32 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({
         success: true,
         liveGames: 0,
+        backfilled: 0,
         eventsInserted: 0,
         eventsSkipped: 0,
         elapsedMs: Date.now() - startedAt,
       })
     }
 
+    // 1-b) mlb_game_pk 비어있는 매치들 자동 매핑 (MLB schedule에서 team_name 매칭)
+    const backfillMap = await backfillGamePks(liveMatches as DBMatch[])
+    const backfilled = backfillMap.size
+
     let eventsInserted = 0
     let eventsSkipped = 0
+    let processed = 0
 
-    // 2) 각 매치별 feed/live 가져와 events 적재
+    // 2) 각 매치별 feed/live 가져와 events 적재 (mlb_game_pk 있는 매치만)
     const CONCURRENCY = 5
     for (let i = 0; i < liveMatches.length; i += CONCURRENCY) {
       const chunk = liveMatches.slice(i, i + CONCURRENCY) as DBMatch[]
       await Promise.all(
         chunk.map(async (m) => {
-          if (!m.mlb_game_pk) return
-          const plays = await fetchLiveFeed(m.mlb_game_pk)
+          // 기존 mlb_game_pk 또는 방금 backfill한 값 사용
+          const gamePk = m.mlb_game_pk ?? backfillMap.get(m.api_match_id) ?? null
+          if (!gamePk) return
+
+          const plays = await fetchLiveFeed(gamePk)
           if (plays.length === 0) return
 
           const eventRows = playsToEventRows(m.api_match_id, plays)
@@ -256,6 +345,7 @@ export async function GET(_req: NextRequest) {
           const insertedCount = data?.length ?? 0
           eventsInserted += insertedCount
           eventsSkipped += rows.length - insertedCount
+          processed++
         }),
       )
     }
@@ -263,6 +353,8 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({
       success: true,
       liveGames: liveMatches.length,
+      backfilled,
+      processed,
       eventsInserted,
       eventsSkipped,
       elapsedMs: Date.now() - startedAt,
