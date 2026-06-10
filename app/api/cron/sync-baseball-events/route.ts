@@ -535,8 +535,25 @@ export async function GET(_req: NextRequest) {
           if (Object.keys(updateMatch).length > 0) {
             updateMatch.updated_at = new Date().toISOString()
             await supabase.from('baseball_matches').update(updateMatch).eq('id', m.id)
+
+            // 🛡️ 알림 폭주 방지: match_event_state도 함께 sync해서 옛 push cron이
+            //   stale 정정된 매치를 catch-up처럼 detect 못하게 차단
+            //   (sync 이전에 옛 cron이 못 보던 상태였으니, 이번 정정은 새 detect 대상 X)
+            const stateUpsert = {
+              match_id: m.api_match_id,
+              sport: 'baseball',
+              last_status: newStatus ?? m.status,
+              last_home_score: feed.homeRuns ?? null,
+              last_away_score: feed.awayRuns ?? null,
+              last_inning: feed.currentInning ? String(feed.currentInning) : null,
+              last_run_at: new Date().toISOString(),
+            }
+            await supabase
+              .from('match_event_state')
+              .upsert(stateUpsert, { onConflict: 'match_id,sport' })
+
             console.log(
-              `[sync-baseball-events] fresh sync match=${m.api_match_id} ` +
+              `[sync-baseball-events] fresh sync + state sealed match=${m.api_match_id} ` +
               `status=${newStatus ?? m.status} home=${feed.homeRuns ?? '?'} away=${feed.awayRuns ?? '?'}`,
             )
           }
