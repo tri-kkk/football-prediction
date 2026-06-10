@@ -103,6 +103,12 @@ function detectEvents(
   const prevAway = prev.last_away_score ?? 0
   const prevInning = prev.last_inning ?? null
 
+  // 🛡️ 가드 1: 이미 종료 상태로 추적 중인 매치는 새 알림 발송 X
+  // (이전 cron에서 gameEnd 보낸 후의 잔여 detect로 인한 중복/지각 알림 차단)
+  if (isFinishedBaseballStatus(prevStatus)) {
+    return []
+  }
+
   const homeTeam = match.home_team_ko || match.home_team
   const awayTeam = match.away_team_ko || match.away_team
   const homeScore = match.home_score ?? 0
@@ -117,9 +123,22 @@ function detectEvents(
     inning: currentInning ?? undefined,
   }
 
-  // 1. firstPitch — NS → 라이브성 상태
+  // 🛡️ 가드 2: prev=NS인데 current가 종료 → cron 다운타임으로 모든 중간 이벤트 놓침
+  // 알림 폭주 방지: gameEnd 1개만 발송, firstPitch/inningChange/score 모두 skip
+  if (prevStatus === 'NS' && isFinishedBaseballStatus(match.status)) {
+    detected.push({ event: 'gameEnd', ctx: baseCtx })
+    return detected
+  }
+
+  // 1. firstPitch — NS → 라이브성 상태 (IN1만, 큰 점프는 가드 3에서 별도 처리)
   if (prevStatus === 'NS' && isLiveBaseballStatus(match.status)) {
+    // 🛡️ 가드 3: 큰 inning 점프(NS → IN3+)는 cron 다운타임 catch-up
+    // firstPitch만 발송, inningChange/score 알림은 skip (false-positive 폭주 방지)
+    const inningNum = currentInning ? parseInt(currentInning, 10) : 1
     detected.push({ event: 'firstPitch', ctx: baseCtx })
+    if (inningNum > 2) {
+      return detected // IN3+ 진입은 firstPitch 1개만
+    }
   }
 
   // 2. gameEnd — 미종료 → 종료
@@ -130,23 +149,26 @@ function detectEvents(
     detected.push({ event: 'gameEnd', ctx: baseCtx })
   }
 
-  // 3. inningChange — 이닝 번호 증가
+  // 3. inningChange — 이닝 번호 증가 (1 단계씩만, 큰 점프는 skip)
   if (currentInning && currentInning !== prevInning) {
-    // 첫 이닝(IN1) 진입은 firstPitch에서 잡았으므로 inningChange는 IN2부터
     const inningNum = parseInt(currentInning, 10)
-    if (inningNum > 1) {
+    const prevInningNum = prevInning ? parseInt(prevInning, 10) : 0
+    // 첫 이닝(IN1) 진입은 firstPitch에서 잡았으므로 inningChange는 IN2부터
+    // 또한 점프가 2 이닝 이상이면 catch-up이라 skip (예: IN3 → IN6는 알림 X)
+    if (inningNum > 1 && (prevInningNum === 0 || inningNum - prevInningNum === 1)) {
       detected.push({ event: 'inningChange', ctx: baseCtx })
     }
   }
 
-  // 4. score — home_score 또는 away_score 변화
-  if (homeScore > prevHome) {
+  // 4. score — home_score 또는 away_score 변화 (1점 차이일 때만 알림)
+  // 큰 점수 점프(catch-up)는 score 알림 skip — false-positive 폭주 방지
+  if (homeScore > prevHome && homeScore - prevHome <= 4) {
     detected.push({
       event: 'score',
       ctx: { ...baseCtx, scoringTeam: 'home' },
     })
   }
-  if (awayScore > prevAway) {
+  if (awayScore > prevAway && awayScore - prevAway <= 4) {
     detected.push({
       event: 'score',
       ctx: { ...baseCtx, scoringTeam: 'away' },
