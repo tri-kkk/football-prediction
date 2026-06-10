@@ -149,12 +149,16 @@ interface DBMatch {
   status: string
 }
 
-// feed/live 결과 + 응답의 teams.home/away 이름 반환 (gamePk 검증용)
+// feed/live 결과 + 응답의 teams.home/away 이름 + 현재 status/score 반환
 async function fetchLiveFeed(gamePk: number): Promise<{
   plays: MlbPlay[]
   homeTeamName: string | null
   awayTeamName: string | null
-  gameState: string | null
+  gameState: string | null               // 'Preview' | 'Live' | 'Final'
+  currentInning: number | null           // 1~9 등
+  inningHalf: string | null              // 'Top' | 'Bottom'
+  homeRuns: number | null                // 현재 홈팀 점수
+  awayRuns: number | null                // 현재 원정팀 점수
 }> {
   try {
     const res = await fetch(`${MLB_API}/game/${gamePk}/feed/live`, {
@@ -162,19 +166,38 @@ async function fetchLiveFeed(gamePk: number): Promise<{
     })
     if (!res.ok) {
       console.warn(`[sync-baseball-events] feed/live failed gamePk=${gamePk}:`, res.status)
-      return { plays: [], homeTeamName: null, awayTeamName: null, gameState: null }
+      return {
+        plays: [], homeTeamName: null, awayTeamName: null, gameState: null,
+        currentInning: null, inningHalf: null, homeRuns: null, awayRuns: null,
+      }
     }
     const data = await res.json()
+    const linescore = data?.liveData?.linescore
     return {
       plays: data?.liveData?.plays?.allPlays ?? [],
       homeTeamName: data?.gameData?.teams?.home?.name ?? null,
       awayTeamName: data?.gameData?.teams?.away?.name ?? null,
       gameState: data?.gameData?.status?.abstractGameState ?? null,
+      currentInning: linescore?.currentInning ?? null,
+      inningHalf: linescore?.inningHalf ?? null,
+      homeRuns: linescore?.teams?.home?.runs ?? null,
+      awayRuns: linescore?.teams?.away?.runs ?? null,
     }
   } catch (e) {
     console.warn(`[sync-baseball-events] feed/live error gamePk=${gamePk}:`, (e as Error).message)
-    return { plays: [], homeTeamName: null, awayTeamName: null, gameState: null }
+    return {
+      plays: [], homeTeamName: null, awayTeamName: null, gameState: null,
+      currentInning: null, inningHalf: null, homeRuns: null, awayRuns: null,
+    }
   }
+}
+
+// gameState → 우리 DB status 변환
+function mapGameStateToStatus(gameState: string | null, inning: number | null): string | null {
+  if (gameState === 'Final') return 'FT'
+  if (gameState === 'Preview') return 'NS'
+  if (gameState === 'Live' && inning != null) return `IN${inning}`
+  return null
 }
 
 // 플레이 → events 행 변환 (1 play가 최대 2 event row 생성 가능: score+homerun)
@@ -363,6 +386,22 @@ export async function GET(_req: NextRequest) {
               .eq('id', m.id)
             mismatchedReset++
             return
+          }
+
+          // 🔥 매치 정보 fresh 갱신 — MLB Stats API가 1차 source (lag 최소화)
+          //   기존 api-sports baseball 데이터는 2~5분 lag 있어서 알림 늦음 문제 해결
+          const newStatus = mapGameStateToStatus(feed.gameState, feed.currentInning)
+          const updateMatch: Record<string, any> = {}
+          if (newStatus && newStatus !== m.status) updateMatch.status = newStatus
+          if (feed.homeRuns != null) updateMatch.home_score = feed.homeRuns
+          if (feed.awayRuns != null) updateMatch.away_score = feed.awayRuns
+          if (Object.keys(updateMatch).length > 0) {
+            updateMatch.updated_at = new Date().toISOString()
+            await supabase.from('baseball_matches').update(updateMatch).eq('id', m.id)
+            console.log(
+              `[sync-baseball-events] fresh sync match=${m.api_match_id} ` +
+              `status=${newStatus ?? m.status} home=${feed.homeRuns ?? '?'} away=${feed.awayRuns ?? '?'}`,
+            )
           }
 
           if (feed.plays.length === 0) return
