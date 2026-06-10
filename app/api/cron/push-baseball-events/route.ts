@@ -131,8 +131,6 @@ function detectEvents(
   }
 
   // 1. firstPitch — NS → 라이브성 상태
-  // 🔁 v2: score/inningChange/homerun 등 풍부한 이벤트는 push-rich-events(events 테이블)가 담당
-  //       이 라우트는 매치 상태 기반 firstPitch/gameEnd만 발송
   if (prevStatus === 'NS' && isLiveBaseballStatus(match.status)) {
     detected.push({ event: 'firstPitch', ctx: baseCtx })
   }
@@ -145,11 +143,30 @@ function detectEvents(
     detected.push({ event: 'gameEnd', ctx: baseCtx })
   }
 
-  // 🔁 v2: 아래 detect는 push-rich-events로 이전됨
-  //   - inningChange (baseball_events.type='inningChange')
-  //   - score (baseball_events.type='score')
-  //   - homerun (baseball_events.type='homerun')
-  // 풍부한 player/inning/detail 정보 포함된 알림으로 발송
+  // 3. inningChange — 1단계 증가만 (큰 점프는 catch-up skip)
+  // 🔁 fallback: events 테이블(sync-baseball-events)이 처리 못하는 매치(gamePk 매핑 실패)용
+  //   push-rich-events 사이드에서 매치별 events row 존재 여부 체크해 중복 방지
+  if (currentInning && currentInning !== prevInning) {
+    const inningNum = parseInt(currentInning, 10)
+    const prevInningNum = prevInning ? parseInt(prevInning, 10) : 0
+    if (inningNum > 1 && (prevInningNum === 0 || inningNum - prevInningNum === 1)) {
+      detected.push({ event: 'inningChange', ctx: baseCtx })
+    }
+  }
+
+  // 4. score — 1점 차이일 때만 발송 (catch-up은 skip)
+  if (homeScore > prevHome && homeScore - prevHome <= 4) {
+    detected.push({
+      event: 'score',
+      ctx: { ...baseCtx, scoringTeam: 'home' },
+    })
+  }
+  if (awayScore > prevAway && awayScore - prevAway <= 4) {
+    detected.push({
+      event: 'score',
+      ctx: { ...baseCtx, scoringTeam: 'away' },
+    })
+  }
 
   return detected
 }
@@ -337,7 +354,21 @@ export async function GET(_request: NextRequest) {
       const isFirstSeen = !prevMap.has(match.api_match_id)
 
       if (!isFirstSeen && detected.length > 0) {
+        // 🛡️ dedup: 이 매치가 baseball_events 테이블에 적재 중인지 확인
+        //   적재 중이면 score/inningChange는 push-rich-events가 담당 (풍부 메시지)
+        //   여기서는 firstPitch/gameEnd만 발송
+        const { count: richEventCount } = await supabase
+          .from('baseball_events')
+          .select('*', { count: 'exact', head: true })
+          .eq('match_id', match.api_match_id)
+          .limit(1)
+        const isHandledByRich = (richEventCount ?? 0) > 0
+
         for (const ev of detected) {
+          // events 테이블이 처리하는 매치면 score/inningChange skip (중복 방지)
+          if (isHandledByRich && (ev.event === 'score' || ev.event === 'inningChange')) {
+            continue
+          }
           const result = await dispatchEvent(supabase, match.api_match_id, ev, match)
           totalEvents++
           totalSent += result.sent
