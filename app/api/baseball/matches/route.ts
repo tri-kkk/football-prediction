@@ -23,6 +23,30 @@ const TEAM_NAME_KO: Record<string, string> = {
   'Nippon Ham Fighters': '니혼햄',
 }
 
+// 🩹 status 보정: api-sports가 이미 진행/종료된 경기에 'NS'를 잘못 주면서
+//   스코어·이닝만 채워주는 케이스가 있음 → 이닝 데이터가 있는데 status가 NS면
+//   경과 시간으로 LIVE/FT를 추론해 홈/피드의 '시작 전' 오표시를 방지.
+function hasInningData(innings: any): boolean {
+  if (!innings || typeof innings !== 'object') return false
+  for (const side of ['home', 'away']) {
+    const o = innings[side]
+    if (o && typeof o === 'object') {
+      for (const k of Object.keys(o)) {
+        if (o[k] !== null && o[k] !== undefined) return true
+      }
+    }
+  }
+  return false
+}
+function correctBaseballStatus(rawStatus: string | null | undefined, timestamp: any, innings: any): string {
+  const status = rawStatus || 'NS'
+  if (!['NS', 'SCHEDULED', 'TBD'].includes(status)) return status
+  if (!hasInningData(innings)) return status // 진짜 미시작 경기
+  const t = timestamp ? new Date(timestamp).getTime() : 0
+  const elapsedH = t ? (Date.now() - t) / 3_600_000 : 99
+  return elapsedH >= 4 ? 'FT' : 'LIVE' // 4시간 경과면 종료로 간주, 아니면 라이브
+}
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
@@ -324,7 +348,7 @@ export async function GET(request: NextRequest) {
             awayTeam: match.away_team,
             awayTeamKo: match.away_team_ko || TEAM_NAME_KO[match.away_team] || match.away_team,
             awayTeamId: match.away_team_id, awayLogo: match.away_team_logo, awayScore: match.away_score,
-            status: match.status || 'NS', innings: match.inning,
+            status: correctBaseballStatus(match.status, match.match_timestamp || match.match_date, match.inning), innings: match.inning,
             odds: matchOdds ? {
               homeWinProb: matchOdds.home_win_prob, awayWinProb: matchOdds.away_win_prob,
               homeWinOdds: matchOdds.home_win_odds, awayWinOdds: matchOdds.away_win_odds,
@@ -474,7 +498,7 @@ export async function GET(request: NextRequest) {
         awayLogo: match.away_team_logo,
         awayScore: match.away_score,
 
-        status: match.status || 'NS',
+        status: correctBaseballStatus(match.status, match.match_timestamp || match.match_date, match.inning),
         innings: match.inning,
 
         odds: matchOdds ? {

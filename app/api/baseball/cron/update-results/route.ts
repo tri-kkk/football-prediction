@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     // 🔥 2026-04 패치: lib/baseballStatus의 통합 화이트리스트 사용. 기존엔 INTR/IN10+가 빠져 영구 LIVE로 박히는 버그 있었음.
     const { data: matches, error: fetchError } = await supabase
       .from('baseball_matches')
-      .select('api_match_id, home_team, away_team, match_date, status, inning, home_score, away_score, updated_at')
+      .select('api_match_id, home_team, away_team, match_date, match_timestamp, status, inning, home_score, away_score, updated_at')
       .gte('match_date', yesterdayStr)
       .lte('match_date', todayStr)
       .or(`${REQUERY_STATUSES_IN_CLAUSE},and(status.eq.FT,inning.is.null)`)
@@ -125,6 +125,19 @@ export async function GET(request: NextRequest) {
           if (hoursElapsed >= 6 && hasScore) {
             console.log(`  ⏰ INTR 타임아웃: ${hoursElapsed.toFixed(1)}시간 경과 + 점수(${homeScore}-${awayScore}) → FT 자동 전환`)
             newStatus = 'FT'
+          }
+        }
+
+        // 🩹 api-sports가 이미 시작/종료된 경기에 'NS'를 잘못 반환하는 케이스 보정.
+        //   스코어가 있는데 NS-like면 시작된 경기 → 경과 시간으로 FT/LIVE 추론(NS로 박히는 것 방지).
+        if (['NS', 'SCHEDULED', 'TBD'].includes(newStatus)) {
+          const hasScore = (homeScore ?? null) !== null && (awayScore ?? null) !== null
+          if (hasScore) {
+            const startMs = match.match_timestamp ? new Date(match.match_timestamp).getTime() : 0
+            const elapsedH = startMs ? (Date.now() - startMs) / (1000 * 60 * 60) : 99
+            const corrected = elapsedH >= 4 ? 'FT' : 'LIVE'
+            console.log(`  🩹 NS 보정: 스코어(${homeScore}-${awayScore}) 존재, ${elapsedH.toFixed(1)}h 경과 → ${corrected}`)
+            newStatus = corrected
           }
         }
 
