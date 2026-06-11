@@ -13,19 +13,24 @@ const API_KEY = process.env.API_FOOTBALL_KEY!
 const API_HOST = 'v1.baseball.api-sports.io'
 
 export async function GET(request: NextRequest) {
-  console.log('⚾ Baseball 경기 결과 업데이트 시작...')
-  
+  // 🌐 ?league=KBO,NPB 또는 ?league=MLB 로 부하 분산 (다중 cron 등록)
+  const { searchParams } = new URL(request.url)
+  const leagueParam = searchParams.get('league')
+  const leagueFilter = leagueParam ? leagueParam.split(',').map(s => s.trim().toUpperCase()) : null
+
+  console.log(`⚾ Baseball 경기 결과 업데이트 시작... ${leagueFilter ? `[league=${leagueFilter.join(',')}]` : '(전체)'}`)
+
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    
+
     // 1. 오늘과 어제 날짜
     const today = new Date()
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    
+
     const todayStr = today.toISOString().split('T')[0]
     const yesterdayStr = yesterday.toISOString().split('T')[0]
-    
+
     console.log(`📅 업데이트 대상: ${yesterdayStr}, ${todayStr}`)
     
     // 2. DB에서 업데이트가 필요한 경기 조회
@@ -36,14 +41,18 @@ export async function GET(request: NextRequest) {
     // 🔥 우선순위: 시작 임박 매치 우선 + KBO/NPB도 누락 안 되게
     //   기존 limit 50 + ORDER 없음 → MLB가 채우면 KBO/NPB 누락
     //   수정: limit 300 + match_timestamp ASC (시작 임박 우선)
-    const { data: matches, error: fetchError } = await supabase
+    let query = supabase
       .from('baseball_matches')
       .select('api_match_id, home_team, away_team, match_date, match_timestamp, status, inning, home_score, away_score, updated_at, league')
       .gte('match_date', yesterdayStr)
       .lte('match_date', todayStr)
       .or(`${REQUERY_STATUSES_IN_CLAUSE},and(status.eq.FT,inning.is.null)`)
       .order('match_timestamp', { ascending: true })
-      .limit(300)
+
+    if (leagueFilter) {
+      query = query.in('league', leagueFilter)
+    }
+    const { data: matches, error: fetchError } = await query.limit(100)
     
     if (fetchError) {
       console.error('❌ DB 조회 오류:', fetchError)
@@ -80,7 +89,7 @@ export async function GET(request: NextRequest) {
         if (!response.ok) {
           console.error(`  ❌ API 오류 (${match.api_match_id}):`, response.status)
           errors++
-          await new Promise(resolve => setTimeout(resolve, 500))
+          await new Promise(resolve => setTimeout(resolve, 100))
           continue
         }
         
@@ -88,7 +97,7 @@ export async function GET(request: NextRequest) {
         
         if (!data.response || data.response.length === 0) {
           console.log(`  ⚠️ 경기 정보 없음 (${match.api_match_id})`)
-          await new Promise(resolve => setTimeout(resolve, 500))
+          await new Promise(resolve => setTimeout(resolve, 100))
           continue
         }
         
@@ -193,7 +202,7 @@ export async function GET(request: NextRequest) {
         }
         
         // Rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 100))
         
       } catch (matchError: any) {
         console.error(`  ❌ 경기 처리 오류 (${match.api_match_id}):`, matchError.message)
