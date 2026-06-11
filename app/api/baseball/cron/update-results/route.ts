@@ -33,13 +33,17 @@ export async function GET(request: NextRequest) {
     // - 일시 중단된 경기 (INTR) — 재개 또는 영구 종료까지 폴링 필요
     // - 종료된 경기 중 이닝 데이터가 없는 경기 (FT인데 inning IS NULL)
     // 🔥 2026-04 패치: lib/baseballStatus의 통합 화이트리스트 사용. 기존엔 INTR/IN10+가 빠져 영구 LIVE로 박히는 버그 있었음.
+    // 🔥 우선순위: 시작 임박 매치 우선 + KBO/NPB도 누락 안 되게
+    //   기존 limit 50 + ORDER 없음 → MLB가 채우면 KBO/NPB 누락
+    //   수정: limit 300 + match_timestamp ASC (시작 임박 우선)
     const { data: matches, error: fetchError } = await supabase
       .from('baseball_matches')
-      .select('api_match_id, home_team, away_team, match_date, match_timestamp, status, inning, home_score, away_score, updated_at')
+      .select('api_match_id, home_team, away_team, match_date, match_timestamp, status, inning, home_score, away_score, updated_at, league')
       .gte('match_date', yesterdayStr)
       .lte('match_date', todayStr)
       .or(`${REQUERY_STATUSES_IN_CLAUSE},and(status.eq.FT,inning.is.null)`)
-      .limit(50)
+      .order('match_timestamp', { ascending: true })
+      .limit(300)
     
     if (fetchError) {
       console.error('❌ DB 조회 오류:', fetchError)
