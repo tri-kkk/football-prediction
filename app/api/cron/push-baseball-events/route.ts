@@ -39,6 +39,7 @@ interface DBMatch {
   api_match_id: number
   league: string
   status: string                   // NS, IN1~IN15, BT, HT, FT, AET, POST, ...
+  match_timestamp: string | null   // 매치 예정 시작 시각 (catch-up 가드용)
   home_team: string
   away_team: string
   home_team_ko: string | null
@@ -107,6 +108,16 @@ function detectEvents(
   // (이전 cron에서 gameEnd 보낸 후의 잔여 detect로 인한 중복/지각 알림 차단)
   if (isFinishedBaseballStatus(prevStatus)) {
     return []
+  }
+
+  // 🛡️ 가드 0: 매치 시작 시각이 12시간 이상 지났으면 detect skip
+  //   (어제 매치가 다음날 새벽 catch-up 시점에 NS→FT로 정정되며 gameEnd 폭주하는 문제 차단)
+  if (match.match_timestamp) {
+    const matchStartMs = new Date(match.match_timestamp).getTime()
+    const hoursElapsed = (Date.now() - matchStartMs) / (1000 * 60 * 60)
+    if (hoursElapsed > 12) {
+      return []
+    }
   }
 
   const homeTeam = match.home_team_ko || match.home_team
@@ -307,7 +318,7 @@ export async function GET(_request: NextRequest) {
     const { data: matches, error } = await supabase
       .from('baseball_matches')
       .select(
-        'api_match_id, league, status, home_team, away_team, home_team_ko, away_team_ko, home_team_logo, away_team_logo, home_score, away_score, updated_at'
+        'api_match_id, league, status, match_timestamp, home_team, away_team, home_team_ko, away_team_ko, home_team_logo, away_team_logo, home_score, away_score, updated_at'
       )
       .gte('match_date', yesterday)
       .order('updated_at', { ascending: false })
