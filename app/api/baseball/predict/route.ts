@@ -153,7 +153,9 @@ async function getTeamRollingStats(team: string, league: string = 'MLB') {
 
 export async function POST(request: NextRequest) {
   try {
-    const { matchId, homeTeam, awayTeam, quick } = await request.json()
+    const { matchId, homeTeam, awayTeam, quick, language: bodyLang } = await request.json()
+    // 🌐 영문 분기 (lang fallback)
+    const isEn = (bodyLang ?? 'ko').toString().toLowerCase() === 'en'
     const quickMode = quick === true
 
     if (!matchId) {
@@ -448,33 +450,42 @@ export async function POST(request: NextRequest) {
 
     // 선발투수 카드는 양팀 모두 실제 데이터 있을 때만 노출
     if (hasPitcherData) {
-      const pitcherFavor = awayPitcherEra > homePitcherEra ? '홈' : (awayPitcherEra < homePitcherEra ? '원정' : '대등')
+      const pitcherFavorKo = awayPitcherEra > homePitcherEra ? '홈' : (awayPitcherEra < homePitcherEra ? '원정' : '대등')
+      const pitcherFavorEn = awayPitcherEra > homePitcherEra ? 'home' : (awayPitcherEra < homePitcherEra ? 'away' : 'even')
       keyFactors.push({
-        name: '선발투수 ERA',
+        name: isEn ? 'Starting Pitcher ERA' : '선발투수 ERA',
         value: homePitcherEra,
         impact: eraImpact,
-        description: `원정 ${awayPitcherEra.toFixed(2)} vs 홈 ${homePitcherEra.toFixed(2)} (${pitcherFavor} 우세)`,
+        description: isEn
+          ? `Away ${awayPitcherEra.toFixed(2)} vs Home ${homePitcherEra.toFixed(2)} (${pitcherFavorEn} edge)`
+          : `원정 ${awayPitcherEra.toFixed(2)} vs 홈 ${homePitcherEra.toFixed(2)} (${pitcherFavorKo} 우세)`,
       })
     }
 
     keyFactors.push(
       {
-        name: '최근 10경기 안타',
+        name: isEn ? 'Hits (last 10 games)' : '최근 10경기 안타',
         value: homeStats.avg_hits,
         impact: Math.round(8.04 * 100) / 100 * 10,
-        description: `원정 ${awayStats.avg_hits.toFixed(1)}개 vs 홈 ${homeStats.avg_hits.toFixed(1)}개`,
+        description: isEn
+          ? `Away ${awayStats.avg_hits.toFixed(1)} vs Home ${homeStats.avg_hits.toFixed(1)}`
+          : `원정 ${awayStats.avg_hits.toFixed(1)}개 vs 홈 ${homeStats.avg_hits.toFixed(1)}개`,
       },
       {
-        name: '득실점 차이',
+        name: isEn ? 'Run Differential' : '득실점 차이',
         value: homeStats.run_diff,
         impact: Math.round(7.25 * 100) / 100 * 10,
-        description: `원정 ${awayStats.run_diff > 0 ? '+' : ''}${awayStats.run_diff.toFixed(1)} vs 홈 ${homeStats.run_diff > 0 ? '+' : ''}${homeStats.run_diff.toFixed(1)}`,
+        description: isEn
+          ? `Away ${awayStats.run_diff > 0 ? '+' : ''}${awayStats.run_diff.toFixed(1)} vs Home ${homeStats.run_diff > 0 ? '+' : ''}${homeStats.run_diff.toFixed(1)}`
+          : `원정 ${awayStats.run_diff > 0 ? '+' : ''}${awayStats.run_diff.toFixed(1)} vs 홈 ${homeStats.run_diff > 0 ? '+' : ''}${homeStats.run_diff.toFixed(1)}`,
       },
       {
-        name: '최근 5경기 폼',
+        name: isEn ? 'Form (last 5 games)' : '최근 5경기 폼',
         value: homeStats.recent_form,
         impact: Math.round(formDiff * 100),
-        description: `원정 ${awayStats.recent_wins}/${awayStats.recent_total}승 vs 홈 ${homeStats.recent_wins}/${homeStats.recent_total}승`,
+        description: isEn
+          ? `Away ${awayStats.recent_wins}-${awayStats.recent_total - awayStats.recent_wins} vs Home ${homeStats.recent_wins}-${homeStats.recent_total - homeStats.recent_wins}`
+          : `원정 ${awayStats.recent_wins}/${awayStats.recent_total}승 vs 홈 ${homeStats.recent_wins}/${homeStats.recent_total}승`,
       },
     )
 
@@ -484,7 +495,7 @@ export async function POST(request: NextRequest) {
     const favoredTeam = homeWinProb >= awayWinProb ? homeTeam : awayTeam
     const favoredProb = Math.max(homeWinProb, awayWinProb)
 
-    // 선발 매치업 코멘트 (조사 없이 — 프론트에서 팀명 치환 시 받침 문제 회피)
+    // 선발 매치업 코멘트
     let pitcherLine = ''
     if (hasPitcherData) {
       const eraDiff = awayPitcherEra - homePitcherEra
@@ -492,17 +503,27 @@ export async function POST(request: NextRequest) {
       const aceTeam = eraDiff > 0 ? homeTeam : awayTeam
       const aceEra = Math.min(homePitcherEra, awayPitcherEra)
       if (absDiff >= 1.5) {
-        pitcherLine = ` 선발 매치업은 ${aceTeam} 측 ERA ${aceEra.toFixed(2)}로 압도적 우세.`
+        pitcherLine = isEn
+          ? ` ${aceTeam} starter (ERA ${aceEra.toFixed(2)}) holds a decisive edge in the pitching matchup.`
+          : ` 선발 매치업은 ${aceTeam} 측 ERA ${aceEra.toFixed(2)}로 압도적 우세.`
       } else if (absDiff >= 0.75) {
-        pitcherLine = ` 선발 매치업은 ${aceTeam} 측 ERA ${aceEra.toFixed(2)}로 우위.`
+        pitcherLine = isEn
+          ? ` ${aceTeam} starter (ERA ${aceEra.toFixed(2)}) has a moderate edge in the pitching matchup.`
+          : ` 선발 매치업은 ${aceTeam} 측 ERA ${aceEra.toFixed(2)}로 우위.`
       } else if (absDiff < 0.3) {
-        pitcherLine = ` 양팀 선발 ERA가 대등해 마운드 우열을 가리기 어려움.`
+        pitcherLine = isEn
+          ? ` Both starters have similar ERAs — mound matchup is essentially even.`
+          : ` 양팀 선발 ERA가 대등해 마운드 우열을 가리기 어려움.`
       }
     }
 
     const summary = dataReliable
-      ? `${favoredTeam} 측 ${favoredProb}% 확률로 우세.${pitcherLine || ' 최근 득실점 흐름과 안타 생산력이 주요 분석 근거.'}`
-      : `데이터가 부족하여 분석 신뢰도가 낮습니다. (홈 ${homeStats.games_played}경기, 원정 ${awayStats.games_played}경기)`
+      ? (isEn
+        ? `${favoredTeam} favored at ${favoredProb}%.${pitcherLine || ' Recent run differential and hits production are the key factors.'}`
+        : `${favoredTeam} 측 ${favoredProb}% 확률로 우세.${pitcherLine || ' 최근 득실점 흐름과 안타 생산력이 주요 분석 근거.'}`)
+      : (isEn
+        ? `Insufficient data — analysis confidence is low. (Home ${homeStats.games_played} games, Away ${awayStats.games_played} games)`
+        : `데이터가 부족하여 분석 신뢰도가 낮습니다. (홈 ${homeStats.games_played}경기, 원정 ${awayStats.games_played}경기)`)
 
     // ✅ full 모드 결과를 baseball_odds_latest에 저장 (메인 목록과 동기화)
     // quickMode는 placeholder(배당/균등)라 저장하지 않음 — 실제 AI 블렌딩된 full 결과만 저장

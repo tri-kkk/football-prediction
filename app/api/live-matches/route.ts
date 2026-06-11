@@ -135,6 +135,7 @@ export async function GET(request: NextRequest) {
     console.log(`📊 지원 리그: ${Object.keys(LEAGUE_IDS).length}개`)
 
     // API-Football에서 현재 라이브 경기 조회
+    //   cache:'no-store' + revalidate:0 강제 — 간헐적 빈 응답이 캐시 문제 아니게 보장
     const response = await fetch(
       'https://v3.football.api-sports.io/fixtures?live=all',
       {
@@ -142,7 +143,8 @@ export async function GET(request: NextRequest) {
           'x-rapidapi-key': apiKey,
           'x-rapidapi-host': 'v3.football.api-sports.io'
         },
-        next: { revalidate: 0 } // 캐싱 안 함
+        cache: 'no-store',
+        next: { revalidate: 0 }
       }
     )
 
@@ -151,15 +153,26 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log('📥 받은 라이브 경기 수:', data.response?.length || 0)
+    const rawCount = data.response?.length || 0
+    console.log('📥 받은 라이브 경기 수:', rawCount)
 
     // 우리가 지원하는 리그만 필터링
     const supportedLeagueIds = Object.values(LEAGUE_IDS)
-    const liveMatches = data.response.filter((match: any) =>
+    const liveMatches = (data.response || []).filter((match: any) =>
       supportedLeagueIds.includes(match.league.id)
     )
 
     console.log('✅ 필터링된 경기 수:', liveMatches.length)
+
+    // 🔍 디버깅: 라이브 0건일 때 어떤 league/매치였는지 노출 (외주 진단용)
+    if (liveMatches.length === 0 && rawCount > 0) {
+      const skippedLeagues = (data.response || []).map((m: any) => ({
+        leagueId: m.league?.id,
+        leagueName: m.league?.name,
+        country: m.league?.country,
+      })).slice(0, 10)
+      console.warn('[live-matches] all ' + rawCount + ' raw matches filtered out — skipped leagues:', JSON.stringify(skippedLeagues))
+    }
 
     // 각 경기에 대해 상세 정보 추가로 조회
     const matchesWithDetails = await Promise.all(
