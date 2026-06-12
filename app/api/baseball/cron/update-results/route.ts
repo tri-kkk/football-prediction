@@ -113,9 +113,13 @@ export async function GET(request: NextRequest) {
         const awayScore = game.scores.away.total
 
         // API가 종료 상태를 반환하면 FT로 통일
-        if (FINISHED_STATUSES.includes(newStatus) && newStatus !== 'FT') {
+        // 🔥 단, POST(연기)/CANC(취소)/ABD(중단)/AWD(부전승)는 그대로 유지 — 외주 앱에서 구분 핸들링 필요
+        const PRESERVE_STATUSES = new Set(['POST', 'CANC', 'ABD', 'AWD', 'WO'])
+        if (FINISHED_STATUSES.includes(newStatus) && newStatus !== 'FT' && !PRESERVE_STATUSES.has(newStatus)) {
           console.log(`  🔄 상태 매핑: ${newStatus} → FT`)
           newStatus = 'FT'
+        } else if (PRESERVE_STATUSES.has(newStatus)) {
+          console.log(`  ⚠️ 비종료성 결과 유지: ${newStatus} (${match.home_team} vs ${match.away_team})`)
         }
 
         // 타임아웃 안전장치 1: 후반 이닝(IN7~IN15)에서 3시간 이상 업데이트 없으면 자동 FT
@@ -145,12 +149,17 @@ export async function GET(request: NextRequest) {
         //   스코어가 있는데 NS-like면 시작된 경기 → 경과 시간으로 FT/LIVE 추론(NS로 박히는 것 방지).
         if (['NS', 'SCHEDULED', 'TBD'].includes(newStatus)) {
           const hasScore = (homeScore ?? null) !== null && (awayScore ?? null) !== null
+          const startMs = match.match_timestamp ? new Date(match.match_timestamp).getTime() : 0
+          const elapsedH = startMs ? (Date.now() - startMs) / (1000 * 60 * 60) : 99
           if (hasScore) {
-            const startMs = match.match_timestamp ? new Date(match.match_timestamp).getTime() : 0
-            const elapsedH = startMs ? (Date.now() - startMs) / (1000 * 60 * 60) : 99
             const corrected = elapsedH >= 4 ? 'FT' : 'LIVE'
             console.log(`  🩹 NS 보정: 스코어(${homeScore}-${awayScore}) 존재, ${elapsedH.toFixed(1)}h 경과 → ${corrected}`)
             newStatus = corrected
+          } else if (elapsedH >= 4) {
+            // 🔥 스코어 없이 매치 시작 시간 4시간 이상 지났는데 NS → 우천 취소/연기로 추정
+            //   api-sports가 우천 취소 매치를 명시적 POST/CANC로 응답 안 하는 케이스 대응
+            console.log(`  🌧️ NS 추정 보정: 스코어 없음, ${elapsedH.toFixed(1)}h 경과 → POST (우천 취소/연기 추정)`)
+            newStatus = 'POST'
           }
         }
 
