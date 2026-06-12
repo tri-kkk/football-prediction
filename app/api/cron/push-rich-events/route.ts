@@ -63,7 +63,7 @@ function mapBaseballEventType(type: string): BaseballEvent | null {
 
 async function loadTargetTokens(
   matchId: number,
-  sport: 'football' | 'baseball',
+  sport: 'soccer' | 'baseball',
   event: SoccerEvent | BaseballEvent,
 ): Promise<Array<{ token: string; locale: Locale }>> {
   const { data: notifs } = await supabase
@@ -112,7 +112,7 @@ async function loadTargetTokens(
 
 async function dispatchPush(
   matchId: number,
-  sport: 'football' | 'baseball',
+  sport: 'soccer' | 'baseball',
   event: SoccerEvent | BaseballEvent,
   ctxByLocale: { ko: EventContext; en: EventContext },
 ): Promise<{ sent: number; failed: number }> {
@@ -129,7 +129,7 @@ async function dispatchPush(
     if (!byLocale[locale].length) continue
     const ctx = ctxByLocale[locale]
     const text =
-      sport === 'football'
+      sport === 'soccer'
         ? renderSoccerNotification(event as SoccerEvent, ctx, locale)
         : renderBaseballNotification(event as BaseballEvent, ctx, locale)
     const data = toFCMData(
@@ -173,7 +173,7 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
   const { data: cursors } = await supabase
     .from('push_event_cursor')
     .select('match_id, last_pushed_event_id')
-    .eq('sport', 'football')
+    .eq('sport', 'soccer')
     .in('match_id', matchIds)
   const cursorMap = new Map<number, number>()
   for (const c of cursors ?? []) cursorMap.set(Number(c.match_id), Number(c.last_pushed_event_id ?? 0))
@@ -233,7 +233,7 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
       detail: e.detail ?? undefined,
     }
 
-    const r = await dispatchPush(matchId, 'football', eventType, { ko: ctxKo, en: ctxEn })
+    const r = await dispatchPush(matchId, 'soccer', eventType, { ko: ctxKo, en: ctxEn })
     if (r.sent > 0 || r.failed > 0) pushed++
     lastPushedByMatch.set(matchId, e.id)
   }
@@ -242,7 +242,7 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
   if (lastPushedByMatch.size > 0) {
     const updates = Array.from(lastPushedByMatch.entries()).map(([match_id, last_pushed_event_id]) => ({
       match_id,
-      sport: 'football',
+      sport: 'soccer',
       last_pushed_event_id,
       last_pushed_at: new Date().toISOString(),
     }))
