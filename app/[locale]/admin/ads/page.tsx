@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import BaseballBlogPanel from './BaseballBlogPanel'
 import ShortsGenerator from './ShortsGenerator'
+import DailyClipGenerator from './DailyClipGenerator'
 import PushSendPanel from './PushSendPanel'
 import PostHogAnalyticsDashboard from '../../../components/admin/PostHogAnalyticsDashboard'
 import RetentionDashboard from '../../../components/admin/RetentionDashboard'
@@ -386,6 +387,7 @@ const TABS = [
   { id: 'pitcher', label: '선발 관리', icon: '⚾' },
   { id: 'baseball-blog', label: '야구 블로그', icon: '📰' },
   { id: 'shorts', label: '쇼츠 생성', icon: '🎬' },
+  { id: 'daily-clip', label: '데일리 요약 클립', icon: '📅' },
 ]
 
 /// 국기 이모지 매핑 - 확장
@@ -2405,6 +2407,34 @@ export default function AdminDashboard() {
     await handleUpdateExpiry(userId, base.toISOString())
   }
 
+  // 🗑️ 회원 완전 삭제 (테스트용) — FK 정리 + deleted_users 해시까지 제거 → 재가입 즉시 가능
+  const handleDeleteUserPermanent = async (userId: string, email: string) => {
+    if (!confirm(`'${email}' 회원을 완전히 삭제합니다.\n\n` +
+      `- payments / subscriptions / proto_slips / device_tokens / match_notifications 등 자식 테이블 일괄 삭제\n` +
+      `- deleted_users 해시 제거 (재가입 즉시 가능)\n\n진행할까요?`)) return
+    try {
+      const res = await fetch('/api/admin/users/delete-permanent-internal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userIds: [userId],
+          emails: [email],
+          removeDeletedHash: true,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        alert(`삭제 실패: ${data?.error ?? `HTTP ${res.status}`}`)
+        return
+      }
+      // 화면에서 해당 회원 즉시 제거
+      setUsers((prev) => prev.filter((u) => u.id !== userId))
+      alert(`✅ 삭제 완료\n\n${JSON.stringify(data.summary?.deleted ?? {}, null, 2)}`)
+    } catch (e: any) {
+      alert(`삭제 실패: ${e?.message ?? String(e)}`)
+    }
+  }
+
   // ==================== 구독 관리 함수 ====================
 
   const handleCancelSubscription = async (subscriptionId: string) => {
@@ -3473,6 +3503,16 @@ export default function AdminDashboard() {
                                     </div>
                                   )}
                                 </div>
+                              </td>
+                              {/* 🗑️ 액션 — 회원 완전 삭제 (테스트용) */}
+                              <td className="px-4 py-4 text-right">
+                                <button
+                                  onClick={() => handleDeleteUserPermanent(user.id, user.email)}
+                                  className="px-2 py-1 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 rounded text-xs text-red-400 font-medium"
+                                  title="회원 완전 삭제 + deleted_users 해시 제거 (재가입 즉시 가능)"
+                                >
+                                  🗑️ 삭제
+                                </button>
                               </td>
                             </tr>
                           ))
@@ -5446,6 +5486,13 @@ export default function AdminDashboard() {
       {activeTab === 'shorts' && (
         <div className="w-full px-3 md:px-6 py-4 md:py-6 space-y-6">
           <ShortsGenerator />
+        </div>
+      )}
+
+      {/* 📅 데일리 요약 클립 탭 */}
+      {activeTab === 'daily-clip' && (
+        <div className="w-full px-3 md:px-6 py-4 md:py-6 space-y-6">
+          <DailyClipGenerator />
         </div>
       )}
       </div>
