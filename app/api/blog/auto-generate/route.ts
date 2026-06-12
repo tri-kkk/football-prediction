@@ -1030,11 +1030,12 @@ async function fetchTeamStats(teamName: string, leagueCode: string): Promise<any
   }
 }
 
-async function fetchH2H(match: any): Promise<any> {
+async function fetchH2H(match: any, lang: 'ko' | 'en' = 'ko'): Promise<any> {
   try {
     const params = new URLSearchParams({
       homeTeam: match.home_team,
       awayTeam: match.away_team,
+      lang,
     })
     if (match.home_team_id) params.append('homeTeamId', String(match.home_team_id))
     if (match.away_team_id) params.append('awayTeamId', String(match.away_team_id))
@@ -1430,7 +1431,8 @@ function generateContentEn(
     if (h2h.recentMatches?.length > 0) {
       c += `**Recent Meetings**\n\n`
       h2h.recentMatches.slice(0, 3).forEach((m: any) => {
-        const icon = m.result === 'W' ? '승' : m.result === 'L' ? '패' : '무'
+        // 🌐 영문 콘텐츠 — 결과 표기 W/L/D (기존 승/패/무 한글 박혀있던 버그)
+        const icon = m.result === 'W' ? 'W' : m.result === 'L' ? 'L' : 'D'
         const date = m.date ? ` (${m.date.slice(0, 10)})` : ''
         const hName = m.homeTeam || match.home_team
         const aName = m.awayTeam || match.away_team
@@ -1583,11 +1585,12 @@ export async function GET(request: NextRequest) {
           continue
         }
         
-        // 2. 팀 스탯 + H2H
-        const [homeStats, awayStats, h2h] = await Promise.all([
+        // 2. 팀 스탯 + H2H (ko + en 둘 다 — 각 언어 콘텐츠에 맞게 인사이트 사용)
+        const [homeStats, awayStats, h2h, h2hEnData] = await Promise.all([
           fetchTeamStats(match.home_team, match.league_code),
           fetchTeamStats(match.away_team, match.league_code),
-          fetchH2H(match),
+          fetchH2H(match, 'ko'),
+          fetchH2H(match, 'en'),
         ])
         
         // 3. 데이터 충분성 검증
@@ -1616,9 +1619,9 @@ export async function GET(request: NextRequest) {
           console.log(`⚠️ AI fallback: ${match.home_team} vs ${match.away_team}`)
         }
         
-        // 5. 콘텐츠 생성
+        // 5. 콘텐츠 생성 — 한국어는 h2h(ko), 영문은 h2hEnData(en) 사용
         const contentKo = generateContentKo(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai)
-        const contentEn = generateContentEn(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai)
+        const contentEn = generateContentEn(match, prediction, homeStats, awayStats, h2hEnData ?? h2h, leagueInfo, ai)
         
         // 5. 썸네일 URL
         const thumbnailUrl = generateThumbnailUrl(match, prediction, leagueInfo)
@@ -1731,30 +1734,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prediction data invalid (all probabilities 0%)' }, { status: 422 })
     }
     
-    const [homeStats, awayStats, h2h] = await Promise.all([
+    const [homeStats, awayStats, h2h, h2hEnData] = await Promise.all([
       fetchTeamStats(match.home_team, match.league_code),
       fetchTeamStats(match.away_team, match.league_code),
-      fetchH2H(match),
+      fetchH2H(match, 'ko'),
+      fetchH2H(match, 'en'),
     ])
-    
+
     if (!hasEnoughData(homeStats, awayStats, match.league_code)) {
       return NextResponse.json({ error: 'Insufficient team data for blog generation' }, { status: 422 })
     }
-    
+
     if (isSeasonStatsAbnormal(homeStats, awayStats)) {
       return NextResponse.json({ error: 'Abnormal season stats detected (likely data error)' }, { status: 422 })
     }
-    
+
     const homeKo = getTeamNameKo(match.home_team)
     const awayKo = getTeamNameKo(match.away_team)
     const slug = generateSlug(match.home_team, match.away_team, match.league_code, match.commence_time)
-    
+
     let ai: AISections | null = null
     try { ai = await generateAISections(match, prediction, homeStats, awayStats, h2h, leagueInfo, homeKo, awayKo) } catch (e) {}
-    
+
     const seasonCtx = detectSeasonContext(match.league_code, homeStats, awayStats)
     const contentKo = generateContentKo(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai)
-    const contentEn = generateContentEn(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai)
+    const contentEn = generateContentEn(match, prediction, homeStats, awayStats, h2hEnData ?? h2h, leagueInfo, ai)
     const thumbnailUrl = generateThumbnailUrl(match, prediction, leagueInfo)
     const tags = generateTags(match, leagueInfo)
     
