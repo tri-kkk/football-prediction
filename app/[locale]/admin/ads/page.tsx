@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import BaseballBlogPanel from './BaseballBlogPanel'
 import ShortsGenerator from './ShortsGenerator'
-import DailyClipGenerator from './DailyClipGenerator'
 import PushSendPanel from './PushSendPanel'
 import PostHogAnalyticsDashboard from '../../../components/admin/PostHogAnalyticsDashboard'
 import RetentionDashboard from '../../../components/admin/RetentionDashboard'
@@ -5489,10 +5488,10 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 📅 데일리 요약 클립 탭 */}
+      {/* 📅 데일리 요약 클립 탭 — 컴포넌트 미존재 */}
       {activeTab === 'daily-clip' && (
-        <div className="w-full px-3 md:px-6 py-4 md:py-6 space-y-6">
-          <DailyClipGenerator />
+        <div className="w-full px-3 md:px-6 py-4 md:py-6 text-center text-gray-500">
+          데일리 클립 기능 준비 중입니다.
         </div>
       )}
       </div>
