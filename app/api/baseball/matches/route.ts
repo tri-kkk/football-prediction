@@ -280,8 +280,9 @@ export async function GET(request: NextRequest) {
             q = q.like('status', 'IN%')
           } else if (status === 'today') {
             q = q.eq('match_date', today)
-          } else {
-            // status === 'all' (default): yesterday~tomorrow window so home feed shows current matches
+          } else if (!date) {
+            // status === 'all' AND date 파라미터 없음: yesterday~tomorrow window
+            //   🔥 date 파라미터 있으면 window 적용 X (기존: 미래 날짜 0건 반환 버그)
             const yesterdayDate = new Date(now.getTime() - 86_400_000).toISOString().split('T')[0]
             const tomorrowDate = new Date(now.getTime() + 86_400_000).toISOString().split('T')[0]
             q = q.gte('match_date', yesterdayDate).lte('match_date', tomorrowDate)
@@ -406,8 +407,10 @@ export async function GET(request: NextRequest) {
         const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
         const today = now.toISOString().split('T')[0]
         query = query.eq('match_date', today)
-      } else {
-        // status === 'all' (default): yesterday~tomorrow window
+      } else if (!date) {
+        // status === 'all' (default) AND date 파라미터 없음: yesterday~tomorrow window
+        //   🔥 date 파라미터 있으면 window 조건 적용 X — 외주가 명시한 날짜 그대로 조회
+        //      (기존 버그: date AND window 동시 적용 → 미래 날짜는 window 밖이라 0건 반환)
         const koreaOffset = 9 * 60
         const now = new Date(Date.now() + (koreaOffset + new Date().getTimezoneOffset()) * 60000)
         const yesterdayDate = new Date(now.getTime() - 86_400_000).toISOString().split('T')[0]
