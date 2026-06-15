@@ -187,7 +187,10 @@ export async function GET(request: NextRequest) {
         }
         
         // 4. 점수나 상태가 변경되었으면 업데이트
-        if (newStatus === 'FT' || isLiveBaseballStatus(newStatus) || newStatus === 'INTR' || homeScore !== null || awayScore !== null) {
+        // 🔥 PRESERVE_STATUSES(POST/CANC/ABD/AWD/WO)도 update 조건에 추가
+        //    이전 버그: NS→POST 보정 후에도 update 조건 통과 못 해서 DB에 저장 안 됨
+        const isPreservedStatus = ['POST', 'CANC', 'ABD', 'AWD', 'WO'].includes(newStatus)
+        if (newStatus === 'FT' || isLiveBaseballStatus(newStatus) || newStatus === 'INTR' || isPreservedStatus || homeScore !== null || awayScore !== null) {
           console.log(`  💾 DB 업데이트 시도...`)
           
           const { error: updateError } = await supabase
