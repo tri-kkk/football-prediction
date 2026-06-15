@@ -504,10 +504,20 @@ export async function GET(request: Request) {
     }
     upcomingUrl += `&order=commence_time.asc&limit=${limit}`
 
-    const upcomingResponse = await fetch(upcomingUrl, {
+    // 🛡️ 일시적 Cloudflare/Supabase 연결 실패(522/503/504) 대응: 1회 재시도
+    let upcomingResponse = await fetch(upcomingUrl, {
       headers,
       next: { revalidate: 60 }
     })
+
+    if (!upcomingResponse.ok && [502, 503, 504, 522, 524].includes(upcomingResponse.status)) {
+      console.warn(`[odds-from-db] upcoming first attempt ${upcomingResponse.status}, retrying after 500ms...`)
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      upcomingResponse = await fetch(upcomingUrl, {
+        headers,
+        cache: 'no-store',
+      })
+    }
 
     if (!upcomingResponse.ok) {
       throw new Error(`Supabase error (upcoming): ${upcomingResponse.status}`)
