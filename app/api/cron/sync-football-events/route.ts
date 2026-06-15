@@ -43,6 +43,10 @@ interface ApiFootballEvent {
 
 function buildExternalEventId(matchId: number, e: ApiFootballEvent): string {
   // api-football events에 고유 id가 없으므로 핵심 필드 hash로 안정적 dedup key 생성
+  // 🛡️ player.name/assist는 포함 X — api-football이 동일 골을 표기만 바꿔서 ('A. Isak' → 'Alexander Isak')
+  //   여러 번 응답하면 중복 row가 적재되어 알림이 여러 번 발송되는 버그 발생.
+  //   player.id가 안정적이지만 일부 매치에 null로 오는 케이스 있어 보조 정보로만 사용.
+  //   player.id가 있을 때만 hash에 포함 → 같은 골을 동일 dedup key로 묶음.
   const parts = [
     matchId,
     e.type,
@@ -50,9 +54,8 @@ function buildExternalEventId(matchId: number, e: ApiFootballEvent): string {
     e.time?.elapsed ?? '',
     e.time?.extra ?? '',
     e.team?.id ?? '',
-    e.player?.id ?? '',
-    e.player?.name ?? '',
-    e.assist?.id ?? '',
+    e.player?.id ?? '',     // ✅ id만 (name 표기 차이 무관)
+    e.assist?.id ?? '',     // ✅ id만
   ].join('|')
   return crypto.createHash('sha1').update(parts).digest('hex').slice(0, 32)
 }
