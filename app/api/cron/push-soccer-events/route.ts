@@ -144,6 +144,10 @@ function detectEvents(
   if (prevStatus !== 'HT' && match.status === 'HT') {
     detected.push({ event: 'halftime', ctx: baseCtx })
   }
+  // 🆕 후반 시작 (HT → 2H)
+  if (prevStatus === 'HT' && match.status === '2H') {
+    detected.push({ event: 'secondHalf', ctx: baseCtx })
+  }
   if (!FINISHED_STATUSES.has(prevStatus) && FINISHED_STATUSES.has(match.status)) {
     detected.push({ event: 'fulltime', ctx: baseCtx })
   }

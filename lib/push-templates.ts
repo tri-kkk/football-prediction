@@ -9,7 +9,7 @@
  */
 
 export type SoccerEvent =
-  | 'kickoff' | 'goal' | 'halftime' | 'fulltime'
+  | 'kickoff' | 'goal' | 'halftime' | 'secondHalf' | 'fulltime'
   | 'yellowCard' | 'redCard' | 'substitution'
 
 export type BaseballEvent =
@@ -104,6 +104,16 @@ const SOCCER_TEMPLATES: Record<
     }),
     en: (c) => ({
       title: '⏸ Half-time',
+      body: `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
+    }),
+  },
+  secondHalf: {
+    ko: (c) => ({
+      title: '▶ 후반 시작',
+      body: `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
+    }),
+    en: (c) => ({
+      title: '▶ Second Half',
       body: `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
     }),
   },

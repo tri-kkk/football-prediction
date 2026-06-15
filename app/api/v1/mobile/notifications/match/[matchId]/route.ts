@@ -30,7 +30,7 @@ const SPORTS = ['soccer', 'baseball'] as const
 type Sport = (typeof SPORTS)[number]
 
 // 이벤트 키 화이트리스트
-const SOCCER_EVENT_KEYS = ['kickoff', 'goal', 'halftime', 'fulltime', 'yellowCard', 'redCard', 'substitution']
+const SOCCER_EVENT_KEYS = ['kickoff', 'goal', 'halftime', 'secondHalf', 'fulltime', 'yellowCard', 'redCard', 'substitution']
 const BASEBALL_EVENT_KEYS = ['firstPitch', 'score', 'inningChange', 'homerun', 'gameEnd']
 
 function defaultEvents(sport: Sport): Record<string, boolean> {
