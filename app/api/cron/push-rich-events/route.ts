@@ -115,15 +115,29 @@ async function dispatchPush(
   sport: 'soccer' | 'baseball',
   event: SoccerEvent | BaseballEvent,
   ctxByLocale: { ko: EventContext; en: EventContext },
+  eventSourceId?: number,            // football_events.id 또는 baseball_events.id (옵션, 로그용)
 ): Promise<{ sent: number; failed: number }> {
   const tokens = await loadTargetTokens(matchId, sport, event)
-  if (!tokens.length) return { sent: 0, failed: 0 }
+  if (!tokens.length) {
+    // 구독자 0명 — 로그만 남기고 종료
+    await safeInsertLog({
+      match_id: matchId, sport, event_type: event, event_source_id: eventSourceId ?? null,
+      tokens_attempted: 0, tokens_success: 0, tokens_failed: 0,
+      invalid_tokens: null, error_message: 'no_subscribers',
+      notification_title: null, notification_body: null,
+    })
+    return { sent: 0, failed: 0 }
+  }
 
   const byLocale: Record<Locale, string[]> = { ko: [], en: [] }
   for (const t of tokens) byLocale[t.locale].push(t.token)
 
   let sent = 0
   let failed = 0
+  const invalidTokens: string[] = []
+  let lastErr: string | null = null
+  let lastTitle: string | null = null
+  let lastBody: string | null = null
 
   for (const locale of ['ko', 'en'] as const) {
     if (!byLocale[locale].length) continue
@@ -132,25 +146,54 @@ async function dispatchPush(
       sport === 'soccer'
         ? renderSoccerNotification(event as SoccerEvent, ctx, locale)
         : renderBaseballNotification(event as BaseballEvent, ctx, locale)
+    lastTitle = text.title
+    lastBody = text.body
     const data = toFCMData(
-      buildEventPayload({
-        sport,
-        matchId,
-        event,
-        extra: ctx as any,
-      }),
+      buildEventPayload({ sport, matchId, event, extra: ctx as any }),
     )
-    const result = await sendToTokens(byLocale[locale], {
-      notification: { title: text.title, body: text.body },
-      data,
-      android: { priority: 'high', notification: { sound: 'default' } },
-      apns: { payload: { aps: { sound: 'default' } } },
-    })
-    sent += result.successCount
-    failed += result.failureCount
+    try {
+      const result = await sendToTokens(byLocale[locale], {
+        notification: { title: text.title, body: text.body },
+        data,
+        android: { priority: 'high', notification: { sound: 'default' } },
+        apns: { payload: { aps: { sound: 'default' } } },
+      })
+      sent += result.successCount
+      failed += result.failureCount
+      // FCM이 invalid라고 응답한 토큰 prefix 수집 (개인정보 보호 위해 앞 30자만)
+      if (Array.isArray((result as any).invalidTokens)) {
+        for (const t of (result as any).invalidTokens as string[]) {
+          invalidTokens.push((t || '').slice(0, 30))
+        }
+      }
+    } catch (e: any) {
+      failed += byLocale[locale].length
+      lastErr = e?.message ?? String(e)
+    }
   }
 
+  // 발송 결과 로그 (best-effort, 실패해도 알림 자체에 영향 없음)
+  await safeInsertLog({
+    match_id: matchId, sport, event_type: event, event_source_id: eventSourceId ?? null,
+    tokens_attempted: tokens.length,
+    tokens_success: sent,
+    tokens_failed: failed,
+    invalid_tokens: invalidTokens.length > 0 ? invalidTokens : null,
+    error_message: lastErr,
+    notification_title: lastTitle,
+    notification_body: lastBody,
+  })
+
   return { sent, failed }
+}
+
+// 로그 insert (실패해도 throw 안 함)
+async function safeInsertLog(row: any) {
+  try {
+    await supabase.from('push_event_log').insert(row)
+  } catch (e) {
+    console.warn('[push-rich-events] log insert failed:', (e as Error).message)
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -233,7 +276,7 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
       detail: e.detail ?? undefined,
     }
 
-    const r = await dispatchPush(matchId, 'soccer', eventType, { ko: ctxKo, en: ctxEn })
+    const r = await dispatchPush(matchId, 'soccer', eventType, { ko: ctxKo, en: ctxEn }, Number(e.id))
     if (r.sent > 0 || r.failed > 0) pushed++
     lastPushedByMatch.set(matchId, e.id)
   }
@@ -327,7 +370,7 @@ async function processBaseballEvents(): Promise<{ pushed: number; seen: number }
       detail: e.detail ?? undefined,
     }
 
-    const r = await dispatchPush(matchId, 'baseball', eventType, { ko: ctxKo, en: ctxEn })
+    const r = await dispatchPush(matchId, 'baseball', eventType, { ko: ctxKo, en: ctxEn }, Number(e.id))
     if (r.sent > 0 || r.failed > 0) pushed++
     lastPushedByMatch.set(matchId, e.id)
   }
