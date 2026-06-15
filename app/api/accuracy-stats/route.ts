@@ -3,6 +3,11 @@
 // PICK 등급 중심으로 표시
 
 import { NextResponse } from 'next/server'
+
+// 🛡️ DB outage 시 cascade timeout 방지 (기본 300초 → 15초)
+export const maxDuration = 15
+// 🚀 백테스트 결과 1시간 캐시 (적중률은 시간 단위로 변경 없음)
+export const revalidate = 3600
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -39,28 +44,29 @@ function calculatePattern(homeProb: number, drawProb: number, awayProb: number):
   return `${getCode(homeProb)}-${getCode(drawProb)}-${getCode(awayProb)}`
 }
 
-// 팀 통계 캐시
-const teamStatsCache = new Map<number, any>()
+// 팀 통계 - 미리 일괄 로드해서 memory map으로 조회
+type TeamStatsAgg = {
+  total_played: number
+  home_goals_for: number
+  home_goals_against: number
+  away_goals_for: number
+  away_goals_against: number
+  home_first_goal_games: number
+  home_first_goal_wins: number
+  away_first_goal_games: number
+  away_first_goal_wins: number
+  form_home_5: number | null
+  form_away_5: number | null
+  is_promoted: boolean
+}
 
-async function getTeamStats(teamId: number, teamName: string) {
-  // 캐시 확인
-  if (teamId && teamStatsCache.has(teamId)) {
-    return teamStatsCache.get(teamId)
-  }
-  
-  let query = supabase.from('fg_team_stats').select('*')
-  
-  if (teamId) {
-    query = query.eq('team_id', teamId)
-  } else {
-    query = query.ilike('team_name', `%${teamName}%`)
-  }
-  
-  const { data: allSeasons } = await query.order('season', { ascending: false })
-  
-  if (!allSeasons || allSeasons.length === 0) return null
-  
-  const agg = {
+function aggregateTeamSeasons(seasons: any[]): TeamStatsAgg | null {
+  if (!seasons || seasons.length === 0) return null
+  // 최신 시즌 우선 (season DESC)
+  const sorted = [...seasons].sort((a, b) =>
+    String(b.season).localeCompare(String(a.season))
+  )
+  const agg: TeamStatsAgg = {
     total_played: 0,
     home_goals_for: 0,
     home_goals_against: 0,
@@ -70,12 +76,11 @@ async function getTeamStats(teamId: number, teamName: string) {
     home_first_goal_wins: 0,
     away_first_goal_games: 0,
     away_first_goal_wins: 0,
-    form_home_5: allSeasons[0].form_home_5,
-    form_away_5: allSeasons[0].form_away_5,
-    is_promoted: allSeasons[0].is_promoted || false,
+    form_home_5: sorted[0].form_home_5,
+    form_away_5: sorted[0].form_away_5,
+    is_promoted: sorted[0].is_promoted || false,
   }
-  
-  for (const s of allSeasons) {
+  for (const s of sorted) {
     agg.total_played += s.total_played || 0
     agg.home_goals_for += s.home_goals_for || 0
     agg.home_goals_against += s.home_goals_against || 0
@@ -86,25 +91,25 @@ async function getTeamStats(teamId: number, teamName: string) {
     agg.away_first_goal_games += s.away_first_goal_games || 0
     agg.away_first_goal_wins += s.away_first_goal_wins || 0
   }
-  
-  // 캐시 저장
-  if (teamId) teamStatsCache.set(teamId, agg)
-  
   return agg
 }
 
-async function predictMatch(match: any): Promise<{
+function predictMatch(
+  match: any,
+  teamStatsMap: Map<number, TeamStatsAgg>,
+  patternMap: Map<string, any>
+): {
   predictedWinner: 'HOME' | 'DRAW' | 'AWAY' | 'SKIP'
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
   grade: 'PICK' | 'GOOD' | 'PASS'
   homeProb: number
   drawProb: number
   awayProb: number
-} | null> {
-  
-  const homeStats = await getTeamStats(match.home_team_id, match.home_team)
-  const awayStats = await getTeamStats(match.away_team_id, match.away_team)
-  
+} | null {
+
+  const homeStats = teamStatsMap.get(match.home_team_id)
+  const awayStats = teamStatsMap.get(match.away_team_id)
+
   if (!homeStats || !awayStats) return null
   if (homeStats.total_played < 5 || awayStats.total_played < 5) return null
   
@@ -161,15 +166,10 @@ async function predictMatch(match: any): Promise<{
   const avgTotal = avgWin + avgDraw + avgLose
   avgWin /= avgTotal; avgDraw /= avgTotal; avgLose /= avgTotal
   
-  // 패턴 반영
+  // 패턴 반영 (메모리 Map 조회 - DB 안 거침)
   const pattern = calculatePattern(avgWin, avgDraw, avgLose)
-  const { data: patternData } = await supabase
-    .from('fg_patterns')
-    .select('*')
-    .eq('pattern', pattern)
-    .is('league_id', null)
-    .single()
-  
+  const patternData = patternMap.get(pattern) || null
+
   let finalWin = avgWin, finalDraw = avgDraw, finalLose = avgLose
   
   if (patternData && patternData.total_matches >= 10) {
@@ -228,39 +228,83 @@ async function predictMatch(match: any): Promise<{
 
 export async function GET() {
   const startTime = Date.now()
-  
+
   try {
-    // 캐시 초기화
-    teamStatsCache.clear()
-    
-    // 24-25 시즌 종료된 경기 가져오기 (최근 300경기)
-    const { data: matches, error } = await supabase
+    // ============================================
+    // 1) 모든 데이터 일괄 fetch (3 DB call)
+    // ============================================
+
+    // 1-1) 24-25 시즌 종료된 경기 (최근 300경기)
+    const matchesPromise = supabase
       .from('fg_match_history')
       .select('*')
       .eq('status', 'FINISHED')
       .in('season', ['2024', '2025'])
       .order('match_date', { ascending: false })
       .limit(300)
-    
-    if (error) throw error
+
+    // 1-2) 글로벌 패턴 (league_id IS NULL) — 한 번만 fetch
+    const patternsPromise = supabase
+      .from('fg_patterns')
+      .select('*')
+      .is('league_id', null)
+
+    const [
+      { data: matches, error: matchesError },
+      { data: allPatterns },
+    ] = await Promise.all([matchesPromise, patternsPromise])
+
+    if (matchesError) throw matchesError
     if (!matches || matches.length === 0) {
       return NextResponse.json({ success: false, error: 'No matches found' })
     }
-    
-    // 백테스트 실행
+
+    const patternMap = new Map<string, any>(
+      (allPatterns || []).map((p: any) => [p.pattern, p])
+    )
+
+    // 1-3) 등장하는 모든 team_id 추출 → fg_team_stats 일괄 fetch
+    const teamIdSet = new Set<number>()
+    for (const m of matches) {
+      if (m.home_team_id) teamIdSet.add(m.home_team_id)
+      if (m.away_team_id) teamIdSet.add(m.away_team_id)
+    }
+    const teamIds = Array.from(teamIdSet)
+
+    const { data: allTeamSeasons } = await supabase
+      .from('fg_team_stats')
+      .select('*')
+      .in('team_id', teamIds)
+
+    // team_id별로 시즌 묶기
+    const seasonsByTeam = new Map<number, any[]>()
+    for (const row of allTeamSeasons || []) {
+      const arr = seasonsByTeam.get(row.team_id) || []
+      arr.push(row)
+      seasonsByTeam.set(row.team_id, arr)
+    }
+    const teamStatsMap = new Map<number, TeamStatsAgg>()
+    Array.from(seasonsByTeam.entries()).forEach(([tid, seasons]) => {
+      const agg = aggregateTeamSeasons(seasons)
+      if (agg) teamStatsMap.set(tid, agg)
+    })
+
+    // ============================================
+    // 2) 백테스트 실행 (메모리만 — DB 호출 없음)
+    // ============================================
     let total = 0, hits = 0, skipped = 0
-    
+
     const byGrade: Record<string, { total: number; hits: number }> = {
       PICK: { total: 0, hits: 0 },
       GOOD: { total: 0, hits: 0 },
       PASS: { total: 0, hits: 0 }
     }
-    
+
     const byLeague: Record<string, { total: number; hits: number }> = {}
     const recentResults: any[] = []
-    
+
     for (const match of matches) {
-      const prediction = await predictMatch(match)
+      const prediction = predictMatch(match, teamStatsMap, patternMap)
       
       if (!prediction || prediction.predictedWinner === 'SKIP') {
         skipped++
