@@ -10,6 +10,8 @@
 import { TEAM_NAME_KR } from '../../teamLogos'
 
 export const revalidate = 60
+// 🛡️ DB outage 시 cascade timeout 방지 (기본 300초 → 15초)
+export const maxDuration = 15
 
 function getTeamKo(name: string | null | undefined): string | null {
   if (!name) return null

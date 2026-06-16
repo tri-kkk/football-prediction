@@ -222,12 +222,15 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
   for (const c of cursors ?? []) cursorMap.set(Number(c.match_id), Number(c.last_pushed_event_id ?? 0))
 
   // 3) 매치 정보 join
+  //    매치 본체는 match_odds_latest (text match_id 사용 — API-football fixture id)
+  //    한국어 팀명은 별도 team_translations(있을 경우)에서 fallback
+  const matchIdStrings = matchIds.map((m) => String(m))
   const { data: matches } = await supabase
-    .from('matches')
-    .select('api_match_id, home_team, away_team, home_team_ko, away_team_ko, home_team_id')
-    .in('api_match_id', matchIds)
+    .from('match_odds_latest')
+    .select('match_id, home_team, away_team, home_team_id, away_team_id')
+    .in('match_id', matchIdStrings)
   const matchMap = new Map<number, any>()
-  for (const m of matches ?? []) matchMap.set(Number(m.api_match_id), m)
+  for (const m of matches ?? []) matchMap.set(Number(m.match_id), m)
 
   // 4) 매치별 신규 이벤트 처리
   let pushed = 0
@@ -410,9 +413,9 @@ export async function GET(_req: NextRequest) {
       elapsedMs: Date.now() - startedAt,
     })
   } catch (e: any) {
-    console.error('[push-rich-events] crash:', e.message)
+    console.error('[push-rich-events] crash:', e?.message ?? e)
     return NextResponse.json(
-      { success: false, error: e.message, elapsedMs: Date.now() - startedAt },
+      { success: false, error: e?.message ?? String(e), elapsedMs: Date.now() - startedAt },
       { status: 500 },
     )
   }
