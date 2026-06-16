@@ -49,8 +49,10 @@ interface Match {
   } | null
   homePitcher?: string | null
   homePitcherId?: number | null
+  homePitcherKo?: string | null
   awayPitcher?: string | null
   awayPitcherId?: number | null
+  awayPitcherKo?: string | null
   hasPitcherData?: boolean
 }
 
@@ -455,12 +457,18 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
           <div className="flex items-center justify-between mb-3 px-1 py-2 rounded-lg" style={{ background: '#1a1c1d', border: '1px solid rgba(255,255,255,0.04)' }}>
             <div className="flex-1 text-center">
               <p className="text-[9px] text-gray-600 mb-0.5">{language === 'ko' ? '선발' : 'SP'}</p>
-              <p className="text-[11px] font-semibold text-gray-400">{match.awayPitcher ? match.awayPitcher.split(' ').pop() : '—'}</p>
+              <p className="text-[11px] font-semibold text-gray-400">{(() => {
+                const p = language === 'ko' ? (match.awayPitcherKo || match.awayPitcher) : (match.awayPitcher || match.awayPitcherKo)
+                return p ? p.split(' ').pop() : '—'
+              })()}</p>
             </div>
             <div className="w-px h-5 bg-gray-800" />
             <div className="flex-1 text-center">
               <p className="text-[9px] text-gray-600 mb-0.5">{language === 'ko' ? '선발' : 'SP'}</p>
-              <p className="text-[11px] font-semibold text-gray-400">{match.homePitcher ? match.homePitcher.split(' ').pop() : '—'}</p>
+              <p className="text-[11px] font-semibold text-gray-400">{(() => {
+                const p = language === 'ko' ? (match.homePitcherKo || match.homePitcher) : (match.homePitcher || match.homePitcherKo)
+                return p ? p.split(' ').pop() : '—'
+              })()}</p>
             </div>
           </div>
         )}
