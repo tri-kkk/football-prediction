@@ -158,14 +158,17 @@ async function dispatchPush(
         android: { priority: 'high', notification: { sound: 'default' } },
         apns: { payload: { aps: { sound: 'default' } } },
       })
-      sent += result.successCount
-      failed += result.failureCount
+      sent += result.success ?? 0
+      failed += result.failed ?? 0
       // FCM이 invalid라고 응답한 토큰 prefix 수집 (개인정보 보호 위해 앞 30자만)
-      if (Array.isArray((result as any).invalidTokens)) {
-        for (const t of (result as any).invalidTokens as string[]) {
+      if (Array.isArray(result.invalidTokens)) {
+        for (const t of result.invalidTokens) {
           invalidTokens.push((t || '').slice(0, 30))
         }
       }
+      // 개별 실패 메시지 수집 (lastErr 로깅용)
+      const firstErr = result.results.find((r) => !r.ok && r.error)?.error
+      if (firstErr) lastErr = `${firstErr.code}: ${firstErr.message ?? ''}`.trim()
     } catch (e: any) {
       failed += byLocale[locale].length
       lastErr = e?.message ?? String(e)
