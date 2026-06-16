@@ -262,7 +262,30 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
         ? 'home'
         : 'away'
 
-    // 한·영 context (팀명 분기 + assist 포함)
+    // 골 이벤트면 누적 스코어 계산 (이 골 포함, Missed Penalty 제외, Own Goal은 상대팀 점수)
+    let homeScore: number | undefined
+    let awayScore: number | undefined
+    if (eventType === 'goal' && e.detail !== 'Missed Penalty') {
+      const { data: goalsSoFar } = await supabase
+        .from('football_events')
+        .select('team_id, detail')
+        .eq('match_id', matchId)
+        .eq('type', 'Goal')
+        .neq('detail', 'Missed Penalty')
+        .lte('id', e.id)
+      let h = 0, a = 0
+      for (const g of goalsSoFar ?? []) {
+        const teamIsHome = match.home_team_id && Number(g.team_id) === Number(match.home_team_id)
+        const isOwnGoal = g.detail === 'Own Goal'
+        const homeGoal = isOwnGoal ? !teamIsHome : teamIsHome
+        if (homeGoal) h++
+        else a++
+      }
+      homeScore = h
+      awayScore = a
+    }
+
+    // 한·영 context (팀명 분기 + assist + 스코어 포함)
     const ctxKo: EventContext = {
       homeTeam: match.home_team_ko || match.home_team,
       awayTeam: match.away_team_ko || match.away_team,
@@ -271,6 +294,8 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
       assist: e.assist_name ?? undefined,
       scoringTeam,
       detail: e.detail ?? undefined,
+      homeScore,
+      awayScore,
     }
     const ctxEn: EventContext = {
       homeTeam: match.home_team,
@@ -280,6 +305,8 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
       assist: e.assist_name ?? undefined,
       scoringTeam,
       detail: e.detail ?? undefined,
+      homeScore,
+      awayScore,
     }
 
     const r = await dispatchPush(matchId, 'soccer', eventType, { ko: ctxKo, en: ctxEn }, Number(e.id))
@@ -396,9 +423,10 @@ async function processBaseballEvents(): Promise<{ pushed: number; seen: number }
   return { pushed, seen: events.length }
 }
 
-// ─────────────────────────────────────────────────────────────
+
+// ====================================
 // 메인 핸들러
-// ─────────────────────────────────────────────────────────────
+// ====================================
 
 export async function GET(_req: NextRequest) {
   const startedAt = Date.now()
