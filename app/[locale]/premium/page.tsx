@@ -1131,6 +1131,26 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
           {/* 상세 정보 - 펼침 상태일 때만 */}
           {isExpanded && (
             <>
+              {/* 🌍 데이터 부족 안내 (월드컵/국가전 등 fg_team_stats에 통계 없는 매치) */}
+              {(prediction as any)?.noStatsAvailable && (
+                <div className="bg-amber-900/20 border border-amber-700/40 rounded-lg p-3 mb-2 text-center">
+                  <div className="text-amber-300 text-sm font-semibold mb-1">⚠️ {language === 'ko' ? '분석 데이터 미지원' : 'Analysis Not Available'}</div>
+                  <div className="text-xs text-amber-200/80">
+                    {language === 'ko'
+                      ? '월드컵/국가대표 경기는 클럽 리그 통계 기반 분석이 적용되지 않습니다. 아래 수치는 참고용 기본값입니다.'
+                      : 'International / World Cup matches are not covered by club-league based statistics. Values below are neutral defaults.'}
+                  </div>
+                </div>
+              )}
+              {(prediction as any)?.partialStatsOnly && !(prediction as any)?.noStatsAvailable && (
+                <div className="bg-yellow-900/20 border border-yellow-700/40 rounded-lg p-3 mb-2 text-center">
+                  <div className="text-yellow-300 text-xs">
+                    {language === 'ko'
+                      ? '⚠️ 한 팀의 통계 데이터가 부족합니다. 분석 신뢰도가 낮을 수 있습니다.'
+                      : '⚠️ Stats data is missing for one team. Confidence may be limited.'}
+                  </div>
+                </div>
+              )}
               {/* 파워 점수 비교 */}
               <div className="bg-[#1a1d1e] rounded-lg p-3">
                 <div className="text-xs text-gray-500 mb-2 text-center">{t.powerIndex}</div>

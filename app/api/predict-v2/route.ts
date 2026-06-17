@@ -345,6 +345,10 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   const homeStats = await getAggregatedStats(homeTeamId, homeTeam, season)
   const awayStats = await getAggregatedStats(awayTeamId, awayTeam, season)
   
+  // 🌍 둘 다 fallback이면 분석 신뢰도 없음 (월드컵/국가전 등 fg_team_stats에 데이터 없는 케이스)
+  const noStatsAvailable = !homeStats && !awayStats
+  const partialStatsOnly = !homeStats || !awayStats
+
   if (!homeStats || !awayStats) {
     // ✅ fallback: DB에 통계가 없는 팀은 기본값으로 분석 진행
     console.warn(`⚠️ Stats not found, using fallback: ${!homeStats ? homeTeam : ''} ${!awayStats ? awayTeam : ''}`)
@@ -644,6 +648,8 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   return {
     homeTeam,
     awayTeam,
+    noStatsAvailable,
+    partialStatsOnly,
     homePower,
     awayPower,
     homePA: { all: homePA_all, five: homePA_five, firstGoal: homePA_firstGoal },
