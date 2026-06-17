@@ -145,6 +145,28 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // 🌧 타임아웃 안전장치 3: 라이브 status 정체 감지 → INTR 자동 마킹 (우천 서스펜드 대응)
+        //   api-sports가 우천 중단을 IN2/IN5 등 라이브 status 그대로 유지하는 케이스
+        //   조건: DB의 라이브 status와 동일 + 점수 동일 + 1시간 이상 경과
+        //   → INTR로 마킹 → 이후 안전장치 2(INTR + 6시간 → FT)로 자동 종료 처리됨
+        if (
+          match.updated_at &&
+          isLiveBaseballStatus(match.status) &&
+          isLiveBaseballStatus(newStatus) &&
+          newStatus !== 'INTR'
+        ) {
+          const lastUpdate = new Date(match.updated_at).getTime()
+          const hoursElapsed = (Date.now() - lastUpdate) / (1000 * 60 * 60)
+          const sameInning = newStatus === match.status
+          const sameScore =
+            (homeScore ?? null) === (match.home_score ?? null) &&
+            (awayScore ?? null) === (match.away_score ?? null)
+          if (hoursElapsed >= 1 && sameInning && sameScore) {
+            console.log(`  ⏸ 정체 감지: ${match.status} 점수/이닝 ${hoursElapsed.toFixed(1)}시간 동결 → INTR 자동 마킹 (우천/서스펜드 추정)`)
+            newStatus = 'INTR'
+          }
+        }
+
         // 🩹 api-sports가 이미 시작/종료된 경기에 'NS'를 잘못 반환하는 케이스 보정.
         //   스코어가 있는데 NS-like면 시작된 경기 → 경과 시간으로 FT/LIVE 추론(NS로 박히는 것 방지).
         if (['NS', 'SCHEDULED', 'TBD'].includes(newStatus)) {
