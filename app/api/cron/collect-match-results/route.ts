@@ -611,11 +611,15 @@ export async function GET(request: NextRequest) {
 
         // 분석 데이터 없으면 결과 저장은 스킵하되, status는 업데이트!
         if (!prediction) {
-          // 🔥 분석 없어도 match_odds_latest status 업데이트
+          // 🔥 분석 없어도 match_odds_latest status + score + elapsed 업데이트
           const { error: statusUpdateError } = await supabase
             .from('match_odds_latest')
             .update({ 
               status: match.fixture.status.short,
+              home_score: match.goals?.home ?? null,
+              away_score: match.goals?.away ?? null,
+              elapsed: match.fixture.status.elapsed ?? null,
+              elapsed_extra: match.fixture.status.extra ?? null,
               updated_at: new Date().toISOString()
             })
             .eq('match_id', matchId)
@@ -686,11 +690,15 @@ export async function GET(request: NextRequest) {
           const correctIcon = isCorrect ? '✅' : '❌'
           console.log(`${correctIcon} ${match.teams.home.name} ${finalScoreHome}-${finalScoreAway} ${match.teams.away.name}`)
           
-          // 🔥 핵심: match_odds_latest의 status도 업데이트!
+          // 🔥 핵심: match_odds_latest의 status + score + elapsed 업데이트!
           const { error: updateError } = await supabase
             .from('match_odds_latest')
             .update({ 
               status: match.fixture.status.short,  // FT, AET, PEN 등
+              home_score: finalScoreHome ?? null,
+              away_score: finalScoreAway ?? null,
+              elapsed: match.fixture.status.elapsed ?? null,
+              elapsed_extra: match.fixture.status.extra ?? null,
               updated_at: new Date().toISOString()
             })
             .eq('match_id', matchId)

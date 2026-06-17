@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { TEAM_NAME_KR } from '../../teamLogos'
+
+// 종료 매치 fetch용 supabase client
+const supabaseLive = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+)
 
 // ============================================================
 // 🔥 리그 ID 매핑 (50개 - Cron과 동일!)
@@ -247,6 +254,7 @@ export async function GET(request: NextRequest) {
           status: match.fixture.status.short,
           statusLong: match.fixture.status.long,
           elapsed: match.fixture.status.elapsed,
+          elapsedExtra: match.fixture.status.extra ?? null,
           elapsedExtra: match.fixture.status.extra ?? null,  // 추가시간 분 (예: 90+3' → elapsed=90, elapsedExtra=3)
           
           // 팀 정보
@@ -274,10 +282,53 @@ export async function GET(request: NextRequest) {
 
     console.log(`📊 총 ${matchesWithDetails.length}개 경기 상세 정보 조회 완료`)
 
+    // 🆕 최근 30분 안에 종료된 매치도 함께 반환 (라이브 API가 매치 종료 즉시 사라뜨려 외주 앱이 FT를 한 번도 못 받던 문제 해결)
+    let recentlyEnded: any[] = []
+    try {
+      const endedCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+      const { data: endedRows } = await supabaseLive
+        .from('match_odds_latest')
+        .select('match_id, home_team, away_team, league_code, status, elapsed, elapsed_extra, home_score, away_score, home_team_logo, away_team_logo, home_team_id, away_team_id, commence_time')
+        .in('status', ['FT', 'AET', 'PEN'])
+        .gte('updated_at', endedCutoff)
+        .limit(100)
+
+      const liveIds = new Set(matchesWithDetails.map((m: any) => Number(m.id)))
+      recentlyEnded = (endedRows ?? [])
+        .filter((r: any) => !liveIds.has(Number(r.match_id)))
+        .map((r: any) => ({
+          id: Number(r.match_id),
+          fixtureId: Number(r.match_id),
+          leagueCode: r.league_code,
+          league: r.league_code,
+          leagueLogo: null,
+          country: null,
+          date: r.commence_time,
+          timestamp: r.commence_time ? Math.floor(new Date(r.commence_time).getTime() / 1000) : null,
+          status: r.status,
+          statusLong: r.status === 'FT' ? 'Match Finished' : r.status === 'AET' ? 'After Extra Time' : r.status === 'PEN' ? 'Penalty Shootout' : r.status,
+          elapsed: r.elapsed ?? 90,
+          elapsedExtra: r.elapsed_extra ?? null,
+          homeTeam: r.home_team,
+          awayTeam: r.away_team,
+          homeTeamKR: translateTeamName(r.home_team),
+          awayTeamKR: translateTeamName(r.away_team),
+          homeCrest: r.home_team_logo,
+          awayCrest: r.away_team_logo,
+          homeScore: r.home_score ?? 0,
+          awayScore: r.away_score ?? 0,
+        }))
+      console.log(`📦 최근 종료 매치 ${recentlyEnded.length}개 함께 반환`)
+    } catch (e) {
+      console.warn('[live-matches] recently ended fetch failed:', (e as Error).message)
+    }
+
+    const allMatches = [...matchesWithDetails, ...recentlyEnded]
+
     return NextResponse.json({
       success: true,
-      count: matchesWithDetails.length,
-      matches: matchesWithDetails,
+      count: allMatches.length,
+      matches: allMatches,
       timestamp: new Date().toISOString()
     })
 
