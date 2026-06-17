@@ -247,6 +247,7 @@ export async function GET(request: NextRequest) {
           status: match.fixture.status.short,
           statusLong: match.fixture.status.long,
           elapsed: match.fixture.status.elapsed,
+          elapsedExtra: match.fixture.status.extra ?? null,  // 추가시간 분 (예: 90+3' → elapsed=90, elapsedExtra=3)
           
           // 팀 정보
           homeTeam: match.teams.home.name,

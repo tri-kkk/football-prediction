@@ -28,7 +28,7 @@ const API_FOOTBALL_HOST = 'v3.football.api-sports.io'
 interface ApiFootballFixture {
   fixture: {
     id: number
-    status: { short: string; elapsed: number | null }
+    status: { short: string; elapsed: number | null; extra?: number | null }
     timestamp: number
   }
   teams: { home: { name: string }; away: { name: string } }
@@ -125,8 +125,12 @@ export async function GET(_req: NextRequest) {
       if (!mid || !newStatus) continue
       const homeScore = f.goals?.home ?? null
       const awayScore = f.goals?.away ?? null
+      const elapsed = f.fixture?.status?.elapsed ?? null
+      const elapsedExtra = f.fixture?.status?.extra ?? null
       const update: Record<string, any> = {
         status: newStatus,
+        elapsed,
+        elapsed_extra: elapsedExtra,
         updated_at: new Date().toISOString(),
       }
       if (homeScore !== null) update.home_score = homeScore
