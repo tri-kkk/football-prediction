@@ -207,7 +207,7 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
   // 1) 최근 신규 events 가져옴 (id 오름차순 — 매치별 cursor 비교 위해)
   const { data: events } = await supabase
     .from('football_events')
-    .select('id, match_id, type, detail, minute, team_id, team_name, player_name, assist_name, comments')
+    .select('id, match_id, type, detail, minute, team_id, team_name, player_name, assist_name, comments, created_at')
     .order('id', { ascending: true })
     .gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()) // 최근 30분
     .limit(500)
@@ -243,6 +243,13 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
     const matchId = Number(e.match_id)
     const lastCursor = lastPushedByMatch.get(matchId) ?? cursorMap.get(matchId) ?? 0
     if (e.id <= lastCursor) continue
+
+    // Staleness: 이벤트 발생 후 5분 이상 지났으면 push 안 함 (cron lag/재시작 catch-up 일괄 발송 방지)
+    const eventAgeMs = e.created_at ? Date.now() - new Date(e.created_at).getTime() : 0
+    if (eventAgeMs > 5 * 60 * 1000) {
+      lastPushedByMatch.set(matchId, e.id)
+      continue
+    }
 
     const eventType = mapFootballEventType(e.type, e.detail)
     if (!eventType) {
@@ -381,6 +388,8 @@ async function processBaseballEvents(): Promise<{ pushed: number; seen: number }
 
     const scoringTeam = e.team === 'home' ? 'home' : 'away'
     const inningNum = e.inning ? e.inning.replace(/^IN/, '') : undefined
+    const halfInning: 'top' | 'bottom' | undefined =
+      e.half_inning === 'top' ? 'top' : e.half_inning === 'bottom' ? 'bottom' : undefined
 
     const ctxKo: EventContext = {
       homeTeam: match.home_team_ko || match.home_team,
@@ -388,6 +397,7 @@ async function processBaseballEvents(): Promise<{ pushed: number; seen: number }
       homeScore: e.home_score ?? 0,
       awayScore: e.away_score ?? 0,
       inning: inningNum,
+      halfInning,
       player: e.player_name ?? undefined,
       scoringTeam,
       detail: e.detail ?? undefined,
@@ -398,6 +408,7 @@ async function processBaseballEvents(): Promise<{ pushed: number; seen: number }
       homeScore: e.home_score ?? 0,
       awayScore: e.away_score ?? 0,
       inning: inningNum,
+      halfInning,
       player: e.player_name ?? undefined,
       scoringTeam,
       detail: e.detail ?? undefined,

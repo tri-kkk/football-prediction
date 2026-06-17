@@ -24,6 +24,7 @@ export interface EventContext {
   awayScore?: number
   elapsed?: number                    // 축구 경기 분 (예: 67)
   inning?: string                     // 야구 이닝 (예: '5', '5T', '5B')
+  halfInning?: 'top' | 'bottom'       // 야구 초/말 (MLB만 정확. KBO/NPB 미지원)
   player?: string                     // 골/카드 선수명, 타자명
   assist?: string                     // 어시스트 선수명 (축구 골)
   scoringTeam?: 'home' | 'away'       // 득점/카드 발생 팀
@@ -192,14 +193,20 @@ const BASEBALL_TEMPLATES: Record<
     }),
   },
   inningChange: {
-    ko: (c) => ({
-      title: `⚾ ${c.inning ?? ''}회`,
-      body: `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
-    }),
-    en: (c) => ({
-      title: `⚾ Inning ${c.inning ?? ''}`,
-      body: `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
-    }),
+    ko: (c) => {
+      const half = c.halfInning === 'top' ? ' 초' : c.halfInning === 'bottom' ? ' 말' : ''
+      return {
+        title: `⚾ ${c.inning ?? ''}회${half}`,
+        body: `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
+      }
+    },
+    en: (c) => {
+      const half = c.halfInning === 'top' ? 'Top of ' : c.halfInning === 'bottom' ? 'Bottom of ' : ''
+      return {
+        title: `⚾ ${half}Inning ${c.inning ?? ''}`,
+        body: `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
+      }
+    },
   },
   homerun: {
     ko: (c) => ({

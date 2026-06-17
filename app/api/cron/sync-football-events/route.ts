@@ -47,6 +47,8 @@ function buildExternalEventId(matchId: number, e: ApiFootballEvent): string {
   //   여러 번 응답하면 중복 row가 적재되어 알림이 여러 번 발송되는 버그 발생.
   //   player.id가 안정적이지만 일부 매치에 null로 오는 케이스 있어 보조 정보로만 사용.
   //   player.id가 있을 때만 hash에 포함 → 같은 골을 동일 dedup key로 묶음.
+  // 🛡️ player.id/assist.id 제외 — api-sports가 라이브 중 단계적으로 보강(null→채움, assist 추가)
+  //    같은 골이 여러 row로 적재되어 중복 알림 발송되던 버그 해결
   const parts = [
     matchId,
     e.type,
@@ -54,8 +56,6 @@ function buildExternalEventId(matchId: number, e: ApiFootballEvent): string {
     e.time?.elapsed ?? '',
     e.time?.extra ?? '',
     e.team?.id ?? '',
-    e.player?.id ?? '',     // ✅ id만 (name 표기 차이 무관)
-    e.assist?.id ?? '',     // ✅ id만
   ].join('|')
   return crypto.createHash('sha1').update(parts).digest('hex').slice(0, 32)
 }
