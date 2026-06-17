@@ -12,7 +12,7 @@ const supabase = createClient(
 )
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514'
+const CLAUDE_MODEL = 'claude-sonnet-4-6'
 
 // ═══════════════════════════════════════
 // 다양화 유틸 (baseball-generate와 동일)

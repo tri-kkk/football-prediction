@@ -65,7 +65,7 @@ Respond in this exact JSON format (no markdown code blocks, just raw JSON):
 Only include fields that were provided in the input.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8000,
       messages: [
         {

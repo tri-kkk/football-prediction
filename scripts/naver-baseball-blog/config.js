@@ -17,7 +17,7 @@ export const CONFIG = {
 
   // Claude API
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-  CLAUDE_MODEL: 'claude-sonnet-4-20250514',
+  CLAUDE_MODEL: 'claude-sonnet-4-6',
 
   // 네이버 블로그 API
   NAVER_CLIENT_ID: process.env.NAVER_BLOG_CLIENT_ID || '',
