@@ -275,13 +275,18 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
     if (eventType === 'goal' && e.detail !== 'Missed Penalty') {
       const { data: goalsSoFar } = await supabase
         .from('football_events')
-        .select('team_id, detail')
+        .select('team_id, detail, minute, extra_minute')
         .eq('match_id', matchId)
         .eq('type', 'Goal')
         .neq('detail', 'Missed Penalty')
         .lte('id', e.id)
+      // 🛡️ 같은 골이 여러 row로 적재된 매치(dedup fix 이전 데이터) 대응: (minute, team, detail) 조합으로 dedup
+      const seen = new Set<string>()
       let h = 0, a = 0
       for (const g of goalsSoFar ?? []) {
+        const key = `${g.minute ?? ''}|${g.extra_minute ?? ''}|${g.team_id}|${g.detail}`
+        if (seen.has(key)) continue
+        seen.add(key)
         const teamIsHome = match.home_team_id && Number(g.team_id) === Number(match.home_team_id)
         const isOwnGoal = g.detail === 'Own Goal'
         const homeGoal = isOwnGoal ? !teamIsHome : teamIsHome
