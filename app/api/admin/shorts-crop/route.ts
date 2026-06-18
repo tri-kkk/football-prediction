@@ -41,7 +41,9 @@ function resolveBgmPath(key: string | null): string | null {
 
 export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const bgmKey = searchParams.get('bgm') || ''
+  const format = (searchParams.get('format') || 'webm').toLowerCase()  // 'webm' | 'mp4'
+  const naverMode = searchParams.get('naver') === '1'  // 네이버 클립용 = 무음 강제
+  const bgmKey = naverMode ? '' : (searchParams.get('bgm') || '')
   const bgmPath = resolveBgmPath(bgmKey)
 
   console.log('[shorts-crop] start FFMPEG_PATH=', FFMPEG_PATH, 'BGM=', bgmKey)
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
         '-map', '0:v:0',
         '-map', '1:a:0',
         '-af', 'afade=in:st=0:d=0.5,afade=out:st=26:d=1.5,volume=0.8',
-        '-c:a', 'libopus',
+        '-c:a', format === 'mp4' ? 'aac' : 'libopus',
         '-b:a', '128k',
         '-shortest',
       )
@@ -77,18 +79,32 @@ export async function POST(request: NextRequest) {
       args.push('-an')
     }
 
-    args.push(
-      '-c:v', 'libvpx-vp9',
-      '-b:v', '8M',
-      '-deadline', 'realtime',
-      '-cpu-used', '8',
-      '-row-mt', '1',
-      '-tile-columns', '2',
-      '-frame-parallel', '1',
-      '-pix_fmt', 'yuv420p',
-      '-f', 'webm',
-      'pipe:1',
-    )
+    if (format === 'mp4') {
+      // 네이버 클립용 mp4 — H.264 + AAC, fragmented mp4로 streaming pipe 출력
+      args.push(
+        '-c:v', 'libx264',
+        '-preset', 'veryfast',
+        '-crf', '22',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', '+frag_keyframe+empty_moov+default_base_moof',
+        '-f', 'mp4',
+        'pipe:1',
+      )
+    } else {
+      // 기본 webm — VP9 + Opus (BGM 포함)
+      args.push(
+        '-c:v', 'libvpx-vp9',
+        '-b:v', '8M',
+        '-deadline', 'realtime',
+        '-cpu-used', '8',
+        '-row-mt', '1',
+        '-tile-columns', '2',
+        '-frame-parallel', '1',
+        '-pix_fmt', 'yuv420p',
+        '-f', 'webm',
+        'pipe:1',
+      )
+    }
 
     return await new Promise<NextResponse>((resolve) => {
       let ff: any
@@ -142,11 +158,12 @@ export async function POST(request: NextRequest) {
         }
         const out = Buffer.concat(outChunks)
         console.log('[shorts-crop] success bytes:', out.length, 'elapsed:', elapsed, 'ms')
+        const isMp4 = format === 'mp4'
         resolve(new NextResponse(out as any, {
           status: 200,
           headers: {
-            'Content-Type': 'video/webm',
-            'Content-Disposition': 'attachment; filename=shorts_9x16.webm',
+            'Content-Type': isMp4 ? 'video/mp4' : 'video/webm',
+            'Content-Disposition': `attachment; filename=shorts_9x16.${isMp4 ? 'mp4' : 'webm'}`,
             'Cache-Control': 'no-store',
           },
         }))

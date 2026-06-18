@@ -7,6 +7,8 @@ import { useSession } from 'next-auth/react'
 import { useLanguage } from '../../../contexts/LanguageContext'
 import BaseballAIPrediction from '../../../components/BaseballAIPrediction'
 import AdBanner from '../../../components/AdBanner'
+import RewardedAdModal from '../../../components/RewardedAdModal'
+import { useMatchUnlock } from '../../../hooks/useMatchUnlock'
 import { isLiveBaseballStatus, extractInningNumber } from '../../../../lib/baseballStatus'
 
 // =====================================================
@@ -248,7 +250,13 @@ export default function BaseballDetailPage() {
   // 프리미엄 여부 체크
   const isPremium = (session?.user as any)?.tier === 'premium'
   const isLoggedIn = !!session?.user
-  
+
+  // 🎁 경기별 광고 시청 잠금 해제 (KST 자정 리셋) — 비회원/무료회원 대상
+  const { unlocked: adUnlocked, unlock: unlockMatch } = useMatchUnlock(matchId)
+  const [showAdModal, setShowAdModal] = useState(false)
+  // 프리미엄이거나 광고로 해제한 경우 상세 분석 열람 가능
+  const canViewAnalysis = isPremium || adUnlocked
+
   const [match, setMatch] = useState<MatchDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1480,8 +1488,8 @@ export default function BaseballDetailPage() {
         {/* AI 분석 컴포넌트 - 예정 경기만 */}
         {match.status === "NS" && (
           <div className="mt-2">
-            {isPremium ? (
-              /* ✅ 프리미엄: 전체 공개 */
+            {canViewAnalysis ? (
+              /* ✅ 프리미엄 또는 광고 시청 완료: 전체 공개 */
               <BaseballAIPrediction
                 matchId={match.id}
                 homeTeam={match.home.team}
@@ -1494,91 +1502,139 @@ export default function BaseballDetailPage() {
               />
             ) : (
               /* 🔒 비회원/무료회원: 잠금 UI */
-              <div className="mx-0 rounded-none overflow-hidden" style={{ background: '#0f1623', border: '1px solid #1e293b' }}>
+              <div className="mx-0 overflow-hidden relative" style={{ background: 'linear-gradient(180deg, #0e1421, #0a0f1a)', border: '1px solid #1e293b' }}>
+                {/* 상단 그라데이션 라인 */}
+                <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #2563eb, #7c3aed, #10b981)' }} />
+
                 {/* 헤더 */}
-                <div className="px-4 py-2.5 flex items-center justify-between"
-                  style={{ background: 'linear-gradient(90deg, #1e3a5f, #1a2744)', borderBottom: '1px solid #334155' }}>
+                <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: '1px solid #18233a' }}>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2l2.4 6.8L21 9l-5.2 4.4L17.6 21 12 16.9 6.4 21l1.8-7.6L3 9l6.6-.2z"/>
+                      </svg>
+                    </div>
                     <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>{t('AI 야구 분석', 'AI Baseball Analysis')}</span>
                   </div>
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-                    style={{ background: '#7c3aed30', color: '#a78bfa', border: '1px solid #7c3aed50' }}>
-                    PREMIUM
+                    style={{ background: '#0b1220', color: '#64748b', border: '1px solid #1e293b' }}>
+                    {t('미열람', 'Locked')}
                   </span>
                 </div>
 
                 {/* 블러 미리보기 영역 */}
                 <div className="relative">
                   {/* 블러 처리된 더미 컨텐츠 */}
-                  <div className="px-4 py-5 blur-sm pointer-events-none select-none" aria-hidden="true">
+                  <div className="px-4 py-5 blur-md pointer-events-none select-none" aria-hidden="true">
                     <div className="flex justify-between mb-4">
                       <div className="text-center flex-1">
                         <p className="text-[11px] mb-1" style={{ color: '#64748b' }}>{language === 'ko' ? match.away.teamKo : match.away.team} {t('승리', 'Win')}</p>
-                        <div className="text-2xl font-black" style={{ color: '#f87171' }}>●●%</div>
+                        <div className="text-2xl font-black" style={{ color: '#f87171' }}>62%</div>
                       </div>
                       <div className="text-center flex-1">
                         <p className="text-[11px] mb-1" style={{ color: '#64748b' }}>{language === 'ko' ? match.home.teamKo : match.home.team} {t('승리', 'Win')}</p>
-                        <div className="text-2xl font-black" style={{ color: '#60a5fa' }}>●●%</div>
+                        <div className="text-2xl font-black" style={{ color: '#60a5fa' }}>38%</div>
                       </div>
                     </div>
                     <div className="h-2 rounded-full mb-4" style={{ background: '#1e293b' }}>
                       <div className="h-2 rounded-full w-3/5" style={{ background: 'linear-gradient(90deg, #f87171, #60a5fa)' }} />
                     </div>
                     <div className="space-y-2">
-                      {[1,2,3].map(i => (
-                        <div key={i} className="h-3 rounded-full" style={{ background: '#1e293b', width: `${75 - i * 10}%` }} />
+                      {[1,2,3,4].map(i => (
+                        <div key={i} className="h-3 rounded-full" style={{ background: '#1e293b', width: `${85 - i * 12}%` }} />
                       ))}
                     </div>
                   </div>
 
                   {/* 잠금 오버레이 */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3"
-                    style={{ background: 'linear-gradient(to top, #0f1623 60%, #0f162380)' }}>
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
-                      style={{ background: 'linear-gradient(135deg, #2563eb20, #7c3aed20)', border: '1px solid #7c3aed40' }}>
-                      🔒
-                    </div>
-                    <div className="text-center px-6">
-                      <p className="text-sm font-bold text-white mb-1">
-                        {t('AI 야구 분석은 프리미엄 전용입니다', 'AI Baseball Analysis is Premium only')}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-5"
+                    style={{ background: 'linear-gradient(to top, #0a0f1a 48%, rgba(10,15,26,0.86))' }}>
+                    <div className="text-center">
+                      <p className="text-[15px] font-extrabold text-white mb-2">
+                        {t('이 경기의 AI 분석 열어보기', 'Unlock this match\'s AI analysis')}
                       </p>
-                      <p className="text-xs" style={{ color: '#64748b' }}>
-                        {t('승리 확률 · O/U 분석 · 투수 매치업 종합', 'Win probability · O/U analysis · Pitcher matchup')}
-                      </p>
+                      {/* 기능 칩 */}
+                      <div className="flex flex-wrap items-center justify-center gap-1.5">
+                        {[
+                          t('승리 확률', 'Win probability'),
+                          t('O/U 분석', 'O/U analysis'),
+                          t('투수 매치업', 'Pitcher matchup'),
+                        ].map((c, i) => (
+                          <span key={i} className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ background: 'rgba(148,163,184,0.08)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.12)' }}>
+                            {c}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    {isLoggedIn ? (
-                      /* 로그인은 됐지만 무료회원 */
+
+                    {/* 액션 버튼 그룹 */}
+                    <div className="w-full max-w-[300px] flex flex-col gap-2">
+                      {/* 광고 보고 이 경기 열람 (비회원·무료회원 모두) */}
+                      <button
+                        onClick={() => setShowAdModal(true)}
+                        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 6px 22px rgba(16,185,129,0.32)' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        {t('광고 보고 무료로 열람', 'Watch ad to unlock free')}
+                        <span className="text-[10px] font-semibold opacity-80">{t('· 15초', '· 15s')}</span>
+                      </button>
+
+                      {/* 프리미엄 전환 */}
                       <button
                         onClick={() => router.push('/premium/pricing')}
-                        className="px-5 py-2 rounded-full text-sm font-bold text-white transition-all active:scale-95"
-                        style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
-                        {t('프리미엄 업그레이드 →', 'Upgrade to Premium →')}
+                        className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.01] active:scale-[0.98]"
+                        style={{ background: 'rgba(124,58,237,0.12)', color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.3)' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M3 7l4.5 4L12 5l4.5 6L21 7l-1.5 12h-15z"/>
+                        </svg>
+                        {t('프리미엄 · 광고 없이 모두 보기', 'Premium · ad-free, unlimited')}
                       </button>
-                    ) : (
-                      /* 비회원 */
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => router.push('/login')}
-                          className="px-4 py-2 rounded-full text-xs font-bold transition-all active:scale-95"
-                          style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #334155' }}>
-                          {t('로그인', 'Sign in')}
-                        </button>
-                        <button
-                          onClick={() => router.push('/premium/pricing')}
-                          className="px-4 py-2 rounded-full text-xs font-bold text-white transition-all active:scale-95"
-                          style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
-                          {t('프리미엄 시작 →', 'Start Premium →')}
-                        </button>
-                      </div>
-                    )}
+                    </div>
+
+                    {/* 하단 보조 안내 */}
+                    <div className="flex items-center gap-2 text-[10px]" style={{ color: '#475569' }}>
+                      <span className="flex items-center gap-1">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                        </svg>
+                        {t('자정(KST) 자동 잠김', 'Locks at midnight KST')}
+                      </span>
+                      {!isLoggedIn && (
+                        <>
+                          <span style={{ color: '#1e293b' }}>|</span>
+                          <button
+                            onClick={() => router.push('/login')}
+                            className="font-semibold transition-colors hover:text-gray-300"
+                            style={{ color: '#64748b' }}>
+                            {t('로그인', 'Sign in')}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             )}
           </div>
         )}
+
+        {/* 🎁 광고 시청 모달 (이 경기 상세 분석 잠금 해제) */}
+        <RewardedAdModal
+          open={showAdModal}
+          onClose={() => setShowAdModal(false)}
+          onComplete={() => unlockMatch()}
+          countdownSec={15}
+          title={t('이 경기 AI 분석 잠금 해제', 'Unlock this match\'s AI analysis')}
+          subtitle={t(
+            '아래 광고를 끝까지 보시면 오늘 자정(KST)까지 이 경기의 상세 분석이 무료로 풀립니다.',
+            'Watch the ad to unlock this match\'s detailed analysis until midnight KST.'
+          )}
+          rewardLabel={t('이 경기 분석 보기', 'View this match analysis')}
+        />
 
         {/* ===== 라이브 실황 카드 (DB 기반 R/H/E) ===== */}
         {isLive && (

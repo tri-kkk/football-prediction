@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react'
 import { Link } from '@/i18n/navigation'
 import { useSession } from 'next-auth/react'
 import { useLanguage } from '../../../contexts/LanguageContext'
-import { useComboUnlock, type ComboLeague } from '../../../hooks/useComboUnlock'
-import RewardedAdModal from '../../../components/RewardedAdModal'
 
 // =====================================================
 // 타입
@@ -124,19 +122,11 @@ export default function ComboPicksPage() {
 
   const isPremium = (session?.user as any)?.tier === 'premium'
 
-  // 🎁 리그별 광고 시청 잠금 해제 (KST 자정 리셋)
-  const { unlocks, unlock, hasAnyUnlock } = useComboUnlock()
-  const [adModalLeague, setAdModalLeague] = useState<ComboLeague | null>(null)
+  // 조합 분석은 프리미엄 구독 전용 (광고 시청 잠금 해제 폐지)
+  const hasAccess = isPremium
 
-  // 현재 league 탭 기준 접근 권한
-  const hasAccess = isPremium || (
-    league === 'ALL' ? hasAnyUnlock : !!unlocks[league as ComboLeague]
-  )
-
-  // 무료 사용자는 unlock된 리그의 픽만 노출
-  const visiblePicks = isPremium
-    ? picks
-    : picks.filter(p => unlocks[p.league as ComboLeague])
+  // 프리미엄만 픽 노출
+  const visiblePicks = picks
 
   const getKSTToday = () => {
     const now = new Date(Date.now() + 9 * 60 * 60 * 1000)
@@ -415,7 +405,7 @@ export default function ComboPicksPage() {
                 ))}
               </div>
 
-              {/* CTA 영역: 프리미엄 + 리그별 광고 풀기 */}
+              {/* CTA 영역: 프리미엄 전용 */}
               <div className="flex flex-col items-center gap-3">
                 <Link href="/premium/pricing"
                   className="inline-flex items-center justify-center gap-2 w-full max-w-[300px] py-3 text-[13px] font-bold rounded-xl text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -427,78 +417,13 @@ export default function ComboPicksPage() {
                   </svg>
                 </Link>
 
-                <div className="w-full max-w-[300px] flex items-center gap-2 my-1">
-                  <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
-                  <span className="text-[10px]" style={{ color: '#475569' }}>{t('또는 리그별 광고 시청', 'OR watch an ad per league')}</span>
-                  <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 w-full max-w-[300px]">
-                  {([
-                    { id: 'KBO' as ComboLeague, name: 'KBO', color: '#ef4444', logo: 'https://media.api-sports.io/baseball/leagues/5.png' },
-                    { id: 'MLB' as ComboLeague, name: 'MLB', color: '#3b82f6', logo: 'https://media.api-sports.io/baseball/leagues/1.png' },
-                    { id: 'NPB' as ComboLeague, name: 'NPB', color: '#f97316', logo: 'https://media.api-sports.io/baseball/leagues/2.png' },
-                  ]).map(lg => {
-                    const isUnlocked = unlocks[lg.id]
-                    return (
-                      <button
-                        key={lg.id}
-                        type="button"
-                        onClick={() => !isUnlocked && setAdModalLeague(lg.id)}
-                        disabled={isUnlocked}
-                        className={[
-                          'flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[11px] font-bold transition-all',
-                          isUnlocked
-                            ? 'cursor-default opacity-90'
-                            : 'hover:scale-[1.03] active:scale-[0.97] cursor-pointer',
-                        ].join(' ')}
-                        style={{
-                          background: isUnlocked
-                            ? `linear-gradient(135deg, ${lg.color}25, ${lg.color}10)`
-                            : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${isUnlocked ? lg.color + '50' : 'rgba(255,255,255,0.10)'}`,
-                          color: isUnlocked ? lg.color : '#e5e7eb',
-                        }}
-                      >
-                        <span className="w-6 h-6 rounded-full bg-white/95 flex items-center justify-center p-0.5">
-                          <img src={lg.logo} alt={lg.name} className="max-w-full max-h-full object-contain" />
-                        </span>
-                        <span>{lg.name}</span>
-                        <span className="text-[9px] font-medium opacity-80">
-                          {isUnlocked ? t('✓ 풀림', '✓ Unlocked') : t('📺 광고 1', '📺 Watch ad')}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <p className="text-[10px] mt-1" style={{ color: '#64748b' }}>
-                  {t('자정(KST)에 자동 잠김 · 리그별 별도 시청', 'Auto-locks at midnight KST · Per-league')}
+                <p className="text-[10px] mt-1 text-center" style={{ color: '#64748b' }}>
+                  {t('AI 조합 분석은 프리미엄 전용입니다', 'AI combo analysis is Premium only')}
                 </p>
               </div>
             </div>
           </div>
         )}
-
-        {/* 🎁 광고 시청 모달 (리그별) */}
-        <RewardedAdModal
-          open={adModalLeague !== null}
-          onClose={() => setAdModalLeague(null)}
-          onComplete={() => { if (adModalLeague) unlock(adModalLeague) }}
-          countdownSec={15}
-          title={adModalLeague
-            ? t(`${adModalLeague} 조합 분석 잠금 해제`, `Unlock ${adModalLeague} multi-match analysis`)
-            : t('잠금 해제', 'Unlock')}
-          subtitle={adModalLeague
-            ? t(
-                `아래 광고를 끝까지 보시면 오늘 자정(KST)까지 ${adModalLeague} 조합 분석이 무료로 풀립니다.`,
-                `Watch the ad to unlock ${adModalLeague} multi-match analysis until midnight KST.`
-              )
-            : ''}
-          rewardLabel={adModalLeague
-            ? t(`${adModalLeague} 조합 분석 잠금 해제`, `Unlock ${adModalLeague} multi-match analysis`)
-            : t('잠금 해제', 'Unlock')}
-        />
 
         {/* ====== 빈 상태 ====== */}
         {!loading && hasAccess && visiblePicks.length === 0 && (() => {

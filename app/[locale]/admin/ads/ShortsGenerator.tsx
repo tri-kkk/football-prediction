@@ -385,7 +385,7 @@ export default function ShortsGenerator() {
 
   }
 
-  const downloadVideo = async () => {
+  const downloadVideo = async (opts: { format?: 'webm' | 'mp4'; naver?: boolean } = {}) => {
 
     if (!game || recording) return
 
@@ -491,9 +491,13 @@ export default function ShortsGenerator() {
 
           const buf = await rawBlob.arrayBuffer()
 
-          const bgmQuery = bgm ? `?bgm=${encodeURIComponent(bgm)}` : ''
+          const qs = new URLSearchParams()
+          if (opts.format === 'mp4') qs.set('format', 'mp4')
+          if (opts.naver) qs.set('naver', '1')
+          if (bgm && !opts.naver) qs.set('bgm', bgm)
+          const qsStr = qs.toString() ? '?' + qs.toString() : ''
 
-          const cropRes = await fetch('/api/admin/shorts-crop' + bgmQuery, {
+          const cropRes = await fetch('/api/admin/shorts-crop' + qsStr, {
 
             method: 'POST',
 
@@ -533,10 +537,10 @@ export default function ShortsGenerator() {
 
         const url = URL.createObjectURL(finalBlob)
 
+        const outExt = opts.format === 'mp4' ? 'mp4' : 'webm'
+        const suffix = opts.naver ? '_naver_9x16' : '_9x16'
         const fname = cropOk
-
-          ? `${baseName}_9x16.webm`
-
+          ? `${baseName}${suffix}.${outExt}`
           : `${baseName}_RAW_${1080}x${512}.webm`
 
         const a = document.createElement('a')
@@ -744,34 +748,27 @@ export default function ShortsGenerator() {
 
             className="bg-gray-700 hover:bg-gray-600 px-4 py-1.5 rounded text-sm">■ 정지</button>
 
-          <button onClick={downloadVideo} disabled={!game || recording}
-
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 px-4 py-1.5 rounded text-sm font-semibold flex items-center gap-1.5">
-
+          <button onClick={() => downloadVideo()} disabled={!game || recording}
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 px-4 py-1.5 rounded text-sm font-semibold flex items-center gap-1.5"
+            title="유튜브 쇼츠용 webm (BGM 포함)">
             {recording ? (
-
               <>
-
                 <span style={{
-
                   display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-
                   background: '#ef4444', animation: 'ts-pop 1s ease-in-out infinite alternate',
-
                 }} />
-
                 녹화 중…
-
               </>
-
             ) : (
-
-              <>📥 영상 다운로드</>
-
+              <>📥 유튜브용 (webm)</>
             )}
-
           </button>
-
+          <button onClick={() => downloadVideo({ format: 'mp4', naver: true })}
+            disabled={!game || recording}
+            className="bg-green-700 hover:bg-green-800 disabled:opacity-50 px-3 py-1.5 rounded text-sm font-semibold flex items-center gap-1.5"
+            title="네이버 클립용 mp4 — H.264 + 무음 (저작권 회피)">
+            📺 네이버 클립 (mp4, 무음)
+          </button>
         </div>
 
         <div className="flex gap-2 mt-3">
@@ -1635,7 +1632,7 @@ function ScenePitcher({ game }: { game: Game }) {
 
             }}>
 
-              <div style={{ color: BRAND_C1, fontWeight: 900, fontSize: 15, marginBottom: 7, letterSpacing: 0.5 }}>선발 발표 완료 ✓</div>
+              <div style={{ color: BRAND_C1, fontWeight: 900, fontSize: 15, marginBottom: 7, letterSpacing: 0.5 }}>선발 발표 완료</div>
 
               <div style={{ fontSize: 12, color: '#cbd5e1' }}>
 
@@ -1735,7 +1732,7 @@ function ScenePitcher({ game }: { game: Game }) {
 
         }}>
 
-          ⚡ AI 매치업 분석
+          AI 매치업 분석
 
         </div>
 
@@ -2626,11 +2623,7 @@ function formatMatchTime(iso: string): string {
   try {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return iso
-    return d.toLocaleString('ko-KR', {
-      month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit',
-      timeZone: 'Asia/Seoul',
-    })
+    return d.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' })
   } catch {
     return iso
   }
