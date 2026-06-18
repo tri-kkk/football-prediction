@@ -19,16 +19,20 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 function getBaseUrl(): string {
-  // Vercel 배포 환경에서는 동일 origin
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  // Production 도메인 hardcode — Vercel preview URL은 인증 이슈로 internal fetch 실패
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
-  return 'http://localhost:3000'
+  return 'https://trendsoccer.com'
 }
 
 async function callJson(url: string): Promise<any> {
   try {
     const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(45000) })
-    return await r.json().catch(() => ({ success: false, error: 'invalid_json' }))
+    const text = await r.text()
+    try {
+      return JSON.parse(text)
+    } catch {
+      return { success: false, error: 'invalid_json', status: r.status, preview: text.slice(0, 200) }
+    }
   } catch (e: any) {
     return { success: false, error: e?.message ?? String(e) }
   }
