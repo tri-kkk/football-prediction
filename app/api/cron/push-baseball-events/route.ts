@@ -265,10 +265,15 @@ async function dispatchEvent(
   let sent = 0
   let failed = 0
   const allInvalid: string[] = []
+  let lastTitle: string | null = null
+  let lastBody: string | null = null
+  let lastErr: string | null = null
 
   for (const locale of ['ko', 'en'] as const) {
     if (!byLocale[locale].length) continue
     const notification = renderBaseballNotification(detected.event, detected.ctx, locale)
+    lastTitle = notification.title
+    lastBody = notification.body
     const options: FCMSendOptions = {
       notification,
       data,
@@ -282,6 +287,27 @@ async function dispatchEvent(
     sent += result.success
     failed += result.failed
     allInvalid.push(...result.invalidTokens)
+    const firstErr = result.results.find((r) => !r.ok && r.error)?.error
+    if (firstErr) lastErr = `${firstErr.code}: ${firstErr.message ?? ''}`.trim()
+  }
+
+  // 🔍 push_event_log 기록 (진단용 — push-rich-events와 동일 format)
+  try {
+    await supabase.from('push_event_log').insert({
+      match_id: matchId,
+      sport: 'baseball',
+      event_type: detected.event,
+      event_source_id: null,
+      tokens_attempted: tokens.length,
+      tokens_success: sent,
+      tokens_failed: failed,
+      invalid_tokens: allInvalid.length > 0 ? allInvalid.slice(0, 5).map(t => t.slice(0, 30)) : null,
+      error_message: lastErr,
+      notification_title: lastTitle,
+      notification_body: lastBody,
+    })
+  } catch (e) {
+    console.warn('[push-baseball] log insert failed:', (e as Error).message)
   }
 
   let cleaned = 0
