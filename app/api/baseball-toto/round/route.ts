@@ -112,45 +112,54 @@ export async function GET(request: NextRequest) {
 }
 
 // ===== 예산별 조합 전략 (승/1/패) =====
+// 목표 최대 조합수(매수)를 넘지 않게 확장하고, 실제 조합수로 금액·라벨 표기.
+// (₩1,000 × 조합수 = 총구매금액 — 와이즈토토 슬립과 일치)
 function calculateBudgetStrategies(matches: any[]) {
-  return [
-    {
-      budget: 1000, label: '₩1,000 · 1매', description: '가장 자신있는 14경기 고정',
-      combinations: 1,
-      selections: matches.map(m => ({ match_number: m.match_number, picks: [m.primary_pick], count: 1 })),
-    },
-    { budget: 5000, label: '₩5,000 · 5매', description: '불확실 1경기 더블 + 1경기 트리플', combinations: 5, selections: calculateOptimalSelections(matches, 5) },
-    { budget: 10000, label: '₩10,000 · 10매', description: '불확실 2경기 더블 + 1경기 트리플', combinations: 10, selections: calculateOptimalSelections(matches, 10) },
-    { budget: 54000, label: '₩54,000 · 54매', description: 'FAIR/PASS 전부 더블 + 주요 변수 트리플', combinations: 54, selections: calculateOptimalSelections(matches, 54) },
+  const targets = [
+    { max: 1,  desc: '가장 자신있는 14경기 고정' },
+    { max: 6,  desc: '불확실 경기 더블/트리플 (최대 6매)' },
+    { max: 12, desc: '불확실 경기 더블/트리플 (최대 12매)' },
+    { max: 54, desc: 'FAIR/PASS 더블 + 주요 변수 트리플 (최대 54매)' },
   ]
+  return targets.map(t => {
+    const { selections, combos } = buildSelections(matches, t.max)
+    return {
+      budget: combos * 1000,
+      label: `₩${(combos * 1000).toLocaleString()} · ${combos}매`,
+      description: t.desc,
+      combinations: combos,
+      selections,
+    }
+  })
 }
 
-function calculateOptimalSelections(matches: any[], target: number) {
+// 목표 조합수(maxCombos)를 절대 초과하지 않도록 더블(×2)/트리플(×1.5) 확장.
+// 실제 달성 조합수(combos)도 함께 반환.
+function buildSelections(matches: any[], maxCombos: number) {
   const sorted = [...matches].sort((a, b) => {
     const order: Record<string, number> = { PASS: 4, FAIR: 3, GOOD: 2, PICK: 1 }
     return (order[b.grade] || 0) - (order[a.grade] || 0)
   })
   const selections = matches.map(m => ({ match_number: m.match_number, picks: [m.primary_pick], count: 1 }))
+  const find = (id: number) => selections.find(s => s.match_number === id)!
   let combos = 1
   for (const match of sorted) {
-    if (combos >= target) break
-    const idx = selections.findIndex(s => s.match_number === match.match_number)
-    if (idx === -1) continue
-    if (selections[idx].count === 1 && match.secondary_pick) {
-      selections[idx].picks.push(match.secondary_pick)
-      selections[idx].count = 2
+    const s = find(match.match_number)
+    // 더블: count 1 → 2 (조합수 ×2)
+    if (s.count === 1 && match.secondary_pick && combos * 2 <= maxCombos) {
+      s.picks.push(match.secondary_pick)
+      s.count = 2
       combos *= 2
-      if (combos >= target) break
     }
-    if (selections[idx].count === 2 && match.grade === 'PASS') {
-      const all = ['W', 'O', 'L']
-      const missing = all.filter(p => !selections[idx].picks.includes(p))
+    // 트리플: PASS, count 2 → 3 (조합수 ×1.5)
+    if (s.count === 2 && match.grade === 'PASS' && (combos / 2) * 3 <= maxCombos) {
+      const missing = ['W', 'O', 'L'].filter(p => !s.picks.includes(p))
       if (missing.length > 0) {
-        selections[idx].picks.push(missing[0])
-        selections[idx].count = 3
-        combos = combos / 2 * 3
+        s.picks.push(missing[0])
+        s.count = 3
+        combos = (combos / 2) * 3
       }
     }
   }
-  return selections
+  return { selections, combos }
 }
