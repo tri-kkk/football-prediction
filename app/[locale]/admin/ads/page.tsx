@@ -3846,65 +3846,89 @@ export default function AdminDashboard() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredAds.map((ad) => (
-                    <div key={ad.id} className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
-                      <div className="relative">
-                        <img 
-                          src={ad.image_url} 
-                          alt={ad.alt_text || ad.name}
-                          className="w-full h-32 object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'https://via.placeholder.com/300x100?text=No+Image'
-                          }}
-                        />
-                        <span className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium ${
-                          ad.is_active 
-                            ? 'bg-emerald-500/80 text-white'
-                            : 'bg-gray-500/80 text-white'
-                        }`}>
-                          {ad.is_active ? '활성' : '비활성'}
-                        </span>
-                      </div>
-                      <div className="p-4">
-                        <h4 className="text-white font-medium mb-1">{ad.name}</h4>
-                        <p className="text-gray-500 text-sm mb-3">
-                          {SLOT_TYPES.find(s => s.value === ad.slot_type)?.label} ({ad.width}×{ad.height})
-                        </p>
-                        <div className="flex items-center gap-4 text-sm mb-3">
-                          <span className="text-gray-400">👁️ {todayAdStats[ad.id]?.impressions || 0}</span>
-                          <span className="text-gray-400">👆 {todayAdStats[ad.id]?.clicks || 0}</span>
-                          <span className="text-emerald-400">
+                <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-900/60 text-gray-400 text-xs uppercase">
+                      <tr>
+                        <th className="px-3 py-2 text-left w-20">썸네일</th>
+                        <th className="px-3 py-2 text-left">광고명</th>
+                        <th className="px-3 py-2 text-left">슬롯</th>
+                        <th className="px-3 py-2 text-center">사이즈</th>
+                        <th className="px-3 py-2 text-center">노출</th>
+                        <th className="px-3 py-2 text-center">클릭</th>
+                        <th className="px-3 py-2 text-center">CTR</th>
+                        <th className="px-3 py-2 text-center">상태</th>
+                        <th className="px-3 py-2 text-right">액션</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700/40">
+                      {filteredAds.map((ad) => (
+                        <tr key={ad.id} className="hover:bg-gray-800/40 transition-colors">
+                          <td className="px-3 py-2">
+                            <img
+                              src={ad.image_url}
+                              alt={ad.alt_text || ad.name}
+                              className="w-16 h-10 object-cover rounded"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/64x40?text=N/A'
+                              }}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-white font-medium">{ad.name}</td>
+                          <td className="px-3 py-2 text-gray-400 text-xs">
+                            {SLOT_TYPES.find(s => s.value === ad.slot_type)?.label}
+                          </td>
+                          <td className="px-3 py-2 text-center text-gray-400 text-xs">
+                            {ad.width}×{ad.height}
+                          </td>
+                          <td className="px-3 py-2 text-center text-gray-300">
+                            {todayAdStats[ad.id]?.impressions || 0}
+                          </td>
+                          <td className="px-3 py-2 text-center text-gray-300">
+                            {todayAdStats[ad.id]?.clicks || 0}
+                          </td>
+                          <td className="px-3 py-2 text-center text-emerald-400">
                             {calculateCTR(todayAdStats[ad.id]?.clicks || 0, todayAdStats[ad.id]?.impressions || 0)}%
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleToggleAdActive(ad)}
-                            className={`flex-1 py-2 rounded text-xs font-medium transition-colors ${
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                               ad.is_active
-                                ? 'bg-gray-600 hover:bg-gray-500 text-white'
-                                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                            }`}
-                          >
-                            {ad.is_active ? '비활성화' : '활성화'}
-                          </button>
-                          <button
-                            onClick={() => handleEditAd(ad)}
-                            className="px-3 py-2 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded text-xs transition-colors"
-                          >
-                            수정
-                          </button>
-                          <button
-                            onClick={() => handleAdDelete(ad.id)}
-                            className="px-3 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs transition-colors"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                                ? 'bg-emerald-500/20 text-emerald-300'
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {ad.is_active ? '활성' : '비활성'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-1 justify-end">
+                              <button
+                                onClick={() => handleToggleAdActive(ad)}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                  ad.is_active
+                                    ? 'bg-gray-600 hover:bg-gray-500 text-white'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                }`}
+                              >
+                                {ad.is_active ? 'OFF' : 'ON'}
+                              </button>
+                              <button
+                                onClick={() => handleEditAd(ad)}
+                                className="px-2 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded text-xs transition-colors"
+                              >
+                                수정
+                              </button>
+                              <button
+                                onClick={() => handleAdDelete(ad.id)}
+                                className="px-2 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs transition-colors"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
 
                 {filteredAds.length === 0 && (
