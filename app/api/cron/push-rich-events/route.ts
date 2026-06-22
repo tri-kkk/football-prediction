@@ -280,8 +280,9 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
         .eq('type', 'Goal')
         .neq('detail', 'Missed Penalty')
         .lte('id', e.id)
-      // 🛡️ Fuzzy dedup — api-sports가 같은 골을 minute±2분으로 살짝 다르게 두 번 보고하는 케이스 대응
-      //    (예: 41분 → 40분 update). player_name 일치 + minute ±2분 이내면 같은 골로 간주.
+      // 🛡️ Fuzzy dedup — api-sports가 같은 골을 minute±2분으로 살짝 다르게 두 번 보고하는 케이스만 dedup
+      //    같은 player가 다른 시점(예: 47분 + 54분)에 진짜 2골 넣은 경우는 합치면 안 됨!
+      //    조건: 같은 team + 같은 detail + 같은 player + minute 차이 ±2분 이내
       const seenGoals: Array<{ team: number; player: string | null; detail: string; minute: number }> = []
       let h = 0, a = 0
       for (const g of goalsSoFar ?? []) {
@@ -290,9 +291,9 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
         const isDup = seenGoals.some((s) =>
           s.team === Number(g.team_id) &&
           s.detail === g.detail &&
-          // player_name이 같거나(가장 강한 신호), 둘 다 있는데 ±2분 이내면 같은 골 추정
-          ((gPlayer && s.player === gPlayer) ||
-           (Math.abs(s.minute - gMinute) <= 2 && s.player === gPlayer))
+          Math.abs(s.minute - gMinute) <= 2 &&
+          // player_name이 둘 다 있으면 일치해야, 한쪽 null이면 시간만으로 판단 (api-sports가 player 늦게 채움)
+          (s.player === null || gPlayer === null || s.player === gPlayer)
         )
         if (isDup) continue
         seenGoals.push({ team: Number(g.team_id), player: gPlayer, detail: g.detail, minute: gMinute })
