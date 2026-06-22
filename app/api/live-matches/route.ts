@@ -282,15 +282,25 @@ export async function GET(request: NextRequest) {
 
     console.log(`📊 총 ${matchesWithDetails.length}개 경기 상세 정보 조회 완료`)
 
-    // 🆕 최근 30분 안에 종료된 매치도 함께 반환 (라이브 API가 매치 종료 즉시 사라뜨려 외주 앱이 FT를 한 번도 못 받던 문제 해결)
+    // 🆕 최근 종료된 매치도 함께 반환 (라이브 API가 매치 종료 즉시 사라뜨려 외주 앱이 FT를 한 번도 못 받던 문제 해결)
+    // ⚠️ updated_at 은 배당 동기화 크론이 계속 갱신해서 "종료 시각" 대용으로 못 씀 (과거 경기 누적 버그).
+    //    → finished_at(트리거가 종료 전환 시점에 기록) 기준으로 정확히 "종료 후 30분 이내" 만 추린다.
+    //    finished_at 이 아직 없는 행(트리거 적용 직후 과도기)은 commence_time 3.5h 창으로 폴백.
+    //    (SQL: sql/add_finished_at_to_match_odds_latest.sql)
     let recentlyEnded: any[] = []
     try {
-      const endedCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+      const nowMs = Date.now()
+      const endedCutoff = new Date(nowMs - 30 * 60 * 1000).toISOString()   // 종료 후 30분
+      const startedAfter = new Date(nowMs - 3.5 * 60 * 60 * 1000).toISOString() // 폴백: 시작 3.5h 이내
+      const notFuture = new Date(nowMs).toISOString()
       const { data: endedRows } = await supabaseLive
         .from('match_odds_latest')
-        .select('match_id, home_team, away_team, league_code, status, elapsed, elapsed_extra, home_score, away_score, home_team_logo, away_team_logo, home_team_id, away_team_id, commence_time')
+        .select('match_id, home_team, away_team, league_code, status, elapsed, elapsed_extra, home_score, away_score, home_team_logo, away_team_logo, home_team_id, away_team_id, commence_time, finished_at')
         .in('status', ['FT', 'AET', 'PEN'])
-        .gte('updated_at', endedCutoff)
+        .gte('commence_time', startedAfter)
+        .lte('commence_time', notFuture)
+        .or(`finished_at.gte.${endedCutoff},finished_at.is.null`)
+        .order('commence_time', { ascending: false })
         .limit(100)
 
       const liveIds = new Set(matchesWithDetails.map((m: any) => Number(m.id)))
