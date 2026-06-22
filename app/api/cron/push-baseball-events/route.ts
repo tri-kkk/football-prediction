@@ -239,7 +239,27 @@ async function dispatchEvent(
   match: DBMatch
 ): Promise<{ sent: number; failed: number; cleaned: number }> {
   const tokens = await loadTargetTokens(supabase, matchId, detected.event)
-  if (!tokens.length) return { sent: 0, failed: 0, cleaned: 0 }
+  if (!tokens.length) {
+    // 진단용 — 구독자 0명도 log 남김
+    try {
+      await supabase.from('push_event_log').insert({
+        match_id: matchId,
+        sport: 'baseball',
+        event_type: detected.event,
+        event_source_id: null,
+        tokens_attempted: 0,
+        tokens_success: 0,
+        tokens_failed: 0,
+        invalid_tokens: null,
+        error_message: 'no_subscribers',
+        notification_title: null,
+        notification_body: null,
+      })
+    } catch (e) {
+      console.warn('[push-baseball] log no_subscribers insert failed:', (e as Error).message)
+    }
+    return { sent: 0, failed: 0, cleaned: 0 }
+  }
 
   const byLocale: Record<Locale, string[]> = { ko: [], en: [] }
   for (const t of tokens) byLocale[t.locale].push(t.token)
