@@ -3,6 +3,8 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from '@/i18n/navigation'
 
 // ===== 타입 =====
 interface TotoMatch {
@@ -126,6 +128,9 @@ export default function BaseballTotoPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [budgetIdx, setBudgetIdx] = useState(0)
   const [showSlip, setShowSlip] = useState(false)
+  const { data: session } = useSession()
+  const router = useRouter()
+  const isPremium = (session?.user as any)?.tier === 'premium'
 
   useEffect(() => { load() }, [])
 
@@ -170,6 +175,8 @@ export default function BaseballTotoPage() {
   if (!data) return null
 
   const { round, strategies } = data
+
+  if (!isPremium) return <PremiumGate round={round} onUpgrade={() => router.push('/premium/pricing')} />
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Noto Sans KR', -apple-system, sans-serif" }}>
@@ -268,6 +275,63 @@ export default function BaseballTotoPage() {
         @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
         @keyframes slideUp { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin{to{transform:rotate(360deg)}}
+      `}</style>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════
+//  프리미엄 잠금 화면
+// ═══════════════════════════════════════════
+function PremiumGate({ round, onUpgrade }: { round: TotoRound; onUpgrade: () => void }) {
+  return (
+    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Noto Sans KR', -apple-system, sans-serif" }}>
+      <div style={{ background: 'rgba(11,17,24,0.85)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ maxWidth: 600, margin: '0 auto', padding: '14px 18px' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: C.accent, textTransform: 'uppercase' }}>AI 분석 · 야구</div>
+          <div style={{ fontSize: 19, fontWeight: 800, color: C.text, marginTop: 2, letterSpacing: -0.3 }}>
+            야구 승1패 <span style={{ color: C.textSub, fontWeight: 600 }}>{round.round_number}회차</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '48px 20px', textAlign: 'center' }}>
+        <div style={{ width: 64, height: 64, borderRadius: 20, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', fontSize: 30 }}>🔒</div>
+        <div style={{ fontSize: 20, fontWeight: 900, color: C.text, marginBottom: 10 }}>프리미엄 전용</div>
+        <div style={{ fontSize: 13.5, color: C.textSub, lineHeight: 1.75, marginBottom: 22 }}>
+          야구 승1패 AI 분석은 프리미엄 회원에게만 제공됩니다.<br />
+          모델 + 시장(투표) 블렌딩 예측, 1점차 확률(Skellam), 예산별 추천 조합까지 한 번에 확인하세요.
+        </div>
+
+        <div style={{ textAlign: 'left', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 16px', marginBottom: 22 }}>
+          {[
+            '14경기 승/1점차/패 AI 확률',
+            '대중 투표 대비 괴리율 분석',
+            '예산별 추천 조합표 (복사·캡처)',
+            '경기 종료 후 적중 결과 자동 정산',
+          ].map((t) => (
+            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0', fontSize: 12.5, color: C.textSub }}>
+              <span style={{ color: C.accent, fontWeight: 900 }}>✓</span>{t}
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onUpgrade} style={{
+          width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
+          fontSize: 15, fontWeight: 800, color: '#1a1206',
+          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+        }}>
+          프리미엄 시작하기 →
+        </button>
+        <div style={{ marginTop: 12, fontSize: 11, color: C.textMuted }}>
+          이미 프리미엄인데 잠겨 보이면 로그인 상태를 확인해 주세요.
+        </div>
+      </div>
+
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: ${C.bg}; }
       `}</style>
     </div>
   )
