@@ -40,7 +40,11 @@ const supabase = createClient(
 // ─────────────────────────────────────────────────────────────
 
 function mapFootballEventType(type: string, detail: string | null): SoccerEvent | null {
-  if (type === 'Goal') return 'goal'              // Normal/Penalty/Own/VAR Goal 모두 'goal'로
+  if (type === 'Goal') {
+    // 🛡️ Missed Penalty는 골 알림 발송 X — api-sports가 PK 실축도 type=Goal로 분류
+    if (detail === 'Missed Penalty') return null
+    return 'goal' // Normal/Penalty/Own/VAR Goal
+  }
   if (type === 'Card') {
     if (detail?.toLowerCase().includes('red')) return 'redCard'
     return 'yellowCard'
