@@ -70,8 +70,8 @@ function skellamOneRun(lh: number, la: number): number {
   return decided > 0 ? one / decided : 0.28
 }
 
-// 최근 FT 경기로 팀 평균 득점/실점 (Skellam λ 추정용)
-async function teamRunRates(enName: string, league: string): Promise<{ scored: number; conceded: number; games: number }> {
+// 최근 FT 경기로 팀 평균 득점/실점(최근12) + 과거 1점차 성향(최근50)
+async function teamRunRates(enName: string, league: string): Promise<{ scored: number; conceded: number; games: number; oneRunRate: number | null }> {
   const key = toSearchKey(enName)
   const { data } = await supabase
     .from('baseball_matches')
@@ -79,18 +79,25 @@ async function teamRunRates(enName: string, league: string): Promise<{ scored: n
     .eq('league', league).eq('status', 'FT')
     .or(`home_team.ilike.%${key}%,away_team.ilike.%${key}%`)
     .order('match_date', { ascending: false })
-    .limit(15)
-  let scored = 0, conceded = 0, n = 0
+    .limit(50)
+  let scored = 0, conceded = 0, nRecent = 0  // 득실: 최근 12경기
+  let oneRun = 0, nAll = 0                    // 1점차 성향: 최근 50경기
+  let i = 0
   for (const g of data || []) {
     const isHome = (g.home_team || '').toLowerCase().includes(key.toLowerCase())
     const hs = Number(g.home_score), as = Number(g.away_score)
-    if (isNaN(hs) || isNaN(as)) continue
-    scored += isHome ? hs : as
-    conceded += isHome ? as : hs
-    n++
+    if (isNaN(hs) || isNaN(as)) { i++; continue }
+    if (i < 12) { scored += isHome ? hs : as; conceded += isHome ? as : hs; nRecent++ }
+    nAll++
+    if (Math.abs(hs - as) === 1) oneRun++
+    i++
   }
-  if (n === 0) return { scored: 4.5, conceded: 4.5, games: 0 }
-  return { scored: scored / n, conceded: conceded / n, games: n }
+  return {
+    scored: nRecent ? scored / nRecent : 4.5,
+    conceded: nRecent ? conceded / nRecent : 4.5,
+    games: nRecent,
+    oneRunRate: nAll >= 20 ? oneRun / nAll : null,
+  }
 }
 
 // ===== 팀명 매핑 (wisetoto 축약 → 풀네임/영문/리그) =====
@@ -331,7 +338,7 @@ async function enrichWithPredictions(matches: any[], year: number, origin: strin
         // baseball_matches 에서 해당 경기 조회 (리그 + 날짜창 ±2일 + 팀명)
         let q = supabase
           .from('baseball_matches')
-          .select('id, api_match_id, home_team, away_team, match_date, home_team_logo, away_team_logo')
+          .select('id, api_match_id, home_team, away_team, match_date, home_team_logo, away_team_logo, home_pitcher_era, away_pitcher_era')
           .eq('league', m.league)
         if (iso) {
           const d = new Date(iso)
@@ -419,9 +426,26 @@ async function enrichWithPredictions(matches: any[], year: number, origin: strin
             teamRunRates(awayEn, m.league),
           ])
           if (hr.games >= 5 && ar.games >= 5) {
-            const lh = clampLambda((hr.scored + ar.conceded) / 2 + HOME_RUN_BONUS)
-            const la = clampLambda((ar.scored + hr.conceded) / 2)
-            m._skellamOne = skellamOneRun(lh, la) * (ONE_RUN_CAL[m.league] ?? ONE_RUN_CAL.Other)
+            let lh = (hr.scored + ar.conceded) / 2 + HOME_RUN_BONUS
+            let la = (ar.scored + hr.conceded) / 2
+            // (1) 선발 투수 매치업: 좋은 투수 상대일수록 상대 득점 λ↓ (에이스전 → 저득점 → 1점차↑)
+            const homeERA = reversed ? row?.away_pitcher_era : row?.home_pitcher_era
+            const awayERA = reversed ? row?.home_pitcher_era : row?.away_pitcher_era
+            if (homeERA != null && awayERA != null) {
+              const f = (era: number) => Math.pow(Math.max(0.7, Math.min(1.4, era / 4.20)), 0.5)
+              lh *= f(awayERA)  // 홈 득점 ← 원정 선발
+              la *= f(homeERA)  // 원정 득점 ← 홈 선발
+              m._pitcherAdj = true
+            }
+            let pOne = skellamOneRun(clampLambda(lh), clampLambda(la)) * (ONE_RUN_CAL[m.league] ?? ONE_RUN_CAL.Other)
+            // (2) 팀별 과거 1점차 성향: 리그평균 대비 편차의 절반만큼 가산 (불펜·접전 성향)
+            if (hr.oneRunRate != null && ar.oneRunRate != null) {
+              const pairRate = (hr.oneRunRate + ar.oneRunRate) / 2
+              const lgBase = ONE_RUN_BASE[m.league] ?? ONE_RUN_BASE.Other
+              pOne += (pairRate - lgBase) * 0.5
+              m._teamTendency = Math.round(pairRate * 1000) / 10
+            }
+            m._skellamOne = Math.max(0.16, Math.min(0.42, pOne))
           }
         } catch {}
       }
