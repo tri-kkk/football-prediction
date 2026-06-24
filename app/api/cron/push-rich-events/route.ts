@@ -50,7 +50,15 @@ function mapFootballEventType(type: string, detail: string | null): SoccerEvent 
     return 'yellowCard'
   }
   if (type === 'subst') return 'substitution'
-  return null // Var(코멘트형)는 별도 알림 안 함
+  // 🆕 VAR 골 취소 알림
+  if (type === 'Var') {
+    const d = (detail ?? '').toLowerCase()
+    if (d.includes('disallow') || d.includes('cancel') || d.includes('overturn')) {
+      return 'goalCancelled'
+    }
+    return null // 다른 VAR (Penalty awarded 등)는 알림 안 함
+  }
+  return null
 }
 
 function mapBaseballEventType(type: string): BaseballEvent | null {
@@ -78,7 +86,13 @@ async function loadTargetTokens(
     .eq('enabled', true)
 
   if (!notifs?.length) return []
-  const filtered = notifs.filter((n: any) => n.events?.[event] === true)
+  // 🆕 goalCancelled는 'goal' 토글에 연동 (외주 요청)
+  const filtered = notifs.filter((n: any) => {
+    if (event === 'goalCancelled') {
+      return n.events?.goal === true || n.events?.goalCancelled === true
+    }
+    return n.events?.[event] === true
+  })
   if (!filtered.length) return []
 
   const userIds = filtered.filter((n: any) => n.user_id).map((n: any) => n.user_id)
@@ -284,6 +298,19 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
         .eq('type', 'Goal')
         .neq('detail', 'Missed Penalty')
         .lte('id', e.id)
+      // 🆕 VAR로 취소된 골 가져옴 (detail에 disallow/cancel/overturn 포함)
+      const { data: varCancels } = await supabase
+        .from('football_events')
+        .select('team_id, minute, player_name')
+        .eq('match_id', matchId)
+        .eq('type', 'Var')
+        .or('detail.ilike.%disallow%,detail.ilike.%cancel%,detail.ilike.%overturn%')
+        .lte('id', e.id)
+      // 취소된 골 key set (team|minute|player 매칭)
+      const cancelKeys = new Set<string>()
+      for (const cnl of varCancels ?? []) {
+        cancelKeys.add(`${cnl.team_id}|${cnl.minute ?? ''}|${cnl.player_name ?? ''}`)
+      }
       // 🛡️ Fuzzy dedup — api-sports가 같은 골을 minute±2분으로 살짝 다르게 두 번 보고하는 케이스만 dedup
       //    같은 player가 다른 시점(예: 47분 + 54분)에 진짜 2골 넣은 경우는 합치면 안 됨!
       //    조건: 같은 team + 같은 detail + 같은 player + minute 차이 ±2분 이내
@@ -292,6 +319,9 @@ async function processFootballEvents(): Promise<{ pushed: number; seen: number }
       for (const g of goalsSoFar ?? []) {
         const gMinute = g.minute ?? 0
         const gPlayer = g.player_name ?? null
+        // 🆕 VAR로 취소된 골 skip
+        const cancelKey = `${g.team_id}|${gMinute}|${gPlayer ?? ''}`
+        if (cancelKeys.has(cancelKey)) continue
         const isDup = seenGoals.some((s) =>
           s.team === Number(g.team_id) &&
           s.detail === g.detail &&

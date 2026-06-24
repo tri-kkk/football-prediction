@@ -9,7 +9,7 @@
  */
 
 export type SoccerEvent =
-  | 'kickoff' | 'goal' | 'halftime' | 'secondHalf' | 'fulltime'
+  | 'kickoff' | 'goal' | 'goalCancelled' | 'halftime' | 'secondHalf' | 'fulltime'
   | 'yellowCard' | 'redCard' | 'substitution'
 
 export type BaseballEvent =
@@ -126,6 +126,22 @@ const SOCCER_TEMPLATES: Record<
     en: (c) => ({
       title: '🏁 Full-time',
       body: `${c.homeTeam} ${score(c)} ${c.awayTeam}`,
+    }),
+  },
+  goalCancelled: {
+    ko: (c) => ({
+      title: `❌ VAR 골 취소 — ${scoringTeamLabel(c, 'ko')}`,
+      body:
+        (c.player ? `${c.player} ` : '') +
+        (c.elapsed ? `${c.elapsed}'` : '') +
+        ` · ${c.homeTeam} ${score(c)} ${c.awayTeam}`,
+    }),
+    en: (c) => ({
+      title: `❌ Goal cancelled by VAR — ${scoringTeamLabel(c, 'en')}`,
+      body:
+        (c.player ? `${c.player} ` : '') +
+        (c.elapsed ? `${c.elapsed}'` : '') +
+        ` · ${c.homeTeam} ${score(c)} ${c.awayTeam}`,
     }),
   },
   yellowCard: {
