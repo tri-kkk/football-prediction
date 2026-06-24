@@ -190,6 +190,12 @@ export default function BaseballTotoPage() {
 
   if (!isPremium) return <PremiumGate round={round} onUpgrade={() => router.push('/premium/pricing')} />
 
+  // 발매 상태 라이브 판정: 첫 경기 시작 전이면 발매중, 시작 후면 마감, 전부 종료면 종료
+  const firstGame = Math.min(...data.matches.map(m => (m.match_date ? new Date(m.match_date).getTime() : Infinity)))
+  const liveStatus =
+    round.status === 'finished' ? 'finished'
+    : (isFinite(firstGame) && Date.now() >= firstGame ? 'closed' : 'upcoming')
+
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Noto Sans KR', -apple-system, sans-serif" }}>
 
@@ -204,7 +210,7 @@ export default function BaseballTotoPage() {
                 <RoundSelect rounds={rounds} current={round} onSelect={(y, r) => setSel({ year: y, round: r })} />
               </div>
             </div>
-            <StatusPill status={round.status} />
+            <StatusPill status={liveStatus} />
           </div>
 
           {/* 리그 필터 */}
@@ -583,16 +589,20 @@ function MatchCard({ m, expanded, toggle, hasVotes }: {
 //  상태 배지
 // ═══════════════════════════════════════════
 function StatusPill({ status }: { status: string }) {
-  const live = status === 'upcoming'
+  const MAP: Record<string, { label: string; color: string; pulse: boolean }> = {
+    upcoming: { label: '발매중', color: C.accent,   pulse: true },
+    closed:   { label: '마감',   color: C.one,      pulse: false },
+    finished: { label: '종료',   color: C.textMuted, pulse: false },
+  }
+  const s = MAP[status] || MAP.closed
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999,
-      background: live ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.12)',
-      border: `1px solid ${live ? 'rgba(52,211,153,0.25)' : 'rgba(248,113,113,0.25)'}`,
-      fontSize: 11, fontWeight: 700, color: live ? C.accent : C.lose,
+      background: s.color + '1f', border: `1px solid ${s.color}40`,
+      fontSize: 11, fontWeight: 700, color: s.color,
     }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: live ? C.accent : C.lose, animation: live ? 'pulse2 1.5s infinite' : 'none' }} />
-      {live ? '발매중' : '마감'}
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.color, animation: s.pulse ? 'pulse2 1.5s infinite' : 'none' }} />
+      {s.label}
     </span>
   )
 }
