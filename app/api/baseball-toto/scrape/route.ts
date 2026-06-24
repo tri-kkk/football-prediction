@@ -138,6 +138,7 @@ const TEAM_MAP: Record<string, TeamInfo> = {
   '밀워브루': { full: '밀워키 브루어스', en: 'Milwaukee Brewers', league: 'MLB' },
   '세인카디': { full: '세인트루이스 카디널스', en: 'St.Louis Cardinals', league: 'MLB' },
   '클리블가': { full: '클리블랜드 가디언스', en: 'Cleveland Guardians', league: 'MLB' },
+  '클리가디': { full: '클리블랜드 가디언스', en: 'Cleveland Guardians', league: 'MLB' },
   '디트타이': { full: '디트로이트 타이거스', en: 'Detroit Tigers', league: 'MLB' },
   '애리다이': { full: '애리조나 다이아몬드백스', en: 'Arizona Diamondbacks', league: 'MLB' },
 }

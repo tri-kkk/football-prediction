@@ -32,6 +32,11 @@ function searchKey(name: string): string {
   return distinctive[distinctive.length - 1] || words[0] || name
 }
 
+function kstDate(ts: string | null): string {
+  if (!ts) return ''
+  return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })  // YYYY-MM-DD (KST)
+}
+
 function calcResult(margin: number): 'W' | 'O' | 'L' | 'D' {
   if (margin >= 2) return 'W'
   if (margin <= -2) return 'L'
@@ -71,23 +76,21 @@ async function resolveRound(roundId: number) {
     q = q.or(`home_team.ilike.%${homeKey}%,away_team.ilike.%${homeKey}%`).limit(20)
     const { data: rows } = await q
 
-    // 시리즈 대응: 토토 경기일과 가장 가까운 경기 선택
+    // 시리즈 대응: 토토 경기와 "같은 날(KST)"의 FT 경기만 인정
+    // (연전이라 어제 끝난 경기를 오늘 진행중 경기에 잘못 붙이는 것 방지)
+    const totoDay = kstDate(m.match_date)
     let row: any = null
     let reversed = false
     if (rows?.length) {
-      const target = m.match_date ? new Date(m.match_date).getTime() : 0
-      const cands: { r: any; rev: boolean; dist: number }[] = []
       for (const r of rows) {
         const fwd = r.home_team?.toLowerCase().includes(homeKey.toLowerCase()) &&
                     r.away_team?.toLowerCase().includes(awayKey.toLowerCase())
         const rev = r.away_team?.toLowerCase().includes(homeKey.toLowerCase()) &&
                     r.home_team?.toLowerCase().includes(awayKey.toLowerCase())
         if (!fwd && !rev) continue
-        const dist = (r.match_date && target) ? Math.abs(new Date(r.match_date).getTime() - target) : 0
-        cands.push({ r, rev: !fwd && rev, dist })
+        if (totoDay && kstDate(r.match_date) !== totoDay) continue  // 같은 날만
+        row = r; reversed = !fwd && rev; break
       }
-      cands.sort((a, b) => a.dist - b.dist)
-      if (cands.length) { row = cands[0].r; reversed = cands[0].rev }
     }
 
     if (!row || row.home_score == null || row.away_score == null) { pending++; continue }

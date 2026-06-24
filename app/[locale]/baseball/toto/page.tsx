@@ -76,13 +76,15 @@ interface TotoData {
 // ===== 유틸 =====
 function fmtDate(d?: string): string {
   if (!d) return ''
-  const m = d.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
-  if (m) {
-    const days = ['일','월','화','수','목','금','토']
-    const dt = new Date(+m[1], +m[2]-1, +m[3])
-    return `${m[2]}.${m[3]}(${days[dt.getDay()]}) ${m[4]}:${m[5]}`
-  }
-  return d
+  const dt = new Date(d)
+  if (isNaN(dt.getTime())) return d
+  const kst = new Date(dt.getTime() + 9 * 3600 * 1000)  // UTC → KST 벽시계
+  const days = ['일','월','화','수','목','금','토']
+  const mo = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const da = String(kst.getUTCDate()).padStart(2, '0')
+  const hh = String(kst.getUTCHours()).padStart(2, '0')
+  const mi = String(kst.getUTCMinutes()).padStart(2, '0')
+  return `${mo}.${da}(${days[kst.getUTCDay()]}) ${hh}:${mi}`
 }
 
 function fmtVotes(n?: number): string {
@@ -128,18 +130,28 @@ export default function BaseballTotoPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [budgetIdx, setBudgetIdx] = useState(0)
   const [showSlip, setShowSlip] = useState(false)
+  const [rounds, setRounds] = useState<{ id: number; year: number; round_number: number; status: string }[]>([])
+  const [sel, setSel] = useState<{ year: number; round: number } | null>(null)
   const { data: session } = useSession()
   const router = useRouter()
   const isPremium = (session?.user as any)?.tier === 'premium'
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    fetch('/api/baseball-toto/round?history=true&limit=30')
+      .then(r => r.json()).then(d => setRounds(d.rounds || [])).catch(() => {})
+  }, [])
+
+  useEffect(() => { load() }, [sel])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = async () => {
     try {
       setLoading(true); setError(null)
-      const res = await fetch('/api/baseball-toto/round')
+      const url = sel
+        ? `/api/baseball-toto/round?year=${sel.year}&round=${sel.round}`
+        : '/api/baseball-toto/round'
+      const res = await fetch(url)
       if (!res.ok) {
-        if (res.status === 404) {
+        if (res.status === 404 && !sel) {
           const s = await fetch('/api/baseball-toto/scrape')
           if (s.ok) {
             const r2 = await fetch('/api/baseball-toto/round')
@@ -188,7 +200,8 @@ export default function BaseballTotoPage() {
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: C.accent, textTransform: 'uppercase' }}>AI 분석 · 야구</div>
               <div style={{ fontSize: 19, fontWeight: 800, color: C.text, marginTop: 2, letterSpacing: -0.3 }}>
-                야구 승1패 <span style={{ color: C.textSub, fontWeight: 600 }}>{round.round_number}회차</span>
+                야구 승1패{' '}
+                <RoundSelect rounds={rounds} current={round} onSelect={(y, r) => setSel({ year: y, round: r })} />
               </div>
             </div>
             <StatusPill status={round.status} />
@@ -277,6 +290,40 @@ export default function BaseballTotoPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
       `}</style>
     </div>
+  )
+}
+
+// ═══════════════════════════════════════════
+//  회차 선택 드롭다운
+// ═══════════════════════════════════════════
+function RoundSelect({ rounds, current, onSelect }: {
+  rounds: { id: number; year: number; round_number: number; status: string }[]
+  current: TotoRound
+  onSelect: (year: number, round: number) => void
+}) {
+  const opts = [...rounds]
+  if (!opts.some(r => r.year === current.year && r.round_number === current.round_number)) {
+    opts.unshift({ id: current.id, year: current.year, round_number: current.round_number, status: current.status })
+  }
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+      <select
+        value={`${current.year}-${current.round_number}`}
+        onChange={(e) => { const [y, r] = e.target.value.split('-').map(Number); onSelect(y, r) }}
+        style={{
+          appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+          background: C.surface, color: C.textSub, fontWeight: 700, fontSize: 14,
+          border: `1px solid ${C.borderStrong}`, borderRadius: 9,
+          padding: '3px 26px 3px 11px', cursor: 'pointer', outline: 'none',
+        }}>
+        {opts.map(rd => (
+          <option key={`${rd.year}-${rd.round_number}`} value={`${rd.year}-${rd.round_number}`} style={{ background: '#1a2230', color: '#fff' }}>
+            {rd.round_number}회차{rd.status === 'finished' ? ' · 마감' : ''}
+          </option>
+        ))}
+      </select>
+      <span style={{ position: 'absolute', right: 10, pointerEvents: 'none', color: C.textMuted, fontSize: 10 }}>▾</span>
+    </span>
   )
 }
 
