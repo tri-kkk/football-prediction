@@ -71,18 +71,23 @@ async function resolveRound(roundId: number) {
     q = q.or(`home_team.ilike.%${homeKey}%,away_team.ilike.%${homeKey}%`).limit(20)
     const { data: rows } = await q
 
+    // 시리즈 대응: 토토 경기일과 가장 가까운 경기 선택
     let row: any = null
     let reversed = false
     if (rows?.length) {
-      row = rows.find(r =>
-        r.home_team?.toLowerCase().includes(homeKey.toLowerCase()) &&
-        r.away_team?.toLowerCase().includes(awayKey.toLowerCase()))
-      if (!row) {
-        const rev = rows.find(r =>
-          r.away_team?.toLowerCase().includes(homeKey.toLowerCase()) &&
-          r.home_team?.toLowerCase().includes(awayKey.toLowerCase()))
-        if (rev) { row = rev; reversed = true }
+      const target = m.match_date ? new Date(m.match_date).getTime() : 0
+      const cands: { r: any; rev: boolean; dist: number }[] = []
+      for (const r of rows) {
+        const fwd = r.home_team?.toLowerCase().includes(homeKey.toLowerCase()) &&
+                    r.away_team?.toLowerCase().includes(awayKey.toLowerCase())
+        const rev = r.away_team?.toLowerCase().includes(homeKey.toLowerCase()) &&
+                    r.home_team?.toLowerCase().includes(awayKey.toLowerCase())
+        if (!fwd && !rev) continue
+        const dist = (r.match_date && target) ? Math.abs(new Date(r.match_date).getTime() - target) : 0
+        cands.push({ r, rev: !fwd && rev, dist })
       }
+      cands.sort((a, b) => a.dist - b.dist)
+      if (cands.length) { row = cands[0].r; reversed = cands[0].rev }
     }
 
     if (!row || row.home_score == null || row.away_score == null) { pending++; continue }
