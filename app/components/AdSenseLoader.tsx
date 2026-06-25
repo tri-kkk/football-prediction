@@ -103,6 +103,23 @@ export default function AdSenseLoader() {
   const isPremium = (session?.user as any)?.tier === 'premium'
   const isExcluded = isAdExcludedPath(pathname)
 
+  // 🛑 이미 로드된 adsbygoogle.js(자동광고·Offerwall)는 경로 제외만으론 안 멈춤.
+  //    제외 경로(로그인/가입 등)·프리미엄에선 광고 요청 자체를 pause, 벗어나면 resume.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const ada: any = ((window as any).adsbygoogle = (window as any).adsbygoogle || [])
+    const shouldPause = isExcluded || isPremium
+    try {
+      ada.pauseAdRequests = shouldPause ? 1 : 0
+    } catch {}
+    // 제외 경로에선 혹시 이미 떠 있는 Offerwall/비네트 오버레이도 즉시 제거
+    if (shouldPause) {
+      document.querySelectorAll(
+        'ins.adsbygoogle[data-vignette-loaded], .google-auto-placed, [id^="google_vignette"], iframe[src*="googleads"][style*="z-index"]'
+      ).forEach((el) => { (el as HTMLElement).style.display = 'none' })
+    }
+  }, [isExcluded, isPremium, pathname])
+
   // 🛡️ 무효 트래픽 체크 + 로드 결정
   useEffect(() => {
     if (status === 'loading') return
