@@ -71,6 +71,13 @@ interface TotoData {
     top_divergence: any[]
   }
   strategies: Strategy[]
+  track?: {
+    hit_rate: number
+    graded: number
+    rounds: number
+    pred_one_avg: number | null
+    actual_one_rate: number | null
+  } | null
 }
 
 // ===== 유틸 =====
@@ -262,6 +269,24 @@ export default function BaseballTotoPage() {
             </div>
           )
         })()}
+
+        {/* 누적 적중률 track-record */}
+        {data.track && data.track.graded >= 14 && (
+          <div style={{ marginBottom: 12, padding: '12px 16px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.textSub }}>🎯 AI 누적 적중률</span>
+                <span style={{ fontSize: 20, fontWeight: 900, color: C.accent }}>{data.track.hit_rate}%</span>
+                <span style={{ fontSize: 11, color: C.textMuted }}>{data.track.rounds}회차 · {data.track.graded}경기</span>
+              </div>
+              {data.track.pred_one_avg != null && data.track.actual_one_rate != null && (
+                <div style={{ fontSize: 11, color: C.textMuted }}>
+                  1점차 예측 <b style={{ color: C.one }}>{data.track.pred_one_avg}%</b> / 실제 <b style={{ color: C.text }}>{data.track.actual_one_rate}%</b>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 예산별 추천 조합 (상단 고정) */}
         {strategies && strategies.length > 0 && (

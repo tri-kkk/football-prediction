@@ -95,6 +95,34 @@ export async function GET(request: NextRequest) {
 
     const strategies = calculateBudgetStrategies(matches || [])
 
+    // 누적 적중률 / 1점차 예측 정확도 (baseball_toto_calibration)
+    let track: any = null
+    try {
+      const { data: calib } = await supabase
+        .from('baseball_toto_calibration')
+        .select('decided, pred_one_avg, actual_one_rate, primary_hits, graded, round_id')
+        .order('id', { ascending: false }).limit(80)
+      let hits = 0, graded = 0, dec = 0, predW = 0, actW = 0
+      const rset = new Set<number>()
+      for (const c of calib || []) {
+        hits += c.primary_hits || 0
+        graded += c.graded || 0
+        dec += c.decided || 0
+        predW += (Number(c.pred_one_avg) || 0) / 100 * (c.decided || 0)
+        actW += (Number(c.actual_one_rate) || 0) / 100 * (c.decided || 0)
+        rset.add(c.round_id)
+      }
+      if (graded > 0) {
+        track = {
+          hit_rate: Math.round((100 * hits / graded) * 10) / 10,
+          graded,
+          rounds: rset.size,
+          pred_one_avg: dec ? Math.round((predW / dec) * 1000) / 10 : null,
+          actual_one_rate: dec ? Math.round((actW / dec) * 1000) / 10 : null,
+        }
+      }
+    } catch {}
+
     return NextResponse.json({
       round: {
         id: roundData.id, year: roundData.year, round_number: roundData.round_number,
@@ -104,6 +132,7 @@ export async function GET(request: NextRequest) {
       matches: matches || [],
       summary: { total_matches: matches?.length || 0, grade_count: gradeCount, difficulty, top_divergence: topDivergence },
       strategies,
+      track,
     })
   } catch (error: any) {
     console.error('❌ 야구토토 조회 에러:', error)

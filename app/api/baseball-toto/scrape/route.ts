@@ -71,7 +71,7 @@ function skellamOneRun(lh: number, la: number): number {
 }
 
 // 최근 FT 경기로 팀 평균 득점/실점(최근12) + 과거 1점차 성향(최근50)
-async function teamRunRates(enName: string, league: string): Promise<{ scored: number; conceded: number; games: number; oneRunRate: number | null }> {
+async function teamRunRates(enName: string, league: string): Promise<{ scored: number; conceded: number; games: number; oneRunRate: number | null; oneRunRateRecent: number | null }> {
   const key = toSearchKey(enName)
   const { data } = await supabase
     .from('baseball_matches')
@@ -81,15 +81,17 @@ async function teamRunRates(enName: string, league: string): Promise<{ scored: n
     .order('match_date', { ascending: false })
     .limit(50)
   let scored = 0, conceded = 0, nRecent = 0  // 득실: 최근 12경기
-  let oneRun = 0, nAll = 0                    // 1점차 성향: 최근 50경기
+  let oneRun = 0, nAll = 0                    // 1점차 성향(장기): 최근 50경기
+  let oneRunRecent = 0                        // 1점차 흐름(단기): 최근 12경기
   let i = 0
   for (const g of data || []) {
     const isHome = (g.home_team || '').toLowerCase().includes(key.toLowerCase())
     const hs = Number(g.home_score), as = Number(g.away_score)
     if (isNaN(hs) || isNaN(as)) { i++; continue }
-    if (i < 12) { scored += isHome ? hs : as; conceded += isHome ? as : hs; nRecent++ }
+    const close = Math.abs(hs - as) === 1
+    if (i < 12) { scored += isHome ? hs : as; conceded += isHome ? as : hs; nRecent++; if (close) oneRunRecent++ }
     nAll++
-    if (Math.abs(hs - as) === 1) oneRun++
+    if (close) oneRun++
     i++
   }
   return {
@@ -97,7 +99,32 @@ async function teamRunRates(enName: string, league: string): Promise<{ scored: n
     conceded: nRecent ? conceded / nRecent : 4.5,
     games: nRecent,
     oneRunRate: nAll >= 20 ? oneRun / nAll : null,
+    oneRunRateRecent: nRecent >= 8 ? oneRunRecent / nRecent : null,
   }
+}
+
+// 정산 누적(baseball_toto_calibration)으로 1점차 자기보정 계수 — 예측 대비 실제. 데이터 부족시 미적용(1.0)
+async function computeOneRunDrift(): Promise<Record<string, number>> {
+  const out: Record<string, number> = {}
+  try {
+    const { data } = await supabase
+      .from('baseball_toto_calibration')
+      .select('league, decided, pred_one_avg, actual_one_rate')
+      .order('year', { ascending: false }).order('round_number', { ascending: false })
+      .limit(60)
+    const agg: Record<string, { pred: number; act: number }> = {}
+    for (const r of data || []) {
+      const lg = r.league as string
+      const d = Number(r.decided) || 0
+      agg[lg] = agg[lg] || { pred: 0, act: 0 }
+      agg[lg].pred += (Number(r.pred_one_avg) || 0) / 100 * d
+      agg[lg].act += (Number(r.actual_one_rate) || 0) / 100 * d
+    }
+    for (const [lg, a] of Object.entries(agg)) {
+      if (a.pred > 5) out[lg] = Math.max(0.8, Math.min(1.25, a.act / a.pred))
+    }
+  } catch {}
+  return out
 }
 
 // ===== 팀명 매핑 (wisetoto 축약 → 풀네임/영문/리그) =====
@@ -323,6 +350,7 @@ function toISODate(dateStr: string | null, year: number): string | null {
 // AI 예측 + 1점차 추정 + 등급
 // =========================================================
 async function enrichWithPredictions(matches: any[], year: number, origin: string) {
+  const oneRunDrift = await computeOneRunDrift()  // 정산 자기보정 계수
   for (const m of matches) {
     let pHome = 0, pAway = 0           // 모델 승/패 확률 (0..1)
     let source: 'model' | 'vote' = 'vote'
@@ -438,13 +466,20 @@ async function enrichWithPredictions(matches: any[], year: number, origin: strin
               m._pitcherAdj = true
             }
             let pOne = skellamOneRun(clampLambda(lh), clampLambda(la)) * (ONE_RUN_CAL[m.league] ?? ONE_RUN_CAL.Other)
-            // (2) 팀별 과거 1점차 성향: 리그평균 대비 편차의 절반만큼 가산 (불펜·접전 성향)
-            if (hr.oneRunRate != null && ar.oneRunRate != null) {
-              const pairRate = (hr.oneRunRate + ar.oneRunRate) / 2
+            // (2) 팀별 1점차 성향: 장기(50경기) + 최근12 흐름 블렌딩 → 리그평균 대비 편차 절반 가산
+            const teamRate = (t: { oneRunRate: number | null; oneRunRateRecent: number | null }) =>
+              t.oneRunRate == null ? null
+              : (t.oneRunRateRecent != null ? 0.7 * t.oneRunRate + 0.3 * t.oneRunRateRecent : t.oneRunRate)
+            const hRate = teamRate(hr), aRate = teamRate(ar)
+            if (hRate != null && aRate != null) {
+              const pairRate = (hRate + aRate) / 2
               const lgBase = ONE_RUN_BASE[m.league] ?? ONE_RUN_BASE.Other
               pOne += (pairRate - lgBase) * 0.5
               m._teamTendency = Math.round(pairRate * 1000) / 10
             }
+            // (3) 정산 자기보정: 누적 예측 대비 실제로 자동 스케일
+            const dr = oneRunDrift[m.league]
+            if (dr) { pOne *= dr; m._drift = Math.round(dr * 100) / 100 }
             m._skellamOne = Math.max(0.16, Math.min(0.42, pOne))
           }
         } catch {}

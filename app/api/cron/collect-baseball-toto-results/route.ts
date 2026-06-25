@@ -44,6 +44,46 @@ function calcResult(margin: number): 'W' | 'O' | 'L' | 'D' {
   return 'O'
 }
 
+// 회차 정산 결과를 리그별로 누적 (예측 1점차 vs 실제 + 적중률)
+async function writeCalibration(roundId: number) {
+  const { data: rd } = await supabase
+    .from('baseball_toto_rounds')
+    .select('year, round_number').eq('id', roundId).maybeSingle()
+  const { data: ms } = await supabase
+    .from('baseball_toto_matches')
+    .select('league, ts_one, result, primary_pick, is_correct')
+    .eq('round_id', roundId).not('result', 'is', null)
+  if (!ms?.length) return
+
+  const byLeague: Record<string, { decided: number; predSum: number; actualOne: number; hits: number; graded: number }> = {}
+  for (const m of ms) {
+    const lg = m.league || 'Other'
+    byLeague[lg] = byLeague[lg] || { decided: 0, predSum: 0, actualOne: 0, hits: 0, graded: 0 }
+    const b = byLeague[lg]
+    if (m.result === 'D') continue  // 무(적특)는 제외
+    b.decided++
+    b.predSum += Number(m.ts_one) || 0
+    if (m.result === 'O') b.actualOne++
+    if (m.is_correct != null) { b.graded++; if (m.is_correct) b.hits++ }
+  }
+
+  for (const [league, b] of Object.entries(byLeague)) {
+    if (b.decided === 0) continue
+    await supabase.from('baseball_toto_calibration').upsert({
+      round_id: roundId,
+      year: rd?.year ?? null,
+      round_number: rd?.round_number ?? null,
+      league,
+      decided: b.decided,
+      pred_one_avg: Math.round((b.predSum / b.decided) * 10) / 10,
+      actual_one_rate: Math.round((100 * b.actualOne / b.decided) * 10) / 10,
+      primary_hits: b.hits,
+      graded: b.graded,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'round_id,league' })
+  }
+}
+
 async function resolveRound(roundId: number) {
   const { data: matches } = await supabase
     .from('baseball_toto_matches')
@@ -111,6 +151,9 @@ async function resolveRound(roundId: number) {
       .eq('id', m.id)
     if (!error) updated++
   }
+
+  // 정산 결과 누적 (예측 vs 실제) — 매 정산마다 갱신
+  if (updated > 0) await writeCalibration(roundId)
 
   // 모든 경기 판정되면 회차 마감 처리
   if (pending === 0) {
