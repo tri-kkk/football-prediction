@@ -2329,8 +2329,8 @@ export default function AdminDashboard() {
       width: ad.width,
       height: ad.height,
       priority: ad.priority,
-      start_date: ad.start_date || '',
-      end_date: ad.end_date || '',
+      start_date: ad.start_date ? new Date(ad.start_date).toISOString().slice(0, 10) : '',
+      end_date: ad.end_date ? new Date(ad.end_date).toISOString().slice(0, 10) : '',
     })
     setIsAdModalOpen(true)
   }
@@ -3854,6 +3854,7 @@ export default function AdminDashboard() {
                         <th className="px-3 py-2 text-left">광고명</th>
                         <th className="px-3 py-2 text-left">슬롯</th>
                         <th className="px-3 py-2 text-center">사이즈</th>
+                        <th className="px-3 py-2 text-center">게재기간</th>
                         <th className="px-3 py-2 text-center">노출</th>
                         <th className="px-3 py-2 text-center">클릭</th>
                         <th className="px-3 py-2 text-center">CTR</th>
@@ -3880,6 +3881,17 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-3 py-2 text-center text-gray-400 text-xs">
                             {ad.width}×{ad.height}
+                          </td>
+                          <td className="px-3 py-2 text-center text-gray-400 text-xs whitespace-nowrap">
+                            {ad.start_date || ad.end_date ? (
+                              <>
+                                {ad.start_date ? new Date(ad.start_date).toISOString().slice(2, 10) : '—'}
+                                <span className="text-gray-600 mx-1">~</span>
+                                {ad.end_date ? new Date(ad.end_date).toISOString().slice(2, 10) : '—'}
+                              </>
+                            ) : (
+                              <span className="text-gray-600">무기한</span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-center text-gray-300">
                             {todayAdStats[ad.id]?.impressions || 0}
