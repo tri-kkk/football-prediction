@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
   try {
     const year = new Date().getFullYear()
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    // ⚠️ cron이 호출된 도메인(origin)을 그대로 사용 — VERCEL_URL은 배포보호(HTML 로그인)가 걸려
+    //    내부 호출 시 JSON 대신 HTML이 와서 깨짐. Supabase cron은 trendsoccer.com으로 호출하므로 origin=공개도메인.
+    const baseUrl = new URL(request.url).origin
 
     // round=0 → 현재 발매중 회차 자동 감지, force=true → 캐시 무시
     const scrapeUrl = `${baseUrl}/api/baseball-toto/scrape?year=${year}&round=0&force=true`
@@ -36,7 +36,21 @@ export async function GET(request: NextRequest) {
     const response = await fetch(scrapeUrl, {
       headers: { 'User-Agent': 'SpoLive-Cron/1.0' },
     })
-    const data = await response.json()
+    const text = await response.text()
+    let data: any
+    try {
+      data = JSON.parse(text)
+    } catch {
+      // HTML 등 비-JSON 응답 (배포보호/404/오류페이지) → 원인 진단 가능하게
+      return NextResponse.json({
+        success: false,
+        error: 'scrape가 JSON이 아닌 응답을 반환 (배포보호 또는 404 의심)',
+        scrapeUrl,
+        status: response.status,
+        sample: text.slice(0, 120),
+        duration_ms: Date.now() - startTime,
+      }, { status: 502 })
+    }
 
     if (!response.ok) {
       console.error('❌ 야구토토 Cron 실패:', data)
