@@ -667,7 +667,9 @@ export async function GET(request: NextRequest) {
       ],
       asia: [
         { id: 292, code: 'K1', name: 'K League 1' },
+        { id: 293, code: 'K2', name: 'K League 2' },
         { id: 98, code: 'J1', name: 'J1 League' },
+        { id: 99, code: 'J2', name: 'J2 League' },
       ],
       americas: [
         { id: 253, code: 'MLS', name: 'Major League Soccer' },

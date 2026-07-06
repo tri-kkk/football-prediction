@@ -28,9 +28,11 @@ const LEAGUES = [
   { id: 61, code: 'FL1', name: 'Ligue 1', country: 'France', region: 'europe' },
   { id: 88, code: 'DED', name: 'Eredivisie', country: 'Netherlands', region: 'europe' },
   
-  // 아시아 리그 (신규)
+  // 아시아 리그
   { id: 292, code: 'K1', name: 'K League 1', country: 'South Korea', region: 'asia' },
+  { id: 293, code: 'K2', name: 'K League 2', country: 'South Korea', region: 'asia' },
   { id: 98, code: 'J1', name: 'J1 League', country: 'Japan', region: 'asia' },
+  { id: 99, code: 'J2', name: 'J2 League', country: 'Japan', region: 'asia' },
 
   // 아메리카 리그
   { id: 253, code: 'MLS', name: 'Major League Soccer', country: 'USA', region: 'americas' },
