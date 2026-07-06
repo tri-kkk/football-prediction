@@ -16,13 +16,10 @@ export async function generateMetadata({
     description: isKo
       ? 'KBO, NPB, MLB 프로야구 심층 데이터 분석 리포트.'
       : 'In-depth data analytics reports for KBO, NPB, and MLB pro baseball.',
+    // Google Ads 랜딩페이지 + SEO 유입 허용 (googlebot 별도 설정 제거, robots만 유지)
     robots: {
-      index: false,
-      follow: false,
-      googleBot: {
-        index: false,
-        follow: false,
-      },
+      index: true,
+      follow: true,
     },
   }
 }
