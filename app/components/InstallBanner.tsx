@@ -10,31 +10,50 @@ export default function InstallBanner() {
   const [showBanner, setShowBanner] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
 
+  // 안드로이드 감지 (SSR 안전)
+  const [isAndroid, setIsAndroid] = useState(false)
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') {
+      setIsAndroid(/Android/i.test(navigator.userAgent))
+    }
+  }, [])
+
   const texts = {
     ko: {
-      title: '앱으로 더 빠르게! ⚡',
-      subtitle: '홈 화면에서 바로 경기 분석 확인',
+      titleAndroid: '트렌드사커 앱 출시! 🎉',
+      subtitleAndroid: '더 빠르고 편리하게 앱으로 이용하세요',
+      titlePwa: '앱으로 더 빠르게! ⚡',
+      subtitlePwa: '홈 화면에서 바로 경기 분석 확인',
       tag1: '즉시 접속',
-      tag2: '앱 느낌',
+      tag2: '알림 지원',
       tag3: '용량 0MB',
+      tagPlayStore: '⭐ 구글 플레이',
+      buttonAndroid: '구글 플레이에서 다운로드',
       buttonIOS: '설치 방법 보기',
-      buttonAndroid: '홈 화면에 추가'
+      buttonPwaAndroid: '홈 화면에 추가'
     },
     en: {
-      title: 'Faster with App! ⚡',
-      subtitle: 'Check match analysis from home screen',
+      titleAndroid: 'TrendSoccer App Released! 🎉',
+      subtitleAndroid: 'Faster and easier with our official app',
+      titlePwa: 'Faster with App! ⚡',
+      subtitlePwa: 'Check match analysis from home screen',
       tag1: 'Instant Access',
-      tag2: 'App-like',
+      tag2: 'Notifications',
       tag3: '0MB Storage',
+      tagPlayStore: '⭐ Google Play',
+      buttonAndroid: 'Download on Google Play',
       buttonIOS: 'See How to Install',
-      buttonAndroid: 'Add to Home Screen'
+      buttonPwaAndroid: 'Add to Home Screen'
     }
   }
 
   const t = texts[language] || texts.ko
 
   useEffect(() => {
-    if (isInstalled || !canInstall) return
+    if (isInstalled) return
+    // 🆕 Android는 canInstall과 무관하게 Play Store 유도 배너 표시 (구글 플레이 앱 출시)
+    // iOS/기타는 기존 PWA canInstall 기반
+    if (!isAndroid && !canInstall) return
 
     // 이전에 닫았는지 체크 (7일 동안)
     const dismissedTime = localStorage.getItem('installBannerDismissed')
@@ -46,7 +65,7 @@ export default function InstallBanner() {
     // 3초 후 배너 표시
     const timer = setTimeout(() => setShowBanner(true), 3000)
     return () => clearTimeout(timer)
-  }, [canInstall, isInstalled])
+  }, [canInstall, isInstalled, isAndroid])
 
   const handleClose = () => {
     setIsClosing(true)
@@ -57,6 +76,13 @@ export default function InstallBanner() {
   }
 
   const handleInstall = async () => {
+    // 🆕 Android면 Play Store로 이동 (앱 출시 후)
+    if (isAndroid) {
+      window.open('https://play.google.com/store/apps/details?id=com.trendsoccer.app', '_blank')
+      handleClose()
+      return
+    }
+    // iOS / 기타는 기존 PWA install
     const result = await triggerInstall()
     if (result || isIOS) handleClose()
   }
@@ -129,10 +155,10 @@ export default function InstallBanner() {
               {/* 텍스트 */}
               <div className="flex-1 pr-8">
                 <h3 className="font-bold text-white text-[17px] leading-tight mb-1">
-                  {t.title}
+                  {isAndroid ? t.titleAndroid : t.titlePwa}
                 </h3>
                 <p className="text-slate-400 text-sm leading-snug">
-                  {t.subtitle}
+                  {isAndroid ? t.subtitleAndroid : t.subtitlePwa}
                 </p>
               </div>
             </div>
@@ -164,7 +190,7 @@ export default function InstallBanner() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                {isIOS ? t.buttonIOS : t.buttonAndroid}
+                {isAndroid ? t.buttonAndroid : isIOS ? t.buttonIOS : t.buttonPwaAndroid}
               </span>
             </button>
           </div>
