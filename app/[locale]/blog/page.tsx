@@ -4,6 +4,10 @@
 import { createClient } from '@supabase/supabase-js'
 import BlogListClient from './BlogListClient'
 
+// 🔄 5분 ISR 캐시 — 새 blog 발행 후 최대 5분 안에 반영
+// (기본 캐시가 무기한이라 K리그 신규 preview가 안 보이던 문제 해결)
+export const revalidate = 300
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
