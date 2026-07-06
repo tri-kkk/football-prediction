@@ -82,7 +82,8 @@ function detectSeasonContext(leagueCode: string, homeStats: any, awayStats: any)
   
   // K리그/J리그/MLS: 2~4월 개막
   if (['KL1', 'KL2', 'J1', 'J2', 'MLS'].includes(leagueCode)) {
-    if (totalGames <= 2) {
+    // 🛡️ 실제 개막기(2~4월)일 때만 "개막" 판정 — totalGames 부족은 stats 매핑 실패일 수 있음
+    if (totalGames <= 2 && month >= 2 && month <= 4) {
       return {
         phaseKo: '시즌 개막',
         phaseEn: 'season opener',
@@ -90,12 +91,23 @@ function detectSeasonContext(leagueCode: string, homeStats: any, awayStats: any)
         cautionNote: '시즌 개막 초반이므로 "연승", "연패", "최근 폼" 등 지난 시즌 데이터를 이번 시즌 흐름처럼 서술하지 마세요. "새 시즌 첫 경기" 또는 "개막전" 맥락으로 작성하세요. 지난 시즌 성적은 "작시즌"으로 명시하세요.',
       }
     }
-    if (totalGames <= 8) {
+    if (totalGames <= 8 && month >= 2 && month <= 5) {
       return {
         phaseKo: '시즌 초반',
         phaseEn: 'early season',
         isOpening: false,
         cautionNote: '시즌 초반이라 데이터가 적습니다. "이번 시즌 초반" 맥락으로, 데이터 해석 시 표본 부족을 인지하세요. 지난 시즌 데이터 참조 시 "작시즌"으로 명시하세요.',
+      }
+    }
+    // K리그 5~11월 진행 중 + totalGames 적으면 → stats 매핑 실패로 간주. "시즌 중반" 처리
+    if (month >= 5 && month <= 11) {
+      return {
+        phaseKo: '시즌 중반',
+        phaseEn: 'mid-season',
+        isOpening: false,
+        cautionNote: totalGames < 8
+          ? 'K리그/J리그 시즌 진행 중입니다. 팀 통계 데이터가 부족할 수 있으니 "개막", "새 시즌", "첫 경기" 같은 표현은 절대 사용하지 마세요. 최근 5경기 폼 위주로 분석하세요.'
+          : '',
       }
     }
   }
