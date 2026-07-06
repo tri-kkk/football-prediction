@@ -1027,8 +1027,11 @@ async function fetchPrediction(match: any): Promise<any> {
 async function fetchTeamStats(teamName: string, leagueCode: string): Promise<any> {
   try {
     // CL/EL 팀들은 자국 리그 소속 — 리그코드 없이 조회해야 데이터 있음
+    // 🛡️ KL1/KL2/K2도 league 파라미터 제외 — fg_team_stats는 K1 데이터만 있어서 KL2 매치 조회 시 mismatch 발생
+    //    (수원 삼성 KL2 매치인데 fg_team_stats에는 K1 시즌 데이터로 저장됨)
     const isCup = ['CL', 'EL'].includes(leagueCode)
-    const url = isCup
+    const isKLeague = ['KL1', 'KL2', 'K1', 'K2'].includes(leagueCode)
+    const url = (isCup || isKLeague)
       ? `${API_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}`
       : `${API_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}&league=${leagueCode}`
     
