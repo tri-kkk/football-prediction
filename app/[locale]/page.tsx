@@ -193,8 +193,8 @@ function HomeInner() {
 
   return (
     <main className="home-container mx-auto px-3 sm:px-5 pt-3 pb-24 sm:pb-8 space-y-4">
-      {/* 최상단 프리미엄 배너 */}
-      {!isPremium && (
+      {/* 최상단 프리미엄 배너 — 비활성화 (요청) */}
+      {false && !isPremium && (
         <a
           href="/premium/pricing"
           className="block -mx-3 sm:mx-0 rounded-xl overflow-hidden"

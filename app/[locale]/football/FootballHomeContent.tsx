@@ -2512,8 +2512,8 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
             {/* ❌ 상단 728x90 광고 배너 제거됨 (2026-05-07) - 인피드 광고와 역할 중복 */}
 
         {/* 🔥 트렌드 PICK CTA 배너 (모바일 + PC 통합) */}
-        {/* 무료 회원 & 비로그인: 프리미엄 이미지 배너 */}
-        {!isPremium ? (
+        {/* 무료 회원 & 비로그인: 프리미엄 이미지 배너 — 비활성화 (요청) */}
+        {false && !isPremium ? (
           <Link
             href={session ? "/premium/pricing" : "/login?callbackUrl=/premium/pricing"}
             className="block mt-2 mb-3 active:scale-[0.99] transition-transform"
