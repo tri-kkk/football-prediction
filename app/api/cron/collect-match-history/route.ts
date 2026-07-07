@@ -6,6 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Vercel function timeout (Pro 800초까지) — K1/K2 다시즌 백필용
+export const maxDuration = 800
+
 // Supabase 클라이언트
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
