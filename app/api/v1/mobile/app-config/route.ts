@@ -22,8 +22,8 @@ import { ErrorCode, errorResponse, successResponse } from '@/lib/mobile-api'
 // 환경변수 → 폴백 기본값
 // ──────────────────────────────────────────────────────────────────
 
-const DEFAULT_MIN_VERSION_ANDROID = '1.0.0'
-const DEFAULT_LATEST_VERSION_ANDROID = '1.0.0'
+const DEFAULT_MIN_VERSION_ANDROID = '1.0.1'
+const DEFAULT_LATEST_VERSION_ANDROID = '1.0.1'
 const DEFAULT_MIN_VERSION_IOS = '1.0.0'
 const DEFAULT_LATEST_VERSION_IOS = '1.0.0'
 
