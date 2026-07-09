@@ -18,6 +18,51 @@ import { Link } from '@/i18n/navigation'
 // import TopHighlights from '../../components/TopHighlights'  // 🆕 제거됨 - 필터 버튼으로 대체
 import MatchPoll from '../../components/MatchPoll'
 
+// 🖥 웹 홈 상단 배너 — 관리자 광고 관리 slot=web_home_top fetch (반응형)
+function FootballHomeTopBanner({ language }: { language: 'ko' | 'en' }) {
+  const [ad, setAd] = useState<{ id: string; image_url: string; link_url: string; alt_text: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/ads?slot=web_home_top')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        const list: any[] = Array.isArray(data) ? data : data?.ads ?? data?.data ?? []
+        const active = list.find((a: any) => a.is_active) || list[0]
+        if (active?.image_url && active?.link_url) {
+          setAd({
+            id: active.id,
+            image_url: active.image_url,
+            link_url: active.link_url,
+            alt_text: active.alt_text || (language === 'ko' ? '광고 배너' : 'Ad Banner'),
+          })
+          fetch(`/api/ads/track?ad_id=${active.id}&type=impression`, { method: 'POST' }).catch(() => {})
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [language])
+
+  if (!ad) return null
+
+  return (
+    <a
+      href={ad.link_url}
+      target={ad.link_url.startsWith('http') ? '_blank' : undefined}
+      rel={ad.link_url.startsWith('http') ? 'noopener noreferrer' : undefined}
+      className="block mt-2 mb-3 active:scale-[0.99] transition-transform rounded-2xl overflow-hidden"
+      aria-label={ad.alt_text}
+      onClick={() => {
+        fetch(`/api/ads/track?ad_id=${ad.id}&type=click`, { method: 'POST' }).catch(() => {})
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={ad.image_url} alt={ad.alt_text} className="w-full h-auto" loading="eager" />
+    </a>
+  )
+}
+
 // 🌐 다국어 지원 데이터 import
 import { LEAGUES, LEAGUE_GROUPS, LEAGUES_WITH_ODDS, getLeagueByCode } from '../../data/leagues'
 import LanguageSelector from '../../components/LanguageSelector'
@@ -2511,27 +2556,10 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
             {/* ❌ 상단 728x90 광고 배너 제거됨 (2026-05-07) - 인피드 광고와 역할 중복 */}
 
-        {/* 🔥 트렌드 PICK CTA 배너 (모바일 + PC 통합) */}
-        {/* 무료 회원 & 비로그인: 프리미엄 이미지 배너 — 비활성화 (요청) */}
-        {false && !isPremium ? (
-          <Link
-            href={session ? "/premium/pricing" : "/login?callbackUrl=/premium/pricing"}
-            className="block mt-2 mb-3 active:scale-[0.99] transition-transform"
-          >
-            {/* 데스크톱 배너 (1200x200) */}
-            <img
-              src="/1200x200.png"
-              alt={currentLanguage === 'ko' ? '48시간 무료 프리미엄 분석 체험' : '48-Hour Free Premium Analysis Trial'}
-              className="hidden lg:block w-full rounded-2xl"
-            />
-            {/* 모바일 배너 (720x200) */}
-            <img
-              src="/720x200.png"
-              alt={currentLanguage === 'ko' ? '48시간 무료 프리미엄 분석 체험' : '48-Hour Free Premium Analysis Trial'}
-              className="block lg:hidden w-full rounded-2xl"
-            />
-          </Link>
-        ) : (
+        {/* 🖥 웹 홈 상단 배너 — 관리자 광고 관리(slot=web_home_top)에서 fetch */}
+        {!isPremium && <FootballHomeTopBanner language={currentLanguage} />}
+        {/* 프리미엄 회원: 기존 트렌드 분석 배너 (아래 로직 그대로 유지) */}
+        {isPremium && (
           /* 프리미엄 회원: 기존 트렌드 분석 배너 */
           <Link
             href="/premium"
