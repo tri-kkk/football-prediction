@@ -23,6 +23,57 @@ import MagazineRow from '../components/home/MagazineRow'
 
 const LIVE_REFRESH_MS = 20000 // 라이브 스코어 자동 갱신 주기
 
+// 🖥 웹 홈 상단 배너 — 관리자 광고 관리(slot=web_home_top) 광고 fetch + 프리미엄 회원 제외
+function HomeTopBanner({ isPremium, isEn }: { isPremium: boolean; isEn: boolean }) {
+  const [ad, setAd] = useState<{ id: string; image_url: string; link_url: string; alt_text: string } | null>(null)
+
+  useEffect(() => {
+    if (isPremium) return
+    let cancelled = false
+    fetch('/api/ads?slot=web_home_top')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        // 응답이 배열 또는 { ads: [...] } 형태 모두 대응
+        const list: any[] = Array.isArray(data) ? data : data?.ads ?? data?.data ?? []
+        const active = list.find((a: any) => a.is_active) || list[0]
+        if (active?.image_url && active?.link_url) {
+          setAd({
+            id: active.id,
+            image_url: active.image_url,
+            link_url: active.link_url,
+            alt_text: active.alt_text || (isEn ? 'Ad Banner' : '광고 배너'),
+          })
+          // 노출 카운트 트래킹 (best-effort)
+          fetch(`/api/ads/track?ad_id=${active.id}&type=impression`, { method: 'POST' }).catch(() => {})
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [isPremium, isEn])
+
+  if (isPremium || !ad) return null
+
+  return (
+    <a
+      href={ad.link_url}
+      target={ad.link_url.startsWith('http') ? '_blank' : undefined}
+      rel={ad.link_url.startsWith('http') ? 'noopener noreferrer' : undefined}
+      className="block -mx-3 sm:mx-0 rounded-xl overflow-hidden"
+      aria-label={ad.alt_text}
+      onClick={() => {
+        // 클릭 트래킹 (best-effort)
+        fetch(`/api/ads/track?ad_id=${ad.id}&type=click`, { method: 'POST' }).catch(() => {})
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={ad.image_url} alt={ad.alt_text} className="w-full h-auto" loading="eager" />
+    </a>
+  )
+}
+
 // 팀명 정규화 키 (대소문자/공백/특수문자 제거)
 const teamKey = (s?: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
@@ -193,22 +244,9 @@ function HomeInner() {
 
   return (
     <main className="home-container mx-auto px-3 sm:px-5 pt-3 pb-24 sm:pb-8 space-y-4">
-      {/* 최상단 프리미엄 배너 — 비활성화 (요청) */}
-      {false && !isPremium && (
-        <a
-          href="/premium/pricing"
-          className="block -mx-3 sm:mx-0 rounded-xl overflow-hidden"
-          aria-label={isEn ? 'Premium subscription' : '프리미엄 구독'}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/1200x200.png"
-            alt={isEn ? 'Premium subscription' : '프리미엄 구독'}
-            className="w-full h-auto"
-            loading="eager"
-          />
-        </a>
-      )}
+      {/* 최상단 웹 홈 배너 — 관리자 광고 관리(slot=web_home_top)에서 관리 */}
+      <HomeTopBanner isPremium={isPremium} isEn={isEn} />
+
 
       {/* ①②  히어로 + 오늘의 PICK */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.85fr_1fr]">

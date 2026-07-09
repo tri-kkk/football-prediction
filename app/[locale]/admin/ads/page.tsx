@@ -201,7 +201,7 @@ interface PaymentStats {
 interface Advertisement {
   id: string
   name: string
-  slot_type: 'desktop_banner' | 'sidebar' | 'mobile_bottom' | 'baseball_odds_bottom' | 'mobile_app_main_top' | 'mobile_app_main_bottom' | 'mobile_app_main_banner'
+  slot_type: 'desktop_banner' | 'sidebar' | 'mobile_bottom' | 'baseball_odds_bottom' | 'mobile_app_main_top' | 'mobile_app_main_bottom' | 'mobile_app_main_banner' | 'web_home_top'
   image_url: string
   link_url: string
   alt_text: string
@@ -367,6 +367,7 @@ const SLOT_TYPES = [
   { value: 'mobile_app_main_top', label: '📱 모바일앱 메인 상단', size: '380×380' },
   { value: 'mobile_app_main_bottom', label: '📱 모바일앱 메인 하단', size: '380×160' },
   { value: 'mobile_app_main_banner', label: '📱 모바일앱 메인 직광고', size: '380×120' },
+  { value: 'web_home_top', label: '🖥 웹 홈 상단 배너', size: '1200×200' },
 ]
 
 const TABS = [
@@ -2228,6 +2229,7 @@ export default function AdminDashboard() {
       mobile_app_main_top: { width: 380, height: 380 },
       mobile_app_main_bottom: { width: 380, height: 160 },
       mobile_app_main_banner: { width: 380, height: 120 },
+      web_home_top: { width: 1200, height: 200 },
     }
     setAdFormData({
       ...adFormData,
