@@ -320,12 +320,13 @@ export async function POST(request: NextRequest) {
     }
 
     await sendTelegramNotification(
-      `💰 <b>매출 발생!</b> (Play IAP)\n\n` +
+      `💰 <b>매출 발생!</b>\n\n` +
         `📋 상품: ${product.label}\n` +
         `💳 금액: ₩${product.price.toLocaleString()}\n` +
         `👤 이메일: ${userEmail}\n` +
         `🆔 주문번호: ${orderId}\n` +
-        `🕐 시간: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}`
+        `🕐 시간: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}\n` +
+        `🚪 채널: 📱 모바일 앱 (Play IAP)`
     )
 
     capturePostHogEvent('subscription_completed', userId, {

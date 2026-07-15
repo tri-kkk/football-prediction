@@ -197,11 +197,23 @@ export async function POST(request: NextRequest) {
 
     // 📨 신규 가입 텔레그램 알림 (비차단)
     const tierLabel = promoCode ? '프로모션' : trialUsed ? '48시간 체험' : tier === 'premium' ? '프리미엄' : '무료'
+    // 🆕 가입 채널 판별 (User-Agent 기반)
+    const ua = request.headers.get('user-agent') || ''
+    const clientType = request.headers.get('x-client-type') // 앱이 명시적으로 보낼 경우 우선
+    let channel = '🌐 웹'
+    if (clientType === 'mobile' || clientType === 'app') {
+      channel = '📱 모바일 앱'
+    } else if (/okhttp|Dart|Flutter|CFNetwork|TrendSoccer/i.test(ua) && !/Mozilla/i.test(ua)) {
+      channel = '📱 모바일 앱'
+    } else if (/Mobile|Android|iPhone|iPad/i.test(ua) && /Mozilla/i.test(ua)) {
+      channel = '📱 모바일 웹'
+    }
     sendTelegram(
       `🎉 <b>신규 가입!</b>\n\n` +
       `👤 ${pendingUser.name || emailLower}\n` +
       `🌍 ${pendingUser.signup_country || '-'}\n` +
-      `🎫 ${tierLabel}`
+      `🎫 ${tierLabel}\n` +
+      `🚪 ${channel}`
     ).catch(() => {})
 
     // ✅ pending_users 삭제

@@ -185,7 +185,8 @@ export async function POST(request: NextRequest) {
       `💳 금액: ₩${planAmount.toLocaleString()}\n` +
       `👤 이메일: ${userEmail}\n` +
       `🆔 주문번호: ${ordNo}\n` +
-      `🕐 시간: ${now}`
+      `🕐 시간: ${now}\n` +
+      `🚪 채널: 🌐 웹 (SeedPay)`
     )
 
     // 🔟 성공 페이지로 리다이렉트
