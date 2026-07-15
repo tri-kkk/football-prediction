@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const platform = (searchParams.get('platform') || 'android').toLowerCase()
-    const currentVersion = searchParams.get('version') || null
+    // version(권장) 또는 currentVersion(외주 앱 호환) 두 이름 모두 지원
+    const currentVersion = searchParams.get('version') || searchParams.get('currentVersion') || null
 
     const isIos = platform === 'ios'
 
