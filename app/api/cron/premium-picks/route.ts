@@ -22,19 +22,29 @@ const leagueIdMap: Record<string, number> = {
   'CL': 2,
   'EL': 3,
   'WC': 1,
-  // 아시아 리그 추가
+  // 아시아 리그
   'KL1': 292,
   'K1': 292,
+  'KL2': 293,
+  'K2': 293,
   'J1': 98,
   'J2': 99,
+  // 아메리카
+  'MLS': 253,
+  // 남미
+  'BSA': 71,   // 브라질 세리A
+  // 중국
+  'CSL': 169,  // Chinese Super League
 }
 
-// 분석할 리그 코드 (K리그/J리그 추가)
+// 분석할 리그 코드 (K리그/J리그/MLS 추가)
 const LEAGUE_CODES = [
   // 유럽
   'PL', 'PD', 'BL1', 'SA', 'FL1', 'DED',
   // 아시아
-  'KL1', 'J1',
+  'KL1', 'KL2', 'J1', 'J2',
+  // 아메리카
+  'MLS',
   // 국제대회 (월드컵 2026)
   'WC',
 ]
