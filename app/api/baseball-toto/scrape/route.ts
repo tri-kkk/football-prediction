@@ -584,14 +584,15 @@ async function enrichWithPredictions(matches: any[], year: number, origin: strin
 async function saveToDB(matches: any[], year: number, round: number) {
   const totalVotes = matches.reduce((s, m) => s + (m.vote_total || 0), 0)
 
-  // 🆕 자동 마감 판정 — 첫 매치 시작 시간이 지났으면 status='closed'
-  //   wisetoto는 마감 이후에도 upcoming status로 응답할 수 있어서 우리가 시간 기준으로 판정
+  // 🆕 자동 마감 판정 — 첫 매치 시작 시간 + 30분 이후면 status='closed'
+  //   wisetoto는 마감 이후에도 upcoming status로 응답 가능. 30분 여유는 오판 방지 안전망.
   const now = Date.now()
+  const SAFETY_MS = 30 * 60 * 1000
   const matchTimes = matches
     .map((m) => m.match_date ? new Date(m.match_date).getTime() : null)
-    .filter((t): t is number => t !== null && !isNaN(t))
+    .filter((t): t is number => t !== null && !isNaN(t) && t > 0)
   const firstMatchTime = matchTimes.length > 0 ? Math.min(...matchTimes) : null
-  const isPastFirstMatch = firstMatchTime !== null && firstMatchTime < now
+  const isPastFirstMatch = firstMatchTime !== null && firstMatchTime + SAFETY_MS < now
 
   let status: string
   if (isPastFirstMatch) {
