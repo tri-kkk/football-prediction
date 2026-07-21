@@ -583,13 +583,32 @@ async function enrichWithPredictions(matches: any[], year: number, origin: strin
 // =========================================================
 async function saveToDB(matches: any[], year: number, round: number) {
   const totalVotes = matches.reduce((s, m) => s + (m.vote_total || 0), 0)
+
+  // 🆕 자동 마감 판정 — 첫 매치 시작 시간이 지났으면 status='closed'
+  //   wisetoto는 마감 이후에도 upcoming status로 응답할 수 있어서 우리가 시간 기준으로 판정
+  const now = Date.now()
+  const matchTimes = matches
+    .map((m) => m.match_date ? new Date(m.match_date).getTime() : null)
+    .filter((t): t is number => t !== null && !isNaN(t))
+  const firstMatchTime = matchTimes.length > 0 ? Math.min(...matchTimes) : null
+  const isPastFirstMatch = firstMatchTime !== null && firstMatchTime < now
+
+  let status: string
+  if (isPastFirstMatch) {
+    status = 'closed'  // 첫 매치 시작 시간 지남 → 마감
+  } else if (totalVotes > 0) {
+    status = 'upcoming'  // 투표 진행 중 (발매중)
+  } else {
+    status = 'scheduled'  // 미발매
+  }
+
   const { data: roundData, error: roundErr } = await supabase
     .from('baseball_toto_rounds')
     .upsert({
       year, round_number: round,
       total_matches: matches.length,
       total_votes: totalVotes,
-      status: totalVotes > 0 ? 'upcoming' : 'scheduled',
+      status,
       scraped_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'year,round_number' })
