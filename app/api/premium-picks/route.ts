@@ -54,6 +54,50 @@ export async function GET() {
 
     console.log(`✅ Premium picks found: ${picks?.length || 0}`)
 
+    // 🆕 fallback: PICK 등급 매치 없으면 pick_recommendations의 GOOD 등급 매치 표시
+    //   (pick_probability >= 0.40 & 확률 격차 명확한 매치)
+    if (!picks || picks.length === 0) {
+      const next48hUTC = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString()
+      const { data: goodPicks } = await supabase
+        .from('pick_recommendations')
+        .select('*')
+        .gte('commence_time', now.toISOString())
+        .lt('commence_time', next48hUTC)
+        .gte('pick_probability', 40)
+        .order('pick_probability', { ascending: false })
+        .limit(6)
+
+      if (goodPicks && goodPicks.length > 0) {
+        picks = goodPicks.map((p: any) => ({
+          match_id: p.match_id,
+          home_team: p.home_team,
+          away_team: p.away_team,
+          home_team_id: null,
+          away_team_id: null,
+          league_code: p.league_code,
+          commence_time: p.commence_time,
+          home_odds: null,
+          draw_odds: null,
+          away_odds: null,
+          prediction: {
+            finalProb: {
+              home: p.home_probability / 100,
+              draw: p.draw_probability / 100,
+              away: p.away_probability / 100,
+            },
+            homePower: p.home_power,
+            awayPower: p.away_power,
+            recommendation: {
+              pick: p.pick_result,
+              grade: 'GOOD',
+              reasons: p.reasons || [],
+            },
+          },
+        }))
+        console.log(`📊 GOOD fallback: ${picks.length}개 (pick_probability >= 40)`)
+      }
+    }
+
     const nowUTC = now.toISOString()
     const next24hUTC = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
 

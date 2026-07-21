@@ -725,15 +725,17 @@ function generateRecommendation(
   // 🎯 3단계 등급 판정
   // ============================================
   
-  // 🔥 PICK: 엄격한 기준 (강추)
-  const isPick = 
+  // 🔥 PICK: 완화된 기준 (실용성 우선 — 2026-07 조정)
+  //   기존: probDiff 25% + powerDiff 25 + pattern 50 + minGames 40 + 선제골 70/65% (매우 tight)
+  //   변경: probDiff 25% + powerDiff 20 + pattern 30 + minGames 30 + 선제골 60/55%
+  const isPick =
     probDiff >= 0.25 &&
-    Math.abs(powerDiff) >= 25 &&
-    patternMatches >= 50 &&
-    minGames >= 40 &&
+    Math.abs(powerDiff) >= 20 &&
+    patternMatches >= 30 &&
+    minGames >= 30 &&
     (
-      (pick === 'HOME' && rates.homeFirstGoalWinRate >= 0.70) ||
-      (pick === 'AWAY' && rates.awayFirstGoalWinRate >= 0.65)
+      (pick === 'HOME' && rates.homeFirstGoalWinRate >= 0.60) ||
+      (pick === 'AWAY' && rates.awayFirstGoalWinRate >= 0.55)
     )
   
   // 컵대회 배당 기반 신뢰도 체크
