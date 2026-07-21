@@ -155,32 +155,32 @@ export async function GET(request: Request) {
       await new Promise(resolve => setTimeout(resolve, 300))
     }
     
-    // 6. 프리미엄 리포트 조건 필터링 (엄격한 기준)
+    // 6. 프리미엄 리포트 조건 필터링 (완화된 기준 — 2026-07 조정)
     const premiumPicks = analyzedMatches.filter(m => {
       if (!m.prediction) return false
       const p = m.prediction
-      
-      // 1. PICK 등급만
+
+      // 1. PICK 또는 GOOD 등급 (이전엔 PICK만)
       const grade = p.recommendation?.grade
-      if (grade !== 'PICK') return false
-      
-      // 2. 파워 차이 50점 이상
+      if (grade !== 'PICK' && grade !== 'GOOD') return false
+
+      // 2. 파워 차이 20점 이상 (이전 50점 → 완화)
       const powerDiff = Math.abs((p.homePower || 0) - (p.awayPower || 0))
-      if (powerDiff < 50) return false
-      
-      // 3. 확률 우위 20% 이상
+      if (powerDiff < 20) return false
+
+      // 3. 확률 우위 15% 이상 (이전 20% → 완화)
       const pick = p.recommendation?.pick
       let probEdge = 0
       if (pick === 'HOME') probEdge = p.finalProb.home - Math.max(p.finalProb.draw, p.finalProb.away)
       else if (pick === 'AWAY') probEdge = p.finalProb.away - Math.max(p.finalProb.draw, p.finalProb.home)
-      if (probEdge < 0.20) return false
-      
-      // 4. 패턴 데이터 500경기 이상
+      if (probEdge < 0.15) return false
+
+      // 4. 패턴 데이터 100경기 이상 (이전 500 → 완화, 신생 리그 배려)
       const patternMatches = p.patternStats?.totalMatches || 0
-      if (patternMatches < 500) return false
-      
+      if (patternMatches < 100) return false
+
       return true
-    }).slice(0, 3) // 최대 3경기
+    }).slice(0, 5) // 최대 5경기 (이전 3 → 확대)
     
     console.log('💎 Premium Picks filtered:', premiumPicks.length)
     
