@@ -172,6 +172,35 @@ export async function GET(request: NextRequest) {
   const roundP = searchParams.get('round')
 
   try {
+    // 🆕 sweep: upcoming/scheduled 회차 중 첫 매치 시간 지났으면 자동 closed 마킹
+    //   (매치 결과 없어서 finished 안 되는 회차 UI 정리 목적)
+    try {
+      const { data: staleRounds } = await supabase
+        .from('baseball_toto_rounds')
+        .select('id, round_number, baseball_toto_matches!inner(match_date)')
+        .in('status', ['upcoming', 'scheduled'])
+        .order('round_number', { ascending: false })
+        .limit(20)
+
+      const nowMs = Date.now()
+      const toClose: number[] = []
+      for (const r of staleRounds || []) {
+        const matches = (r as any).baseball_toto_matches as Array<{ match_date: string }> | undefined
+        if (!matches || matches.length === 0) continue
+        const firstMs = Math.min(...matches.map((m) => new Date(m.match_date).getTime()).filter((t) => !isNaN(t)))
+        if (firstMs && firstMs < nowMs) toClose.push((r as any).id)
+      }
+      if (toClose.length > 0) {
+        await supabase
+          .from('baseball_toto_rounds')
+          .update({ status: 'closed', updated_at: new Date().toISOString() })
+          .in('id', toClose)
+        console.log(`[toto-results] sweep: ${toClose.length}개 회차 자동 closed 마킹`)
+      }
+    } catch (sweepErr) {
+      console.warn('[toto-results] sweep 실패 (무시):', (sweepErr as Error).message)
+    }
+
     let roundIds: number[] = []
 
     if (yearP && roundP) {
