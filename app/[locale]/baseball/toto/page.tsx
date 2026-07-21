@@ -349,7 +349,7 @@ function RoundSelect({ rounds, current, onSelect }: {
         }}>
         {opts.map(rd => (
           <option key={`${rd.year}-${rd.round_number}`} value={`${rd.year}-${rd.round_number}`} style={{ background: '#1a2230', color: '#fff' }}>
-            {rd.round_number}회차{rd.status === 'finished' ? ' · 마감' : ''}
+            {rd.round_number}회차{(rd.status === 'finished' || rd.status === 'closed') ? ' · 마감' : ''}
           </option>
         ))}
       </select>
