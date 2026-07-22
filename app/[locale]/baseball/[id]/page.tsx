@@ -1569,52 +1569,31 @@ export default function BaseballDetailPage() {
                       </div>
                     </div>
 
-                    {/* 액션 버튼 그룹 */}
+                    {/* 액션 버튼 그룹 — 광고 시청 보상 기능 제거 (요청) */}
                     <div className="w-full max-w-[300px] flex flex-col gap-2">
-                      {/* 광고 보고 이 경기 열람 (비회원·무료회원 모두) */}
-                      <button
-                        onClick={() => setShowAdModal(true)}
-                        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
-                        style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 6px 22px rgba(16,185,129,0.32)' }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
-                        {t('광고 보고 무료로 열람', 'Watch ad to unlock free')}
-                        <span className="text-[10px] font-semibold opacity-80">{t('· 15초', '· 15s')}</span>
-                      </button>
-
                       {/* 프리미엄 전환 */}
                       <button
                         onClick={() => router.push('/premium/pricing')}
-                        className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.01] active:scale-[0.98]"
-                        style={{ background: 'rgba(124,58,237,0.12)', color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.3)' }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                        className="w-full flex items-center justify-center gap-1.5 px-5 py-3 rounded-xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.98]"
+                        style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: '#fff', boxShadow: '0 6px 22px rgba(124,58,237,0.32)' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M3 7l4.5 4L12 5l4.5 6L21 7l-1.5 12h-15z"/>
                         </svg>
                         {t('프리미엄 · 광고 없이 모두 보기', 'Premium · ad-free, unlimited')}
                       </button>
                     </div>
 
-                    {/* 하단 보조 안내 */}
-                    <div className="flex items-center gap-2 text-[10px]" style={{ color: '#475569' }}>
-                      <span className="flex items-center gap-1">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
-                        </svg>
-                        {t('자정(KST) 자동 잠김', 'Locks at midnight KST')}
-                      </span>
-                      {!isLoggedIn && (
-                        <>
-                          <span style={{ color: '#1e293b' }}>|</span>
-                          <button
-                            onClick={() => router.push('/login')}
-                            className="font-semibold transition-colors hover:text-gray-300"
-                            style={{ color: '#64748b' }}>
-                            {t('로그인', 'Sign in')}
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    {/* 하단 보조 안내 — 비로그인 로그인 링크만 유지 */}
+                    {!isLoggedIn && (
+                      <div className="flex items-center gap-2 text-[10px]" style={{ color: '#475569' }}>
+                        <button
+                          onClick={() => router.push('/login')}
+                          className="font-semibold transition-colors hover:text-gray-300"
+                          style={{ color: '#64748b' }}>
+                          {t('로그인', 'Sign in')}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
