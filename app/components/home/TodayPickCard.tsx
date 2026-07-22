@@ -48,9 +48,13 @@ export default function TodayPickCard({
 
     const buildFootball = (p: any): PickView | null => {
       if (!p) return null
+      // 🛡️ premium_picks.prediction 은 JSONB → recommendation.pick 에서 진짜 픽 추출
+      //    (이전엔 조건 매칭 실패로 항상 'HOME' 기본값 → 원정승 픽도 홈팀 표시되던 버그)
       const side: string =
         (typeof p.pick_result === 'string' && p.pick_result) ||
         (typeof p.prediction === 'string' && p.prediction) ||
+        (typeof p.prediction === 'object' && p.prediction?.recommendation?.pick) ||
+        (typeof p.prediction === 'object' && p.prediction?.pick) ||
         'HOME'
       const pickedTeam =
         side === 'AWAY' ? kr(p.away_team) : side === 'DRAW' ? (isKo ? '무승부' : 'Draw') : kr(p.home_team)
