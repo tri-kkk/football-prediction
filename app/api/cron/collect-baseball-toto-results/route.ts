@@ -174,26 +174,30 @@ export async function GET(request: NextRequest) {
   try {
     // 🆕 sweep: upcoming/scheduled 회차 중 첫 매치 시간 지났으면 자동 closed 마킹
     //   (매치 결과 없어서 finished 안 되는 회차 UI 정리 목적)
+    //   ⚠️ nested join (!inner) 대신 개별 쿼리 — join 시 잘못된 매치 매핑 오판 방지
     try {
       const { data: staleRounds } = await supabase
         .from('baseball_toto_rounds')
-        .select('id, round_number, baseball_toto_matches!inner(match_date)')
+        .select('id, round_number')
         .in('status', ['upcoming', 'scheduled'])
         .order('round_number', { ascending: false })
         .limit(20)
 
-      // 🛡️ 안전망: 첫 매치 시간 + 30분 이후에만 closed 마킹 (오판 방지)
       const nowMs = Date.now()
       const SAFETY_MS = 30 * 60 * 1000
       const toClose: number[] = []
       for (const r of staleRounds || []) {
-        const matches = (r as any).baseball_toto_matches as Array<{ match_date: string }> | undefined
-        if (!matches || matches.length === 0) continue
-        const validMs = matches
-          .map((m) => new Date(m.match_date).getTime())
-          .filter((t) => !isNaN(t) && t > 0)
-        if (validMs.length === 0) continue
-        const firstMs = Math.min(...validMs)
+        // 회차별 첫 매치 시간 개별 조회 (관계 join 오판 방지)
+        const { data: firstMatch } = await supabase
+          .from('baseball_toto_matches')
+          .select('match_date')
+          .eq('round_id', (r as any).id)
+          .order('match_date', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+        if (!firstMatch?.match_date) continue
+        const firstMs = new Date(firstMatch.match_date).getTime()
+        if (isNaN(firstMs) || firstMs <= 0) continue
         // 명확히 지난 회차만 (첫 매치 시작 + 30분 이후)
         if (firstMs + SAFETY_MS < nowMs) toClose.push((r as any).id)
       }
