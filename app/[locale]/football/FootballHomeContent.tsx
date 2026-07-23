@@ -24,7 +24,7 @@ function FootballHomeTopBanner({ language }: { language: 'ko' | 'en' }) {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/ads?slot=web_home_top')
+    fetch(`/api/ads?slot=web_home_top&lang=${language === 'en' ? 'en' : 'ko'}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return

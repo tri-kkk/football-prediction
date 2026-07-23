@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
     const activeOnly = searchParams.get('active') === 'true'
     const trackImpression = searchParams.get('track') === 'true'
     const adId = searchParams.get('id')
+    // 🆕 언어 필터 — 'ko' / 'en' / 없으면 필터 안 함
+    //    응답은 요청 언어와 일치하는 배너 + 'all' 배너 모두 포함
+    const lang = searchParams.get('lang')
 
     let query = supabase
       .from('advertisements')
@@ -27,10 +30,15 @@ export async function GET(request: NextRequest) {
       query = query.eq('slot_type', slotType)
     }
 
+    // 🆕 언어 필터 (ko 요청 시 → locale in ('ko', 'all'), en 요청 시 → locale in ('en', 'all'))
+    if (lang === 'ko' || lang === 'en') {
+      query = query.in('locale', [lang, 'all'])
+    }
+
     // 활성 광고만
     if (activeOnly) {
       query = query.eq('is_active', true)
-      
+
       // 기간 체크 (시작일/종료일)
       const now = new Date().toISOString()
       query = query

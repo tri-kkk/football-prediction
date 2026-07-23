@@ -208,6 +208,7 @@ interface Advertisement {
   width: number
   height: number
   is_active: boolean
+  locale?: 'ko' | 'en' | 'all'
   priority: number
   start_date: string | null
   end_date: string | null
@@ -716,6 +717,7 @@ export default function AdminDashboard() {
     priority: 0,
     start_date: '',
     end_date: '',
+    locale: 'all',
   })
   
   // ===== 검색 상태 =====
@@ -2333,6 +2335,7 @@ export default function AdminDashboard() {
       priority: ad.priority,
       start_date: ad.start_date ? new Date(ad.start_date).toISOString().slice(0, 10) : '',
       end_date: ad.end_date ? new Date(ad.end_date).toISOString().slice(0, 10) : '',
+      locale: ad.locale || 'all',
     })
     setIsAdModalOpen(true)
   }
@@ -2349,6 +2352,7 @@ export default function AdminDashboard() {
       priority: 0,
       start_date: '',
       end_date: '',
+      locale: 'all',
     })
   }
 
@@ -5719,6 +5723,22 @@ export default function AdminDashboard() {
                   max={100}
                   className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  🌍 언어 (locale)
+                </label>
+                <select
+                  value={adFormData.locale}
+                  onChange={(e) => setAdFormData({ ...adFormData, locale: e.target.value as 'ko' | 'en' | 'all' })}
+                  className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="all">🌐 전체 (언어 무관)</option>
+                  <option value="ko">🇰🇷 한국어만</option>
+                  <option value="en">🇺🇸 English only</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">한국어 배너는 KO 사용자만, English 배너는 EN 사용자만 노출</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

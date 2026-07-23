@@ -30,7 +30,7 @@ function HomeTopBanner({ isPremium, isEn }: { isPremium: boolean; isEn: boolean 
   useEffect(() => {
     if (isPremium) return
     let cancelled = false
-    fetch('/api/ads?slot=web_home_top')
+    fetch(`/api/ads?slot=web_home_top&lang=${isEn ? 'en' : 'ko'}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return
