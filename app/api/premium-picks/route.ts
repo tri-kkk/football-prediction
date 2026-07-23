@@ -63,11 +63,59 @@ export async function GET() {
       .gte('commence_time', nowUTC)
       .lt('commence_time', next24hUTC)
 
+    // 🆕 팀 로고 join (match_odds_latest에서) + confidence 계산 (prediction.finalProb에서)
+    let enrichedPicks = picks || []
+    if (enrichedPicks.length > 0) {
+      const matchIds = enrichedPicks
+        .map((p: any) => String(p.match_id))
+        .filter(Boolean)
+
+      const { data: matchInfo } = await supabase
+        .from('match_odds_latest')
+        .select('match_id, home_team_logo, away_team_logo')
+        .in('match_id', matchIds)
+
+      const logoMap = new Map<string, { home: string | null; away: string | null }>()
+      for (const m of matchInfo || []) {
+        logoMap.set(String((m as any).match_id), {
+          home: (m as any).home_team_logo,
+          away: (m as any).away_team_logo,
+        })
+      }
+
+      enrichedPicks = enrichedPicks.map((p: any) => {
+        const logos = logoMap.get(String(p.match_id))
+        // confidence 계산: pick 팀의 finalProb 값 (0~100 %)
+        const pred = p.prediction || {}
+        const pickSide = pred?.recommendation?.pick // HOME | DRAW | AWAY
+        const finalProb = pred?.finalProb || {}
+        let confidence: number | null = null
+        if (pickSide === 'HOME' && typeof finalProb.home === 'number') {
+          confidence = Math.round(finalProb.home * 1000) / 10
+        } else if (pickSide === 'AWAY' && typeof finalProb.away === 'number') {
+          confidence = Math.round(finalProb.away * 1000) / 10
+        } else if (pickSide === 'DRAW' && typeof finalProb.draw === 'number') {
+          confidence = Math.round(finalProb.draw * 1000) / 10
+        }
+
+        return {
+          ...p,
+          home_team_logo: logos?.home ?? null,
+          away_team_logo: logos?.away ?? null,
+          prediction: {
+            ...pred,
+            confidence,                          // 0~100 (예: 48.4)
+            direction: pickSide ?? null,         // HOME | AWAY | DRAW
+          },
+        }
+      })
+    }
+
     return NextResponse.json({
       success: true,
       validDate: todayKST,
-      picks: picks || [],
-      count: picks?.length || 0,
+      picks: enrichedPicks,
+      count: enrichedPicks.length,
       analyzed: analyzedCount || 0,
     })
 
