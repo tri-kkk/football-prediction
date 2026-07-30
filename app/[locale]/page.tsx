@@ -14,8 +14,7 @@ import {
 } from '../components/home/normalizers'
 import type { SportFilter, UnifiedMatch } from '../components/home/types'
 import type { DateFilter } from '../components/home/DateTabs'
-import HeroBanner from '../components/home/HeroBanner'
-import TodayPickCard from '../components/home/TodayPickCard'
+import TodayPickRow from '../components/home/TodayPickRow'
 import NewsGrid from '../components/home/NewsGrid'
 import PredictionTrackRecord from '../components/home/PredictionTrackRecord'
 import TopHighlights from '../components/TopHighlights'
@@ -61,7 +60,7 @@ function HomeTopBanner({ isPremium, isEn }: { isPremium: boolean; isEn: boolean 
       href={ad.link_url}
       target={ad.link_url.startsWith('http') ? '_blank' : undefined}
       rel={ad.link_url.startsWith('http') ? 'noopener noreferrer' : undefined}
-      className="block -mx-3 sm:mx-0 rounded-xl overflow-hidden"
+      className="mx-auto block max-w-3xl overflow-hidden rounded-xl"
       aria-label={ad.alt_text}
       onClick={() => {
         // 클릭 트래킹 (best-effort)
@@ -69,7 +68,13 @@ function HomeTopBanner({ isPremium, isEn }: { isPremium: boolean; isEn: boolean 
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={ad.image_url} alt={ad.alt_text} className="w-full h-auto" loading="eager" />
+      {/* 얇은 띠 배너 — 높이 제한(모바일 64px / 데스크탑 90px), 비율 유지 중앙 정렬 */}
+      <img
+        src={ad.image_url}
+        alt={ad.alt_text}
+        className="mx-auto h-auto max-h-[64px] w-auto object-contain sm:max-h-[90px]"
+        loading="eager"
+      />
     </a>
   )
 }
@@ -248,11 +253,8 @@ function HomeInner() {
       <HomeTopBanner isPremium={isPremium} isEn={isEn} />
 
 
-      {/* ①②  히어로 + 오늘의 PICK */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.85fr_1fr]">
-        <HeroBanner locale={locale} />
-        <TodayPickCard locale={locale} isPremium={isPremium} />
-      </div>
+      {/* ①  오늘의 추천 경기 — 3분할 카드 행 */}
+      <TodayPickRow locale={locale} isPremium={isPremium} />
 
       {/* ③  통합 경기 피드 (홈은 3줄로 축소, 라이브 경기는 상단 정렬) */}
       <UnifiedFeed

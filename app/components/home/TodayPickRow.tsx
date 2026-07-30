@@ -1,0 +1,349 @@
+'use client'
+
+// 오늘의 추천 경기 — 3분할 카드 행 (시안 2)
+// 1순위: 축구 프리미엄 픽(/api/premium-picks, 등급순) 으로 최대 3개.
+//   부족하면 → 야구 AI 픽(/api/baseball/matches mlPrediction)으로 채움.
+// 비프리미엄은 카드 행 전체 블러 + 단일 구독/가입 CTA (종목 무관 동일). 이모지 미사용. 대만 CPBL 제외.
+
+import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { getTeamLogo } from '../../teamLogos'
+import { TEAM_NAME_KR } from '../../teamLogos'
+
+interface PickView {
+  key: string
+  sport: 'football' | 'baseball'
+  homeTeam: string
+  awayTeam: string
+  homeLogo: string
+  awayLogo: string
+  pickedTeam: string
+  oddsText: string | null
+  grade?: string | null
+  confidence?: number | null // 0~100
+}
+
+const MAX_PICKS = 3
+const gradeRank = (g?: string | null) => (g === 'PICK' ? 3 : g === 'GOOD' ? 2 : g ? 1 : 0)
+const isFinished = (s?: string) => /^(ft|final|finished|end|aban|canc|post)/i.test(s || '')
+const isExcludedLeague = (m: any) => /cpbl/i.test(m?.league || m?.leagueName || m?.leagueCode || '')
+
+export default function TodayPickRow({
+  locale = 'ko',
+  isPremium = false,
+}: {
+  locale?: string
+  isPremium?: boolean
+}) {
+  const isKo = locale !== 'en'
+  const { status } = useSession()
+  const isLoggedIn = status === 'authenticated'
+  const [views, setViews] = useState<PickView[]>([])
+  const [accuracy, setAccuracy] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const kr = (name: string) => (isKo ? TEAM_NAME_KR[name] || name : name)
+
+  useEffect(() => {
+    let cancel = false
+
+    // KST 기준 오늘 날짜 (YYYY-MM-DD) — "오늘의 추천 경기"이므로 오늘 경기만 노출
+    const kstToday = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const isTodayKST = (dateOrIso?: string | null) => {
+      if (!dateOrIso) return false
+      // 이미 YYYY-MM-DD 형식이면 그대로 비교
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateOrIso)) return dateOrIso === kstToday
+      const t = Date.parse(dateOrIso)
+      if (Number.isNaN(t)) return false
+      return new Date(t + 9 * 60 * 60 * 1000).toISOString().slice(0, 10) === kstToday
+    }
+
+    const buildFootball = (p: any): PickView | null => {
+      if (!p) return null
+      const side: string =
+        (typeof p.pick_result === 'string' && p.pick_result) ||
+        (typeof p.prediction === 'string' && p.prediction) ||
+        (typeof p.prediction === 'object' && p.prediction?.recommendation?.pick) ||
+        (typeof p.prediction === 'object' && p.prediction?.pick) ||
+        'HOME'
+      const pickedTeam =
+        side === 'AWAY' ? kr(p.away_team) : side === 'DRAW' ? (isKo ? '무승부' : 'Draw') : kr(p.home_team)
+      const odds = side === 'AWAY' ? p.away_odds : side === 'DRAW' ? p.draw_odds : p.home_odds
+      const conf =
+        typeof p.confidence === 'number'
+          ? Math.round(p.confidence)
+          : typeof p.prediction?.confidence === 'number'
+          ? Math.round(p.prediction.confidence)
+          : null
+      return {
+        key: `fb-${p.match_id ?? `${p.home_team}-${p.away_team}`}`,
+        sport: 'football',
+        homeTeam: kr(p.home_team),
+        awayTeam: kr(p.away_team),
+        homeLogo: p.home_team_logo || getTeamLogo(p.home_team_id || p.home_team, p.home_team),
+        awayLogo: p.away_team_logo || getTeamLogo(p.away_team_id || p.away_team, p.away_team),
+        pickedTeam,
+        oddsText: odds ? `@${odds}` : null,
+        grade: p.grade,
+        confidence: conf,
+      }
+    }
+
+    const buildBaseball = (m: any): PickView | null => {
+      const ml = m?.mlPrediction
+      if (!ml) return null
+      const homeWin = (ml.homeWinProb || 0) >= (ml.awayWinProb || 0)
+      const conf = Math.round(Math.max(ml.homeWinProb || 0, ml.awayWinProb || 0))
+      return {
+        key: `bb-${m.id ?? m.match_id ?? `${m.homeTeam}-${m.awayTeam}`}`,
+        sport: 'baseball',
+        homeTeam: isKo ? m.homeTeamKo || m.homeTeam : m.homeTeam,
+        awayTeam: isKo ? m.awayTeamKo || m.awayTeam : m.awayTeam,
+        homeLogo: m.homeLogo,
+        awayLogo: m.awayLogo,
+        pickedTeam: isKo
+          ? homeWin
+            ? m.homeTeamKo || m.homeTeam
+            : m.awayTeamKo || m.awayTeam
+          : homeWin
+          ? m.homeTeam
+          : m.awayTeam,
+        oddsText: null,
+        grade: ml.grade,
+        confidence: conf,
+      }
+    }
+
+    ;(async () => {
+      const fbP = fetch('/api/premium-picks')
+        .then((r) => r.json())
+        .catch(() => null)
+      const bbCtrl = new AbortController()
+      const bbTimeout = setTimeout(() => bbCtrl.abort(), 10000)
+      const bbP = fetch('/api/baseball/matches', { signal: bbCtrl.signal })
+        .then((r) => r.json())
+        .catch(() => null)
+
+      try {
+        // 1) 축구 프리미엄 픽 — 등급순 정렬 후 상위
+        const fb = await fbP
+        const fbList: any[] = fb?.picks || []
+        const fbViews = fbList
+          .filter((p) => isTodayKST(p?.commence_time)) // ✅ 오늘(KST) 경기만
+          .sort((a, b) => gradeRank(b?.grade) - gradeRank(a?.grade))
+          .map(buildFootball)
+          .filter((v): v is PickView => !!v)
+
+        let combined = fbViews.slice(0, MAX_PICKS)
+
+        // 2) 3개 미만이면 야구 AI 픽으로 채움
+        if (combined.length < MAX_PICKS) {
+          const bb = await bbP
+          clearTimeout(bbTimeout)
+          const bbList: any[] = bb?.matches || bb?.data || (Array.isArray(bb) ? bb : [])
+          const bbViews = bbList
+            .filter(
+              (m) =>
+                m?.mlPrediction &&
+                !isFinished(m.status) &&
+                !isExcludedLeague(m) &&
+                (isTodayKST(m.date) || isTodayKST(m.timestamp)), // ✅ 오늘(KST) 경기만
+            )
+            .sort((a, b) => {
+              const gr = gradeRank(b.mlPrediction.grade) - gradeRank(a.mlPrediction.grade)
+              if (gr !== 0) return gr
+              const cb = Math.max(b.mlPrediction.homeWinProb || 0, b.mlPrediction.awayWinProb || 0)
+              const ca = Math.max(a.mlPrediction.homeWinProb || 0, a.mlPrediction.awayWinProb || 0)
+              return cb - ca
+            })
+            .map(buildBaseball)
+            .filter((v): v is PickView => !!v)
+          combined = [...combined, ...bbViews].slice(0, MAX_PICKS)
+        } else {
+          bbCtrl.abort()
+          clearTimeout(bbTimeout)
+        }
+
+        if (!cancel) {
+          setViews(combined)
+          setLoading(false)
+        }
+      } catch {
+        clearTimeout(bbTimeout)
+        if (!cancel) setLoading(false)
+      }
+    })()
+
+    // 적중률 — 비차단 + 5초 타임아웃
+    ;(async () => {
+      try {
+        const c = new AbortController()
+        const id = setTimeout(() => c.abort(), 5000)
+        const res = await fetch('/api/accuracy-stats', { signal: c.signal }).then((r) => r.json())
+        clearTimeout(id)
+        const acc =
+          res?.accuracy ?? res?.overall?.accuracy ?? res?.pickAccuracy ?? res?.stats?.accuracy ?? null
+        if (!cancel && typeof acc === 'number') setAccuracy(Math.round(acc))
+      } catch {
+        /* noop */
+      }
+    })()
+
+    return () => {
+      cancel = true
+    }
+  }, [isKo])
+
+  const Header = (
+    <div className="flex items-center justify-between px-0.5">
+      <div className="flex items-center gap-2">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#A3FF4C]" />
+        <span className="text-sm font-semibold tracking-wide text-gray-100">
+          {isKo ? '오늘의 추천 경기' : "Today's picks"}
+        </span>
+      </div>
+      {accuracy != null && (
+        <span className="text-[11px] font-medium text-gray-400">
+          {isKo ? '적중률' : 'Hit rate'} <span className="text-[#A3FF4C]">{accuracy}%</span>
+        </span>
+      )}
+    </div>
+  )
+
+  const Card = (view: PickView) => {
+    const sportLabel =
+      view.sport === 'baseball' ? (isKo ? '야구' : 'Baseball') : isKo ? '축구' : 'Football'
+    const conf = typeof view.confidence === 'number' ? view.confidence : null
+    return (
+      <div
+        key={view.key}
+        className="flex flex-col gap-3 rounded-2xl border border-gray-800 bg-gray-900 p-4"
+      >
+        <div className="flex items-center justify-between">
+          <span className="rounded-md bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
+            {sportLabel}
+          </span>
+          {view.grade && (
+            <span className="rounded-md bg-[#A3FF4C]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#A3FF4C]">
+              {view.grade}
+            </span>
+          )}
+        </div>
+
+        {/* 매치업 */}
+        <div className="flex items-center justify-around gap-2">
+          <div className="flex flex-1 flex-col items-center gap-1.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={view.homeLogo} alt={view.homeTeam} className="h-10 w-10 object-contain" />
+            <span className="line-clamp-1 text-center text-[11px] text-gray-300">{view.homeTeam}</span>
+          </div>
+          <span className="text-[11px] font-medium text-gray-600">VS</span>
+          <div className="flex flex-1 flex-col items-center gap-1.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={view.awayLogo} alt={view.awayTeam} className="h-10 w-10 object-contain" />
+            <span className="line-clamp-1 text-center text-[11px] text-gray-300">{view.awayTeam}</span>
+          </div>
+        </div>
+
+        {/* 추천 + 신뢰도 */}
+        <div className="rounded-xl border border-gray-800 bg-gray-950/40 p-2.5">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] text-gray-500">{isKo ? '추천' : 'Pick'}</span>
+            {view.oddsText && <span className="text-[11px] text-gray-400">{view.oddsText}</span>}
+          </div>
+          <div className="mt-0.5 line-clamp-1 text-sm font-bold text-[#A3FF4C]">{view.pickedTeam}</div>
+          {conf != null && (
+            <div className="mt-2">
+              <div className="mb-1 flex items-center justify-between text-[10px] text-gray-500">
+                <span>{isKo ? '신뢰도' : 'Confidence'}</span>
+                <span className="font-medium text-gray-300">{conf}%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
+                <div className="h-full rounded-full bg-[#A3FF4C]" style={{ width: `${conf}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // 로딩 — 스켈레톤 3장
+  if (loading) {
+    return (
+      <div className="space-y-2.5">
+        {Header}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="min-h-[180px] animate-pulse rounded-2xl border border-gray-800 bg-gray-900"
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (views.length === 0) {
+    return (
+      <div className="space-y-2.5">
+        {Header}
+        <div className="flex min-h-[120px] items-center justify-center rounded-2xl border border-gray-800 bg-gray-900 text-sm text-gray-500">
+          {isKo ? '오늘 추천 경기 준비 중입니다' : 'No recommended matches today'}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {Header}
+      <div className="relative">
+        <div
+          className={`grid grid-cols-1 gap-3 sm:grid-cols-3 ${
+            isPremium ? '' : 'pointer-events-none select-none blur-[7px]'
+          }`}
+        >
+          {views.map((v) => Card(v))}
+        </div>
+
+        {/* 비프리미엄 CTA 오버레이 */}
+        {!isPremium && (
+          <a
+            href={`/${locale}/${isLoggedIn ? 'premium/pricing' : 'signup'}`}
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl bg-black/60 text-center backdrop-blur-[1px]"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-gray-200"
+              aria-hidden="true"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span className="px-4 text-sm font-semibold text-white">
+              {isLoggedIn
+                ? isKo
+                  ? '프리미엄으로 추천 경기 전체 확인'
+                  : 'Unlock all picks with Premium'
+                : isKo
+                ? '회원가입하고 추천 경기 확인'
+                : 'Sign up to see the picks'}
+            </span>
+            <span className="rounded-full bg-[#A3FF4C] px-4 py-1.5 text-xs font-bold text-black">
+              {isLoggedIn ? (isKo ? '구독하기' : 'Subscribe') : isKo ? '무료 가입' : 'Sign up'}
+            </span>
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
