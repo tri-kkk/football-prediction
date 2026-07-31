@@ -32,7 +32,7 @@ export async function GET() {
     <description>AI 기반 축구 경기 분석 및 분석 리포트. 프리미어리그, 라리가, 분데스리가, 세리에A, 리그1 등 주요 리그 경기 분석.</description>
     <language>ko</language>
     <lastBuildDate>${now}</lastBuildDate>
-    <atom:link href="${siteUrl}/feed" rel="self" type="application/rss+xml"/>
+    <atom:link href="${siteUrl}/rss" rel="self" type="application/rss+xml"/>
     <image>
       <url>${siteUrl}/og-image.png</url>
       <title>TrendSoccer</title>

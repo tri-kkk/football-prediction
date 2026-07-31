@@ -50,6 +50,6 @@ export const config = {
    */
   matcher: [
     '/api/proto/:path*',
-    '/((?!api|_next|_vercel|favicon|robots|sitemap|manifest|sw\\.js|.*\\..*).*)',
+    '/((?!api|_next|_vercel|favicon|robots|sitemap|rss|feed|manifest|sw\\.js|.*\\..*).*)',
   ],
 }
