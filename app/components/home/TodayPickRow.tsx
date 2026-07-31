@@ -217,7 +217,7 @@ export default function TodayPickRow({
     return (
       <div
         key={view.key}
-        className="flex flex-col gap-3 rounded-2xl border border-gray-800 bg-gray-900 p-4"
+        className="flex flex-col gap-2.5 rounded-2xl border border-gray-800 bg-gray-900 p-3"
       >
         <div className="flex items-center justify-between">
           <span className="rounded-md bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
@@ -232,29 +232,29 @@ export default function TodayPickRow({
 
         {/* 매치업 */}
         <div className="flex items-center justify-around gap-2">
-          <div className="flex flex-1 flex-col items-center gap-1.5">
+          <div className="flex flex-1 flex-col items-center gap-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={view.homeLogo} alt={view.homeTeam} className="h-10 w-10 object-contain" />
+            <img src={view.homeLogo} alt={view.homeTeam} className="h-8 w-8 object-contain" />
             <span className="line-clamp-1 text-center text-[11px] text-gray-300">{view.homeTeam}</span>
           </div>
           <span className="text-[11px] font-medium text-gray-600">VS</span>
-          <div className="flex flex-1 flex-col items-center gap-1.5">
+          <div className="flex flex-1 flex-col items-center gap-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={view.awayLogo} alt={view.awayTeam} className="h-10 w-10 object-contain" />
+            <img src={view.awayLogo} alt={view.awayTeam} className="h-8 w-8 object-contain" />
             <span className="line-clamp-1 text-center text-[11px] text-gray-300">{view.awayTeam}</span>
           </div>
         </div>
 
         {/* 추천 + 신뢰도 */}
-        <div className="rounded-xl border border-gray-800 bg-gray-950/40 p-2.5">
+        <div className="rounded-xl border border-gray-800 bg-gray-950/40 p-2">
           <div className="flex items-baseline justify-between">
             <span className="text-[10px] text-gray-500">{isKo ? '추천' : 'Pick'}</span>
             {view.oddsText && <span className="text-[11px] text-gray-400">{view.oddsText}</span>}
           </div>
           <div className="mt-0.5 line-clamp-1 text-sm font-bold text-[#A3FF4C]">{view.pickedTeam}</div>
           {conf != null && (
-            <div className="mt-2">
-              <div className="mb-1 flex items-center justify-between text-[10px] text-gray-500">
+            <div className="mt-1.5">
+              <div className="mb-0.5 flex items-center justify-between text-[10px] text-gray-500">
                 <span>{isKo ? '신뢰도' : 'Confidence'}</span>
                 <span className="font-medium text-gray-300">{conf}%</span>
               </div>
@@ -277,7 +277,7 @@ export default function TodayPickRow({
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="min-h-[180px] animate-pulse rounded-2xl border border-gray-800 bg-gray-900"
+              className="min-h-[148px] animate-pulse rounded-2xl border border-gray-800 bg-gray-900"
             />
           ))}
         </div>
