@@ -238,6 +238,12 @@ export default async function LocaleLayout({
           content="6jaoly9e4zuusvbebvi6f91jy0pjlv"
         />
 
+        {/* 네이버 서치어드바이저 사이트 소유확인 */}
+        <meta
+          name="naver-site-verification"
+          content="a3a628444c6ec953ba95dee344cd4438faa65cbb"
+        />
+
         {/* PWA 메타 태그 */}
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
