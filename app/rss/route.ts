@@ -6,6 +6,28 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// XML 텍스트/속성 이스케이프 — 이스케이프 안 된 & < > " ' 는 RSS 파싱을 깨뜨림
+const esc = (v: unknown): string =>
+  String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+
+// CDATA 안전 처리 — 본문 안에 ]]> 가 있으면 CDATA가 조기 종료되므로 분할
+const cdata = (v: unknown): string =>
+  `<![CDATA[${String(v ?? '').replace(/]]>/g, ']]]]><![CDATA[>')}]]>`
+
+// 이미지 확장자로 MIME 추정 (기본 jpeg)
+const imageMime = (url: string): string => {
+  const u = url.toLowerCase()
+  if (u.includes('.png')) return 'image/png'
+  if (u.includes('.webp')) return 'image/webp'
+  if (u.includes('.gif')) return 'image/gif'
+  return 'image/jpeg'
+}
+
 export async function GET() {
   try {
     // 최신 블로그 글 50개 가져오기
@@ -23,6 +45,27 @@ export async function GET() {
     const siteUrl = 'https://www.trendsoccer.com'
     const now = new Date().toUTCString()
 
+    const items = (posts || [])
+      .map((post) => {
+        const link = `${siteUrl}/blog/${esc(post.slug)}`
+        const pubDate = post.created_at ? new Date(post.created_at).toUTCString() : now
+        const enclosure = post.cover_image
+          ? `<enclosure url="${esc(post.cover_image)}" type="${imageMime(String(post.cover_image))}"/>`
+          : ''
+        return `
+    <item>
+      <title>${cdata(post.title_kr || post.title)}</title>
+      <link>${link}</link>
+      <guid isPermaLink="true">${link}</guid>
+      <description>${cdata(post.excerpt || '')}</description>
+      <category>${esc(post.category || 'preview')}</category>
+      <author>${esc(post.author || 'TrendSoccer')}</author>
+      <pubDate>${pubDate}</pubDate>
+      ${enclosure}
+    </item>`
+      })
+      .join('')
+
     // RSS 2.0 XML 생성
     const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -37,18 +80,7 @@ export async function GET() {
       <url>${siteUrl}/og-image.png</url>
       <title>TrendSoccer</title>
       <link>${siteUrl}</link>
-    </image>
-    ${posts?.map(post => `
-    <item>
-      <title><![CDATA[${post.title_kr || post.title}]]></title>
-      <link>${siteUrl}/blog/${post.slug}</link>
-      <guid isPermaLink="true">${siteUrl}/blog/${post.slug}</guid>
-      <description><![CDATA[${post.excerpt || ''}]]></description>
-      <category>${post.category || 'preview'}</category>
-      <author>${post.author || 'TrendSoccer'}</author>
-      <pubDate>${post.created_at ? new Date(post.created_at).toUTCString() : now}</pubDate>
-      ${post.cover_image ? `<enclosure url="${post.cover_image}" type="image/jpeg"/>` : ''}
-    </item>`).join('') || ''}
+    </image>${items}
   </channel>
 </rss>`
 
