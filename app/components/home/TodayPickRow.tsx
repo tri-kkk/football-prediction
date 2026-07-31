@@ -217,7 +217,7 @@ export default function TodayPickRow({
     return (
       <div
         key={view.key}
-        className="flex flex-col gap-2.5 rounded-2xl border border-gray-800 bg-gray-900 p-3"
+        className="flex flex-col gap-3 rounded-2xl border border-gray-800 bg-gray-900 p-3.5"
       >
         <div className="flex items-center justify-between">
           <span className="rounded-md bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
@@ -230,37 +230,34 @@ export default function TodayPickRow({
           )}
         </div>
 
-        {/* 매치업 */}
-        <div className="flex items-center justify-around gap-2">
-          <div className="flex flex-1 flex-col items-center gap-1">
+        {/* 매치업 — 엠블럼/팀 정보 크게 */}
+        <div className="flex items-center justify-around gap-2 pt-0.5">
+          <div className="flex flex-1 flex-col items-center gap-1.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={view.homeLogo} alt={view.homeTeam} className="h-8 w-8 object-contain" />
-            <span className="line-clamp-1 text-center text-[11px] text-gray-300">{view.homeTeam}</span>
+            <img src={view.homeLogo} alt={view.homeTeam} className="h-12 w-12 object-contain" />
+            <span className="line-clamp-1 text-center text-[13px] font-medium text-gray-200">{view.homeTeam}</span>
           </div>
-          <span className="text-[11px] font-medium text-gray-600">VS</span>
-          <div className="flex flex-1 flex-col items-center gap-1">
+          <span className="text-xs font-semibold text-gray-600">VS</span>
+          <div className="flex flex-1 flex-col items-center gap-1.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={view.awayLogo} alt={view.awayTeam} className="h-8 w-8 object-contain" />
-            <span className="line-clamp-1 text-center text-[11px] text-gray-300">{view.awayTeam}</span>
+            <img src={view.awayLogo} alt={view.awayTeam} className="h-12 w-12 object-contain" />
+            <span className="line-clamp-1 text-center text-[13px] font-medium text-gray-200">{view.awayTeam}</span>
           </div>
         </div>
 
-        {/* 추천 + 신뢰도 */}
-        <div className="rounded-xl border border-gray-800 bg-gray-950/40 p-2">
-          <div className="flex items-baseline justify-between">
+        {/* 추천 + 신뢰도 — 한 줄로 통합 */}
+        <div className="flex items-end justify-between gap-2 border-t border-gray-800 pt-2.5">
+          <div className="min-w-0">
             <span className="text-[10px] text-gray-500">{isKo ? '추천' : 'Pick'}</span>
-            {view.oddsText && <span className="text-[11px] text-gray-400">{view.oddsText}</span>}
+            <div className="flex items-baseline gap-1">
+              <span className="line-clamp-1 text-[15px] font-bold text-[#A3FF4C]">{view.pickedTeam}</span>
+              {view.oddsText && <span className="shrink-0 text-[11px] text-gray-400">{view.oddsText}</span>}
+            </div>
           </div>
-          <div className="mt-0.5 line-clamp-1 text-sm font-bold text-[#A3FF4C]">{view.pickedTeam}</div>
           {conf != null && (
-            <div className="mt-1.5">
-              <div className="mb-0.5 flex items-center justify-between text-[10px] text-gray-500">
-                <span>{isKo ? '신뢰도' : 'Confidence'}</span>
-                <span className="font-medium text-gray-300">{conf}%</span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
-                <div className="h-full rounded-full bg-[#A3FF4C]" style={{ width: `${conf}%` }} />
-              </div>
+            <div className="shrink-0 text-right">
+              <span className="text-[10px] text-gray-500">{isKo ? '신뢰도' : 'Conf.'}</span>
+              <div className="text-base font-bold leading-tight text-[#A3FF4C]">{conf}%</div>
             </div>
           )}
         </div>
