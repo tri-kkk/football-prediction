@@ -41,10 +41,23 @@ const LEAGUES = [
   { id: 253, code: 'MLS', name: 'Major League Soccer', country: 'USA', region: 'americas' },
 ]
 
-// 수집할 시즌 (유럽: 2022-23 ~ 2025-26, 아시아: 2022 ~ 2026, 아메리카: 2022 ~ 2026)
-const EUROPE_SEASONS = [2022, 2023, 2024, 2025]
+// 수집할 시즌 (유럽: 2022-23 ~ 2026-27, 아시아: 2022 ~ 2026, 아메리카: 2022 ~ 2026)
+const EUROPE_SEASONS = [2022, 2023, 2024, 2025, 2026]
 const ASIA_SEASONS = [2022, 2023, 2024, 2025, 2026]
 const AMERICAS_SEASONS = [2022, 2023, 2024, 2025, 2026]
+
+// 지역별 "현재 시즌" 자동 계산 — 매년 하드코딩 갱신 방지
+// - 유럽(크로스 시즌): 8월 이후면 당해 연도, 그 전이면 전년도 (예: 2026-08 → 2026)
+// - 아시아/아메리카(단일 연도 시즌): 당해 연도
+function getCurrentSeasonForRegion(region: string): number {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1
+  if (region === 'europe') {
+    return month >= 8 ? year : year - 1
+  }
+  return year
+}
 
 // ============================================
 // 팀명 한글 매핑
@@ -599,9 +612,9 @@ export async function GET(request: NextRequest) {
       americas: AMERICAS_SEASONS,
     },
     currentSeason: {
-      europe: '2025-26',
-      asia: 2025,
-      americas: 2026,
+      europe: `${getCurrentSeasonForRegion('europe')}-${(getCurrentSeasonForRegion('europe') + 1).toString().slice(2)}`,
+      asia: getCurrentSeasonForRegion('asia'),
+      americas: getCurrentSeasonForRegion('americas'),
     },
     usage: {
       status: 'GET /api/cron/collect-match-history',
@@ -705,8 +718,8 @@ export async function POST(request: NextRequest) {
       for (const league of LEAGUES) {
         console.log(`\n📊 Recent matches: ${league.name}`)
         
-        // 현재 시즌 결정
-        const currentSeason = league.region === 'americas' ? 2026 : league.region === 'asia' ? 2025 : 2025
+        // 현재 시즌 결정 — 지역별 자동 계산 (하드코딩 제거)
+        const currentSeason = getCurrentSeasonForRegion(league.region)
         
         const fixturesData = await fetchFromApiFootball(
           `/fixtures?league=${league.id}&season=${currentSeason}&from=${fromDate}&to=${toDate}&status=FT`
