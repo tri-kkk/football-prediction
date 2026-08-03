@@ -14,10 +14,13 @@ declare global {
 
 export default function PricingPage() {
   const { language } = useLanguage()
+  const isKo = language === 'ko'
   const { data: session } = useSession()
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly'>('quarterly')
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  // 📊 AI 적중률 (신뢰 요소) — best-effort
+  const [accuracy, setAccuracy] = useState<number | null>(null)
 
   // ✅ pgAsistant.js 로드
   useEffect(() => {
@@ -26,6 +29,27 @@ export default function PricingPage() {
     script.async = true
     document.head.appendChild(script)
     setMounted(true)
+  }, [])
+
+  // 적중률 — 비차단 + 5초 타임아웃
+  useEffect(() => {
+    let cancel = false
+    ;(async () => {
+      try {
+        const c = new AbortController()
+        const id = setTimeout(() => c.abort(), 5000)
+        const res = await fetch('/api/accuracy-stats', { signal: c.signal }).then((r) => r.json())
+        clearTimeout(id)
+        const acc =
+          res?.accuracy ?? res?.overall?.accuracy ?? res?.pickAccuracy ?? res?.stats?.accuracy ?? null
+        if (!cancel && typeof acc === 'number') setAccuracy(Math.round(acc))
+      } catch {
+        /* noop */
+      }
+    })()
+    return () => {
+      cancel = true
+    }
   }, [])
 
   // ✅ SeedPay postMessage 수신
@@ -72,9 +96,6 @@ export default function PricingPage() {
   }, [language])
 
   const isPremium = (session?.user as any)?.tier === 'premium'
-
-  // 🎉 프로모션 기간 체크 (현재 만료됨)
-  const isPromoPeriod = false
 
   const plans = {
     monthly: {
@@ -167,136 +188,113 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white">
-      <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
-        {/* 🎉 프로모션 배너 - 비로그인 + 프로모션 기간 */}
-        {mounted && !session && isPromoPeriod && (
-          <div className="bg-gradient-to-r from-[#1a2a1a] to-[#1a1a2a] border border-green-500/30 rounded-2xl p-6 mb-8">
-            <div className="text-center">
-              <div className="inline-block px-3 py-1 bg-green-500/20 rounded-full mb-3">
-                <span className="text-green-400 text-xs font-bold tracking-wider">OPEN EVENT</span>
-              </div>
-              <h3 className="text-white font-bold text-xl mb-2">
-                {language === 'ko' ? '1월 31일까지 가입하면' : 'Sign up by Jan 31'}
-              </h3>
-              <p
-                className="text-3xl font-black mb-4"
-                style={{
-                  background: 'linear-gradient(to right, #22d3ee, #34d399)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                {language === 'ko' ? '프리미엄 분석픽 무료' : 'FREE Premium Picks'}
-              </p>
-              <Link
-                href="/login"
-                className="inline-block px-8 py-3 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-500 hover:to-cyan-500 text-white font-bold rounded-xl transition-all"
-              >
-                {language === 'ko' ? '지금 무료로 가입하기 →' : 'Join Free Now →'}
-              </Link>
-              <p className="text-gray-500 text-xs mt-3">
-                {language === 'ko' ? '* 프로모션 기간: ~2026.01.31' : '* Promo period: ~2026.01.31'}
-              </p>
-            </div>
-          </div>
-        )}
-
+      <main className="mx-auto max-w-4xl px-4 py-8 md:py-12">
         {/* 이미 프리미엄인 경우 */}
         {isPremium ? (
-          <div className="text-center py-20">
-            <div className="text-5xl mb-4">✅</div>
-            <h1 className="text-2xl font-bold text-green-400 mb-4">
-              {language === 'ko' ? '이미 프리미엄 회원입니다!' : 'You are already Premium!'}
+          <div className="py-20 text-center">
+            <div className="mb-4 text-5xl">✅</div>
+            <h1 className="mb-4 text-2xl font-bold text-emerald-400">
+              {isKo ? '이미 프리미엄 회원입니다!' : 'You are already Premium!'}
             </h1>
             <Link
               href="/premium"
-              className="inline-block px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+              className="inline-block rounded-lg bg-emerald-500 px-6 py-3 font-medium text-white transition-colors hover:bg-emerald-600"
             >
-              {language === 'ko' ? '프리미엄 리포트 보기' : 'View Premium Picks'}
+              {isKo ? '프리미엄 리포트 보기' : 'View Premium Picks'}
             </Link>
           </div>
         ) : (
           <>
             {/* 헤더 */}
-            <div className="text-center mb-8">
-              <span className="text-cyan-400 text-sm font-medium tracking-wider">PREMIUM</span>
-              <h1 className="text-3xl md:text-4xl font-bold mt-2 mb-3">
-                <span className="text-white">{language === 'ko' ? '트렌드사커' : 'TrendSoccer'}</span>
+            <div className="mb-8 text-center">
+              <span className="text-sm font-medium tracking-wider text-emerald-400">PREMIUM</span>
+              <h1 className="mb-3 mt-2 text-3xl font-bold md:text-4xl">
+                <span className="text-white">{isKo ? '트렌드사커' : 'TrendSoccer'}</span>
                 <br />
-                <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                  {language === 'ko' ? '프리미엄 리포트' : 'Premium Picks'}
+                <span className="bg-gradient-to-r from-emerald-400 to-[#A3FF4C] bg-clip-text text-transparent">
+                  {isKo ? '프리미엄 리포트' : 'Premium Picks'}
                 </span>
               </h1>
               <p className="text-gray-400">
-                {language === 'ko'
+                {isKo
                   ? '축구 6대 리그 + 야구 KBO·MLB·NPB AI 분석'
                   : 'Football 6 Leagues + Baseball KBO·MLB·NPB AI Analysis'}
               </p>
-              <p className="text-gray-500 text-sm mt-1">
-                {language === 'ko'
+              <p className="mt-1 text-sm text-gray-500">
+                {isKo
                   ? '매일 갱신 · 확신 있을 때만 · 하나의 구독으로 모두 이용'
                   : 'Updated daily · Only when confident · All-in-one subscription'}
               </p>
+
+              {/* 신뢰 요소 — 적중률 (있을 때만) */}
+              {accuracy != null && (
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/[0.08] px-4 py-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[13px] text-gray-300">
+                    {isKo ? '최근 AI 예측 적중률' : 'Recent AI hit rate'}{' '}
+                    <b className="text-emerald-400">{accuracy}%</b>
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* 가격 카드 2개 - 나란히 */}
-            <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-10">
+            <div className="mx-auto mb-10 grid max-w-2xl gap-4 md:grid-cols-2">
               {/* 월간 */}
               <div
                 onClick={() => setSelectedPlan('monthly')}
-                className={`p-6 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                className={`cursor-pointer rounded-2xl border-2 p-6 text-left transition-all ${
                   selectedPlan === 'monthly'
-                    ? 'border-yellow-500 bg-yellow-500/10'
+                    ? 'border-[#A3FF4C] bg-[#A3FF4C]/10'
                     : 'border-gray-700 bg-[#1a1a1a] hover:border-gray-600'
                 }`}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-400 text-sm">{language === 'ko' ? '월간' : 'Monthly'}</span>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-sm text-gray-400">{isKo ? '월간' : 'Monthly'}</span>
                   <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedPlan === 'monthly' ? 'border-yellow-500 bg-yellow-500' : 'border-gray-600'
+                    className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                      selectedPlan === 'monthly' ? 'border-[#A3FF4C] bg-[#A3FF4C]' : 'border-gray-600'
                     }`}
                   >
-                    {selectedPlan === 'monthly' && <span className="text-black text-xs">✔</span>}
+                    {selectedPlan === 'monthly' && <span className="text-xs text-black">✔</span>}
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-white">
                   {plans.monthly.priceDisplay}
-                  <span className="text-lg text-gray-400 font-normal">{plans.monthly.period}</span>
+                  <span className="text-lg font-normal text-gray-400">{plans.monthly.period}</span>
                 </div>
               </div>
 
               {/* 3개월 */}
               <div
                 onClick={() => setSelectedPlan('quarterly')}
-                className={`p-6 rounded-2xl border-2 text-left transition-all cursor-pointer relative ${
+                className={`relative cursor-pointer rounded-2xl border-2 p-6 text-left transition-all ${
                   selectedPlan === 'quarterly'
-                    ? 'border-yellow-500 bg-yellow-500/10'
+                    ? 'border-[#A3FF4C] bg-[#A3FF4C]/10'
                     : 'border-gray-700 bg-[#1a1a1a] hover:border-gray-600'
                 }`}
               >
                 {/* 할인 뱃지 */}
-                <div className="absolute -top-3 right-4 px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
+                <div className="absolute -top-3 right-4 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-black">
                   -33%
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-400 text-sm">{language === 'ko' ? '3개월' : 'Quarterly'}</span>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-sm text-gray-400">{isKo ? '3개월' : 'Quarterly'}</span>
                   <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      selectedPlan === 'quarterly' ? 'border-yellow-500 bg-yellow-500' : 'border-gray-600'
+                    className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                      selectedPlan === 'quarterly' ? 'border-[#A3FF4C] bg-[#A3FF4C]' : 'border-gray-600'
                     }`}
                   >
-                    {selectedPlan === 'quarterly' && <span className="text-black text-xs">✔</span>}
+                    {selectedPlan === 'quarterly' && <span className="text-xs text-black">✔</span>}
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-white">
                   {plans.quarterly.priceDisplay}
-                  <span className="text-lg text-gray-400 font-normal">{plans.quarterly.period}</span>
+                  <span className="text-lg font-normal text-gray-400">{plans.quarterly.period}</span>
                 </div>
-                <div className="text-green-400 text-sm mt-1">
-                  {language === 'ko'
+                <div className="mt-1 text-sm text-emerald-400">
+                  {isKo
                     ? `월 ${plans.quarterly.monthlyEquivalent} (1개월 무료)`
                     : `${plans.quarterly.monthlyEquivalent}/mo (1 month free)`}
                 </div>
@@ -304,86 +302,86 @@ export default function PricingPage() {
             </div>
 
             {/* CTA 버튼 */}
-            <div className="text-center mb-12">
+            <div className="mb-4 text-center">
               {!session ? (
                 // 비로그인: 로그인 페이지로
                 <Link
                   href="/login"
-                  className="inline-block w-full max-w-md py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl font-bold text-lg transition-all text-center"
+                  className="inline-block w-full max-w-md rounded-xl bg-gradient-to-r from-[#A3FF4C] to-emerald-400 py-4 text-center text-lg font-bold text-black transition-all hover:brightness-105"
                 >
-                  {language === 'ko'
-                    ? isPromoPeriod
-                      ? '무료로 시작하기'
-                      : '로그인하고 시작하기'
-                    : isPromoPeriod
-                    ? 'Start Free'
-                    : 'Sign in to Start'}
+                  {isKo ? '로그인하고 시작하기' : 'Sign in to Start'}
                 </Link>
               ) : (
                 // 로그인된 일반 사용자: 결제 버튼
                 <button
                   onClick={handlePayment}
                   disabled={loading}
-                  className={`w-full max-w-md py-4 rounded-xl font-bold text-lg transition-all ${
+                  className={`w-full max-w-md rounded-xl py-4 text-lg font-bold transition-all ${
                     loading
-                      ? 'bg-gray-600 cursor-not-allowed opacity-50'
-                      : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white'
+                      ? 'cursor-not-allowed bg-gray-600 opacity-50'
+                      : 'bg-gradient-to-r from-[#A3FF4C] to-emerald-400 text-black hover:brightness-105'
                   }`}
                 >
                   {loading
-                    ? language === 'ko'
+                    ? isKo
                       ? '처리 중...'
                       : 'Processing...'
-                    : language === 'ko'
+                    : isKo
                     ? '프리미엄 시작하기'
                     : 'Start Premium'}
                 </button>
               )}
+              {/* 안내 문구 (결제 후 즉시 적용) */}
+              <p className="mx-auto mt-3 max-w-md text-[12px] text-gray-500">
+                {isKo
+                  ? '결제 후 즉시 로그인 계정에 프리미엄이 적용됩니다.'
+                  : 'Premium is applied to your account immediately after payment.'}
+              </p>
             </div>
 
             {/* 프리미엄 혜택 */}
-            <div className="max-w-2xl mx-auto mb-12">
-              <h3 className="text-center text-white font-bold mb-4">
-                {language === 'ko' ? '프리미엄 전용 혜택' : 'Premium Benefits'}
+            <div className="mx-auto mb-12 mt-8 max-w-2xl">
+              <h3 className="mb-4 text-center font-bold text-white">
+                {isKo ? '프리미엄 전용 혜택' : 'Premium Benefits'}
               </h3>
 
-              <div className="bg-[#1a1a1a] rounded-xl p-6 space-y-4">
+              <div className="space-y-4 rounded-xl bg-[#1a1a1a] p-6">
                 {[
                   {
                     icon: '⚽',
-                    title: language === 'ko' ? '축구 AI 프리미엄 리포트' : 'Football AI Premium Picks',
-                    desc: language === 'ko' ? '6대 리그 엄선 경기 데이터 분석' : 'Top 6 league curated match analysis',
+                    title: isKo ? '축구 AI 프리미엄 리포트' : 'Football AI Premium Picks',
+                    desc: isKo ? '6대 리그 엄선 경기 데이터 분석' : 'Top 6 league curated match analysis',
                   },
                   {
                     icon: '⚾',
-                    title: language === 'ko' ? '야구 AI 프리미엄 리포트' : 'Baseball AI Premium Picks',
-                    desc: language === 'ko' ? 'KBO·MLB·NPB 경기 데이터 분석' : 'KBO·MLB·NPB match analysis',
+                    title: isKo ? '야구 AI 프리미엄 리포트' : 'Baseball AI Premium Picks',
+                    desc: isKo ? 'KBO·MLB·NPB 경기 데이터 분석' : 'KBO·MLB·NPB match analysis',
                   },
                   {
                     icon: '⏰',
-                    title: language === 'ko' ? '24시간 선공개' : '24h Early Access',
-                    desc: language === 'ko' ? '분석을 남들보다 먼저 확인' : 'Get predictions before others',
+                    title: isKo ? '24시간 선공개' : '24h Early Access',
+                    desc: isKo ? '분석을 남들보다 먼저 확인' : 'Get predictions before others',
                   },
                   {
                     icon: '📊',
-                    title: language === 'ko' ? '상세 AI 분석 리포트' : 'Detailed AI Analysis Report',
-                    desc: language === 'ko' ? '팀 전력, 상대전적, 세이버메트릭스' : 'Team stats, H2H, sabermetrics',
+                    title: isKo ? '상세 AI 분석 리포트' : 'Detailed AI Analysis Report',
+                    desc: isKo ? '팀 전력, 상대전적, 세이버메트릭스' : 'Team stats, H2H, sabermetrics',
                   },
                   {
                     icon: '🚫',
-                    title: language === 'ko' ? '광고 완전 제거' : 'Ad-free Experience',
-                    desc: language === 'ko' ? '깔끔한 화면으로 분석에 집중' : 'Clean interface, no distractions',
+                    title: isKo ? '광고 완전 제거' : 'Ad-free Experience',
+                    desc: isKo ? '깔끔한 화면으로 분석에 집중' : 'Clean interface, no distractions',
                   },
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#A3FF4C]/10">
                       <span className="text-lg">{item.icon}</span>
                     </div>
                     <div>
-                      <div className="text-white font-medium">{item.title}</div>
-                      <div className="text-gray-500 text-sm">{item.desc}</div>
+                      <div className="font-medium text-white">{item.title}</div>
+                      <div className="text-sm text-gray-500">{item.desc}</div>
                     </div>
-                    <span className="ml-auto text-green-400">✔</span>
+                    <span className="ml-auto text-emerald-400">✔</span>
                   </div>
                 ))}
               </div>
