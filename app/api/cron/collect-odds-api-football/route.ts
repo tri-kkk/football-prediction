@@ -499,12 +499,21 @@ export async function POST(request: Request) {
           }
         }
 
+        // ⚠️ 이상 감지(로그): 경기는 있는데 배당 0건이면 제공사 무응답/할당량 소진 의심
+        const zeroAlert = fixtures.length > 0 && savedCount === 0
+        if (zeroAlert) {
+          const msg = `⚠️ ALERT: ${league.code} 배당 0/${fixtures.length} 저장 — 제공사 무응답 또는 API 할당량 소진 가능성`
+          console.warn(msg)
+          results.errors.push(msg)
+        }
+
         results.leagues.push({
           league: league.code,
           name: league.name,
           matches: fixtures.length,
           saved: savedCount,
           status: savedCount > 0 ? 'success' : 'no_odds',
+          alert: zeroAlert || undefined,
         })
 
         results.totalMatches += fixtures.length
@@ -537,6 +546,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
+      // 하나라도 이상 리그가 있으면 alert=true (로그/응답에서 바로 확인용)
+      alert: results.errors.length > 0,
       summary: {
         leaguesProcessed: LEAGUES.length,
         totalMatches: results.totalMatches,

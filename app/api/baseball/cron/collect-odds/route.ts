@@ -349,7 +349,14 @@ export async function GET(request: NextRequest) {
       }
 
       console.log(`  ✅ ${league.name}: ${oddsSaved}/${matchIds.length} odds saved`)
-      results.leagues.push({ league: league.code, odds: oddsSaved, total: matchIds.length })
+      // ⚠️ 이상 감지(로그): 경기는 있는데 배당 0건이면 제공사 무응답/할당량 소진 의심
+      const zeroAlert = matchIds.length > 0 && oddsSaved === 0
+      if (zeroAlert) {
+        const msg = `⚠️ ALERT: ${league.code} 배당 0/${matchIds.length} 수집 실패 — 제공사 무응답 또는 API 할당량 소진 가능성`
+        console.warn(msg)
+        results.errors.push(msg)
+      }
+      results.leagues.push({ league: league.code, odds: oddsSaved, total: matchIds.length, alert: zeroAlert || undefined })
       results.totalOdds += oddsSaved
     }
 
@@ -357,6 +364,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Baseball odds collection completed',
+      // 하나라도 이상 리그가 있으면 alert=true (로그/응답에서 바로 확인용)
+      alert: results.errors.length > 0,
       duration: `${duration}ms`,
       results
     })
