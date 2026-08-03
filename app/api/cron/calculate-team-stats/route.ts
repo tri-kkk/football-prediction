@@ -15,6 +15,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// 현재 시즌 자동 계산 — season 미지정 시 사용 (매년 하드코딩 갱신 방지)
+// 유럽 크로스 시즌 기준: 8월 이후면 당해 연도(예: 2026-08 → "2026"), 그 전이면 전년도.
+// 8월부터는 아시아/아메리카(단일 연도 시즌)도 동일 연도라 전 리그가 일치함.
+function getDefaultSeason(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1
+  return String(month >= 8 ? year : year - 1)
+}
+
 // ============================================
 // 팀명 한글 매핑
 // ============================================
@@ -691,8 +701,11 @@ export async function POST(request: NextRequest) {
       result = await calculateTeamStats()
     } else if (mode === 'league' && leagueId) {
       result = await calculateTeamStats(leagueId, null)
-    } else if (mode === 'season' && season) {
-      result = await calculateTeamStats(null, season)
+    } else if (mode === 'season') {
+      // season 미지정('auto'/'current' 포함) 시 현재 시즌 자동 사용
+      const targetSeason =
+        season && season !== 'auto' && season !== 'current' ? String(season) : getDefaultSeason()
+      result = await calculateTeamStats(null, targetSeason)
     } else {
       return NextResponse.json({
         error: 'Invalid mode',
