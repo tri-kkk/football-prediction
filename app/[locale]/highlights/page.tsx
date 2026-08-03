@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Link } from '@/i18n/navigation'
-import WorldCupHighlights from '../../components/highlights/WorldCupHighlights'
 import { useLanguage } from '../../contexts/LanguageContext'
 // 리그 정보
 const LEAGUES = [
@@ -242,9 +241,6 @@ export default function HighlightsPage() {
       </div>
 
       <main className="home-container mx-auto px-4 py-6">
-
-        {/* 월드컵 하이라이트 */}
-        <WorldCupHighlights language={language} />
 
         {/* 로딩 */}
         {loading && (
