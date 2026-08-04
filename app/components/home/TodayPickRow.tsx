@@ -2,7 +2,7 @@
 
 // 오늘의 추천 경기 — 3분할 카드 행 (시안 2)
 // 1순위: 축구 프리미엄 픽(/api/premium-picks, 등급순) 으로 최대 3개.
-//   부족하면 → 야구 AI 픽(/api/baseball/matches mlPrediction)으로 채움.
+//   부족하면 → 야구 AI 픽(/api/baseball/matches, aiPrediction 우선)으로 채움.
 // 비프리미엄은 카드 행 전체 블러 + 단일 구독/가입 CTA (종목 무관 동일). 이모지 미사용. 대만 CPBL 제외.
 
 import { useEffect, useState } from 'react'
@@ -89,11 +89,47 @@ export default function TodayPickRow({
       }
     }
 
-    const buildBaseball = (m: any): PickView | null => {
+    // 야구 승률 소스 — 분석/상세 페이지와 동일한 우선순위로 통일
+    //   0순위 aiPrediction (AI 모델 최종값) → 1순위 mlPrediction → 2순위 배당 내재확률
+    //   ※ 이렇게 해야 홈 추천카드 승률이 분석 페이지와 100% 일치함
+    const bbPred = (m: any): { homeWinProb: number; awayWinProb: number; grade: string } | null => {
+      let hp: number | undefined
+      let ap: number | undefined
+      let raw: string | null = null
+      const ai = m?.aiPrediction
       const ml = m?.mlPrediction
-      if (!ml) return null
-      const homeWin = (ml.homeWinProb || 0) >= (ml.awayWinProb || 0)
-      const conf = Math.round(Math.max(ml.homeWinProb || 0, ml.awayWinProb || 0))
+      const od = m?.odds
+      if (ai && typeof ai.homeWinProb === 'number') {
+        hp = ai.homeWinProb
+        ap = ai.awayWinProb
+        raw = ai.grade ?? null
+      } else if (ml && typeof ml.homeWinProb === 'number') {
+        hp = ml.homeWinProb
+        ap = ml.awayWinProb
+        raw = ml.grade ?? null
+      } else if (od && typeof od.homeWinProb === 'number') {
+        hp = od.homeWinProb
+        ap = od.awayWinProb
+      } else {
+        return null
+      }
+      const diff = Math.abs((hp || 0) - (ap || 0))
+      const grade =
+        raw === 'PICK' || raw === 'GOOD' || raw === 'PASS'
+          ? raw
+          : diff >= 20
+          ? 'PICK'
+          : diff >= 10
+          ? 'GOOD'
+          : 'PASS'
+      return { homeWinProb: hp || 0, awayWinProb: ap || 0, grade }
+    }
+
+    const buildBaseball = (m: any): PickView | null => {
+      const p = bbPred(m)
+      if (!p) return null
+      const homeWin = p.homeWinProb >= p.awayWinProb
+      const conf = Math.round(Math.max(p.homeWinProb, p.awayWinProb))
       return {
         key: `bb-${m.id ?? m.match_id ?? `${m.homeTeam}-${m.awayTeam}`}`,
         sport: 'baseball',
@@ -109,7 +145,7 @@ export default function TodayPickRow({
           ? m.homeTeam
           : m.awayTeam,
         oddsText: null,
-        grade: ml.grade,
+        grade: p.grade,
         confidence: conf,
       }
     }
@@ -144,17 +180,17 @@ export default function TodayPickRow({
           const bbViews = bbList
             .filter(
               (m) =>
-                m?.mlPrediction &&
+                bbPred(m) &&
                 !isFinished(m.status) &&
                 !isExcludedLeague(m) &&
                 (isTodayKST(m.date) || isTodayKST(m.timestamp)), // ✅ 오늘(KST) 경기만
             )
             .sort((a, b) => {
-              const gr = gradeRank(b.mlPrediction.grade) - gradeRank(a.mlPrediction.grade)
+              const pa = bbPred(a)!
+              const pb = bbPred(b)!
+              const gr = gradeRank(pb.grade) - gradeRank(pa.grade)
               if (gr !== 0) return gr
-              const cb = Math.max(b.mlPrediction.homeWinProb || 0, b.mlPrediction.awayWinProb || 0)
-              const ca = Math.max(a.mlPrediction.homeWinProb || 0, a.mlPrediction.awayWinProb || 0)
-              return cb - ca
+              return Math.max(pb.homeWinProb, pb.awayWinProb) - Math.max(pa.homeWinProb, pa.awayWinProb)
             })
             .map(buildBaseball)
             .filter((v): v is PickView => !!v)
@@ -217,7 +253,7 @@ export default function TodayPickRow({
     return (
       <div
         key={view.key}
-        className="flex flex-col gap-3 rounded-2xl border border-gray-800 bg-gray-900 p-3.5"
+        className="flex flex-col gap-2.5 rounded-2xl border border-gray-800 bg-gray-900 p-3"
       >
         <div className="flex items-center justify-between">
           <span className="rounded-md bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
@@ -230,34 +266,37 @@ export default function TodayPickRow({
           )}
         </div>
 
-        {/* 매치업 — 엠블럼/팀 정보 크게 */}
-        <div className="flex items-center justify-around gap-2 pt-0.5">
-          <div className="flex flex-1 flex-col items-center gap-1.5">
+        {/* 매치업 */}
+        <div className="flex items-center justify-around gap-2">
+          <div className="flex flex-1 flex-col items-center gap-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={view.homeLogo} alt={view.homeTeam} className="h-12 w-12 object-contain" />
-            <span className="line-clamp-1 text-center text-[13px] font-medium text-gray-200">{view.homeTeam}</span>
+            <img src={view.homeLogo} alt={view.homeTeam} className="h-8 w-8 object-contain" />
+            <span className="line-clamp-1 text-center text-[11px] text-gray-300">{view.homeTeam}</span>
           </div>
-          <span className="text-xs font-semibold text-gray-600">VS</span>
-          <div className="flex flex-1 flex-col items-center gap-1.5">
+          <span className="text-[11px] font-medium text-gray-600">VS</span>
+          <div className="flex flex-1 flex-col items-center gap-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={view.awayLogo} alt={view.awayTeam} className="h-12 w-12 object-contain" />
-            <span className="line-clamp-1 text-center text-[13px] font-medium text-gray-200">{view.awayTeam}</span>
+            <img src={view.awayLogo} alt={view.awayTeam} className="h-8 w-8 object-contain" />
+            <span className="line-clamp-1 text-center text-[11px] text-gray-300">{view.awayTeam}</span>
           </div>
         </div>
 
-        {/* 추천 + 신뢰도 — 한 줄로 통합 */}
-        <div className="flex items-end justify-between gap-2 border-t border-gray-800 pt-2.5">
-          <div className="min-w-0">
+        {/* 추천 + 신뢰도 */}
+        <div className="rounded-xl border border-gray-800 bg-gray-950/40 p-2">
+          <div className="flex items-baseline justify-between">
             <span className="text-[10px] text-gray-500">{isKo ? '추천' : 'Pick'}</span>
-            <div className="flex items-baseline gap-1">
-              <span className="line-clamp-1 text-[15px] font-bold text-[#A3FF4C]">{view.pickedTeam}</span>
-              {view.oddsText && <span className="shrink-0 text-[11px] text-gray-400">{view.oddsText}</span>}
-            </div>
+            {view.oddsText && <span className="text-[11px] text-gray-400">{view.oddsText}</span>}
           </div>
+          <div className="mt-0.5 line-clamp-1 text-sm font-bold text-[#A3FF4C]">{view.pickedTeam}</div>
           {conf != null && (
-            <div className="shrink-0 text-right">
-              <span className="text-[10px] text-gray-500">{isKo ? '신뢰도' : 'Conf.'}</span>
-              <div className="text-base font-bold leading-tight text-[#A3FF4C]">{conf}%</div>
+            <div className="mt-1.5">
+              <div className="mb-0.5 flex items-center justify-between text-[10px] text-gray-500">
+                <span>{isKo ? '신뢰도' : 'Confidence'}</span>
+                <span className="font-medium text-gray-300">{conf}%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
+                <div className="h-full rounded-full bg-[#A3FF4C]" style={{ width: `${conf}%` }} />
+              </div>
             </div>
           )}
         </div>
