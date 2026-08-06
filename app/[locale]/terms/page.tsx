@@ -122,9 +122,9 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
             : 'The service operates with the following membership tiers:'}
         </p>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
-          <li><strong>{isKo ? '비회원:' : 'Guest:'}</strong> {isKo ? '경기 1시간 전 분석 열람 (제한적)' : 'View predictions 1 hour before match (limited)'}</li>
-          <li><strong>{isKo ? '무료회원:' : 'Free Member:'}</strong> {isKo ? '경기 2시간 전 분석 열람' : 'View predictions 2 hours before match'}</li>
-          <li><strong>{isKo ? '프리미엄:' : 'Premium:'}</strong> {isKo ? '이용권 구매를 통해 프리미엄 혜택 이용' : 'Access premium benefits through access pass purchase'}</li>
+          <li><strong>{isKo ? '비회원:' : 'Guest:'}</strong> {isKo ? '경기 분석 및 콘텐츠 열람 불가 (무료 회원가입 후 이용 가능)' : 'Match analysis and content not available (sign up free to access)'}</li>
+          <li><strong>{isKo ? '무료회원:' : 'Free Member:'}</strong> {isKo ? '축구 경기 2시간 전 분석 열람 (야구 분석은 프리미엄 전용)' : 'View football predictions 2 hours before match (baseball analysis is premium-only)'}</li>
+          <li><strong>{isKo ? '프리미엄:' : 'Premium:'}</strong> {isKo ? '이용권 구매를 통해 축구 24시간 선공개 및 야구 분석 등 프리미엄 혜택 이용' : 'Access premium benefits including football 24-hour early access and baseball analysis via access pass purchase'}</li>
         </ul>
 
         <h3 className="text-xl font-semibold mb-3 text-emerald-400">
@@ -132,7 +132,8 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
           <li>{isKo ? '트렌드사커 픽: 엄선된 고확률 경기 추천' : 'TrendSoccer Picks: curated high-probability match recommendations'}</li>
-          <li>{isKo ? '경기 24시간 전 분석 선공개' : '24-hour early access to predictions'}</li>
+          <li>{isKo ? '축구 경기 24시간 전 분석 선공개' : '24-hour early access to football predictions'}</li>
+          <li>{isKo ? '야구(KBO·MLB·NPB 등) 경기 분석·예측 전체 이용 (프리미엄 전용)' : 'Full access to baseball (KBO, MLB, NPB, etc.) analysis & predictions (premium-only)'}</li>
           <li>{isKo ? '광고 완전 제거' : 'Complete ad-free experience'}</li>
           <li>{isKo ? '하이라이트 무제한 시청' : 'Unlimited highlights viewing'}</li>
           <li>{isKo ? '프로토 계산기 무제한 저장' : 'Unlimited Proto calculator saves'}</li>
@@ -226,7 +227,7 @@ function TermsV2_0({ isKo }: { isKo: boolean }) {
           {isKo ? '7.1 허용되는 사용' : '7.1 Permitted Use'}
         </h3>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4 mb-4">
-          <li>{isKo ? '축구 경기 분석 및 분석 정보 열람' : 'Viewing football match analysis and analysis'}</li>
+          <li>{isKo ? '축구·야구 경기 분석 및 분석 정보 열람' : 'Viewing football & baseball match analysis'}</li>
           <li>{isKo ? '실시간 경기 데이터 및 통계 확인' : 'Accessing real-time match data and statistics'}</li>
           <li>{isKo ? '개인적, 비상업적 목적의 사용' : 'Personal, non-commercial use'}</li>
         </ul>
@@ -422,7 +423,8 @@ function TermsV1_1({ isKo }: { isKo: boolean }) {
           {isKo ? '3. 프리미엄 혜택 (v1.1 기준)' : '3. Premium Benefits (v1.1)'}
         </h2>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
-          <li>{isKo ? '경기 24시간 전 분석 선공개' : '24-hour early access to predictions'}</li>
+          <li>{isKo ? '축구 경기 24시간 전 분석 선공개' : '24-hour early access to football predictions'}</li>
+          <li>{isKo ? '야구(KBO·MLB·NPB 등) 경기 분석·예측 전체 이용 (프리미엄 전용)' : 'Full access to baseball (KBO, MLB, NPB, etc.) analysis & predictions (premium-only)'}</li>
           <li>{isKo ? '승률 높은 경기 추천 (프리미엄 리포트)' : 'High win-rate match recommendations (Premium Picks)'}</li>
           <li>{isKo ? '광고 제거' : 'Ad-free experience'}</li>
         </ul>
@@ -483,7 +485,7 @@ function TermsV1_0({ isKo }: { isKo: boolean }) {
           {isKo ? '2. 서비스 이용' : '2. Use of Service'}
         </h2>
         <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
-          <li>{isKo ? '축구 경기 분석 및 분석 정보 열람' : 'Viewing football match analysis and analysis'}</li>
+          <li>{isKo ? '축구·야구 경기 분석 및 분석 정보 열람' : 'Viewing football & baseball match analysis'}</li>
           <li>{isKo ? '실시간 경기 데이터 및 통계 확인' : 'Accessing real-time match data and statistics'}</li>
           <li>{isKo ? '개인적, 비상업적 목적의 사용' : 'Personal, non-commercial use'}</li>
         </ul>
