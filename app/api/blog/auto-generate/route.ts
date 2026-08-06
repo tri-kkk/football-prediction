@@ -1034,8 +1034,8 @@ async function fetchTeamStats(teamName: string, leagueCode: string): Promise<any
     const url = (isCup || isKLeague)
       ? `${API_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}`
       : `${API_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}&league=${leagueCode}`
-    
-    const response = await fetch(url)
+
+    const response = await fetch(url, { headers: { 'x-internal-secret': process.env.CRON_SECRET || '' } })
     if (!response.ok) return null
     const data = await response.json()
     return data.success ? data.data : null
@@ -1054,7 +1054,7 @@ async function fetchH2H(match: any, lang: 'ko' | 'en' = 'ko'): Promise<any> {
     })
     if (match.home_team_id) params.append('homeTeamId', String(match.home_team_id))
     if (match.away_team_id) params.append('awayTeamId', String(match.away_team_id))
-    const response = await fetch(`${API_BASE}/api/h2h-analysis?${params.toString()}`)
+    const response = await fetch(`${API_BASE}/api/h2h-analysis?${params.toString()}`, { headers: { 'x-internal-secret': process.env.CRON_SECRET || '' } })
     if (!response.ok) return null
     const data = await response.json()
     return data.success ? data.data : null

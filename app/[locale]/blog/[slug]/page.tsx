@@ -5,6 +5,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import BlogPostClient from './BlogPostClient'
+import { getServerSession } from 'next-auth'
 
 // Supabase 서버사이드 클라이언트
 const supabase = createClient(
@@ -129,6 +130,11 @@ export default async function BlogPostPage(
     notFound()
   }
 
+  // 🔒 비회원(비로그인)에겐 본문을 서버에서 제거 — HTML 소스에도 본문이 실리지 않음
+  const _session = await getServerSession()
+  const _isMember = !!(_session as any)?.user?.email
+  const clientPost = _isMember ? post : { ...post, content: '', content_en: null }
+
   // JSON-LD 구조화 데이터 (BlogPosting)
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -196,7 +202,7 @@ export default async function BlogPostPage(
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {/* 클라이언트 컴포넌트에 서버에서 가져온 데이터 전달 */}
-      <BlogPostClient initialPost={post} />
+      <BlogPostClient initialPost={clientPost} />
     </>
   )
 }

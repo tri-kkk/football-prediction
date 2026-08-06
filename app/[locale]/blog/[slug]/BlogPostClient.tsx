@@ -172,24 +172,23 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
-      {/* 커버 이미지 */}
+      {/* 커버 이미지 (콤팩트 배너) */}
       {post.cover_image && (
-        <div className="relative w-full max-w-5xl mx-auto overflow-hidden bg-[#0f1623] rounded-b-2xl">
-          <div className="relative w-full" style={{ paddingBottom: '52.5%' }}>
+        <div className="w-full max-w-3xl mx-auto px-4 mt-4">
+          <div className="relative w-full h-[170px] md:h-[230px] overflow-hidden rounded-2xl bg-[#0f1623] border border-white/10">
             <img
               src={post.cover_image}
               alt={getTitle()}
               className="absolute inset-0 w-full h-full object-contain"
             />
           </div>
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0a0a0f] to-transparent"></div>
         </div>
       )}
 
       {/* 포스트 내용 */}
-      <article className="max-w-4xl mx-auto px-4 py-8">
+      <article className="max-w-4xl mx-auto px-4 py-6">
         {/* 메타 정보 헤더 */}
-        <div className="mb-8">
+        <div className="mb-6">
           {/* 카테고리 + 메타 */}
           <div className="flex items-center gap-3 text-sm text-gray-400 mb-5 flex-wrap">
             <span className={`px-3 py-1.5 text-xs font-bold rounded-lg border ${catColors.badge}`}>
@@ -212,13 +211,13 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
           </div>
 
           {/* 제목 */}
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black mb-5 leading-tight tracking-tight">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black mb-4 leading-tight tracking-tight">
             {getTitle()}
           </h1>
 
           {/* 요약 */}
           {getExcerpt() && (
-            <p className="text-lg text-gray-400 leading-relaxed">
+            <p className="text-base text-gray-400 leading-relaxed">
               {getExcerpt()}
             </p>
           )}
@@ -248,6 +247,34 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
         )}
 
         {/* 본문 */}
+        {!session ? (
+          /* 🔒 비회원: 본문 원천 차단 (제목·구조만 노출 + 로그인 CTA) */
+          <div className="rounded-2xl p-8 md:p-10 text-center bg-gradient-to-b from-[#f5c451]/[0.06] to-white/[0.02] border border-[#f5c451]/25 my-4">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#f5c451]/[0.12] border border-[#f5c451]/30 flex items-center justify-center">
+              <svg className="w-6 h-6 text-[#f5c451]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <rect x="5" y="11" width="14" height="10" rx="2" />
+                <path d="M8 11V7a4 4 0 018 0v4" />
+              </svg>
+            </div>
+            <p className="text-white font-bold text-xl mb-2">
+              {currentLanguage === 'ko' ? '회원 전용 콘텐츠' : 'Members-only Content'}
+            </p>
+            <p className="text-gray-400 text-sm mb-6">
+              {currentLanguage === 'ko'
+                ? '로그인하면 전체 분석 콘텐츠를 무료로 볼 수 있어요'
+                : 'Log in to read the full analysis — free'}
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all text-sm no-underline shadow-lg shadow-emerald-500/20"
+            >
+              {currentLanguage === 'ko' ? '무료로 시작하기' : 'Get Started Free'}
+            </Link>
+            <p className="text-gray-600 text-xs mt-3">
+              {currentLanguage === 'ko' ? '30초 가입 · 결제 정보 필요 없음' : 'Sign up in 30s · No payment'}
+            </p>
+          </div>
+        ) : (
         <div className="prose prose-invert prose-lg max-w-none">
           {(() => {
             const content = getContent()
@@ -546,6 +573,7 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
             )
           })()}
         </div>
+        )}
 
         {/* 광고 - 본문 하단 (프리미엄 제외) */}
         {!isPremium && (

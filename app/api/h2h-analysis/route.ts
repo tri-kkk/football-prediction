@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getServerSession } from 'next-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,16 @@ const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY!
 const API_FOOTBALL_URL = 'https://v3.football.api-sports.io'
 
 export async function GET(request: NextRequest) {
+  // 🔒 회원 전용 분석 데이터: 세션(로그인) 또는 내부 호출(CRON_SECRET)만 허용
+  const _secret = process.env.CRON_SECRET
+  const _isInternal = !!_secret && request.headers.get('x-internal-secret') === _secret
+  if (!_isInternal) {
+    const _session = await getServerSession()
+    if (!(_session as any)?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+  }
+
   const { searchParams } = new URL(request.url)
   const homeTeam = searchParams.get('homeTeam')
   const awayTeam = searchParams.get('awayTeam')

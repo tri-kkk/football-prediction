@@ -966,7 +966,34 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
       </div>
       
       {/* 분석 결과 */}
-      {loading ? (
+      {!session ? (
+        /* 🔒 비회원: 분석 데이터 원천 차단 (구조만 노출 + 로그인 CTA) */
+        <div className="rounded-xl p-6 text-center bg-gradient-to-b from-[#f5c451]/[0.06] to-white/[0.02] border border-[#f5c451]/25">
+          <div className="w-11 h-11 mx-auto mb-3 rounded-full bg-[#f5c451]/[0.12] border border-[#f5c451]/30 flex items-center justify-center">
+            <svg className="w-5 h-5 text-[#f5c451]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 018 0v4" />
+            </svg>
+          </div>
+          <div className="text-white font-bold mb-1">
+            {language === 'ko' ? '회원 전용 분석' : 'Members-only Analysis'}
+          </div>
+          <div className="text-gray-400 text-sm mb-4">
+            {language === 'ko'
+              ? '로그인하면 이 경기의 통계 분석을 볼 수 있어요'
+              : 'Log in to view this match analysis'}
+          </div>
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white rounded-lg font-bold text-sm transition-all"
+          >
+            {language === 'ko' ? '무료로 시작하기' : 'Get Started Free'}
+          </Link>
+          <div className="text-gray-500 text-xs mt-3">
+            {language === 'ko' ? '30초 가입 · 결제 정보 필요 없음' : 'Sign up in 30s · No payment'}
+          </div>
+        </div>
+      ) : loading ? (
         <div className="text-center py-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
           <div className="text-gray-400 text-sm mt-2">{t.loading}</div>
