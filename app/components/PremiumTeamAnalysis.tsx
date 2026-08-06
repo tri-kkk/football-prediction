@@ -312,13 +312,13 @@ export default function PremiumTeamAnalysis({
   return (
     <div className="bg-gradient-to-b from-[#1a1a2e] to-[#12121a] rounded-lg p-3 border border-yellow-500/30">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-yellow-400">🔐</span>
-        <span className="text-sm font-bold text-yellow-400">{t.title}</span>
+        <span className="text-[#f5c451]">🔐</span>
+        <span className="text-sm font-bold text-[#f5c451]">{t.title}</span>
         {loading && <span className="text-xs text-gray-500 animate-pulse">{t.loading}</span>}
       </div>
       
       {/* 탭 */}
-      <div className="flex mb-3 bg-gray-800/50 rounded-lg p-1">
+      <div className="flex mb-3 bg-white/[0.05] rounded-lg p-1">
         {[
           { key: 'h2h', label: t.h2h },
           { key: 'home', label: getTeamName(homeTeam).slice(0,6) },
@@ -382,7 +382,7 @@ function H2HSection({ h2h, homeTeam, awayTeam, t, getTeamName, language }: {
         <div className="text-xs text-gray-500 mb-2">{t.overall} ({overall.totalMatches}{language === 'ko' ? '경기' : ' games'})</div>
         <div className="flex items-center gap-2">
           <span className="text-blue-400 font-bold text-sm w-8">{overall.homeWins}</span>
-          <div className="flex-1 h-3 bg-gray-700 rounded-full overflow-hidden flex">
+          <div className="flex-1 h-3 bg-white/[0.06] rounded-full overflow-hidden flex">
             <div className="bg-blue-500 h-full" style={{ width: `${overall.homeWinRate}%` }} />
             <div className="bg-gray-500 h-full" style={{ width: `${overall.drawRate}%` }} />
             <div className="bg-red-500 h-full" style={{ width: `${overall.awayWinRate}%` }} />
@@ -420,8 +420,8 @@ function H2HSection({ h2h, homeTeam, awayTeam, t, getTeamName, language }: {
       )}
       
       {/* 🔥 H2H 베팅 가이드 */}
-      <div className="bg-gray-800/60 rounded-lg p-3">
-        <div className="text-xs text-yellow-400 font-medium mb-3">🎯 {t.bettingGuide}</div>
+      <div className="bg-white/[0.05] rounded-lg p-3">
+        <div className="text-xs text-[#f5c451] font-medium mb-3">🎯 {t.bettingGuide}</div>
         
         {/* 골 마켓 */}
         <div className="mb-3">
@@ -474,7 +474,7 @@ function H2HSection({ h2h, homeTeam, awayTeam, t, getTeamName, language }: {
             <div className="text-[10px] text-gray-500 mb-2">{t.mostCommonScore}</div>
             <div className="flex gap-2 flex-wrap">
               {scorePatterns.mostCommon.slice(0, 3).map((item, idx) => (
-                <span key={idx} className="px-2 py-1 bg-gray-700 rounded text-xs text-white">
+                <span key={idx} className="px-2 py-1 bg-white/[0.06] rounded text-xs text-white">
                   {item.score} <span className="text-gray-400">({item.count})</span>
                 </span>
               ))}
@@ -591,7 +591,7 @@ function TeamSection({ stats, isHome, t, language }: {
               <div className="text-lg font-bold text-green-400">{relevantStats.wins}</div>
               <div className="text-xs text-gray-500">{t.wins}</div>
             </div>
-            <div className="bg-gray-700/30 rounded p-2">
+            <div className="bg-white/[0.04] rounded p-2">
               <div className="text-lg font-bold text-gray-300">{relevantStats.draws}</div>
               <div className="text-xs text-gray-500">{t.draws}</div>
             </div>
@@ -608,21 +608,21 @@ function TeamSection({ stats, isHome, t, language }: {
       )}
       
       {/* 🔥 베팅 가이드 (강화됨) */}
-      <div className="bg-gray-800/60 rounded-lg p-3">
-        <div className="text-xs text-yellow-400 font-medium mb-3">🎯 {t.bettingGuide} ({t.last10})</div>
+      <div className="bg-white/[0.05] rounded-lg p-3">
+        <div className="text-xs text-[#f5c451] font-medium mb-3">🎯 {t.bettingGuide} ({t.last10})</div>
         
         {/* 득점 평균 */}
         <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="bg-gray-700/50 rounded p-2 text-center">
+          <div className="bg-white/[0.05] rounded p-2 text-center">
             <div className="text-lg font-bold text-blue-400">{avgGoalsFor}</div>
             <div className="text-[10px] text-gray-500">{language === 'ko' ? '득점' : 'GF'}</div>
           </div>
-          <div className="bg-gray-700/50 rounded p-2 text-center">
+          <div className="bg-white/[0.05] rounded p-2 text-center">
             <div className="text-lg font-bold text-red-400">{avgGoalsAgainst}</div>
             <div className="text-[10px] text-gray-500">{language === 'ko' ? '실점' : 'GA'}</div>
           </div>
-          <div className="bg-gray-700/50 rounded p-2 text-center">
-            <div className="text-lg font-bold text-yellow-400">{avgTotalGoals}</div>
+          <div className="bg-white/[0.05] rounded p-2 text-center">
+            <div className="text-lg font-bold text-[#f5c451]">{avgTotalGoals}</div>
             <div className="text-[10px] text-gray-500">{language === 'ko' ? '총골' : 'Total'}</div>
           </div>
         </div>
@@ -660,7 +660,7 @@ function TeamSection({ stats, isHome, t, language }: {
           <div className="text-xs text-gray-500 mb-2">{language === 'ko' ? '최근 경기' : 'Recent'}</div>
           <div className="space-y-1">
             {recentMatches.slice(0, 5).map((m, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs bg-gray-800/30 rounded px-2 py-1">
+              <div key={i} className="flex items-center gap-2 text-xs bg-white/[0.04] rounded px-2 py-1">
                 <span className={`w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center ${
                   m.result === 'W' ? 'bg-green-600' : m.result === 'D' ? 'bg-gray-500' : 'bg-red-600'
                 } text-white`}>
@@ -712,8 +712,8 @@ function BettingIndicator({
   if (isAvg && value) {
     const numValue = parseFloat(value)
     return (
-      <div className="bg-gray-700/50 rounded p-2 text-center">
-        <div className={`text-sm font-bold ${numValue >= 2.5 ? 'text-green-400' : numValue >= 1.5 ? 'text-yellow-400' : 'text-gray-400'}`}>
+      <div className="bg-white/[0.05] rounded p-2 text-center">
+        <div className={`text-sm font-bold ${numValue >= 2.5 ? 'text-green-400' : numValue >= 1.5 ? 'text-[#f5c451]' : 'text-gray-400'}`}>
           {value}
         </div>
         <div className="text-[10px] text-gray-500">{label}</div>
@@ -726,7 +726,7 @@ function BettingIndicator({
   
   const bgColor = recommendation === 'good' ? 'bg-green-900/40 border-green-500/30' 
     : recommendation === 'bad' ? 'bg-red-900/40 border-red-500/30' 
-    : 'bg-gray-700/50 border-gray-600/30'
+    : 'bg-white/[0.05] border-white/10'
   
   const textColor = recommendation === 'good' ? 'text-green-400' 
     : recommendation === 'bad' ? 'text-red-400' 
@@ -769,16 +769,16 @@ function PremiumGate({
   }, [homeTeam, awayTeam, leagueCode])
 
   return (
-    <div className="bg-[#12121a] rounded-lg p-3 border border-gray-700 relative overflow-hidden">
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/40 z-10" />
+    <div className="bg-[#12121a] rounded-lg p-3 border border-white/10 relative overflow-hidden">
+      <div className="absolute inset-0 backdrop-blur-sm bg-white/[0.03] z-10" />
       <div className="opacity-30">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-yellow-400">🔐</span>
-          <span className="text-sm font-bold text-yellow-400">{t.title}</span>
+          <span className="text-[#f5c451]">🔐</span>
+          <span className="text-sm font-bold text-[#f5c451]">{t.title}</span>
         </div>
         <div className="grid grid-cols-3 gap-2 mb-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-gray-800 rounded h-12" />
+            <div key={i} className="bg-white/[0.05] rounded h-12" />
           ))}
         </div>
       </div>

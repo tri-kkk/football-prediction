@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import './premium-redesign.css'
 
 const BASE_URL = 'https://www.trendsoccer.com'
 
