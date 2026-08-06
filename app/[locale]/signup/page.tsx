@@ -132,10 +132,6 @@ export default function SignupPage() {
                     <span className="text-emerald-400">·</span>
                     {isKo ? '기본 분석 리포트' : 'Basic reports'}
                   </li>
-                  <li className="flex gap-1.5 text-[11.5px] text-gray-300">
-                    <span className="text-emerald-400">·</span>
-                    {isKo ? '광고 시청 시 조합 분석' : 'Combos via ad view'}
-                  </li>
                 </ul>
               </div>
               {/* 프리미엄 */}
