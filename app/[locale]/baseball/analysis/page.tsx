@@ -705,9 +705,14 @@ export default function BaseballPredictionsPage() {
   const confirmedPredictions = predictions.filter(p =>
     p.match.league === 'MLB' || p.match.league === 'CPBL' || p.match.hasPitcherData !== false
   )
+  // 🔒 TOP은 실제 AI 예측값(ai_home_win_prob = aiPrediction)이 있는 경기만 노출.
+  //    AI값이 없어 오즈로 폴백되는 경기는 상세 페이지 최종 승률과 어긋날 수 있어 TOP에서 제외.
+  const topPicks = predictions.filter(
+    p => p.prediction.grade === 'PICK' && p.match.aiPrediction != null
+  )
   const stats = {
     total: predictions.length,
-    pick: confirmedPredictions.filter(p => p.prediction.grade === 'PICK').length,
+    pick: topPicks.length,
     good: confirmedPredictions.filter(p => p.prediction.grade === 'GOOD').length,
     pass: confirmedPredictions.filter(p => p.prediction.grade === 'PASS').length,
     analyzing: analyzingCount,
@@ -790,7 +795,7 @@ export default function BaseballPredictionsPage() {
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {predictions.filter(p => p.prediction.grade === 'PICK').map(({ match, prediction }) => (
+                  {topPicks.map(({ match, prediction }) => (
                     <PredictionCard key={match.id} match={match} prediction={prediction} language={language} isPremium={isPremium} isLoggedIn={isLoggedIn} />
                   ))}
                 </div>
