@@ -89,31 +89,17 @@ export default function TodayPickRow({
       }
     }
 
-    // 야구 승률 소스 — 분석/상세 페이지와 동일한 우선순위로 통일
-    //   0순위 aiPrediction (AI 모델 최종값) → 1순위 mlPrediction → 2순위 배당 내재확률
-    //   ※ 이렇게 해야 홈 추천카드 승률이 분석 페이지와 100% 일치함
+    // 야구 승률 — 실제 AI 최종값(aiPrediction = ai_home_win_prob)만 사용.
+    //   AI값 없는 경기는 추천에서 제외 → 상세/분석 페이지 최종 승률과 100% 일치.
     const bbPred = (m: any): { homeWinProb: number; awayWinProb: number; grade: string } | null => {
-      let hp: number | undefined
-      let ap: number | undefined
-      let raw: string | null = null
+      // 🔒 홈 추천은 실제 AI 최종 예측값(aiPrediction = ai_home_win_prob)이 있는 경기만.
+      //    AI값이 없어 ML/오즈로 폴백되던 경기는 상세 페이지 최종 승률과 어긋날 수 있어 추천에서 제외.
       const ai = m?.aiPrediction
-      const ml = m?.mlPrediction
-      const od = m?.odds
-      if (ai && typeof ai.homeWinProb === 'number') {
-        hp = ai.homeWinProb
-        ap = ai.awayWinProb
-        raw = ai.grade ?? null
-      } else if (ml && typeof ml.homeWinProb === 'number') {
-        hp = ml.homeWinProb
-        ap = ml.awayWinProb
-        raw = ml.grade ?? null
-      } else if (od && typeof od.homeWinProb === 'number') {
-        hp = od.homeWinProb
-        ap = od.awayWinProb
-      } else {
-        return null
-      }
-      const diff = Math.abs((hp || 0) - (ap || 0))
+      if (!(ai && typeof ai.homeWinProb === 'number')) return null
+      const hp: number = ai.homeWinProb
+      const ap: number = ai.awayWinProb
+      const raw: string | null = ai.grade ?? null
+      const diff = Math.abs(hp - ap)
       const grade =
         raw === 'PICK' || raw === 'GOOD' || raw === 'PASS'
           ? raw
