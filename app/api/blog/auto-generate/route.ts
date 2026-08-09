@@ -1560,16 +1560,26 @@ export async function GET(request: NextRequest) {
   
   try {
     const now = new Date()
-    // D-1 발행: 경기 시작 24시간 이내 경기만 대상
-    // (D-2 발행 시 경기 시작 직전 결과가 스탯에 반영되지 않아 데이터 정확도 저하)
-    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    // 🔁 재생성 모드: force=true (CRON_SECRET 필요) → 기존 글도 덮어쓰기(upsert, 발행일 유지).
+    //    hours=N 으로 대상 창 확대(기본 24h, 최대 14일), league=DED,PL 로 리그 필터.
+    const { searchParams } = new URL(request.url)
+    const secret = request.headers.get('x-internal-secret') || searchParams.get('secret') || ''
+    const isAuthed = !!process.env.CRON_SECRET && secret === process.env.CRON_SECRET
+    const force = searchParams.get('force') === 'true'
+    if (force && !isAuthed) {
+      return NextResponse.json({ error: 'force regenerate requires valid secret' }, { status: 401 })
+    }
+    const windowHours = Math.min(Math.max(parseInt(searchParams.get('hours') || '24', 10) || 24, 1), 336)
+    const leagueFilter = (searchParams.get('league') || '').split(',').map(s => s.trim()).filter(Boolean)
 
-    // 24시간 이내 경기 조회 (D-1 발행)
+    // D-1 발행: 기본은 경기 시작 24시간 이내 경기 대상 (재생성 시 windowHours로 확대)
+    const windowEnd = new Date(now.getTime() + windowHours * 60 * 60 * 1000)
+
     const { data: upcomingMatches, error: matchError } = await supabase
       .from('match_odds_latest')
       .select('*')
       .gte('commence_time', now.toISOString())
-      .lte('commence_time', in24h.toISOString())
+      .lte('commence_time', windowEnd.toISOString())
       .order('commence_time', { ascending: true })
 
     if (matchError) {
@@ -1580,8 +1590,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'No upcoming matches in 24h', generated: 0 })
     }
     
-    // 지원 리그만 필터링
-    const supportedMatches = upcomingMatches.filter(m => SUPPORTED_LEAGUES.has(m.league_code))
+    // 지원 리그만 필터링 (+ 재생성 시 league 파라미터로 추가 필터)
+    const supportedMatches = upcomingMatches.filter(m =>
+      SUPPORTED_LEAGUES.has(m.league_code) &&
+      (leagueFilter.length === 0 || leagueFilter.includes(m.league_code))
+    )
     console.log(`📝 ${supportedMatches.length}/${upcomingMatches.length} matches in supported leagues`)
     
     // 중복 체크
@@ -1607,7 +1620,7 @@ export async function GET(request: NextRequest) {
       const leagueInfo = LEAGUE_INFO[match.league_code]
       const slug = generateSlug(match.home_team, match.away_team, match.league_code, match.commence_time)
       
-      if (existingSlugs.has(slug)) { skipped++; continue }
+      if (existingSlugs.has(slug) && !force) { skipped++; continue }
       
       try {
         // 1. 분석 데이터
@@ -1675,32 +1688,35 @@ export async function GET(request: NextRequest) {
         const excerptKr = generateExcerptKr(homeKo, awayKo, leagueInfo, seasonCtx)
         const excerptEn = generateExcerptEn(match.home_team, match.away_team, leagueInfo, seasonCtx)
         
-        const { error: insertError } = await supabase
-          .from('blog_posts')
-          .insert({
-            slug,
-            title: titleEn,
-            title_kr: titleKr,
-            excerpt: excerptKr,
-            excerpt_en: excerptEn,
-            content: contentKo,
-            content_en: contentEn,
-            category: 'preview',
-            tags,
-            thumbnail_url: thumbnailUrl,
-            cover_image: thumbnailUrl,
-            published: true,
-            published_en: true,
-            published_at: new Date().toISOString(),
-          })
-        
+        const basePayload = {
+          slug,
+          title: titleEn,
+          title_kr: titleKr,
+          excerpt: excerptKr,
+          excerpt_en: excerptEn,
+          content: contentKo,
+          content_en: contentEn,
+          category: 'preview',
+          tags,
+          thumbnail_url: thumbnailUrl,
+          cover_image: thumbnailUrl,
+          published: true,
+          published_en: true,
+        }
+
+        // 재생성(force): 기존 글을 slug 기준으로 덮어쓰되 발행일(published_at)은 유지 → 목록 순서 안 흔들림.
+        // 신규: published_at을 현재 시각으로.
+        const { error: insertError } = force
+          ? await supabase.from('blog_posts').upsert(basePayload, { onConflict: 'slug' })
+          : await supabase.from('blog_posts').insert({ ...basePayload, published_at: new Date().toISOString() })
+
         if (insertError) {
-          console.error(`❌ Insert error ${slug}:`, insertError)
+          console.error(`❌ ${force ? 'Upsert' : 'Insert'} error ${slug}:`, insertError)
           failed++
           continue
         }
-        
-        console.log(`✅ Generated: ${slug} [${prediction.recommendation.grade}]`)
+
+        console.log(`${force ? '🔁 Regenerated' : '✅ Generated'}: ${slug} [${prediction.recommendation.grade}]`)
         generated++
         existingSlugs.add(slug)
         
