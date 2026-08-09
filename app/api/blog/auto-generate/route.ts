@@ -128,23 +128,44 @@ function detectSeasonContext(leagueCode: string, homeStats: any, awayStats: any)
     }
   }
 
-  // 유럽 리그: 8~9월 개막
+  // 유럽 리그: 8월 개막 ~ 이듬해 5월 종료.
+  //   ⚠️ 시즌 경계(특히 개막기)에는 팀 통계 DB에 지난 시즌 성적이 남아 totalGames가 크게 잡히므로
+  //      totalGames를 시즌 진행도로 신뢰할 수 없다. → 월(月)을 우선 기준으로 판정한다.
   if (['PL', 'PD', 'BL1', 'SA', 'FL1', 'DED'].includes(leagueCode)) {
-    if (totalGames <= 2 || (month >= 8 && month <= 9 && totalGames <= 4)) {
+    // 6~7월: 비시즌/프리시즌
+    if (month === 6 || month === 7) {
       return {
-        phaseKo: '시즌 개막',
-        phaseEn: 'season opener',
-        isOpening: true,
-        cautionNote: '시즌 개막 초반이므로 "연승", "연패" 등을 이번 시즌 흐름처럼 서술하지 마세요. 데이터는 지난 시즌 또는 프리시즌 기반일 수 있습니다.',
+        phaseKo: '프리시즌', phaseEn: 'pre-season', isOpening: false,
+        cautionNote: '리그 비시즌(프리시즌)입니다. "연승", "연패", "순위 경쟁", "최근 폼" 등 진행 중 시즌 표현을 쓰지 마세요. 통계는 지난 시즌 기준이며 "작시즌"으로 명시하세요.',
       }
     }
-    if (totalGames <= 10) {
-      return { phaseKo: '시즌 초반', phaseEn: 'early season', isOpening: false,
-        cautionNote: '시즌 초반입니다. 표본이 적어 통계 해석에 주의하세요.' }
+    // 8월: 개막 (통계가 많아도 지난 시즌 데이터일 가능성이 높으므로 개막으로 처리)
+    if (month === 8 || totalGames <= 2) {
+      return {
+        phaseKo: '시즌 개막', phaseEn: 'season opener', isOpening: true,
+        cautionNote: '시즌 개막 초반입니다. 통계는 지난 시즌 또는 프리시즌 기반일 수 있으니 "연승", "연패", "순위 경쟁", "최근 폼"을 이번 시즌 흐름처럼 서술하지 마세요. "새 시즌 첫 경기"/"개막전" 맥락으로 작성하고, 지난 시즌 성적은 "작시즌"으로 명시하세요.',
+      }
     }
-    if (month >= 4 || totalGames >= 28) {
-      return { phaseKo: '시즌 후반', phaseEn: 'late season', isOpening: false,
-        cautionNote: '시즌 후반입니다. 순위 경쟁, 잔류 싸움, 우승 경쟁 등 맥락을 반영하세요.' }
+    // 9월: 초반
+    if (month === 9 || totalGames <= 6) {
+      return {
+        phaseKo: '시즌 초반', phaseEn: 'early season', isOpening: false,
+        cautionNote: '시즌 초반이라 표본이 적습니다. "순위 경쟁" 등 단정적 서술을 피하고, 지난 시즌 데이터 참조 시 "작시즌"으로 명시하세요.',
+      }
+    }
+    // 3~5월: 시즌 후반 (순위/우승/잔류 경쟁은 실제 경기 표본이 충분할 때만)
+    if (month >= 3 && month <= 5) {
+      return {
+        phaseKo: '시즌 후반', phaseEn: 'late season', isOpening: false,
+        cautionNote: totalGames >= 20
+          ? '시즌 후반입니다. 순위 경쟁, 잔류 싸움, 우승 경쟁 등 맥락을 반영하세요.'
+          : '시즌 후반이지만 확보된 통계 표본이 적으니 순위/우승 경쟁 단정은 피하세요.',
+      }
+    }
+    // 10~2월: 시즌 중반
+    return {
+      phaseKo: '시즌 중반', phaseEn: 'mid-season', isOpening: false,
+      cautionNote: totalGames < 6 ? '통계 표본이 적으니 해석에 주의하세요.' : '',
     }
   }
   
@@ -170,8 +191,8 @@ function generateTitleKr(homeKo: string, awayKo: string, leagueInfo: any, season
     )
   }
   
-  // 연승/연패 맥락 (개막 아닐 때만)
-  if (!seasonCtx.isOpening) {
+  // 연승/연패 맥락 (시즌 중반·후반에만 — 개막/초반/프리시즌엔 지난 시즌 streak가 새겨 나올 수 있어 제외)
+  if (!seasonCtx.isOpening && seasonCtx.phaseEn !== 'early season' && seasonCtx.phaseEn !== 'pre-season') {
     const hStreak = homeStats?.recentForm?.currentStreak
     const aStreak = awayStats?.recentForm?.currentStreak
     if (hStreak?.count >= 3 && hStreak.type === 'W') {
