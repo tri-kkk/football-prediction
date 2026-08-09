@@ -155,14 +155,14 @@ export async function GET(request: Request) {
       await new Promise(resolve => setTimeout(resolve, 300))
     }
     
-    // 6. 프리미엄 리포트 조건 필터링 (완화된 기준 — 2026-07 조정)
+    // 6. 프리미엄 리포트 조건 필터링 (PICK 기준 — 적중률 우선, 2026-07 GOOD 완화 롤백)
     const premiumPicks = analyzedMatches.filter(m => {
       if (!m.prediction) return false
       const p = m.prediction
 
-      // 1. PICK 또는 GOOD 등급 (이전엔 PICK만)
+      // 1. PICK 등급만 (GOOD 완화 롤백 — 적중률 우선)
       const grade = p.recommendation?.grade
-      if (grade !== 'PICK' && grade !== 'GOOD') return false
+      if (grade !== 'PICK') return false
 
       // 2. 파워 차이 20점 이상 (이전 50점 → 완화)
       const powerDiff = Math.abs((p.homePower || 0) - (p.awayPower || 0))
