@@ -58,6 +58,16 @@ export default function TodayPickRow({
       return new Date(t + 9 * 60 * 60 * 1000).toISOString().slice(0, 10) === kstToday
     }
 
+    // 🔒 이미 시작(라이브)·종료된 경기는 추천에서 제외 — 시작 시각이 미래인 경기만 노출.
+    const nowMs = Date.now()
+    const notStarted = (m: any): boolean => {
+      const iso = m?.timestamp || m?.commence_time || null
+      const t = iso ? Date.parse(iso) : NaN
+      if (!Number.isNaN(t)) return t > nowMs
+      // 시작 시각 불명 → 상태로 판단 (NS/SCHEDULED/TBD만 미시작)
+      return ['NS', 'SCHEDULED', 'TBD', ''].includes(String(m?.status || '').toUpperCase())
+    }
+
     const buildFootball = (p: any): PickView | null => {
       if (!p) return null
       const side: string =
@@ -151,7 +161,7 @@ export default function TodayPickRow({
         const fb = await fbP
         const fbList: any[] = fb?.picks || []
         const fbViews = fbList
-          .filter((p) => isTodayKST(p?.commence_time)) // ✅ 오늘(KST) 경기만
+          .filter((p) => isTodayKST(p?.commence_time) && notStarted(p)) // ✅ 오늘(KST) + 아직 시작 안 한 경기만
           .sort((a, b) => gradeRank(b?.grade) - gradeRank(a?.grade))
           .map(buildFootball)
           .filter((v): v is PickView => !!v)
@@ -168,8 +178,9 @@ export default function TodayPickRow({
               (m) =>
                 bbPred(m) &&
                 !isFinished(m.status) &&
+                notStarted(m) &&
                 !isExcludedLeague(m) &&
-                (isTodayKST(m.date) || isTodayKST(m.timestamp)), // ✅ 오늘(KST) 경기만
+                (isTodayKST(m.date) || isTodayKST(m.timestamp)), // ✅ 오늘(KST) + 아직 시작 안 한 경기만
             )
             .sort((a, b) => {
               const pa = bbPred(a)!
