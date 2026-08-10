@@ -33,7 +33,8 @@ export default function SeasonKickoffHero({ locale = 'ko' }: { locale?: string }
   useEffect(() => {
     setNow(Date.now())
     let cancel = false
-    fetch('/api/odds-from-db?league=ALL')
+    // 개막 감지를 위해 넓은 예정 범위 필요 (기본 league=ALL은 ±1일뿐) → 14일 앞까지
+    fetch('/api/odds-from-db?league=ALL&daysAhead=14&daysBack=1')
       .then((r) => r.json())
       .then((d) => {
         if (cancel) return
@@ -60,34 +61,37 @@ export default function SeasonKickoffHero({ locale = 'ko' }: { locale?: string }
     const isBig = (m: any) => idIn(m.home_team_id) || idIn(m.away_team_id)
     const isBoth = (m: any) => idIn(m.home_team_id) && idIn(m.away_team_id)
 
-    const bigMatches = up.filter(isBig)
-    // 타이머 타깃: 72h내 양팀-빅 매치 우선, 아니면 가장 이른 빅클럽 경기, 없으면 가장 이른 경기
-    const soonBoth = bigMatches.filter((m) => isBoth(m) && ms(m) - nowMs < 72 * 3600 * 1000)
-    const nextBig = soonBoth[0] || bigMatches[0] || up[0] || null
-    // 개막(빅리그 가장 이른 예정 경기)
+    // 빅클럽(리스트)이 낀 경기 — 타이머/티저는 여기서만. 마이너리그(덴마크 등)로 폴백 금지.
+    const soonBoth = up.filter((m) => isBoth(m) && ms(m) - nowMs < 72 * 3600 * 1000)
+    const bigClubUp = up.filter(isBig)
+    const nextBigClub = soonBoth[0] || bigClubUp[0] || null
+    // 빅리그(EPL·라리가·분데스·세리에A·리그1) 가장 이른 예정 경기 = 개막 기준 (마이너리그 제외)
     const opener = up.find((m) => BIG_LEAGUES.has(m.league_code)) || null
     const openerMs = opener ? ms(opener) : null
+    // 표시 대상: 빅클럽 우선 → 빅리그. 둘 다 없으면 null (오프시즌 처리, 아무 경기로 폴백하지 않음)
+    const bigTarget = nextBigClub || opener || null
 
-    const d = new Date(nowMs)
-    const month = d.getMonth() + 1
-    const day = d.getDate()
+    const month = new Date(nowMs).getMonth() + 1
+    const openerFuture = !!openerMs && openerMs > nowMs
+    const openerDays = openerFuture ? Math.ceil((openerMs! - nowMs) / 86400000) : 0
+
     let phase: Phase = 'mid'
-    if (bigMatches.length === 0 && (month === 6 || month === 7)) phase = 'off'
-    else if (month === 8) phase = day <= 13 && openerMs && openerMs > nowMs ? 'pre' : 'open'
-    else if (month === 7 && openerMs && openerMs - nowMs < 14 * 86400 * 1000) phase = 'pre'
+    if (!bigTarget && month >= 5 && month <= 7) phase = 'off'
+    else if ((month === 7 || month === 8) && openerFuture && openerDays >= 1) phase = 'pre'
+    else if (month === 8 && bigTarget) phase = 'open'
+    else if (!bigTarget) phase = 'off'
     else phase = 'mid'
 
-    // 카운트다운 타깃: 개막 전이면 개막 경기, 아니면 다음 빅매치
-    const target = phase === 'pre' ? (opener || nextBig) : nextBig
-    const targetMs = target ? ms(target) : null
+    // 카운트다운/티저 타깃: 개막 전이면 빅리그 개막 경기, 그 외엔 다음 빅매치
+    const cdTarget = phase === 'pre' ? opener : bigTarget
+    const cdMs = cdTarget ? ms(cdTarget) : null
     let cd = { d: 0, h: 0, m: 0, s: 0 }
-    if (targetMs && targetMs > nowMs) {
-      let s = Math.floor((targetMs - nowMs) / 1000)
+    if (cdMs && cdMs > nowMs) {
+      const s = Math.floor((cdMs - nowMs) / 1000)
       cd = { d: Math.floor(s / 86400), h: Math.floor((s % 86400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 }
     }
-    const openerDays = openerMs && openerMs > nowMs ? Math.ceil((openerMs - nowMs) / 86400000) : 0
 
-    return { phase, target: nextBig, cdTarget: target, cd, openerDays }
+    return { phase, cdTarget, cd, openerDays }
   }, [matches, now])
 
   if (!info) return null
@@ -155,6 +159,18 @@ export default function SeasonKickoffHero({ locale = 'ko' }: { locale?: string }
   const teamName = (raw?: string, ko?: string) => (isKo ? ko || raw || '' : raw || '')
   const logo = (id?: any, fallback?: string) =>
     id ? `https://media.api-sports.io/football/teams/${id}.png` : fallback || ''
+  const kickoffStr = (() => {
+    if (!tm?.commence_time) return ''
+    const dt = new Date(tm.commence_time)
+    if (Number.isNaN(dt.getTime())) return ''
+    return dt.toLocaleString(isKo ? 'ko-KR' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  })()
 
   return (
     <div className="skh-root">
@@ -226,40 +242,51 @@ export default function SeasonKickoffHero({ locale = 'ko' }: { locale?: string }
             </div>
           </div>
 
-          {/* RIGHT: 다음 빅매치 티저 */}
+          {/* RIGHT: 다음 빅매치 티저 (카드 전체가 로그인 링크 — 중복 CTA 제거) */}
           {tm && (
             <div className="skh-teaser">
-              <div className="skh-tcard">
+              <Link href="/login" className="skh-tcard">
                 <div className="skh-th">
                   <span className="skh-lc">{tm.league_code || ''}</span>
                   <span className="skh-pk">🔥 {isKo ? '강추' : 'PICK'}</span>
                 </div>
                 <div className="skh-teams">
                   <div className="skh-tm">
-                    <img src={logo(tm.home_team_id, tm.home_team_logo)} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = 'hidden')} />
+                    <span className="skh-lg">
+                      <img src={logo(tm.home_team_id, tm.home_team_logo)} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = 'hidden')} />
+                    </span>
                     <span>{teamName(tm.home_team, tm.home_team_ko)}</span>
                   </div>
                   <span className="skh-vs">VS</span>
                   <div className="skh-tm">
-                    <img src={logo(tm.away_team_id, tm.away_team_logo)} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = 'hidden')} />
+                    <span className="skh-lg">
+                      <img src={logo(tm.away_team_id, tm.away_team_logo)} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = 'hidden')} />
+                    </span>
                     <span>{teamName(tm.away_team, tm.away_team_ko)}</span>
                   </div>
                 </div>
-                <div className="skh-blur">
-                  <div className="skh-bar" />
-                  <div className="skh-brow"><div /><div /><div /></div>
-                </div>
-                <div className="skh-lock">
-                  <div className="skh-ic">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5c451" strokeWidth="2">
-                      <rect x="5" y="11" width="14" height="10" rx="2" />
-                      <path d="M8 11V7a4 4 0 018 0v4" />
+
+                {/* 킥오프 일시 — 실제 경기 정보 노출 */}
+                {kickoffStr && (
+                  <div className="skh-when">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 7v5l3 2" />
                     </svg>
+                    {kickoffStr}
                   </div>
-                  <b>{T.teaserTitle}</b>
-                  <Link href="/login" className="skh-cta p sm">{isKo ? '48시간 무료로 잠금 해제' : 'Unlock free for 48h'}</Link>
-                </div>
-              </div>
+                )}
+
+                {/* 하단 안내 — 초록 버튼 아님(중복 방지), 로그인 유도 캡션 */}
+                <span className="skh-tfoot">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <rect x="5" y="11" width="14" height="10" rx="2" />
+                    <path d="M8 11V7a4 4 0 018 0v4" />
+                  </svg>
+                  {isKo ? '로그인하고 AI 픽 확인' : 'Log in to see the AI pick'}
+                  <span className="skh-arw">→</span>
+                </span>
+              </Link>
             </div>
           )}
         </div>
@@ -272,12 +299,14 @@ export default function SeasonKickoffHero({ locale = 'ko' }: { locale?: string }
         <div className="skh-step"><div className="skh-n">3</div><b>{T.step3t}</b><small>{T.step3}</small></div>
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         .skh-root{--em:#10b981;--em-l:#34d399;--gold:#f5c451;--gold-d:#d9a327;--txt:#eef2f5;--txt-2:#aab4bd;--txt-3:#6c7681;--sf:rgba(255,255,255,.03);--sf2:rgba(255,255,255,.05);--bd:rgba(255,255,255,.09);position:relative;margin-bottom:20px;color:var(--txt)}
         .skh-tnum{font-variant-numeric:tabular-nums}
-        .skh-hero{border-radius:24px;padding:1px;background:linear-gradient(120deg,rgba(245,196,81,.55),rgba(16,185,129,.4) 50%,rgba(255,255,255,.06));overflow:hidden;box-shadow:0 24px 60px -20px rgba(0,0,0,.6)}
+        @keyframes skhrise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+        .skh-hero{border-radius:24px;padding:1px;background:linear-gradient(120deg,rgba(245,196,81,.55),rgba(16,185,129,.4) 50%,rgba(255,255,255,.06));overflow:hidden;box-shadow:0 24px 60px -20px rgba(0,0,0,.6);animation:skhrise .55s cubic-bezier(.22,1,.36,1) both}
         .skh-in{border-radius:23px;background:linear-gradient(160deg,#12181d,#0a0e11);padding:24px;display:grid;grid-template-columns:1.15fr .85fr;gap:24px;position:relative;overflow:hidden}
         .skh-in::before{content:"";position:absolute;top:-120px;right:-80px;width:340px;height:340px;background:radial-gradient(circle,rgba(245,196,81,.13),transparent 60%);pointer-events:none}
+        .skh-in::after{content:"";position:absolute;bottom:-140px;left:-100px;width:320px;height:320px;background:radial-gradient(circle,rgba(16,185,129,.1),transparent 60%);pointer-events:none}
         @media(max-width:820px){.skh-in{grid-template-columns:1fr;padding:20px}}
         .skh-kick{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--gold);background:rgba(245,196,81,.08);border:1px solid rgba(245,196,81,.35);padding:7px 13px;border-radius:999px}
         .skh-kick.season{color:var(--em-l);background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.3)}
@@ -288,46 +317,55 @@ export default function SeasonKickoffHero({ locale = 'ko' }: { locale?: string }
         .skh-lead{color:var(--txt-2);font-size:14.5px;max-width:470px}
         .skh-lead b{color:var(--gold)}
         .skh-leagues{display:flex;align-items:center;gap:8px;margin:16px 0 4px;flex-wrap:wrap}
-        .skh-l{width:32px;height:32px;border-radius:8px;background:#fff;padding:5px;display:grid;place-items:center}
+        .skh-l{width:32px;height:32px;border-radius:8px;background:#fff;padding:5px;display:grid;place-items:center;transition:transform .18s ease,box-shadow .18s ease}
+        .skh-l:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,.35)}
         .skh-l img{width:100%;height:100%;object-fit:contain}
         .skh-more{font-size:12px;color:var(--txt-3);font-weight:600}
         .skh-cd{display:flex;align-items:center;gap:10px;margin:18px 0}
         .skh-lab{font-size:12px;color:var(--txt-3);font-weight:700;white-space:nowrap}
         .skh-box{display:flex;gap:6px}
-        .skh-u{min-width:50px;text-align:center;background:var(--sf2);border:1px solid var(--bd);border-radius:11px;padding:8px 6px}
-        .skh-u b{display:block;font-size:21px;font-weight:800;line-height:1;color:var(--gold)}
-        .skh-u small{font-size:10px;color:var(--txt-3)}
+        .skh-u{min-width:52px;text-align:center;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid var(--bd);border-radius:11px;padding:9px 6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+        .skh-u b{display:block;font-size:22px;font-weight:800;line-height:1;color:var(--gold)}
+        .skh-u small{font-size:10px;color:var(--txt-3);margin-top:3px;display:block}
         .skh-cta-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:6px}
         .skh-cta{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:14px 24px;border-radius:14px;font-size:15.5px;font-weight:800;cursor:pointer;border:none;transition:.2s;text-decoration:none}
         .skh-cta.p{color:#04140d;background:linear-gradient(135deg,var(--em-l),var(--em));box-shadow:0 12px 30px rgba(16,185,129,.32)}
         .skh-cta.p:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(16,185,129,.48)}
         .skh-cta.p.sm{padding:11px 18px;font-size:13px}
         .skh-cta.g{color:var(--txt-2);background:var(--sf);border:1px solid var(--bd)}
+        .skh-cta.g:hover{color:var(--txt);border-color:rgba(255,255,255,.2);background:var(--sf2)}
         .skh-note{font-size:12px;color:var(--txt-3);margin-top:12px;display:flex;align-items:center;gap:6px}
         .skh-note svg{fill:var(--em-l)}
         .skh-trust{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-        .skh-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:11px;background:var(--sf);border:1px solid var(--bd)}
+        .skh-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:11px;background:var(--sf);border:1px solid var(--bd);transition:border-color .18s ease,background .18s ease}
+        .skh-chip:hover{border-color:rgba(255,255,255,.18);background:var(--sf2)}
         .skh-chip b{font-size:15px;font-weight:800}
         .skh-chip b.e{color:var(--em-l)}.skh-chip b.gd{color:var(--gold)}
         .skh-chip small{font-size:11px;color:var(--txt-3)}
         .skh-teaser{align-self:center}
-        .skh-tcard{border-radius:18px;background:var(--sf);border:1px solid rgba(245,196,81,.25);padding:16px;position:relative;overflow:hidden}
-        .skh-th{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+        .skh-tcard{display:block;text-decoration:none;color:inherit;border-radius:18px;background:var(--sf);border:1px solid rgba(245,196,81,.25);padding:16px;position:relative;overflow:hidden;transition:transform .22s cubic-bezier(.22,1,.36,1),border-color .22s ease,box-shadow .22s ease}
+        .skh-tcard:hover{transform:translateY(-3px);border-color:rgba(245,196,81,.45);box-shadow:0 18px 40px -14px rgba(245,196,81,.28)}
+        .skh-th{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
         .skh-lc{font-size:11px;font-weight:700;color:var(--txt-2);background:var(--sf2);padding:3px 9px;border-radius:6px}
         .skh-pk{font-size:11px;font-weight:800;color:#2a1c02;background:linear-gradient(135deg,var(--gold),var(--gold-d));padding:3px 10px;border-radius:7px}
-        .skh-teams{display:flex;align-items:center;justify-content:space-between}
-        .skh-tm{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0}
-        .skh-tm img{width:42px;height:42px;object-fit:contain}
-        .skh-tm span{font-size:13px;font-weight:700;text-align:center;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .skh-vs{color:var(--txt-3);font-weight:800;font-size:13px;padding:0 8px}
-        .skh-blur{filter:blur(7px);opacity:.5;pointer-events:none;user-select:none;margin-top:14px}
-        .skh-bar{height:28px;border-radius:8px;background:linear-gradient(90deg,#3b82f6 61%,#6b7683 61%,#6b7683 78%,#e6392f 78%);margin-bottom:10px}
-        .skh-brow{display:flex;gap:8px}.skh-brow div{flex:1;height:32px;border-radius:8px;background:var(--sf2)}
-        .skh-lock{position:absolute;inset:auto 16px 16px;top:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center}
-        .skh-ic{width:42px;height:42px;border-radius:50%;background:rgba(245,196,81,.14);border:1px solid rgba(245,196,81,.4);display:grid;place-items:center}
-        .skh-lock b{font-size:14px;font-weight:800}
+        .skh-teams{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px}
+        .skh-tm{display:flex;flex-direction:column;align-items:center;gap:11px;flex:1;min-width:0}
+        .skh-lg{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 32%,rgba(255,255,255,.1),rgba(255,255,255,.02) 70%);border:1px solid var(--bd);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 20px -10px rgba(0,0,0,.6);transition:transform .22s cubic-bezier(.22,1,.36,1)}
+        .skh-tcard:hover .skh-lg{transform:translateY(-2px)}
+        .skh-lg img{width:52px;height:52px;object-fit:contain}
+        .skh-tm span{font-size:14px;font-weight:800;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
+        .skh-vs{flex:none;width:36px;height:36px;border-radius:50%;background:var(--sf2);border:1px solid var(--bd);display:grid;place-items:center;color:var(--txt-3);font-weight:800;font-size:11px;margin-top:-22px}
+        /* 킥오프 일시 */
+        .skh-when{margin-top:18px;padding-top:14px;border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--txt-2)}
+        .skh-when svg{stroke:var(--gold);opacity:.9}
+        /* 하단 로그인 유도 캡션 (버튼 아님) */
+        .skh-tfoot{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;padding:10px;border-radius:11px;background:rgba(245,196,81,.08);border:1px solid rgba(245,196,81,.22);font-size:12.5px;font-weight:700;color:var(--gold);transition:background .18s ease}
+        .skh-arw{transition:transform .18s ease}
+        .skh-tcard:hover .skh-tfoot{background:rgba(245,196,81,.15)}
+        .skh-tcard:hover .skh-arw{transform:translateX(3px)}
         .skh-funnel{margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-        .skh-step{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:13px}
+        .skh-step{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:13px;transition:border-color .18s ease,transform .18s ease}
+        .skh-step:hover{border-color:rgba(16,185,129,.3);transform:translateY(-2px)}
         .skh-n{width:22px;height:22px;border-radius:50%;background:rgba(16,185,129,.15);color:var(--em-l);font-weight:800;font-size:12px;display:grid;place-items:center;margin-bottom:8px}
         .skh-step b{font-size:13px;font-weight:800;display:block;margin-bottom:2px}
         .skh-step small{font-size:11.5px;color:var(--txt-3)}
