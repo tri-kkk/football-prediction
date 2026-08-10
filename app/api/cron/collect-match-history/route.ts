@@ -30,7 +30,8 @@ const LEAGUES = [
   { id: 135, code: 'SA', name: 'Serie A', country: 'Italy', region: 'europe' },
   { id: 61, code: 'FL1', name: 'Ligue 1', country: 'France', region: 'europe' },
   { id: 88, code: 'DED', name: 'Eredivisie', country: 'Netherlands', region: 'europe' },
-  
+  { id: 40, code: 'ELC', name: 'Championship', country: 'England', region: 'europe' },
+
   // 아시아 리그
   { id: 292, code: 'K1', name: 'K League 1', country: 'South Korea', region: 'asia' },
   { id: 293, code: 'K2', name: 'K League 2', country: 'South Korea', region: 'asia' },

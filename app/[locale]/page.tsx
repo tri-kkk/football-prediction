@@ -15,6 +15,7 @@ import {
 import type { SportFilter, UnifiedMatch } from '../components/home/types'
 import type { DateFilter } from '../components/home/DateTabs'
 import TodayPickRow from '../components/home/TodayPickRow'
+import SeasonKickoffHero from '../components/home/SeasonKickoffHero'
 import NewsGrid from '../components/home/NewsGrid'
 import PredictionTrackRecord from '../components/home/PredictionTrackRecord'
 import TopHighlights from '../components/TopHighlights'
@@ -252,6 +253,8 @@ function HomeInner() {
       {/* 최상단 웹 홈 배너 — 관리자 광고 관리(slot=web_home_top)에서 관리 */}
       <HomeTopBanner isPremium={isPremium} isEn={isEn} />
 
+      {/* 🏁 해외축구 개막 CTA 히어로 — 비프리미엄에게만 (가입→48h 체험 깔때기, 단계 자동 전환) */}
+      {!isPremium && <SeasonKickoffHero locale={locale} />}
 
       {/* ①  오늘의 추천 경기 — 3분할 카드 행 */}
       <TodayPickRow locale={locale} isPremium={isPremium} />

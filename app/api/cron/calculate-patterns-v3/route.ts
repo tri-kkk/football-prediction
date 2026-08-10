@@ -6,6 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Vercel function timeout: mode=reset 시 13개 리그 전량(각 최대 2000+경기) 재계산 → 기본 타임아웃 초과 방지
+export const maxDuration = 300
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -22,6 +25,7 @@ const LEAGUES = {
     { id: 135, code: 'SA', name: 'Serie A' },
     { id: 61, code: 'FL1', name: 'Ligue 1' },
     { id: 88, code: 'DED', name: 'Eredivisie' },
+    { id: 40, code: 'ELC', name: 'Championship' },
   ],
   asia: [
     { id: 292, code: 'K1', name: 'K League 1' },
@@ -372,25 +376,37 @@ async function calculatePatterns(
   // 1. 팀 통계 미리 로드 (캐시)
   const teamStatsCache = await loadTeamStatsCache(leagueId)
   
-  // 2. 경기 데이터 조회
-  let query = supabase
-    .from('fg_match_history')
-    .select('*')
-    .eq('status', 'FINISHED')
-    .not('result', 'is', null)
-    .order('match_date', { ascending: true })
-  
-  if (leagueId) {
-    query = query.eq('league_id', leagueId)
+  // 2. 경기 데이터 조회 (✅ 페이지네이션 - Supabase 기본 1000행 상한 회피)
+  const matches: any[] = []
+  const PAGE_SIZE = 1000
+  let offset = 0
+  while (true) {
+    let query = supabase
+      .from('fg_match_history')
+      .select('*')
+      .eq('status', 'FINISHED')
+      .not('result', 'is', null)
+      .order('match_date', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1)
+
+    if (leagueId) {
+      query = query.eq('league_id', leagueId)
+    }
+
+    const { data: page, error } = await query
+
+    if (error) {
+      console.error('Error fetching matches:', error)
+      return { patterns: 0, updated: 0, errors: 1, skipped: 0, processed: 0 }
+    }
+
+    if (!page || page.length === 0) break
+    matches.push(...page)
+    console.log(`  Fetched ${matches.length} matches...`)
+    if (page.length < PAGE_SIZE) break
+    offset += PAGE_SIZE
   }
-  
-  const { data: matches, error } = await query
-  
-  if (error || !matches) {
-    console.error('Error fetching matches:', error)
-    return { patterns: 0, updated: 0, errors: 1, skipped: 0, processed: 0 }
-  }
-  
+
   console.log(`📊 Processing ${matches.length} matches...`)
   
   // 3. 패턴별 집계 (메모리에서)

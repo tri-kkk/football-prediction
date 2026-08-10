@@ -62,12 +62,34 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`✅ 야구토토 Cron 완료: ${data.matches?.length || 0}경기, cached=${data.cached}`)
+
+    // 🆕 다음 회차도 스크래핑 시도 (아직 미발매지만 wisetoto에 게시된 경우 대비)
+    let nextRoundResult: any = null
+    if (data.round && data.round > 0) {
+      const nextRound = data.round + 1
+      const nextUrl = `${baseUrl}/api/baseball-toto/scrape?year=${year}&round=${nextRound}&force=true`
+      try {
+        const nextRes = await fetch(nextUrl, { headers: { 'User-Agent': 'SpoLive-Cron/1.0' } })
+        const nextText = await nextRes.text()
+        try {
+          const nextData = JSON.parse(nextText)
+          if (nextRes.ok && (nextData.matches?.length || 0) > 0) {
+            nextRoundResult = { round: nextRound, matches_count: nextData.matches.length }
+            console.log(`✅ 다음 회차 ${nextRound} 미리 스크래핑 완료`)
+          }
+        } catch {}
+      } catch (e) {
+        console.warn('⚠️ 다음 회차 스크래핑 실패 (무시):', (e as Error).message)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       round: data.round,
       matches_count: data.matches?.length || 0,
       model_count: data.stats?.model_count,
       cached: data.cached,
+      nextRound: nextRoundResult,
       duration_ms: Date.now() - startTime,
     })
   } catch (error: any) {
