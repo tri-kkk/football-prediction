@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
       await sendTelegram(
         chatId,
-        '✅ <b>연동 완료!</b>\n내일 아침부터 <b>데일리 AI 픽 리포트</b>가 도착해요.\n\n수신을 멈추려면 <code>/stop</code> 을 보내주세요.',
+        '✅ <b>연동 완료!</b>\n경기 전 <b>데일리 AI 픽 리포트</b>가 도착해요 (축구·야구).\n\n수신을 멈추려면 <code>/stop</code> 을 보내주세요.',
       )
       return NextResponse.json({ ok: true })
     }

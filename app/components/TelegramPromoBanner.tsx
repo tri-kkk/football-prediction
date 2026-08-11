@@ -118,13 +118,13 @@ export default function TelegramPromoBanner() {
         <div className="flex-1 min-w-0 pr-6">
           <p className="text-sm md:text-base font-extrabold text-white leading-tight">
             {ko
-              ? '매일 아침, AI 픽을 텔레그램으로 받아보세요'
-              : 'Get daily AI picks on Telegram every morning'}
+              ? '경기 전, 오늘의 AI 픽을 텔레그램으로'
+              : 'Today’s AI picks on Telegram, before kickoff'}
           </p>
           <p className="text-xs md:text-sm text-gray-300 mt-0.5 truncate">
             {ko
-              ? '프리미엄 전용 데일리 리포트 · 어제 적중률 + 오늘의 강추 픽'
-              : 'Premium daily report · yesterday’s hit rate + today’s top picks'}
+              ? '프리미엄 전용 · 축구·야구 강추 PICK + 최근 적중률'
+              : 'Premium only · football & baseball top picks + recent hit rate'}
           </p>
         </div>
 

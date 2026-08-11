@@ -93,8 +93,8 @@ export default function TelegramLinkButton() {
             {waiting
               ? '텔레그램에서 연동을 완료해 주세요…'
               : linked
-              ? '매일 아침 데일리 AI 픽 리포트를 받고 있어요'
-              : '매일 아침 AI 픽 리포트를 텔레그램으로 받아보세요'}
+              ? '경기 전 데일리 AI 픽 리포트를 받고 있어요'
+              : '경기 전 AI 강추 픽을 텔레그램으로 받아보세요'}
           </p>
         </div>
       </div>
