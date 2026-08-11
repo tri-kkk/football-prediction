@@ -164,7 +164,7 @@ async function buildBaseball(): Promise<string | null> {
   for (const p of picks) {
     lines.push(`· [${esc(p.league)}] ${esc(p.home)} vs ${esc(p.away)} → <b>${esc(p.pick)}</b> (${p.conf}%)`)
     if (p.homePitcher && p.awayPitcher) {
-      lines.push(`   ⚾ 선발 ${esc(p.homePitcher)} vs ${esc(p.awayPitcher)}`)
+      lines.push(`   └ 선발 ${esc(p.homePitcher)} vs ${esc(p.awayPitcher)}`)
     }
   }
   lines.push('')
