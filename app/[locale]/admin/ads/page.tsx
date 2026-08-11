@@ -697,6 +697,7 @@ export default function AdminDashboard() {
   const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null)
   const [revenueFilter, setRevenueFilter] = useState<'all' | '7' | '30' | '90'>('all')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
   const [revenueLoading, setRevenueLoading] = useState(false)
   const [ads, setAds] = useState<Advertisement[]>([])
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([])
@@ -2589,25 +2590,35 @@ export default function AdminDashboard() {
 
         {/* 탭 네비게이션 */}
         <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-          {TAB_GROUPS.map((group) => (
-            <div key={group.title} className="mb-1.5">
-              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{group.title}</div>
-              {group.items.map((tab) => (
+          {TAB_GROUPS.map((group) => {
+            const isCollapsed = collapsedGroups[group.title]
+            return (
+              <div key={group.title} className="mb-1">
                 <button
-                  key={tab.id}
-                  onClick={() => { setActiveTab(tab.id); setSidebarOpen(false) }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
-                    activeTab === tab.id
-                      ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
-                  }`}
+                  onClick={() => setCollapsedGroups((p) => ({ ...p, [group.title]: !p[group.title] }))}
+                  className="w-full flex items-center justify-between px-3 pt-2 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300"
                 >
-                  <span className="text-base">{tab.icon}</span>
-                  <span>{tab.label}</span>
+                  <span>{group.title}</span>
+                  <svg className={`w-3 h-3 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
-              ))}
-            </div>
-          ))}
+                {!isCollapsed && group.items.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setSidebarOpen(false) }}
+                    className={`w-full flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left ${
+                      activeTab === tab.id
+                        ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )
+          })}
         </nav>
 
         {/* 하단 유틸리티 */}
@@ -2651,7 +2662,6 @@ export default function AdminDashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <span className="text-base">{TABS.find(t => t.id === activeTab)?.icon}</span>
             <span className="text-white font-semibold text-sm">{TABS.find(t => t.id === activeTab)?.label}</span>
           </div>
           <div className="text-xs text-gray-500 hidden md:block">TrendSoccer Admin</div>
