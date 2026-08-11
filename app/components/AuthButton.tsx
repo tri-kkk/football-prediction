@@ -5,6 +5,7 @@ import { Link } from '@/i18n/navigation'
 import { createPortal } from 'react-dom'
 import { useState, useRef, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
+import TelegramMenuItem from './TelegramMenuItem'
 
 export default function AuthButton() {
   const { data: session, status } = useSession()
@@ -137,7 +138,10 @@ export default function AuthButton() {
                     {language === 'ko' ? '구독 관리' : 'Manage Subscription'}
                   </button>
                 )}
-                
+
+                {/* 프리미엄 전용: 텔레그램 데일리 리포트 연동 */}
+                {isPremium && <TelegramMenuItem language={language} />}
+
                 {!isPremium && (
                   <Link
                     href="/premium/pricing"

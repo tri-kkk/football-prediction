@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './premium-redesign.css'
+import TelegramPromoBanner from '../../components/TelegramPromoBanner'
 
 const BASE_URL = 'https://www.trendsoccer.com'
 
@@ -51,5 +52,10 @@ export default function PremiumLayout({
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return (
+    <>
+      <TelegramPromoBanner />
+      {children}
+    </>
+  )
 }
