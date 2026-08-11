@@ -573,9 +573,6 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
               <span className="text-[10px] text-gray-500">{language === 'ko' ? '승' : 'Win'}</span>
               <span className="text-emerald-300 font-black text-[13px] ml-auto tabular-nums">{prediction.confidence}%</span>
             </div>
-            <p className="text-[11px] text-gray-500 mt-1 pl-3.5">
-              {language === 'ko' ? prediction.reason : prediction.reasonEn}
-            </p>
           </div>
         ) : (
           <div className="mx-4 mb-3 px-3 py-2.5 rounded-xl text-center"
