@@ -23,6 +23,10 @@ interface Match {
   pattern: string | null
   pred: { home: number; draw: number; away: number } | null
   confidence: string | null
+  pat_home_rate: number | null
+  pat_draw_rate: number | null
+  pat_away_rate: number | null
+  pat_total: number | null
   recommendation: string | null
   home_odds: number | null
   draw_odds: number | null
@@ -180,6 +184,7 @@ export default function KSMBettingPanel() {
                 <th className="px-3 py-2 text-left">경기</th>
                 <th className="px-2 py-2">패턴</th>
                 <th className="px-2 py-2">예상(홈/무/원정)</th>
+                <th className="px-2 py-2">패턴 과거승률</th>
                 <th className="px-2 py-2">시장배당</th>
                 <th className="px-2 py-2">추천</th>
                 <th className="px-2 py-2">베팅</th>
@@ -217,6 +222,13 @@ export default function KSMBettingPanel() {
                           <b className={mk === 'draw' ? 'text-yellow-400' : 'text-gray-300'}>{pct(m.pred.draw)}</b>
                           <span className="text-gray-600"> / </span>
                           <b className={mk === 'away' ? 'text-red-400' : 'text-gray-300'}>{pct(m.pred.away)}</b>
+                        </span>
+                      ) : <span className="text-gray-600">-</span>}
+                    </td>
+                    <td className="px-2 py-2 text-center font-mono text-xs text-gray-400">
+                      {m.pat_home_rate != null ? (
+                        <span>{pct(m.pat_home_rate)}/{pct(m.pat_draw_rate)}/{pct(m.pat_away_rate)}
+                          <span className="block text-[10px] text-gray-500">n={m.pat_total}·{m.confidence}</span>
                         </span>
                       ) : <span className="text-gray-600">-</span>}
                     </td>
@@ -265,7 +277,7 @@ export default function KSMBettingPanel() {
                 )
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={12} className="text-center text-gray-500 py-8">해당 라운드 경기가 없습니다.</td></tr>
+                <tr><td colSpan={13} className="text-center text-gray-500 py-8">해당 라운드 경기가 없습니다.</td></tr>
               )}
             </tbody>
           </table>
