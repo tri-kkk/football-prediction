@@ -102,8 +102,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true })
     }
 
-    // ── 기타 ───────────────────────────────────────────────
-    await sendTelegram(chatId, '명령어: <code>/stop</code> 수신거부')
+    // ── 기타: 임의 메시지엔 응답하지 않음 (도배 방지) ──────────
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('[telegram/webhook] error', e)
