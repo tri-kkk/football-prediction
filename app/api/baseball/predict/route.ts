@@ -388,6 +388,13 @@ export async function POST(request: NextRequest) {
       }
       pitcherAdjustment = Math.max(-0.08, Math.min(0.08, eraAdj + whipAdj))
 
+      // 🔒 표본 신뢰도 가중: 선발 K(시즌 탈삼진 누적)가 적으면(복귀/신인) 보정을 축소.
+      //    소표본 0점대 뻥튀기 방지. 매치업은 덜 검증된 선발 기준(min) — K_FULL 이상이면 그대로.
+      const K_FULL = 80
+      const homeRel = Math.min(1, (homePitcherKReal ?? 0) / K_FULL)
+      const awayRel = Math.min(1, (awayPitcherKReal ?? 0) / K_FULL)
+      pitcherAdjustment *= Math.min(homeRel, awayRel)
+
       blendedHome = Math.max(0.05, Math.min(0.95, blendedHome + pitcherAdjustment))
       blendedAway = Math.max(0.05, Math.min(0.95, blendedAway - pitcherAdjustment))
       const adjTotal = blendedHome + blendedAway
