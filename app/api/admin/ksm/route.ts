@@ -116,16 +116,18 @@ function patternCode(hp: number, dp: number, ap: number) {
   const c = (v: number) => (v <= 0.05 ? 0 : v >= 0.85 ? 0 : v >= mx - 0.03 ? 1 : v <= mn + 0.05 ? 3 : 2)
   return `${c(hp)}-${c(dp)}-${c(ap)}`
 }
-// 이 경기 예측 확률 기반 추천 (패턴 평균이 아니라 해당 매치업 기준)
+// 이 경기 예측 확률 기반 추천 (무승부 라벨 포함)
 function recommend(p: { home: number; draw: number; away: number }) {
   const arr: [string, number][] = [['홈승', p.home], ['무', p.draw], ['원정승', p.away]]
   arr.sort((a, b) => b[1] - a[1])
   const [label, top] = arr[0]
   const gap = top - arr[1][1]
-  const s = `${(top * 100).toFixed(0)}%`
-  if (label === '무') return p.draw >= 0.30 ? `무승부 고려 (${s})` : `접전 - 주의`
-  if (top >= 0.60 || gap >= 0.20) return `${label} 추천 (${s})`
-  if (top >= 0.48 || gap >= 0.10) return `${label} 우세 (${s})`
+  const s = (v: number) => `${(v * 100).toFixed(0)}%`
+  const ds = s(p.draw)
+  if (label === '무') return p.draw >= 0.30 ? `무승부 추천 (${ds})` : `무승부 우세 (${ds})`
+  if (top >= 0.60 || gap >= 0.20) return `${label} 추천 (${s(top)})`
+  if (top >= 0.48 || gap >= 0.10) return `${label} 우세 (${s(top)})`
+  if (p.draw >= 0.25) return `무승부 고려 (${ds})`
   return `접전 - 주의`
 }
 const FINISHED = new Set(['FT', 'AET', 'PEN'])
@@ -182,12 +184,24 @@ export async function GET(req: NextRequest) {
         const h = stats[f.teams.home.id], a = stats[f.teams.away.id]
         const o = oddsMap[String(f.fixture.id)]
         let pred: any = null, pattern = null, patHist = null, rec = null
+        let pick: string | null = null, value: number | null = null, signal = false
         if (h && a) {
           const p = predict(h, a)
           pattern = patternCode(p.home, p.draw, p.away)
           patHist = patMap[pattern] || null
           rec = recommend(p)
           pred = { home: p.home, draw: p.draw, away: p.away }
+          // 밸류: 모델 최고확률 - 배당 함의 확률
+          const cand: [string, number, number | null][] = [
+            ['home', p.home, o?.home_odds ?? null],
+            ['draw', p.draw, o?.draw_odds ?? null],
+            ['away', p.away, o?.away_odds ?? null],
+          ]
+          cand.sort((x, y) => y[1] - x[1])
+          const [pk, prob, odd] = cand[0]
+          pick = pk
+          if (odd) value = prob - 1 / odd
+          signal = value != null && value >= 0.05 && patHist?.confidence === 'HIGH' && !rec.startsWith('접전')
         }
         const short = f.fixture.status?.short
         return {
@@ -207,6 +221,7 @@ export async function GET(req: NextRequest) {
           pat_away_rate: patHist?.away_win_rate ?? null,
           pat_total: patHist?.total_matches ?? null,
           recommendation: rec,
+          pick, value, signal,
           home_odds: o?.home_odds ?? null,
           draw_odds: o?.draw_odds ?? null,
           away_odds: o?.away_odds ?? null,

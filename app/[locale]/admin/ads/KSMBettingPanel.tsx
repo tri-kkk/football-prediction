@@ -28,6 +28,9 @@ interface Match {
   pat_away_rate: number | null
   pat_total: number | null
   recommendation: string | null
+  pick: string | null
+  value: number | null
+  signal: boolean
   home_odds: number | null
   draw_odds: number | null
   away_odds: number | null
@@ -186,6 +189,7 @@ export default function KSMBettingPanel() {
                 <th className="px-2 py-2">예상(홈/무/원정)</th>
                 <th className="px-2 py-2">패턴 과거승률</th>
                 <th className="px-2 py-2">시장배당</th>
+                <th className="px-2 py-2">밸류</th>
                 <th className="px-2 py-2">추천</th>
                 <th className="px-2 py-2">베팅</th>
                 <th className="px-2 py-2">스테이크</th>
@@ -203,7 +207,7 @@ export default function KSMBettingPanel() {
                 const st = m.bet?.status
                 const pl = profit(m.bet)
                 return (
-                  <tr key={m.match_id} className="border-t border-gray-800 hover:bg-gray-800/40">
+                  <tr key={m.match_id} className={`border-t border-gray-800 hover:bg-gray-800/40 ${m.signal ? 'bg-emerald-500/5' : ''}`}>
                     <td className="px-3 py-2">
                       <div className="font-medium">{m.home_team} <span className="text-gray-500">vs</span> {m.away_team}</div>
                       <div className="text-gray-500 text-xs">
@@ -235,7 +239,14 @@ export default function KSMBettingPanel() {
                     <td className="px-2 py-2 text-center font-mono text-xs text-gray-300">
                       {m.home_odds != null ? `${od(m.home_odds)}/${od(m.draw_odds)}/${od(m.away_odds)}` : <span className="text-gray-600">미제공</span>}
                     </td>
-                    <td className="px-2 py-2 text-center text-xs text-gray-300 max-w-[130px] truncate">{m.recommendation || '-'}</td>
+                    <td className="px-2 py-2 text-center text-xs font-mono">
+                      {m.value == null ? <span className="text-gray-600">-</span> :
+                        <b className={m.value >= 0 ? 'text-emerald-400' : 'text-red-400'}>{m.value >= 0 ? '+' : ''}{(m.value * 100).toFixed(0)}%p</b>}
+                    </td>
+                    <td className="px-2 py-2 text-center text-xs max-w-[150px]">
+                      {m.signal && <span className="mr-1">🔥</span>}
+                      <span className={m.signal ? 'text-emerald-300 font-bold' : 'text-gray-300'}>{m.recommendation || '-'}</span>
+                    </td>
                     <td className="px-2 py-2 text-center">
                       <select value={e.pick} onChange={(ev) => pickChange(m, ev.target.value)}
                         className="bg-gray-700 text-white rounded px-2 py-1 text-xs border border-gray-600">
@@ -277,14 +288,14 @@ export default function KSMBettingPanel() {
                 )
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={13} className="text-center text-gray-500 py-8">해당 라운드 경기가 없습니다.</td></tr>
+                <tr><td colSpan={14} className="text-center text-gray-500 py-8">해당 라운드 경기가 없습니다.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       )}
       <p className="text-gray-500 text-xs">
-        · 예상 확률: KSM 3방법 재보정(다시즌+절대실력, 승격팀 환산) · 시장배당: 수집된 평균 배당 자동 표시(베팅 선택 시 배당칸 자동 채움, 수정 가능) · 결과·손익은 경기 종료 후 자동 판정
+        · 예상 확률: KSM 3방법 재보정(다시즌+절대실력, 승격팀 환산) · 시장배당: 수집된 평균 배당 자동 표시(베팅 선택 시 배당칸 자동 채움, 수정 가능) · <b className="text-gray-400">밸류 = 모델확률 − 배당함의확률</b>(양수=베팅 가치) · <b className="text-emerald-400">🔥 = 밸류 ≥5%p + 패턴 신뢰도 HIGH + 명확한 추천</b> · 결과·손익은 경기 종료 후 자동 판정
       </p>
     </div>
   )
