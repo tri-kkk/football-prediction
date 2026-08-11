@@ -12,6 +12,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendTelegram } from '../../../lib/telegram'
+import { TEAM_NAME_KR } from '../../../teamLogos'
+
+// 축구 영문 팀명 → 한글 (매핑 없으면 원문 유지)
+const teamKo = (n?: string) => (n && TEAM_NAME_KR[n]) || n || ''
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -85,12 +89,13 @@ async function buildFootball(): Promise<string | null> {
   lines.push('🔥 <b>오늘 밤 강추 PICK</b>')
   for (const p of picks) {
     const side = p?.prediction?.recommendation?.pick
-    const pickName =
-      side === 'HOME' ? p.home_team : side === 'AWAY' ? p.away_team : '무승부'
+    const homeKo = teamKo(p.home_team)
+    const awayKo = teamKo(p.away_team)
+    const pickName = side === 'HOME' ? homeKo : side === 'AWAY' ? awayKo : '무승부'
     const conf = p?.prediction?.confidence
     const confStr = typeof conf === 'number' ? ` (${Math.round(conf)}%)` : ''
     const lg = p.league_code ? `[${esc(p.league_code)}] ` : ''
-    lines.push(`· ${lg}${esc(p.home_team)} vs ${esc(p.away_team)} → <b>${esc(pickName)}</b>${confStr}`)
+    lines.push(`· ${lg}${esc(homeKo)} vs ${esc(awayKo)} → <b>${esc(pickName)}</b>${confStr}`)
   }
   lines.push('')
   lines.push(`👉 전체 픽  ${SITE}/premium`)
