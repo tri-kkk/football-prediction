@@ -63,8 +63,15 @@ async function buildFootball(): Promise<string | null> {
     fetch(`${BASE}/api/pick-accuracy`, { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
   ])
 
+  const seenF = new Set<string>()
   const picks = ((picksRes?.picks as any[]) || [])
     .filter((p) => p?.prediction?.recommendation?.grade === 'PICK')
+    .filter((p) => {
+      const k = String(p.match_id ?? `${p.home_team}|${p.away_team}`)
+      if (seenF.has(k)) return false
+      seenF.add(k)
+      return true
+    })
     .sort((a, b) => (b?.prediction?.confidence || 0) - (a?.prediction?.confidence || 0))
     .slice(0, 3)
 
@@ -104,12 +111,30 @@ async function buildBaseball(): Promise<string | null> {
 
   const all: any[] = matchRes?.matches || matchRes?.data || []
   const nowMs = Date.now()
+  const today = kstTodayStr()
+  // 분석 페이지와 동일 규칙: timestamp → KST 날짜
+  const kstDate = (m: any) => {
+    const t = m?.timestamp || m?.date
+    const d = new Date(new Date(t).getTime() + 9 * 3600 * 1000)
+    return Number.isNaN(d.getTime()) ? m?.date : d.toISOString().split('T')[0]
+  }
+  const seen = new Set<string>()
   const picks = all
-    .filter((m) => m?.aiPrediction?.grade === 'PICK')
-    .filter((m) => ['NS', 'SCHEDULED', 'TBD'].includes(String(m?.status)))
+    .filter((m) => m?.aiPrediction != null && m?.aiPrediction?.grade === 'PICK')
+    .filter((m) => ['NS', 'SCHEDULED', 'TBD'].includes(String(m?.status))) // 미시작
     .filter((m) => {
       const t = Date.parse(m?.timestamp || m?.date)
-      return Number.isNaN(t) || t > nowMs
+      return Number.isNaN(t) || t > nowMs // 아직 안 열림
+    })
+    .filter((m) => kstDate(m) === today) // 오늘(KST)만 — 시리즈 다음날 제외
+    // KBO/NPB는 선발 확정(hasPitcherData)된 경기만 (분석중 뻥튀기 제외)
+    .filter((m) => m.league === 'MLB' || m.league === 'CPBL' || m.hasPitcherData !== false)
+    .filter((m) => {
+      // 같은 경기 중복 제거
+      const key = `${m.league}|${m.homeTeam}|${m.awayTeam}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
     })
     .map((m) => {
       const hp = m.aiPrediction.homeWinProb ?? 0
