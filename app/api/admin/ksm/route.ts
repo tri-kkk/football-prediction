@@ -116,6 +116,18 @@ function patternCode(hp: number, dp: number, ap: number) {
   const c = (v: number) => (v <= 0.05 ? 0 : v >= 0.85 ? 0 : v >= mx - 0.03 ? 1 : v <= mn + 0.05 ? 3 : 2)
   return `${c(hp)}-${c(dp)}-${c(ap)}`
 }
+// 이 경기 예측 확률 기반 추천 (패턴 평균이 아니라 해당 매치업 기준)
+function recommend(p: { home: number; draw: number; away: number }) {
+  const arr: [string, number][] = [['홈승', p.home], ['무', p.draw], ['원정승', p.away]]
+  arr.sort((a, b) => b[1] - a[1])
+  const [label, top] = arr[0]
+  const gap = top - arr[1][1]
+  const s = `${(top * 100).toFixed(0)}%`
+  if (label === '무') return p.draw >= 0.30 ? `무승부 고려 (${s})` : `접전 - 주의`
+  if (top >= 0.60 || gap >= 0.20) return `${label} 추천 (${s})`
+  if (top >= 0.48 || gap >= 0.10) return `${label} 우세 (${s})`
+  return `접전 - 주의`
+}
 const FINISHED = new Set(['FT', 'AET', 'PEN'])
 
 // ---------- GET ----------
@@ -174,7 +186,7 @@ export async function GET(req: NextRequest) {
           const p = predict(h, a)
           pattern = patternCode(p.home, p.draw, p.away)
           patHist = patMap[pattern] || null
-          rec = patHist?.recommendation || null
+          rec = recommend(p)
           pred = { home: p.home, draw: p.draw, away: p.away }
         }
         const short = f.fixture.status?.short
