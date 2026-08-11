@@ -1,6 +1,6 @@
 // app/api/admin/ksm/route.ts
-// KSM 베팅 관리 — PL 경기 예측(3방법+패턴) + 배당 + 베팅 기록 CRUD (라운드별)
-// GET  ?type=matches : 시즌 전체 경기(라운드 포함) + 예측 + 배당 + 베팅(+결과/손익 자동)
+// KSM 베팅 관리 — 멀티리그(PL/BL1/PD/FL1) 라운드별 예측 + 배당 + 베팅 CRUD
+// GET  ?type=matches&league=PL : 시즌 전체 경기(라운드) + 예측 + 배당 + 베팅(+결과/손익 자동)
 // POST : 베팅 저장/수정(upsert by match_id)
 // DELETE ?match_id= : 베팅 삭제
 
@@ -13,11 +13,15 @@ const supabase = createClient(
 )
 const AF_KEY = process.env.API_FOOTBALL_KEY!
 const AF_HOST = 'v3.football.api-sports.io'
-const PL = 39
-const ELC = 40
 
-const PROMO_IDS = [1346, 64, 57] // Coventry, Hull City, Ipswich
-const TEAM_IDS = [42, 66, 35, 55, 51, 49, 1346, 52, 45, 36, 64, 57, 63, 40, 50, 33, 34, 65, 746, 47]
+const LEAGUES: Record<string, { id: number; name: string }> = {
+  PL: { id: 39, name: '프리미어리그' },
+  BL1: { id: 78, name: '분데스리가' },
+  PD: { id: 140, name: '라리가' },
+  FL1: { id: 61, name: '리그1' },
+}
+const ELC = 40
+const PROMO_IDS = [1346, 64, 57] // PL 승격팀(코번트리/헐시티/입스위치) — 챔피언십 데이터 보유
 
 function currentSeason(): number {
   const now = new Date()
@@ -32,40 +36,49 @@ async function af(endpoint: string) {
   return res.json()
 }
 
-// ---------- 팀 통계 집계 (fg_team_stats 다시즌 합산 + 승격팀 환산) ----------
 const SUMKEYS = [
   'home_played','home_wins','home_goals_for','home_goals_against',
   'home_first_goal_games','home_first_goal_wins','home_concede_first_games','home_concede_first_wins',
   'away_played','away_wins','away_goals_for','away_goals_against',
   'away_first_goal_games','away_first_goal_wins','away_concede_first_games','away_concede_first_wins',
 ]
-async function buildTeamStats() {
-  const { data: plRows } = await supabase
-    .from('fg_team_stats').select('*')
-    .eq('league_id', PL).in('season', ['2023','2024','2025','2026']).in('team_id', TEAM_IDS)
-  const { data: elcRows } = await supabase
-    .from('fg_team_stats').select('*')
-    .eq('league_id', ELC).eq('season', '2025').in('team_id', PROMO_IDS)
+function aggregate(src: any[], promoted: boolean) {
+  const F: any = { promoted }
+  for (const k of SUMKEYS) F[k] = src.reduce((s: number, r: any) => s + (r[k] || 0), 0)
+  const latest = src.reduce((a: any, b: any) => (parseInt(b.season) > parseInt(a.season) ? b : a))
+  F.form_home_5 = latest.form_home_5; F.form_away_5 = latest.form_away_5
+  if (promoted) {
+    F.home_goals_for *= 0.6; F.away_goals_for *= 0.6
+    F.home_goals_against *= 2.32; F.away_goals_against *= 2.32
+    F.home_first_goal_wins *= 0.51; F.away_first_goal_wins *= 0.51
+    F.home_concede_first_wins *= 0.51; F.away_concede_first_wins *= 0.51
+    if (F.form_home_5 != null) F.form_home_5 *= 0.6
+    if (F.form_away_5 != null) F.form_away_5 *= 0.6
+  }
+  return F
+}
+// 리그별 팀 통계 (fg_team_stats 다시즌 합산). PL은 승격팀 챔피언십 환산 반영.
+async function buildTeamStats(leagueId: number) {
+  const { data: rows } = await supabase.from('fg_team_stats').select('*')
+    .eq('league_id', leagueId).in('season', ['2023', '2024', '2025', '2026'])
+  const byTeam: Record<number, any[]> = {}
+  for (const r of rows || []) (byTeam[r.team_id] = byTeam[r.team_id] || []).push(r)
+
+  let elcByTeam: Record<number, any[]> = {}
+  if (leagueId === 39) {
+    const { data: elc } = await supabase.from('fg_team_stats').select('*')
+      .eq('league_id', ELC).eq('season', '2025').in('team_id', PROMO_IDS)
+    for (const r of elc || []) (elcByTeam[r.team_id] = elcByTeam[r.team_id] || []).push(r)
+  }
   const stats: Record<number, any> = {}
-  for (const tid of TEAM_IDS) {
-    const plt = (plRows || []).filter((r: any) => r.team_id === tid)
+  const ids = new Set<number>([...Object.keys(byTeam).map(Number), ...Object.keys(elcByTeam).map(Number)])
+  for (const tid of ids) {
+    const plt = byTeam[tid] || []
     const pl2026 = plt.find((r: any) => r.season === '2026')
-    const stillPromo = PROMO_IDS.includes(tid) && ((pl2026?.total_played || 0) < 5)
-    const src = stillPromo ? (elcRows || []).filter((r: any) => r.team_id === tid) : plt
-    if (!src.length) { stats[tid] = null; continue }
-    const F: any = { promoted: stillPromo }
-    for (const k of SUMKEYS) F[k] = src.reduce((s: number, r: any) => s + (r[k] || 0), 0)
-    const latest = src.reduce((a: any, b: any) => (parseInt(b.season) > parseInt(a.season) ? b : a))
-    F.form_home_5 = latest.form_home_5; F.form_away_5 = latest.form_away_5
-    if (stillPromo) {
-      F.home_goals_for *= 0.6; F.away_goals_for *= 0.6
-      F.home_goals_against *= 2.32; F.away_goals_against *= 2.32
-      F.home_first_goal_wins *= 0.51; F.away_first_goal_wins *= 0.51
-      F.home_concede_first_wins *= 0.51; F.away_concede_first_wins *= 0.51
-      if (F.form_home_5 != null) F.form_home_5 *= 0.6
-      if (F.form_away_5 != null) F.form_away_5 *= 0.6
-    }
-    stats[tid] = F
+    const stillPromo = leagueId === 39 && PROMO_IDS.includes(tid) && ((pl2026?.total_played || 0) < 5)
+    const src = stillPromo ? (elcByTeam[tid] || []) : plt
+    if (!src.length) continue
+    stats[tid] = aggregate(src, stillPromo)
   }
   return stats
 }
@@ -103,21 +116,23 @@ function patternCode(hp: number, dp: number, ap: number) {
   const c = (v: number) => (v <= 0.05 ? 0 : v >= 0.85 ? 0 : v >= mx - 0.03 ? 1 : v <= mn + 0.05 ? 3 : 2)
   return `${c(hp)}-${c(dp)}-${c(ap)}`
 }
-
 const FINISHED = new Set(['FT', 'AET', 'PEN'])
 
 // ---------- GET ----------
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type') || 'matches'
+  const code = (searchParams.get('league') || 'PL').toUpperCase()
+  const cfg = LEAGUES[code]
+  if (!cfg) return NextResponse.json({ error: 'unknown league' }, { status: 400 })
   try {
     if (type === 'matches') {
       const season = currentSeason()
       const [fixData, stats, patRows, betRows] = await Promise.all([
-        af(`/fixtures?league=${PL}&season=${season}`), // 시즌 전체
-        buildTeamStats(),
-        supabase.from('fg_patterns').select('*').eq('league_id', PL).then((r) => r.data || []),
-        supabase.from('ksm_bets').select('*').then((r) => r.data || []),
+        af(`/fixtures?league=${cfg.id}&season=${season}`),
+        buildTeamStats(cfg.id),
+        supabase.from('fg_patterns').select('*').eq('league_id', cfg.id).then((r) => r.data || []),
+        supabase.from('ksm_bets').select('*').eq('league', code).then((r) => r.data || []),
       ])
       const patMap: Record<string, any> = {}
       for (const p of patRows) patMap[p.pattern] = p
@@ -131,7 +146,6 @@ export async function GET(req: NextRequest) {
       const oddsMap: Record<string, any> = {}
       for (const o of oddsRows || []) oddsMap[String(o.match_id)] = o
 
-      // 대기 베팅 결과 자동 판정 (경기 종료)
       const pending = betRows.filter((b: any) => b.status === 'pending' && b.bet_pick)
       if (pending.length) {
         const ids = pending.map((b: any) => b.match_id)
@@ -153,9 +167,8 @@ export async function GET(req: NextRequest) {
       }
 
       const matches = fixtures.map((f: any) => {
-        const hid = f.teams.home.id, aid = f.teams.away.id
-        const h = stats[hid], a = stats[aid]
-        const od = oddsMap[String(f.fixture.id)]
+        const h = stats[f.teams.home.id], a = stats[f.teams.away.id]
+        const o = oddsMap[String(f.fixture.id)]
         let pred: any = null, pattern = null, patHist = null, rec = null
         if (h && a) {
           const p = predict(h, a)
@@ -178,13 +191,13 @@ export async function GET(req: NextRequest) {
           pattern, pred,
           confidence: patHist?.confidence || null,
           recommendation: rec,
-          home_odds: od?.home_odds ?? null,
-          draw_odds: od?.draw_odds ?? null,
-          away_odds: od?.away_odds ?? null,
+          home_odds: o?.home_odds ?? null,
+          draw_odds: o?.draw_odds ?? null,
+          away_odds: o?.away_odds ?? null,
           bet: betMap[f.fixture.id] || null,
         }
       })
-      return NextResponse.json({ success: true, season, league: 'PL', matches })
+      return NextResponse.json({ success: true, season, league: code, leagueName: cfg.name, matches })
     }
     return NextResponse.json({ error: 'unknown type' }, { status: 400 })
   } catch (e: any) {
@@ -192,7 +205,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ---------- POST: 베팅 저장(upsert) + 결과 자동판정 ----------
+// ---------- POST ----------
 export async function POST(req: NextRequest) {
   try {
     const b = await req.json()
@@ -205,14 +218,12 @@ export async function POST(req: NextRequest) {
       if (b.bet_pick) status = b.bet_pick === actual_result ? 'win' : 'lose'
     }
     const row = {
-      match_id: b.match_id, match_date: b.match_date || null,
-      home_team: b.home_team || null, away_team: b.away_team || null,
-      pattern: b.pattern || null,
+      match_id: b.match_id, league: b.league || 'PL', match_date: b.match_date || null,
+      home_team: b.home_team || null, away_team: b.away_team || null, pattern: b.pattern || null,
       home_prob: b.home_prob ?? null, draw_prob: b.draw_prob ?? null, away_prob: b.away_prob ?? null,
       recommendation: b.recommendation || null,
       bet_pick: b.bet_pick || null, stake: b.stake ?? null, bet_odds: b.bet_odds ?? null,
-      memo: b.memo || null, actual_result, status,
-      updated_at: new Date().toISOString(),
+      memo: b.memo || null, actual_result, status, updated_at: new Date().toISOString(),
     }
     const { data, error } = await supabase
       .from('ksm_bets').upsert(row, { onConflict: 'match_id' }).select().single()

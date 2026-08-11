@@ -33,6 +33,12 @@ type EditRow = { pick: string; stake: string; odds: string }
 
 const PICK_LABEL: Record<string, string> = { home: '홈승', draw: '무', away: '원정승' }
 const roundNum = (r: string) => parseInt(r.match(/\d+/)?.[0] || '0', 10)
+const LEAGUES = [
+  { code: 'PL', name: '프리미어리그' },
+  { code: 'BL1', name: '분데스리가' },
+  { code: 'PD', name: '라리가' },
+  { code: 'FL1', name: '리그1' },
+]
 
 export default function KSMBettingPanel() {
   const [matches, setMatches] = useState<Match[]>([])
@@ -41,11 +47,12 @@ export default function KSMBettingPanel() {
   const [edit, setEdit] = useState<Record<number, EditRow>>({})
   const [savingId, setSavingId] = useState<number | null>(null)
   const [round, setRound] = useState<string>('')
+  const [league, setLeague] = useState('PL')
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const res = await fetch('/api/admin/ksm?type=matches', { cache: 'no-store' })
+      const res = await fetch(`/api/admin/ksm?type=matches&league=${league}`, { cache: 'no-store' })
       const data = await res.json()
       if (!data.success) throw new Error(data.error || '불러오기 실패')
       const ms: Match[] = data.matches
@@ -63,7 +70,7 @@ export default function KSMBettingPanel() {
       const rounds = Array.from(new Set(ms.map((m) => m.round))).sort((a, b) => roundNum(a) - roundNum(b))
       setRound((r) => r || next?.round || rounds[rounds.length - 1] || '')
     } catch (err: any) { setError(err.message) } finally { setLoading(false) }
-  }, [])
+  }, [league])
   useEffect(() => { load() }, [load])
 
   const rounds = useMemo(
@@ -83,7 +90,7 @@ export default function KSMBettingPanel() {
       const res = await fetch('/api/admin/ksm', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          match_id: m.match_id, match_date: m.date, home_team: m.home_team, away_team: m.away_team,
+          match_id: m.match_id, league, match_date: m.date, home_team: m.home_team, away_team: m.away_team,
           pattern: m.pattern, home_prob: m.pred?.home, draw_prob: m.pred?.draw, away_prob: m.pred?.away,
           recommendation: m.recommendation, bet_pick: e.pick,
           stake: e.stake ? Number(e.stake) : null, bet_odds: e.odds ? Number(e.odds) : null,
@@ -150,7 +157,11 @@ export default function KSMBettingPanel() {
 
       {/* 리그 > 라운드 선택 */}
       <div className="flex items-center gap-2 text-sm">
-        <span className="bg-gray-800 text-gray-300 px-3 py-1.5 rounded-lg border border-gray-700">리그: <b className="text-white">프리미어리그</b></span>
+        <span className="text-gray-400">리그</span>
+        <select value={league} onChange={(e) => { setLeague(e.target.value); setRound('') }}
+          className="bg-gray-800 text-white px-3 py-1.5 rounded-lg border border-gray-700 font-semibold">
+          {LEAGUES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+        </select>
         <span className="text-gray-500">›</span>
         <select value={round} onChange={(e) => setRound(e.target.value)}
           className="bg-gray-800 text-white px-3 py-1.5 rounded-lg border border-gray-700">
