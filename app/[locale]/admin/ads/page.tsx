@@ -372,27 +372,40 @@ const SLOT_TYPES = [
   { value: 'web_home_top', label: '🖥 웹 홈 상단 배너', size: '1200×200' },
 ]
 
-const TABS = [
-  { id: 'dashboard', label: '대시보드', icon: '📊' },
-  { id: 'traffic', label: '트래픽 분석', icon: '📈' },
-  { id: 'behavior', label: '행동/퍼널', icon: '🎯' },
-  { id: 'users', label: '회원 관리', icon: '👥' },
-  { id: 'retention', label: '잔존율 분석', icon: '📉' },
-  { id: 'subscriptions', label: '구독 관리', icon: '💳' },
-  { id: 'ads', label: '광고 관리', icon: '📢' },
-  { id: 'report', label: '광고 리포트', icon: '📉' },
-  { id: 'blog', label: '블로그 관리', icon: '📝' },
-  { id: 'proto', label: '프로토 관리', icon: '🎫' },
-  { id: 'export', label: '분석 Export', icon: '📤' },
-  { id: 'notices', label: '공지 관리', icon: '📣' },
-  { id: 'push', label: '푸시 발송', icon: '🔔' },
-  { id: 'revenue', label: '매출 관리', icon: '💵' },
-  { id: 'pitcher', label: '선발 관리', icon: '⚾' },
-  { id: 'baseball-blog', label: '야구 블로그', icon: '📰' },
-  { id: 'shorts', label: '쇼츠 생성', icon: '🎬' },
-  { id: 'daily-clip', label: '데일리 요약 클립', icon: '📅' },
-  { id: 'ksm', label: 'KSM 베팅', icon: '🎯' },
+const TAB_GROUPS = [
+  { title: '분석', items: [
+    { id: 'dashboard', label: '대시보드', icon: '📊' },
+    { id: 'traffic', label: '트래픽 분석', icon: '📈' },
+    { id: 'behavior', label: '행동/퍼널', icon: '🎯' },
+    { id: 'retention', label: '잔존율 분석', icon: '📉' },
+    { id: 'export', label: '분석 Export', icon: '📤' },
+  ] },
+  { title: '회원 · 매출', items: [
+    { id: 'users', label: '회원 관리', icon: '👥' },
+    { id: 'subscriptions', label: '구독 관리', icon: '💳' },
+    { id: 'revenue', label: '매출 관리', icon: '💵' },
+  ] },
+  { title: '광고', items: [
+    { id: 'ads', label: '광고 관리', icon: '📢' },
+    { id: 'report', label: '광고 리포트', icon: '📋' },
+  ] },
+  { title: '콘텐츠', items: [
+    { id: 'blog', label: '블로그 관리', icon: '📝' },
+    { id: 'baseball-blog', label: '야구 블로그', icon: '📰' },
+    { id: 'shorts', label: '쇼츠 생성', icon: '🎬' },
+    { id: 'daily-clip', label: '데일리 요약 클립', icon: '📅' },
+  ] },
+  { title: '알림 · 공지', items: [
+    { id: 'notices', label: '공지 관리', icon: '📣' },
+    { id: 'push', label: '푸시 발송', icon: '🔔' },
+  ] },
+  { title: '스포츠 · 예측', items: [
+    { id: 'proto', label: '프로토 관리', icon: '🎫' },
+    { id: 'pitcher', label: '선발 관리', icon: '⚾' },
+    { id: 'ksm', label: 'KSM 베팅', icon: '🎯' },
+  ] },
 ]
+const TABS = TAB_GROUPS.flatMap((g) => g.items)
 
 /// 국기 이모지 매핑 - 확장
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -2576,19 +2589,24 @@ export default function AdminDashboard() {
 
         {/* 탭 네비게이션 */}
         <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setSidebarOpen(false) }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left ${
-                activeTab === tab.id
-                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
-              }`}
-            >
-              <span className="text-base">{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
+          {TAB_GROUPS.map((group) => (
+            <div key={group.title} className="mb-1.5">
+              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{group.title}</div>
+              {group.items.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => { setActiveTab(tab.id); setSidebarOpen(false) }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                    activeTab === tab.id
+                      ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
+                  }`}
+                >
+                  <span className="text-base">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
 
