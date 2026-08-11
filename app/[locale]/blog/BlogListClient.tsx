@@ -107,8 +107,11 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
     }
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return ''
     const date = new Date(dateString)
+    // published_at 이 null/빈값이면 1970으로 찍히는 것 방지
+    if (isNaN(date.getTime()) || date.getFullYear() < 2000) return ''
     const now = new Date()
     const diff = now.getTime() - date.getTime()
     const hours = Math.floor(diff / (1000 * 60 * 60))
@@ -368,9 +371,9 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
       {/* 메인 콘텐츠 */}
       {!loading && (
         <div className="home-container mx-auto px-4 py-6">
-          <div className="flex gap-8">
-            {/* 메인 콘텐츠 영역 */}
-            <main className="flex-1 min-w-0">
+          <div>
+            {/* 메인 콘텐츠 영역 (우측 광고 사이드바 제거 → 중앙 배치) */}
+            <main className="min-w-0">
               {posts.length > 0 ? (
                 <>
                   {/* 포스트 그리드 */}
@@ -464,29 +467,6 @@ export default function BlogListClient({ initialPosts, initialCount }: BlogListC
                 </div>
               )}
             </main>
-
-            {/* 우측 사이드바 - PC 전용 (프리미엄은 광고 없음) */}
-            {!isPremium && (
-              <aside className="hidden lg:block w-[300px] flex-shrink-0">
-                <div className="sticky top-20 space-y-4">
-                  {/* 상단 광고 */}
-                  <div className="rounded-2xl overflow-hidden bg-white/[0.035] border border-white/10">
-                    <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
-                    <div className="p-2">
-                      <AdSenseAd slot="sidebar_right_top" format="rectangle" darkMode={true} />
-                    </div>
-                  </div>
-
-                  {/* 하단 광고 */}
-                  <div className="rounded-2xl overflow-hidden bg-white/[0.035] border border-white/10">
-                    <div className="text-[10px] text-center py-1 text-gray-600">AD</div>
-                    <div className="p-2">
-                      <AdSenseAd slot="sidebar_right_bottom" format="rectangle" darkMode={true} />
-                    </div>
-                  </div>
-                </div>
-              </aside>
-            )}
           </div>
         </div>
       )}
