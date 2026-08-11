@@ -54,6 +54,19 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('tier', 'premium')
 
+    // 텔레그램 데일리 리포트 구독자 (active 연동)
+    const { count: telegramSubs } = await supabase
+      .from('telegram_links')
+      .select('*', { count: 'exact', head: true })
+      .eq('active', true)
+
+    // 어제 신규 텔레그램 구독
+    const { count: newTelegramSubs } = await supabase
+      .from('telegram_links')
+      .select('*', { count: 'exact', head: true })
+      .gte('linked_at', dayStart)
+      .lte('linked_at', dayEnd)
+
     // 오늘 매출 (결제 성공)
     const { data: payments } = await supabase
       .from('payments')
@@ -100,7 +113,8 @@ export async function GET(request: NextRequest) {
       `👥 <b>회원</b>\n` +
       `  • 신규 가입: <b>${newSignups ?? 0}명</b>\n` +
       `  • 총 회원: ${totalUsers?.toLocaleString() ?? 0}명\n` +
-      `  • 프리미엄: ${premiumUsers ?? 0}명\n\n` +
+      `  • 프리미엄: ${premiumUsers ?? 0}명\n` +
+      `  • 텔레그램 구독: <b>${telegramSubs ?? 0}명</b> (신규 +${newTelegramSubs ?? 0})\n\n` +
       `🌐 <b>트래픽</b>\n` +
       `  • 방문자: <b>${visitors}명</b>\n` +
       `  • 페이지뷰: ${pageViews}\n` +
