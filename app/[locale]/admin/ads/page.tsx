@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 import BaseballBlogPanel from './BaseballBlogPanel'
 import ShortsGenerator from './ShortsGenerator'
 import PushSendPanel from './PushSendPanel'
+import KSMBettingPanel from './KSMBettingPanel'
 import PostHogAnalyticsDashboard from '../../../components/admin/PostHogAnalyticsDashboard'
 import RetentionDashboard from '../../../components/admin/RetentionDashboard'
 
@@ -390,6 +391,7 @@ const TABS = [
   { id: 'baseball-blog', label: '야구 블로그', icon: '📰' },
   { id: 'shorts', label: '쇼츠 생성', icon: '🎬' },
   { id: 'daily-clip', label: '데일리 요약 클립', icon: '📅' },
+  { id: 'ksm', label: 'KSM 베팅', icon: '🎯' },
 ]
 
 /// 국기 이모지 매핑 - 확장
@@ -5515,6 +5517,13 @@ export default function AdminDashboard() {
       {activeTab === 'push' && (
         <div className="w-full px-3 md:px-6 py-4 md:py-6">
           <PushSendPanel />
+        </div>
+      )}
+
+      {/* 🎯 KSM 베팅 탭 */}
+      {activeTab === 'ksm' && (
+        <div className="w-full px-3 md:px-6 py-4 md:py-6">
+          <KSMBettingPanel />
         </div>
       )}
 
