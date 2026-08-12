@@ -7,6 +7,8 @@ interface Bet {
   bet_pick?: string | null
   stake?: number | null
   bet_odds?: number | null
+  close_odds?: number | null
+  clv?: number | null
   status?: string | null
   actual_result?: string | null
 }
@@ -22,6 +24,7 @@ interface Match {
   away_score: number | null
   pattern: string | null
   pred: { home: number; draw: number; away: number } | null
+  market: { home: number; draw: number; away: number } | null
   confidence: string | null
   pat_home_rate: number | null
   pat_draw_rate: number | null
@@ -142,13 +145,15 @@ export default function KSMBettingPanel() {
   const pendingCnt = allBets.filter((m) => m.bet?.status === 'pending').length
   const hitRate = settled.length ? Math.round((wins / settled.length) * 100) : null
   const totalPL = allBets.reduce((s, m) => s + (profit(m.bet) || 0), 0)
+  const clvBets = allBets.filter((m) => m.bet?.clv != null)
+  const avgCLV = clvBets.length ? clvBets.reduce((s, m) => s + (m.bet!.clv || 0), 0) / clvBets.length : null
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-white text-lg font-bold">🎯 KSM 베팅 관리</h2>
-          <p className="text-gray-400 text-xs mt-1">라운드별 예측(3방법+패턴) · 배당 · 베팅 기록 · 결과/손익 자동 판정</p>
+          <h2 className="text-white text-lg font-bold">KSM 베팅 관리</h2>
+          <p className="text-gray-400 text-xs mt-1">모델 예측 · 시장확률 대비 · 베팅 기록 · 결과/손익/CLV 자동 판정</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex gap-3 text-xs items-center">
@@ -158,8 +163,9 @@ export default function KSMBettingPanel() {
             <span className="text-yellow-400">대기 <b>{pendingCnt}</b></span>
             <span className="text-gray-300">적중률 <b>{hitRate == null ? '-' : hitRate + '%'}</b></span>
             <span className={totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}>손익 <b>{totalPL >= 0 ? '+' : ''}{totalPL.toFixed(1)}</b></span>
+            <span className={avgCLV == null ? 'text-gray-400' : avgCLV >= 0 ? 'text-sky-300' : 'text-red-400'} title="클로징 라인 대비 평균 — 꾸준히 +면 실전 엣지 신호">평균CLV <b>{avgCLV == null ? '-' : (avgCLV >= 0 ? '+' : '') + (avgCLV * 100).toFixed(1) + '%'}</b></span>
           </div>
-          <button onClick={load} className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-1.5 rounded-lg">🔄 새로고침</button>
+          <button onClick={load} className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-1.5 rounded-lg">새로고침</button>
         </div>
       </div>
 
@@ -187,11 +193,12 @@ export default function KSMBettingPanel() {
               <tr className="bg-gray-800 text-gray-400 text-xs">
                 <th className="px-3 py-2 text-left">경기</th>
                 <th className="px-2 py-2">패턴</th>
-                <th className="px-2 py-2">예상(홈/무/원정)</th>
+                <th className="px-2 py-2">모델 예상(홈/무/원정)</th>
+                <th className="px-2 py-2">시장확률(홈/무/원정)</th>
                 <th className="px-2 py-2">패턴 과거승률</th>
                 <th className="px-2 py-2">시장배당</th>
-                <th className="px-2 py-2">밸류</th>
-                <th className="px-2 py-2">추천</th>
+                <th className="px-2 py-2">모델−시장</th>
+                <th className="px-2 py-2">참고</th>
                 <th className="px-2 py-2">베팅</th>
                 <th className="px-2 py-2">스테이크</th>
                 <th className="px-2 py-2">배당</th>
@@ -199,6 +206,7 @@ export default function KSMBettingPanel() {
                 <th className="px-2 py-2">결과</th>
                 <th className="px-2 py-2">당첨</th>
                 <th className="px-2 py-2">손익</th>
+                <th className="px-2 py-2">CLV</th>
               </tr>
             </thead>
             <tbody>
@@ -208,7 +216,7 @@ export default function KSMBettingPanel() {
                 const st = m.bet?.status
                 const pl = profit(m.bet)
                 return (
-                  <tr key={m.match_id} className={`border-t border-gray-800 hover:bg-gray-800/40 ${m.signal ? 'bg-emerald-500/5' : ''}`}>
+                  <tr key={m.match_id} className={`border-t border-gray-800 hover:bg-gray-800/40 ${m.signal ? 'bg-sky-500/5' : ''}`}>
                     <td className="px-3 py-2">
                       <div className="font-medium">{m.home_team} <span className="text-gray-500">vs</span> {m.away_team}</div>
                       <div className="text-gray-500 text-xs">
@@ -230,6 +238,9 @@ export default function KSMBettingPanel() {
                         </span>
                       ) : <span className="text-gray-600">-</span>}
                     </td>
+                    <td className="px-2 py-2 text-center font-mono text-xs text-sky-300/80">
+                      {m.market ? `${pct(m.market.home)}/${pct(m.market.draw)}/${pct(m.market.away)}` : <span className="text-gray-600">-</span>}
+                    </td>
                     <td className="px-2 py-2 text-center font-mono text-xs text-gray-400">
                       {m.pat_home_rate != null ? (
                         <span>{pct(m.pat_home_rate)}/{pct(m.pat_draw_rate)}/{pct(m.pat_away_rate)}
@@ -242,11 +253,11 @@ export default function KSMBettingPanel() {
                     </td>
                     <td className="px-2 py-2 text-center text-xs font-mono">
                       {m.value == null ? <span className="text-gray-600">-</span> :
-                        <b className={m.value >= 0 ? 'text-emerald-400' : 'text-red-400'}>{m.value >= 0 ? '+' : ''}{(m.value * 100).toFixed(0)}%p</b>}
+                        <b className={Math.abs(m.value) >= 0.08 ? 'text-sky-300' : 'text-gray-400'}>{m.value >= 0 ? '+' : ''}{(m.value * 100).toFixed(0)}%p</b>}
                     </td>
                     <td className="px-2 py-2 text-center text-xs max-w-[150px]">
-                      {m.signal && <span className="mr-1">🔥</span>}
-                      <span className={m.signal ? 'text-emerald-300 font-bold' : 'text-gray-300'}>{m.recommendation || '-'}</span>
+                      {m.signal && <span className="mr-1 bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded text-[10px]">이견↑</span>}
+                      <span className="text-gray-300">{m.recommendation || '-'}</span>
                     </td>
                     <td className="px-2 py-2 text-center">
                       <select value={e.pick} onChange={(ev) => pickChange(m, ev.target.value)}
@@ -285,19 +296,25 @@ export default function KSMBettingPanel() {
                       {pl == null ? <span className="text-gray-600">-</span> :
                         <b className={pl >= 0 ? 'text-emerald-400' : 'text-red-400'}>{pl >= 0 ? '+' : ''}{pl.toFixed(1)}</b>}
                     </td>
+                    <td className="px-2 py-2 text-center text-xs font-mono">
+                      {m.bet?.clv == null ? <span className="text-gray-600">-</span> :
+                        <b className={m.bet.clv >= 0 ? 'text-emerald-400' : 'text-red-400'} title={m.bet.close_odds != null ? `클로징 ${od(m.bet.close_odds)}` : ''}>{m.bet.clv >= 0 ? '+' : ''}{(m.bet.clv * 100).toFixed(1)}%</b>}
+                    </td>
                   </tr>
                 )
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={14} className="text-center text-gray-500 py-8">해당 라운드 경기가 없습니다.</td></tr>
+                <tr><td colSpan={16} className="text-center text-gray-500 py-8">해당 라운드 경기가 없습니다.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       )}
-      <p className="text-gray-500 text-xs">
-        · 예상 확률: KSM 3방법 재보정(다시즌+절대실력, 승격팀 환산) · 시장배당: 수집된 평균 배당 자동 표시(베팅 선택 시 배당칸 자동 채움, 수정 가능) · <b className="text-gray-400">밸류 = 모델확률 − 배당함의확률</b>(양수=베팅 가치) · <b className="text-emerald-400">🔥 = 밸류 ≥5%p + 패턴 신뢰도 HIGH + 명확한 추천</b> · 결과·손익은 경기 종료 후 자동 판정
-      </p>
+      <div className="text-gray-500 text-xs space-y-1">
+        <p>· <b className="text-gray-400">모델 예상</b>: KSM 3방법 재보정(다시즌+절대실력, 승격팀 환산) · <b className="text-sky-300/80">시장확률</b>: 배당에서 마진(오버라운드) 제거한 시장의 진짜 확률 — 참고 기준선</p>
+        <p>· <b className="text-gray-400">모델−시장</b>: 모델이 시장보다 그 픽을 몇 %p 높/낮게 보는지(정보용). <b className="text-gray-400">백테스트상 이 신호로 배당을 이기지는 못함</b> — 수익 보장이 아니라 &ldquo;모델과 시장이 갈리는 경기&rdquo; 표시일 뿐. <span className="bg-sky-500/20 text-sky-300 px-1 rounded text-[10px]">이견↑</span> = 8%p 이상 + 패턴 HIGH</p>
+        <p>· <b className="text-sky-300">CLV</b>(클로징 라인 밸류): 베팅 배당 대비 종료 시점 배당 = <b>(베팅배당/클로징−1)</b>. 양수면 시장이 내 쪽으로 움직였다는 뜻. <b className="text-gray-400">평균 CLV가 꾸준히 +면 진짜 엣지 신호</b> — ROI보다 먼저 나타나는 실전 판별 지표 · 결과·손익·CLV는 경기 종료 후 자동 판정</p>
+      </div>
     </div>
   )
 }

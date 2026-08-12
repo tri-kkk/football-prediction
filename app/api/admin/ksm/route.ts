@@ -112,6 +112,20 @@ function predict(h: any, a: any) {
   const t = w + d + l
   return { home: w / t, draw: d / t, away: l / t }
 }
+// 배당 → 시장 확률 (마진/오버라운드 제거, power 방식)
+function devig(oh: number, odw: number, oa: number) {
+  const raw = [1 / oh, 1 / odw, 1 / oa]
+  let lo = 0.5, hi = 1.5
+  for (let i = 0; i < 50; i++) {
+    const k = (lo + hi) / 2
+    const s = raw.reduce((x, r) => x + Math.pow(r, k), 0)
+    if (s > 1) lo = k; else hi = k
+  }
+  const k = (lo + hi) / 2
+  const p = raw.map((r) => Math.pow(r, k))
+  const s = p[0] + p[1] + p[2]
+  return { home: p[0] / s, draw: p[1] / s, away: p[2] / s }
+}
 function patternCode(hp: number, dp: number, ap: number) {
   const mx = Math.max(hp, dp, ap), mn = Math.min(hp, dp, ap)
   const c = (v: number) => (v <= 0.05 ? 0 : v >= 0.85 ? 0 : v >= mx - 0.03 ? 1 : v <= mn + 0.05 ? 3 : 2)
@@ -173,10 +187,16 @@ export async function GET(req: NextRequest) {
           if (r) {
             const actual = r === 'HOME' ? 'home' : r === 'AWAY' ? 'away' : 'draw'
             const status = b.bet_pick === actual ? 'win' : 'lose'
+            // CLV: 종료 시점(=클로징) 시장배당 스냅샷 → 베팅 배당과 비교
+            const oc = oddsMap[String(b.match_id)]
+            const closeOdd = oc
+              ? (b.bet_pick === 'home' ? oc.home_odds : b.bet_pick === 'draw' ? oc.draw_odds : oc.away_odds)
+              : null
+            const clv = b.bet_odds && closeOdd ? b.bet_odds / closeOdd - 1 : null
             await supabase.from('ksm_bets')
-              .update({ actual_result: actual, status, updated_at: new Date().toISOString() })
+              .update({ actual_result: actual, status, close_odds: closeOdd, clv, updated_at: new Date().toISOString() })
               .eq('match_id', b.match_id)
-            b.actual_result = actual; b.status = status
+            b.actual_result = actual; b.status = status; b.close_odds = closeOdd; b.clv = clv
           }
         }
       }
@@ -186,23 +206,22 @@ export async function GET(req: NextRequest) {
         const o = oddsMap[String(f.fixture.id)]
         let pred: any = null, pattern = null, patHist = null, rec = null
         let pick: string | null = null, value: number | null = null, signal = false
+        let market: { home: number; draw: number; away: number } | null = null
         if (h && a) {
           const p = predict(h, a)
           pattern = patternCode(p.home, p.draw, p.away)
           patHist = patMap[pattern] || null
           rec = recommend(p)
           pred = { home: p.home, draw: p.draw, away: p.away }
-          // 밸류: 모델 최고확률 - 배당 함의 확률
-          const cand: [string, number, number | null][] = [
-            ['home', p.home, o?.home_odds ?? null],
-            ['draw', p.draw, o?.draw_odds ?? null],
-            ['away', p.away, o?.away_odds ?? null],
-          ]
-          cand.sort((x, y) => y[1] - x[1])
-          const [pk, prob, odd] = cand[0]
-          pick = pk
-          if (odd) value = prob - 1 / odd
-          signal = value != null && value >= 0.05 && patHist?.confidence === 'HIGH' && !rec.startsWith('접전')
+          pick = p.home >= p.draw && p.home >= p.away ? 'home' : p.away >= p.draw ? 'away' : 'draw'
+          // 시장확률(마진제거) 대비 이견 — 정직판: 밸류=모델확률 − 시장확률(수익 보장 아님, 참고용)
+          if (o?.home_odds && o?.draw_odds && o?.away_odds) {
+            market = devig(o.home_odds, o.draw_odds, o.away_odds)
+            const mp = pick === 'home' ? market.home : pick === 'draw' ? market.draw : market.away
+            const pp = pick === 'home' ? p.home : pick === 'draw' ? p.draw : p.away
+            value = pp - mp
+            signal = value >= 0.08 && patHist?.confidence === 'HIGH' && !rec.startsWith('접전')
+          }
         }
         const short = f.fixture.status?.short
         return {
@@ -215,7 +234,7 @@ export async function GET(req: NextRequest) {
           away_team: f.teams.away.name,
           home_score: f.goals?.home ?? null,
           away_score: f.goals?.away ?? null,
-          pattern, pred,
+          pattern, pred, market,
           confidence: patHist?.confidence || null,
           pat_home_rate: patHist?.home_win_rate ?? null,
           pat_draw_rate: patHist?.draw_rate ?? null,
@@ -243,11 +262,19 @@ export async function POST(req: NextRequest) {
     const b = await req.json()
     if (!b.match_id) return NextResponse.json({ error: 'match_id required' }, { status: 400 })
     let actual_result: string | null = null, status = 'pending'
+    let close_odds: number | null = null, clv: number | null = null
     const { data: fin } = await supabase
       .from('fg_match_history').select('result').eq('fixture_id', b.match_id).maybeSingle()
     if (fin && fin.result) {
       actual_result = fin.result === 'HOME' ? 'home' : fin.result === 'AWAY' ? 'away' : 'draw'
       if (b.bet_pick) status = b.bet_pick === actual_result ? 'win' : 'lose'
+      // 종료된 경기에 베팅 기록 시 클로징 배당 스냅샷 → CLV
+      if (b.bet_pick) {
+        const { data: oc } = await supabase
+          .from('match_odds_latest').select('home_odds,draw_odds,away_odds').eq('match_id', b.match_id).maybeSingle()
+        if (oc) close_odds = b.bet_pick === 'home' ? oc.home_odds : b.bet_pick === 'draw' ? oc.draw_odds : oc.away_odds
+        if (b.bet_odds && close_odds) clv = b.bet_odds / close_odds - 1
+      }
     }
     const row = {
       match_id: b.match_id, league: b.league || 'PL', match_date: b.match_date || null,
@@ -255,7 +282,7 @@ export async function POST(req: NextRequest) {
       home_prob: b.home_prob ?? null, draw_prob: b.draw_prob ?? null, away_prob: b.away_prob ?? null,
       recommendation: b.recommendation || null,
       bet_pick: b.bet_pick || null, stake: b.stake ?? null, bet_odds: b.bet_odds ?? null,
-      memo: b.memo || null, actual_result, status, updated_at: new Date().toISOString(),
+      memo: b.memo || null, actual_result, status, close_odds, clv, updated_at: new Date().toISOString(),
     }
     const { data, error } = await supabase
       .from('ksm_bets').upsert(row, { onConflict: 'match_id' }).select().single()
