@@ -45,6 +45,7 @@ const LEAGUES = [
   { code: 'BL1', name: '분데스리가' },
   { code: 'PD', name: '라리가' },
   { code: 'FL1', name: '리그1' },
+  { code: 'SA', name: '세리에A' },
 ]
 
 export default function KSMBettingPanel() {

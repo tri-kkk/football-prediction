@@ -19,6 +19,7 @@ const LEAGUES: Record<string, { id: number; name: string }> = {
   BL1: { id: 78, name: '분데스리가' },
   PD: { id: 140, name: '라리가' },
   FL1: { id: 61, name: '리그1' },
+  SA: { id: 135, name: '세리에A' },
 }
 const ELC = 40
 const PROMO_IDS = [1346, 64, 57] // PL 승격팀(코번트리/헐시티/입스위치) — 챔피언십 데이터 보유
