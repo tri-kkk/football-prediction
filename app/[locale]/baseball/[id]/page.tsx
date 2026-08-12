@@ -99,6 +99,9 @@ interface MatchDetail {
   // ✅ 선발 투수 한글 (KBO/NPB)
   homePitcherKo?: string | null
   awayPitcherKo?: string | null
+  // NPB 선발 초상 (Yahoo)
+  homePitcherImage?: string | null
+  awayPitcherImage?: string | null
 }
 
 // =====================================================
@@ -353,6 +356,8 @@ export default function BaseballDetailPage() {
             awayPitcherId: matchData.awayPitcherId ?? null,
             homePitcherKo: matchData.homePitcherKo ?? null,
             awayPitcherKo: matchData.awayPitcherKo ?? null,
+            homePitcherImage: matchData.homePitcherImage ?? null,
+            awayPitcherImage: matchData.awayPitcherImage ?? null,
           }
           
           console.log('✅ Formatted match:', formattedMatch)
@@ -1320,13 +1325,29 @@ export default function BaseballDetailPage() {
               <div className="grid grid-cols-2 divide-x divide-gray-800/60">
                 {[
                   // 🌐 영문 환경에서는 match.awayPitcher(영문) 우선, 없으면 한글 fallback
-                  { name: language === 'en' ? (match.awayPitcher ?? kboNpbAwayPitcher) : (kboNpbAwayPitcher ?? match.awayPitcher), stats: kboAwayPitcherStats, prevStats: kboAwayPitcherPrevStats, label: t('원정', 'Away'), accentColor: 'text-red-400' },
-                  { name: language === 'en' ? (match.homePitcher ?? kboNpbHomePitcher) : (kboNpbHomePitcher ?? match.homePitcher), stats: kboHomePitcherStats, prevStats: kboHomePitcherPrevStats, label: t('홈', 'Home'),   accentColor: 'text-blue-400' },
-                ].map(({ name, stats, prevStats, label, accentColor }, idx) => (
+                  { name: language === 'en' ? (match.awayPitcher ?? kboNpbAwayPitcher) : (kboNpbAwayPitcher ?? match.awayPitcher), stats: kboAwayPitcherStats, prevStats: kboAwayPitcherPrevStats, label: t('원정', 'Away'), accentColor: 'text-red-400', image: match.awayPitcherImage },
+                  { name: language === 'en' ? (match.homePitcher ?? kboNpbHomePitcher) : (kboNpbHomePitcher ?? match.homePitcher), stats: kboHomePitcherStats, prevStats: kboHomePitcherPrevStats, label: t('홈', 'Home'),   accentColor: 'text-blue-400', image: match.homePitcherImage },
+                ].map(({ name, stats, prevStats, label, accentColor, image }, idx) => (
                   <div key={idx} className="px-4 py-4">
                     {/* 프로필 */}
                     <div className="flex flex-col items-center mb-4">
                       <span className={`text-xs font-bold mb-2 ${accentColor}`}>{label}</span>
+                      {/* NPB 선발 초상 (Yahoo) — 있을 때만, 로드 실패 시 숨김 */}
+                      {image && (
+                        <div className="w-24 h-28 rounded-xl mb-2.5 overflow-hidden bg-gray-900/60 flex items-end justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image}
+                            alt={name || ''}
+                            loading="lazy"
+                            className="w-full h-full object-cover object-top"
+                            onError={(e) => {
+                              const p = e.currentTarget.parentElement
+                              if (p) p.style.display = 'none'
+                            }}
+                          />
+                        </div>
+                      )}
                       {kboNpbPitcherLoading && !name ? (
                         <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2" />
                       ) : (

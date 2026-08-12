@@ -153,7 +153,10 @@ export async function GET(
       awayPitcherEra: match.away_pitcher_era ?? null,
       awayPitcherWhip: match.away_pitcher_whip ?? null,
       awayPitcherK: match.away_pitcher_k ?? null,
-      
+      // NPB 선발 초상 (Yahoo)
+      homePitcherImage: match.home_pitcher_image ?? null,
+      awayPitcherImage: match.away_pitcher_image ?? null,
+
       // 오즈 정보
       odds: latestOdds ? {
         homeWinProb: latestOdds.home_win_prob,
