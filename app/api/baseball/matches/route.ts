@@ -541,6 +541,8 @@ export async function GET(request: NextRequest) {
         awayPitcher: match.away_pitcher ?? match.away_pitcher_ko ?? null,
         awayPitcherId: match.away_pitcher_id ?? null,
         awayPitcherKo: match.away_pitcher_ko ?? match.away_pitcher ?? null,
+        homePitcherImage: match.home_pitcher_image ?? null,
+        awayPitcherImage: match.away_pitcher_image ?? null,
 
         // ✅ 투수 데이터 반영 여부 (KBO/NPB는 투수 이름 또는 ERA 있으면 true)
         hasPitcherData: (match.league === 'MLB' || match.league === 'CPBL')
