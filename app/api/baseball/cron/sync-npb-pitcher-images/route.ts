@@ -107,6 +107,41 @@ function parsePortraits(html: string): Array<{ url: string; team: string | null 
   return out
 }
 
+// ── 이미지를 우리 Supabase Storage에 저장 (핫링크/삭제 위험 제거) ──
+const BUCKET = 'pitcher-images'
+
+async function ensureBucket() {
+  // 이미 있으면 에러 무시
+  await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {})
+}
+
+// Yahoo 초상 URL → 우리 스토리지 공개 URL (실패 시 원본 URL 반환)
+async function storeImage(yahooUrl: string): Promise<string> {
+  try {
+    const idMatch = yahooUrl.match(/portrait\/\d+\/(\d+)\.jpg/)
+    const id = idMatch?.[1]
+    if (!id) return yahooUrl
+    const path = `npb/${id}.jpg`
+
+    const res = await fetch(yahooUrl, {
+      headers: { 'User-Agent': UA, Referer: 'https://baseball.yahoo.co.jp/npb/' },
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!res.ok) return yahooUrl
+    const bytes = new Uint8Array(await res.arrayBuffer())
+
+    const up = await supabase.storage
+      .from(BUCKET)
+      .upload(path, bytes, { contentType: 'image/jpeg', upsert: true })
+    if (up.error) return yahooUrl
+
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+    return data?.publicUrl || yahooUrl
+  } catch {
+    return yahooUrl
+  }
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const dryRun = url.searchParams.get('dryRun') === '1'
@@ -128,6 +163,8 @@ export async function GET(request: NextRequest) {
   // 2) Yahoo 일정 → gameId + 양팀
   const schedHtml = await fetchYahoo(`https://baseball.yahoo.co.jp/npb/schedule/?date=${targetDate}`)
   const sched = schedHtml ? parseSchedule(schedHtml) : []
+
+  if (!dryRun) await ensureBucket()
 
   const results: any[] = []
   let updated = 0
@@ -157,10 +194,15 @@ export async function GET(request: NextRequest) {
       method = 'positional'
     }
 
+    // 우리 스토리지에 저장 → 우리 URL (실패 시 Yahoo URL 유지)
+    let homeStored = homeImg
+    let awayStored = awayImg
     if (!dryRun && homeImg && awayImg) {
+      homeStored = await storeImage(homeImg)
+      awayStored = await storeImage(awayImg)
       await supabase
         .from('baseball_matches')
-        .update({ home_pitcher_image: homeImg, away_pitcher_image: awayImg })
+        .update({ home_pitcher_image: homeStored, away_pitcher_image: awayStored })
         .eq('api_match_id', g.api_match_id)
       updated += 1
     }
@@ -169,8 +211,9 @@ export async function GET(request: NextRequest) {
       game: `${g.away_team} @ ${g.home_team}`,
       gameId: yGame.gameId,
       method,
-      homeImg,
-      awayImg,
+      homeImg: homeStored,
+      awayImg: awayStored,
+      yahoo: { home: homeImg, away: awayImg },
       portraits: portraits.map((p) => ({ team: p.team, url: p.url })),
     })
   }
