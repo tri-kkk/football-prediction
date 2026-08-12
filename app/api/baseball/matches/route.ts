@@ -236,7 +236,9 @@ export async function GET(request: NextRequest) {
         away_pitcher_ko,
         away_pitcher_era,
         away_pitcher_whip,
-        away_pitcher_k
+        away_pitcher_k,
+        home_pitcher_image,
+        away_pitcher_image
       `)
 
     if (matchId) {
@@ -368,6 +370,7 @@ export async function GET(request: NextRequest) {
             // 🌐 양방향 fallback: MLB는 영문만/NPB는 한글만 채워지는 경우 보완
             homePitcher: match.home_pitcher ?? match.home_pitcher_ko ?? null, homePitcherId: match.home_pitcher_id ?? null, homePitcherKo: match.home_pitcher_ko ?? match.home_pitcher ?? null,
             awayPitcher: match.away_pitcher ?? match.away_pitcher_ko ?? null, awayPitcherId: match.away_pitcher_id ?? null, awayPitcherKo: match.away_pitcher_ko ?? match.away_pitcher ?? null,
+            homePitcherImage: match.home_pitcher_image ?? null, awayPitcherImage: match.away_pitcher_image ?? null,
             hasPitcherData: (match.league === 'MLB' || match.league === 'CPBL')
               ? true
               : ((match.home_pitcher_ko != null || match.home_pitcher_era != null) && (match.away_pitcher_ko != null || match.away_pitcher_era != null)),
