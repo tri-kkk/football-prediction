@@ -99,7 +99,8 @@ function parsePortraits(html: string): Array<{ url: string; team: string | null 
     const url = m[0]
     if (seen.has(url)) continue
     seen.add(url)
-    const win = html.slice(Math.max(0, m.index - 900), m.index + 250).replace(/<[^>]+>/g, ' ')
+    // 태그 유지(팀 로고 alt="福岡ソフトバンク…" 등까지 팀 감지에 활용)
+    const win = html.slice(Math.max(0, m.index - 1200), m.index + 400)
     out.push({ url, team: jpKey(win) })
     if (out.length >= 6) break
   }
@@ -149,9 +150,10 @@ export async function GET(request: NextRequest) {
     let awayImg = portraits.find((p) => p.team === awayKey)?.url || null
     let method = 'team'
     if (!homeImg || !awayImg) {
+      // Yahoo 경기 페이지는 홈팀을 먼저 실음 → portraits[0]=home, [1]=away
       const urls = portraits.map((p) => p.url)
-      awayImg = awayImg || urls[0] || null
-      homeImg = homeImg || urls.find((u) => u !== awayImg) || null
+      homeImg = homeImg || urls[0] || null
+      awayImg = awayImg || urls.find((u) => u !== homeImg) || null
       method = 'positional'
     }
 
