@@ -6,21 +6,28 @@ import { routing } from './i18n/routing'
 /**
  * 통합 Proxy (Next.js 16 middleware → proxy convention)
  *
- * 1) /api/proto/* 요청 → 기존 CORS 헤더 처리 (외부 위젯 임베드용)
- * 2) 그 외 페이지 요청 → next-intl 미들웨어 (locale 감지 / prefix 리다이렉트)
- *
- * locale 동작:
- *  - 한국어(기본): prefix 없음 → `/`, `/blog/foo`
- *  - 영어: `/en` prefix → `/en`, `/en/blog/foo`
- *  - 첫 방문 시 Accept-Language 보고 자동 매핑 + NEXT_LOCALE 쿠키 저장
+ * 0) coach.* 서브도메인(TrendCoach) → /coach/* 서빙, i18n 미적용
+ * 1) /api/proto/* 요청 → CORS 헤더 처리 (외부 위젯 임베드용)
+ * 2) /coach/* (메인 도메인 직접 접근) → i18n 제외
+ * 3) 그 외 페이지 요청 → next-intl 미들웨어 (locale 감지 / prefix 리다이렉트)
  */
 
 const intlMiddleware = createIntlMiddleware(routing)
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const host = (request.headers.get('host') || '').split(':')[0]
 
-  // /api/proto/* CORS 처리 (기존 동작 유지, 외부 임베드용)
+  // 0) TrendCoach 서브도메인: coach.trendsoccer.com → app/coach/*, i18n 미적용
+  if (host.startsWith('coach.')) {
+    // 이미 /coach/* 면 그대로, 루트면 /coach 로 rewrite
+    if (pathname.startsWith('/coach')) return NextResponse.next()
+    const url = request.nextUrl.clone()
+    url.pathname = pathname === '/' ? '/coach' : `/coach${pathname}`
+    return NextResponse.rewrite(url)
+  }
+
+  // 1) /api/proto/* CORS 처리 (기존 동작 유지, 외부 임베드용)
   if (pathname.startsWith('/api/proto')) {
     if (request.method === 'OPTIONS') {
       return new NextResponse(null, {
@@ -37,17 +44,14 @@ export function proxy(request: NextRequest) {
     return response
   }
 
-  // 그 외 모든 페이지 요청 → next-intl 미들웨어로 위임
+  // 2) /coach/* (메인 도메인 직접 접근)는 i18n 로케일 처리 제외
+  if (pathname.startsWith('/coach')) return NextResponse.next()
+
+  // 3) 그 외 모든 페이지 요청 → next-intl 미들웨어로 위임
   return intlMiddleware(request)
 }
 
 export const config = {
-  /**
-   * matcher:
-   * - /api/proto/* : CORS 처리용
-   * - 그 외 페이지: i18n locale 감지·리다이렉트용
-   *   (api 라우트, _next, _vercel, 정적 파일, 확장자 있는 파일은 제외)
-   */
   matcher: [
     '/api/proto/:path*',
     '/((?!api|_next|_vercel|favicon|robots|sitemap|rss|feed|manifest|sw\\.js|.*\\..*).*)',

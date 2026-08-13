@@ -126,7 +126,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        plan: subscription.plan === 'yearly' ? 'Yearly' : 'Monthly',
+        plan: subscription.plan === 'yearly' ? 'Yearly'
+            : subscription.plan === 'quarterly' ? 'Quarterly'
+            : 'Monthly',  // D5: quarterly가 'Monthly'로 오표기되던 버그 수정
         status: subscription.status,
         startedAt: subscription.started_at,
         expiresAt: subscription.expires_at,

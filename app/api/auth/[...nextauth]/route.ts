@@ -108,6 +108,20 @@ const handler = NextAuth({
         secure: true,
       },
     },
+    // TrendCoach 서브도메인 SSO: 세션 쿠키를 .trendsoccer.com 전체(서브도메인 포함)에서 공유
+    // ⚠️ 배포 시 기존 로그인 유저는 1회 재로그인 필요(호스트 전용 → 도메인 쿠키 전환).
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production'
+        ? '__Secure-next-auth.session-token'
+        : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        domain: process.env.NODE_ENV === 'production' ? '.trendsoccer.com' : undefined,
+      },
+    },
   },
   providers: [
     GoogleProvider({
