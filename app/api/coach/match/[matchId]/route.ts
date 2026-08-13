@@ -59,10 +59,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
     }
   }
 
-  const trend = (trendRes.data || []).map((p: any) => ({
-    t: p.created_at,
-    h: Number(p.home_probability), d: Number(p.draw_probability), a: Number(p.away_probability),
-  }));
+  // 합으로 정규화 → 0~1 소수 (저장 단위가 0~100%든 0~1이든, 오버라운드까지 정규화)
+  const trend = (trendRes.data || []).map((p: any) => {
+    const h = Number(p.home_probability) || 0, dr = Number(p.draw_probability) || 0, a = Number(p.away_probability) || 0;
+    const sum = h + dr + a;
+    return sum > 0
+      ? { t: p.created_at, h: h / sum, d: dr / sum, a: a / sum }
+      : { t: p.created_at, h: 0, d: 0, a: 0 };
+  });
 
   return NextResponse.json({
     match: { matchId: sig.matchId, league: sig.league, round: sig.round, kickoff: sig.kickoff, home: sig.home, away: sig.away, homeId: sig.homeId, awayId: sig.awayId },

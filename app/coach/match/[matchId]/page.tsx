@@ -52,8 +52,12 @@ function FormRow({ label, sub, form }: { label: string; sub: string; form: FormI
 function TrendChart({ trend }: { trend: Detail['trend'] }) {
   if (trend.length < 2) return <div style={{ fontSize: 11.5, color: '#898781', textAlign: 'center', padding: '10px 0' }}>배당 변동 데이터가 아직 충분하지 않아요.</div>;
   const W = 300, H = 84;
+  const vals = trend.flatMap((p) => [p.h, p.d, p.a]);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const pad = (hi - lo) * 0.18 || 0.04; lo -= pad; hi += pad;
+  const rng = hi - lo || 1;
   const xs = (i: number) => (i / (trend.length - 1)) * W;
-  const ys = (v: number) => H - Math.max(0, Math.min(1, v)) * H;
+  const ys = (v: number) => H - ((v - lo) / rng) * H;
   const line = (key: 'h' | 'd' | 'a') => trend.map((p, i) => `${xs(i).toFixed(1)},${ys(p[key]).toFixed(1)}`).join(' ');
   const last = trend[trend.length - 1];
   return (
