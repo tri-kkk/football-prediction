@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCoachUser } from '@/lib/coachAuth';
 import { checkCoachMembership } from '@/lib/checkCoachMembership';
 import { getMatchSignal } from '@/lib/coachMatchService';
-import { af } from '@/lib/ksmModel';
+import { af, buildTeamStats, LEAGUES, currentSeason } from '@/lib/ksmModel';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
   const sig = await getMatchSignal(matchId);
   if (!sig) return NextResponse.json({ error: '경기를 찾을 수 없습니다' }, { status: 404 });
 
-  const [homeFix, awayFix, h2hRes, trendRes] = await Promise.all([
+  const leagueId = LEAGUES[sig.league]?.id || 0;
+  const season = currentSeason();
+  const [homeFix, awayFix, h2hRes, trendRes, teamStats, standRes] = await Promise.all([
     af(`/fixtures?team=${sig.homeId}&last=5`).catch(() => ({ response: [] })),
     af(`/fixtures?team=${sig.awayId}&last=5`).catch(() => ({ response: [] })),
     af(`/fixtures/headtohead?h2h=${sig.homeId}-${sig.awayId}&last=6`).catch(() => ({ response: [] })),
@@ -41,7 +43,30 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
       .select('created_at,home_probability,draw_probability,away_probability')
       .eq('match_id', String(matchId))
       .order('created_at', { ascending: true }),
+    buildTeamStats(leagueId).catch(() => ({} as Record<number, any>)),
+    af(`/standings?league=${leagueId}&season=${season}`).catch(() => ({ response: [] })),
   ]);
+
+  // KSM 팀 스탯(모델 입력값): 경기당 득점·실점, 선제골 시 승률
+  const stat = (s: any) => {
+    if (!s) return null;
+    const played = (s.home_played || 0) + (s.away_played || 0);
+    if (!played) return null;
+    const gf = (s.home_goals_for || 0) + (s.away_goals_for || 0);
+    const ga = (s.home_goals_against || 0) + (s.away_goals_against || 0);
+    const fgG = (s.home_first_goal_games || 0) + (s.away_first_goal_games || 0);
+    const fgW = (s.home_first_goal_wins || 0) + (s.away_first_goal_wins || 0);
+    return { gpg: gf / played, gapg: ga / played, fgWinRate: fgG ? fgW / fgG : null };
+  };
+  const ksmStats = { home: stat((teamStats as any)[sig.homeId]), away: stat((teamStats as any)[sig.awayId]) };
+
+  // 리그 순위·골득실
+  const standRows = (standRes as any)?.response?.[0]?.league?.standings?.[0] || [];
+  const standOf = (id: number) => {
+    const r = standRows.find((x: any) => x.team?.id === id);
+    return r ? { rank: r.rank, points: r.points, gf: r.all?.goals?.for, ga: r.all?.goals?.against, gd: r.goalsDiff } : null;
+  };
+  const standings = { home: standOf(sig.homeId), away: standOf(sig.awayId) };
 
   // H2H (sig.home 관점 집계)
   const h2hRows = (h2hRes.response || []).map((m: any) => ({
@@ -94,6 +119,6 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
     homeForm: toForm(homeFix.response, sig.homeId),
     awayForm: toForm(awayFix.response, sig.awayId),
     h2h: h2hRows, h2hSummary: { home: hw, draw: d, away: aw },
-    trend, toto,
+    trend, toto, ksmStats, standings,
   });
 }

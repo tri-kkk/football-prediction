@@ -1,6 +1,6 @@
 'use client';
 // app/coach/match/[matchId]/page.tsx — 경기 세부 데이터(회원 전용).
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Ring, Emblem, pct, kickoffStr, roundLabel } from '../../ui';
 import { mainLoginUrl } from '@/lib/coachApi';
@@ -17,6 +17,32 @@ interface Detail {
   h2h: H2HRow[]; h2hSummary: { home: number; draw: number; away: number };
   trend: { t: string; h: number; d: number; a: number }[];
   toto: { home: number; draw: number; away: number; total: number } | null;
+  ksmStats: { home: KsmStat | null; away: KsmStat | null };
+  standings: { home: Stand | null; away: Stand | null };
+}
+interface KsmStat { gpg: number; gapg: number; fgWinRate: number | null }
+interface Stand { rank: number; points: number; gf: number; ga: number; gd: number }
+
+function StatCmp({ label, home, away, fmt, lowerBetter }: { label: string; home: number; away: number; fmt: (n: number) => string; lowerBetter?: boolean }) {
+  const tot = home + away || 1;
+  const homeShare = (lowerBetter ? away / tot : home / tot) * 100;
+  const homeBetter = lowerBetter ? home < away : home > away;
+  return (
+    <div style={{ margin: '11px 0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 5 }}>
+        <span style={{ color: '#898781' }}>{label}</span>
+        <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ color: homeBetter ? '#79b0f0' : '#c3c2b7' }}>{fmt(home)}</span>
+          <span style={{ color: '#6b6a64' }}> vs </span>
+          <span style={{ color: !homeBetter ? '#eb8a5f' : '#c3c2b7' }}>{fmt(away)}</span>
+        </span>
+      </div>
+      <div style={{ display: 'flex', height: 8, borderRadius: 5, overflow: 'hidden', background: '#232320', gap: 2 }}>
+        <span style={{ width: `${homeShare}%`, background: '#3987e5' }} />
+        <span style={{ flex: 1, background: '#d95926' }} />
+      </div>
+    </div>
+  );
 }
 
 const RES_BG: Record<string, string> = { W: '#0ca30c', D: '#6b6a64', L: '#d03b3b' };
@@ -172,6 +198,38 @@ export default function MatchDetail() {
               </>
             )}
           </Card>
+
+          {/* 리그 순위 · 득실 */}
+          {(d.standings.home || d.standings.away) && (
+            <Card title="리그 순위 · 득실">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '8px 12px', fontSize: 12, alignItems: 'center' }}>
+                <span style={{ color: '#898781', fontSize: 10.5, fontWeight: 700 }}>팀</span>
+                <span style={{ color: '#898781', fontSize: 10.5, fontWeight: 700, textAlign: 'right' }}>순위</span>
+                <span style={{ color: '#898781', fontSize: 10.5, fontWeight: 700, textAlign: 'right' }}>득/실</span>
+                <span style={{ color: '#898781', fontSize: 10.5, fontWeight: 700, textAlign: 'right' }}>골득실</span>
+                {([['h', d.match.home, d.standings.home], ['a', d.match.away, d.standings.away]] as [string, string, Stand | null][]).map(([k, name, s]) => (
+                  <Fragment key={k}>
+                    <span style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                    <span style={{ textAlign: 'right', color: '#c3c2b7', fontVariantNumeric: 'tabular-nums' }}>{s ? `${s.rank}위` : '-'}</span>
+                    <span style={{ textAlign: 'right', color: '#c3c2b7', fontVariantNumeric: 'tabular-nums' }}>{s ? `${s.gf}/${s.ga}` : '-'}</span>
+                    <span style={{ textAlign: 'right', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: s ? (s.gd > 0 ? '#3ecb3e' : s.gd < 0 ? '#e66767' : '#c3c2b7') : '#6b6a64' }}>{s ? `${s.gd > 0 ? '+' : ''}${s.gd}` : '-'}</span>
+                  </Fragment>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* KSM 팀 스탯 비교 */}
+          {d.ksmStats.home && d.ksmStats.away && (
+            <Card title="팀 스탯 비교 (KSM)">
+              <StatCmp label="경기당 득점" home={d.ksmStats.home.gpg} away={d.ksmStats.away.gpg} fmt={(n) => n.toFixed(2)} />
+              <StatCmp label="경기당 실점 · 낮을수록 우위" home={d.ksmStats.home.gapg} away={d.ksmStats.away.gapg} fmt={(n) => n.toFixed(2)} lowerBetter />
+              {d.ksmStats.home.fgWinRate != null && d.ksmStats.away.fgWinRate != null && (
+                <StatCmp label="선제골 시 승률" home={d.ksmStats.home.fgWinRate} away={d.ksmStats.away.fgWinRate} fmt={(n) => `${Math.round(n * 100)}%`} />
+              )}
+              <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>KSM 모델이 쓰는 다시즌 합산 스탯 기준</div>
+            </Card>
+          )}
 
           {/* 국내 구매율 (와이즈토토) */}
           {d.toto && (
