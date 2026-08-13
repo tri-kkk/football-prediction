@@ -43,13 +43,13 @@ function Hero() {
   );
 }
 
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'good' | 'crit' }) {
-  const color = tone === 'good' ? '#3ecb3e' : tone === 'crit' ? '#e66767' : '#fff';
+function Kpi({ label, value, sub, tone, empty }: { label: string; value: string; sub?: string; tone?: 'good' | 'crit'; empty?: boolean }) {
+  const color = empty ? '#54524d' : tone === 'good' ? '#3ecb3e' : tone === 'crit' ? '#e66767' : '#fff';
   return (
-    <div style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 14 }}>
-      <div style={{ fontSize: 11.5, color: '#898781', fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 25, fontWeight: 800, marginTop: 8, letterSpacing: -.5, color }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: '#898781', marginTop: 3 }}>{sub}</div>}
+    <div style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.08)', borderRadius: 16, padding: '15px 15px 14px' }}>
+      <div style={{ fontSize: 11.5, color: '#8b8a84', fontWeight: 700, letterSpacing: .2 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, marginTop: 10, letterSpacing: -.6, lineHeight: 1, color, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: '#77756f', marginTop: 7 }}>{sub}</div>}
     </div>
   );
 }
@@ -99,13 +99,21 @@ export default function CoachHome() {
       {state === 'ok' && (
         <>
           {sect('내 성과 요약')}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Kpi label="적중률" value={dash?.hitRate != null ? `${(dash.hitRate * 100).toFixed(1)}%` : '—'} sub={dash ? `${dash.settledCount}건 정산` : ''} />
-            <Kpi label="누적 손익" value={dash ? won(dash.profit) : '—'} sub={dash?.roi != null ? `ROI ${(dash.roi * 100).toFixed(1)}%` : '원'} tone={dash && dash.profit >= 0 ? 'good' : 'crit'} />
-            <Kpi label="평균 CLV" value={dash?.avgClv != null ? `${dash.avgClv >= 0 ? '+' : ''}${(dash.avgClv * 100).toFixed(1)}%` : '—'} sub={dash?.clvSampleEnough ? '시장 대비 우위' : '표본 쌓는 중'} tone={dash && dash.avgClv != null ? (dash.avgClv >= 0 ? 'good' : 'crit') : undefined} />
-            <Kpi label="진행중" value={dash ? `${dash.open.count}건` : '—'} sub={dash ? `스테이크 ${dash.open.stake.toLocaleString()}원` : ''} />
-          </div>
-          <div style={{ fontSize: 11, color: '#898781', lineHeight: 1.6, background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderLeft: '3px solid #fab219', borderRadius: 10, padding: '11px 12px', marginTop: 14 }}>
+          {dash && dash.settledCount === 0 && dash.open.count === 0 ? (
+            <div style={{ background: 'linear-gradient(135deg,#1c2a40,#171d28)', border: '1px solid rgba(57,135,229,.28)', borderRadius: 16, padding: '20px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 7 }}>아직 기록이 없어요</div>
+              <p style={{ fontSize: 12, color: '#c3c2b7', lineHeight: 1.65, margin: '0 0 15px' }}>경기에서 첫 픽을 기록하면 적중률·누적 손익·CLV가 여기에 쌓여요.</p>
+              <Link href="/coach/matches" style={{ display: 'inline-block', background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 13, padding: '11px 20px', borderRadius: 11, textDecoration: 'none' }}>첫 기록하러 가기 →</Link>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <Kpi label="적중률" empty={dash?.hitRate == null} value={dash?.hitRate != null ? `${(dash.hitRate * 100).toFixed(1)}%` : '—'} sub={dash ? `${dash.settledCount}건 정산` : ''} />
+              <Kpi label="누적 손익" value={dash ? `${won(dash.profit)}원` : '—'} sub={dash?.roi != null ? `ROI ${dash.roi >= 0 ? '+' : ''}${(dash.roi * 100).toFixed(1)}%` : '정산 후 집계'} tone={dash ? (dash.profit > 0 ? 'good' : dash.profit < 0 ? 'crit' : undefined) : undefined} />
+              <Kpi label="평균 CLV" empty={dash?.avgClv == null} value={dash?.avgClv != null ? `${dash.avgClv >= 0 ? '+' : ''}${(dash.avgClv * 100).toFixed(1)}%` : '—'} sub={dash?.avgClv == null ? '표본 쌓는 중' : dash.clvSampleEnough ? '시장 대비 우위' : '표본 더 필요'} tone={dash?.avgClv != null ? (dash.avgClv > 0 ? 'good' : dash.avgClv < 0 ? 'crit' : undefined) : undefined} />
+              <Kpi label="진행중" empty={!dash || dash.open.count === 0} value={dash ? `${dash.open.count}건` : '—'} sub={dash && dash.open.count > 0 ? `스테이크 ${dash.open.stake.toLocaleString()}원` : '정산 대기 없음'} />
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: '#898781', lineHeight: 1.65, background: '#1a1a19', border: '1px solid rgba(255,255,255,.08)', borderLeft: '3px solid #fab219', borderRadius: 10, padding: '12px 13px', marginTop: 12 }}>
             <b style={{ color: '#c3c2b7' }}>CLV(클로징 라인 밸류)</b>가 핵심 지표예요. 단기 승률·수익은 운이 섞이지만, 내 배당이 마감 배당보다 좋았는지(=CLV)는 <b style={{ color: '#c3c2b7' }}>진짜 실력</b>을 가장 잘 보여줍니다. 표본 200건 이상부터 신뢰하세요.
           </div>
         </>
