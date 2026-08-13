@@ -43,13 +43,6 @@ export default function MatchesPage() {
         ))}
       </div>
 
-      {state === 'guest' && (
-        <div style={{ background: 'linear-gradient(135deg,#1c2a40,#171d28)', border: '1px solid rgba(57,135,229,.4)', borderRadius: 14, padding: '13px 14px', marginBottom: 12, fontSize: 12, color: '#c3c2b7', lineHeight: 1.55 }}>
-          미구독은 <b style={{ color: '#9cc4f4' }}>오늘 1경기</b>만 열람할 수 있어요. 나머지 경기의 시그널은 멤버쉽 전용입니다.
-          <a href="/coach/pricing" style={{ display: 'inline-block', marginTop: 9, background: '#3987e5', color: '#fff', fontWeight: 700, fontSize: 11.5, padding: '8px 14px', borderRadius: 10, textDecoration: 'none' }}>멤버쉽 시작하기</a>
-        </div>
-      )}
-
       {state === 'loading' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>불러오는 중…</p>}
       {state === 'auth' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요. <a href={mainLoginUrl()} style={{ color: '#79b0f0' }}>로그인</a></p>}
       {state === 'error' && <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>{err}</p>}
