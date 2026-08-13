@@ -69,11 +69,21 @@ export default function LoginPage() {
     }
   }, [])
 
+  // TrendCoach: 로그인 후 돌아갈 주소(.trendsoccer.com 서브도메인만 허용)
+  const safeReturnTo = (): string | null => {
+    if (typeof window === 'undefined') return null
+    const rt = new URLSearchParams(window.location.search).get('returnTo')
+    return rt && /^https?:\/\/([a-z0-9-]+\.)*trendsoccer\.com/i.test(rt) ? rt : null
+  }
+
   // 이미 로그인된 경우 리다이렉트
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
+      const rt = safeReturnTo()
       if (!(session.user as any).termsAgreed) {
-        router.push('/auth/terms')
+        router.push(rt ? `/auth/terms?returnTo=${encodeURIComponent(rt)}` : '/auth/terms')
+      } else if (rt) {
+        window.location.href = rt
       } else {
         router.push('/')
       }
@@ -83,8 +93,10 @@ export default function LoginPage() {
   const handleSignIn = async (provider: string) => {
     setIsLoading(provider)
     track.signupStarted(provider)
+    const rt = safeReturnTo()
+    const cb = rt ? `/auth/terms?returnTo=${encodeURIComponent(rt)}` : '/auth/terms'
     try {
-      await signIn(provider, { callbackUrl: '/auth/terms' })
+      await signIn(provider, { callbackUrl: cb })
     } catch (error) {
       console.error('Login error:', error)
       setIsLoading(null)

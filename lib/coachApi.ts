@@ -11,9 +11,10 @@ export class AuthError extends Error {
 /** 로그인 URL — 코치 서브도메인이면 메인(www) 로그인으로, 그 외(프리뷰/로컬)는 동일 호스트 /login */
 export function mainLoginUrl(): string {
   if (typeof window === 'undefined') return '/login';
+  const rt = encodeURIComponent(window.location.origin + '/coach'); // 로그인 후 coach로 복귀
   return window.location.hostname.endsWith('trendsoccer.com')
-    ? 'https://www.trendsoccer.com/login'
-    : '/login';
+    ? `https://www.trendsoccer.com/login?returnTo=${rt}`
+    : `/login?returnTo=${rt}`;
 }
 
 export function getCoachToken(): string | null {

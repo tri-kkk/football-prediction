@@ -12,9 +12,17 @@ export default function SignupCompletePage() {
   
   const [redirectCountdown, setRedirectCountdown] = useState(8)
   const [isPageReady, setIsPageReady] = useState(false)
+  const [returnTo, setReturnTo] = useState<string | null>(null)
   const [trialEndsAt, setTrialEndsAt] = useState<Date | null>(null)
   const [timeLeft, setTimeLeft] = useState({ hours: 47, minutes: 59, seconds: 59 })
   const [isTrial, setIsTrial] = useState(false)
+
+  // ✅ returnTo(코치 등 .trendsoccer.com) 파싱 — 코치가 첫 접점인 신규 유저는 가입 후 코치로 복귀
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const rt = new URLSearchParams(window.location.search).get('returnTo')
+    if (rt && /^https?:\/\/([a-z0-9-]+\.)*trendsoccer\.com/i.test(rt)) setReturnTo(rt)
+  }, [])
 
   // ✅ 1단계: 인증 상태 확인
   useEffect(() => {
@@ -77,9 +85,10 @@ export default function SignupCompletePage() {
       const timer = setTimeout(() => setRedirectCountdown(redirectCountdown - 1), 1000)
       return () => clearTimeout(timer)
     } else {
+      if (returnTo) { window.location.replace(returnTo); return }
       router.push('/')
     }
-  }, [redirectCountdown, isPageReady, router])
+  }, [redirectCountdown, isPageReady, router, returnTo])
 
   if (status === 'loading' || !isPageReady) {
     return (
@@ -227,16 +236,25 @@ export default function SignupCompletePage() {
           </div>
         )}
 
-        <Link
-          href="/"
-          className="w-full py-3 px-4 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white font-semibold rounded-lg transition-all duration-200 text-center block text-sm"
-        >
-          {language === 'ko' ? '홈으로 돌아가기' : 'Go to Home'}
-        </Link>
+        {returnTo ? (
+          <a
+            href={returnTo}
+            className="w-full py-3 px-4 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white font-semibold rounded-lg transition-all duration-200 text-center block text-sm"
+          >
+            {language === 'ko' ? 'TrendCoach로 돌아가기' : 'Back to TrendCoach'}
+          </a>
+        ) : (
+          <Link
+            href="/"
+            className="w-full py-3 px-4 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white font-semibold rounded-lg transition-all duration-200 text-center block text-sm"
+          >
+            {language === 'ko' ? '홈으로 돌아가기' : 'Go to Home'}
+          </Link>
+        )}
 
         <p className="text-center text-gray-600 text-xs mt-4">
           {language === 'ko'
-            ? `${redirectCountdown}초 후 홈으로 이동됩니다`
+            ? `${redirectCountdown}초 후 ${returnTo ? 'TrendCoach로' : '홈으로'} 이동됩니다`
             : `Redirecting in ${redirectCountdown}s`}
         </p>
       </div>

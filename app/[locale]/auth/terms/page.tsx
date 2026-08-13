@@ -47,6 +47,10 @@ export default function TermsPage() {
       console.log('🔍 약관 페이지 진입, termsAgreed:', termsAgreed)
 
       if (termsAgreed === true) {
+        // TrendCoach: returnTo(.trendsoccer.com)로 복귀
+        const rt = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('returnTo') : null
+        const safeRt = rt && /^https?:\/\/([a-z0-9-]+\.)*trendsoccer\.com/i.test(rt) ? rt : null
+        if (safeRt) { window.location.replace(safeRt); return }
         console.log('✅ 기존 회원 - 홈으로')
         router.replace('/')
         return
@@ -121,9 +125,11 @@ export default function TermsPage() {
         throw new Error(data.error || '약관 동의 처리 중 오류가 발생했습니다.')
       }
 
-      // ✅ update() 없이 바로 이동
+      // ✅ update() 없이 바로 이동 — returnTo(코치 등 .trendsoccer.com)를 signup-complete까지 전달
       console.log('🎯 /signup-complete로 이동')
-      window.location.replace('/signup-complete')
+      const rt = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('returnTo') : null
+      const safeRt = rt && /^https?:\/\/([a-z0-9-]+\.)*trendsoccer\.com/i.test(rt) ? rt : null
+      window.location.replace(safeRt ? `/signup-complete?returnTo=${encodeURIComponent(safeRt)}` : '/signup-complete')
       
     } catch (err) {
       console.error('❌ 오류:', err)
