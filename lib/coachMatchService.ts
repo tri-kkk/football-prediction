@@ -114,6 +114,8 @@ async function forLeague(leagueCode: string): Promise<MatchSignal[]> {
 
   const oMap = await oddsMap(fixtures.map((f: any) => String(f.fixture.id)));
   return fixtures.map((f: any) => buildFromFixture(f, stats, patMap, oMap[String(f.fixture.id)], leagueCode))
+    // 배당(1X2)이 모두 있는 경기만 노출 — 배당 없으면 CLV 채점·기록이 무의미하므로 숨김(수집되면 노출)
+    .filter((m: MatchSignal) => m.odds.home != null && m.odds.draw != null && m.odds.away != null)
     .sort((x: MatchSignal, y: MatchSignal) => new Date(x.kickoff).getTime() - new Date(y.kickoff).getTime());
 }
 
