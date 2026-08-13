@@ -68,12 +68,32 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
       : { t: p.created_at, h: 0, d: 0, a: 0 };
   });
 
+  // 국내 구매율(와이즈토토 toto_calc) — 팀명(영문)으로 매칭, 토토 홈/원정 뒤집힘 보정
+  let toto: { home: number; draw: number; away: number; total: number } | null = null;
+  try {
+    const { data: totoRows } = await supabaseAdmin
+      .from('toto_matches')
+      .select('home_team_en, away_team_en, vote_win, vote_draw, vote_lose, vote_total')
+      .or(`home_team_en.ilike.%${sig.home}%,away_team_en.ilike.%${sig.home}%,home_team_en.ilike.%${sig.away}%,away_team_en.ilike.%${sig.away}%`)
+      .limit(30);
+    const norm = (s = '') => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const H = norm(sig.home), A = norm(sig.away);
+    for (const r of totoRows || []) {
+      const th = norm(r.home_team_en), ta = norm(r.away_team_en);
+      if (!th || !ta) continue;
+      const sameH = th.includes(H) || H.includes(th), sameA = ta.includes(A) || A.includes(ta);
+      const swapH = th.includes(A) || A.includes(th), swapA = ta.includes(H) || H.includes(ta);
+      if (sameH && sameA) { toto = { home: r.vote_win, draw: r.vote_draw, away: r.vote_lose, total: r.vote_total }; break; }
+      if (swapH && swapA) { toto = { home: r.vote_lose, draw: r.vote_draw, away: r.vote_win, total: r.vote_total }; break; }
+    }
+  } catch { /* 토토 데이터 없으면 생략 */ }
+
   return NextResponse.json({
     match: { matchId: sig.matchId, league: sig.league, round: sig.round, kickoff: sig.kickoff, home: sig.home, away: sig.away, homeId: sig.homeId, awayId: sig.awayId },
     model: sig.model, market: sig.market, odds: sig.odds, signal: sig.signal,
     homeForm: toForm(homeFix.response, sig.homeId),
     awayForm: toForm(awayFix.response, sig.awayId),
     h2h: h2hRows, h2hSummary: { home: hw, draw: d, away: aw },
-    trend,
+    trend, toto,
   });
 }

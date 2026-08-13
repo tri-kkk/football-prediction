@@ -16,6 +16,7 @@ interface Detail {
   homeForm: FormItem[]; awayForm: FormItem[];
   h2h: H2HRow[]; h2hSummary: { home: number; draw: number; away: number };
   trend: { t: string; h: number; d: number; a: number }[];
+  toto: { home: number; draw: number; away: number; total: number } | null;
 }
 
 const RES_BG: Record<string, string> = { W: '#0ca30c', D: '#6b6a64', L: '#d03b3b' };
@@ -171,6 +172,26 @@ export default function MatchDetail() {
               </>
             )}
           </Card>
+
+          {/* 국내 구매율 (와이즈토토) */}
+          {d.toto && (
+            <Card title="국내 구매율 (와이즈토토)">
+              {[
+                { k: '홈', v: d.toto.home, c: '#3987e5' },
+                { k: '무', v: d.toto.draw, c: '#6b6a64' },
+                { k: '원정', v: d.toto.away, c: '#d95926' },
+              ].map((r) => (
+                <div key={r.k} style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '9px 0' }}>
+                  <span style={{ width: 30, fontSize: 12, color: '#c3c2b7', fontWeight: 700, flex: '0 0 auto' }}>{r.k}</span>
+                  <div style={{ flex: 1, height: 20, background: '#232320', borderRadius: 6, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.max(0, Math.min(100, r.v))}%`, height: '100%', background: r.c, borderRadius: 6 }} />
+                  </div>
+                  <span style={{ width: 46, textAlign: 'right', fontSize: 12.5, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: r.c === '#6b6a64' ? '#c3c2b7' : r.c === '#3987e5' ? '#79b0f0' : '#eb8a5f' }}>{r.v.toFixed(1)}%</span>
+                </div>
+              ))}
+              <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>와이즈토토 승무패 구매 비율{d.toto.total ? ` · 총 ${d.toto.total.toLocaleString()}표` : ''}</div>
+            </Card>
+          )}
 
           {/* 배당 변동 추이 */}
           <Card title="배당(승부 확률) 변동 추이">
