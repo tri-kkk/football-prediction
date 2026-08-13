@@ -1,6 +1,7 @@
 'use client';
 // app/coach/ui.tsx — 코치 앱 공통 UI (시그널 링·경기 카드·기록 추가 시트). 홈/경기 화면 공유.
 import { useState } from 'react';
+import Link from 'next/link';
 import { coachApi, type MatchSignal } from '@/lib/coachApi';
 
 export const GRADE_COLOR: Record<string, string> = { S: '#3987e5', A: '#0ca30c', B: '#eda100', C: '#898781' };
@@ -93,7 +94,10 @@ export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolea
             </div>
           </div>
           {member ? (
-            <button onClick={() => onAdd(m)} style={{ marginTop: 13, width: '100%', border: 0, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, cursor: 'pointer' }}>＋ 기록 추가</button>
+            <div style={{ display: 'flex', gap: 8, marginTop: 13 }}>
+              <Link href={`/coach/match/${m.matchId}`} style={{ flex: 1, textAlign: 'center', border: '1px solid #383835', background: '#232320', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, textDecoration: 'none' }}>세부 데이터</Link>
+              <button onClick={() => onAdd(m)} style={{ flex: 1, border: 0, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, cursor: 'pointer' }}>＋ 기록 추가</button>
+            </div>
           ) : (
             <a href="/coach/pricing" style={{ display: 'block', textAlign: 'center', marginTop: 13, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, textDecoration: 'none' }}>멤버쉽 시작하고 기록하기</a>
           )}
