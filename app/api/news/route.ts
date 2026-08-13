@@ -251,6 +251,27 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // 🔹 TrendCoach 경기 상세: 두 팀 관련 뉴스 (헤드라인)
+    const matchQ = searchParams.get('match') // "HomeTeam|AwayTeam"
+    if (matchQ) {
+      const search = matchQ.split('|').map((t) => t.trim()).filter(Boolean).join(' | ')
+      let arts = filterArticles(await fetchNews(search, 'ko', 8))
+      const key = (a: ProcessedArticle) => a.title.toLowerCase().slice(0, 40)
+      if (arts.length < 3) {
+        const en = filterArticles(await fetchNews(search, 'en', 8))
+        const seen = new Set(arts.map(key))
+        arts = [...arts, ...en.filter((a) => !seen.has(key(a)))]
+      }
+      const usedIds = new Set<string>()
+      const usedTitles = new Set<string>()
+      const unique = deduplicateArticles(arts, usedIds, usedTitles, 6)
+      return NextResponse.json({
+        success: true,
+        articles: unique,
+        updatedAt: new Date().toISOString(),
+      })
+    }
+
     // 🔹 사이드바용: 단순 기사 목록
     if (lang) {
       // 축구 + 야구 뉴스를 함께 가져와 섞음 (히어로/그리드 종목 확장)

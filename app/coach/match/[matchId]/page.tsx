@@ -45,8 +45,16 @@ function StatCmp({ label, home, away, fmt, lowerBetter }: { label: string; home:
   );
 }
 
+interface NewsItem { id: string; title: string; source: string; publishedAt: string }
+
 const RES_BG: Record<string, string> = { W: '#0ca30c', D: '#6b6a64', L: '#d03b3b' };
 const RES_KO: Record<string, string> = { W: '승', D: '무', L: '패' };
+const timeAgo = (iso: string) => {
+  try {
+    const h = Math.floor((Date.now() - new Date(iso).getTime()) / 3600000);
+    if (h < 1) return '방금'; if (h < 24) return `${h}시간 전`; return `${Math.floor(h / 24)}일 전`;
+  } catch { return ''; }
+};
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -107,6 +115,7 @@ export default function MatchDetail() {
   const { matchId } = useParams<{ matchId: string }>();
   const router = useRouter();
   const [d, setD] = useState<Detail | null>(null);
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [state, setState] = useState<'loading' | 'ok' | 'guest' | 'auth' | 'error'>('loading');
   const [err, setErr] = useState('');
 
@@ -121,6 +130,14 @@ export default function MatchDetail() {
       })
       .catch((e) => { setErr(e.message); setState('error'); });
   }, [matchId]);
+
+  useEffect(() => {
+    if (!d) return;
+    fetch(`/api/news?match=${encodeURIComponent(d.match.home)}|${encodeURIComponent(d.match.away)}`)
+      .then((r) => r.json())
+      .then((j) => { if (Array.isArray(j.articles)) setNews(j.articles.slice(0, 4)); })
+      .catch(() => {});
+  }, [d]);
 
   const s = d?.signal;
 
@@ -256,6 +273,18 @@ export default function MatchDetail() {
           <Card title="배당(승부 확률) 변동 추이">
             <TrendChart trend={d.trend} />
           </Card>
+
+          {/* 관련 뉴스 */}
+          {news.length > 0 && (
+            <Card title="관련 뉴스">
+              {news.map((n, i) => (
+                <div key={n.id} style={{ padding: '9px 0', borderBottom: i < news.length - 1 ? '1px solid #2c2c2a' : 0 }}>
+                  <div style={{ fontSize: 10.5, color: '#898781', marginBottom: 4 }}>{n.source}{n.source && ' · '}{timeAgo(n.publishedAt)}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.45, color: '#fff' }}>{n.title}</div>
+                </div>
+              ))}
+            </Card>
+          )}
 
           <p style={{ fontSize: 10.5, color: '#6b6a64', textAlign: 'center', lineHeight: 1.5, margin: '4px 0 10px' }}>실제 베팅이 아닌 분석·참고용 데이터입니다.</p>
         </>
