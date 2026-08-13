@@ -34,7 +34,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
 
   const leagueId = LEAGUES[sig.league]?.id || 0;
   const season = currentSeason();
-  const [homeFix, awayFix, h2hRes, trendRes, teamStats, standRes] = await Promise.all([
+  const [homeFix, awayFix, h2hRes, trendRes, teamStats, standRes, trRes] = await Promise.all([
     af(`/fixtures?team=${sig.homeId}&last=5`).catch(() => ({ response: [] })),
     af(`/fixtures?team=${sig.awayId}&last=5`).catch(() => ({ response: [] })),
     af(`/fixtures/headtohead?h2h=${sig.homeId}-${sig.awayId}&last=6`).catch(() => ({ response: [] })),
@@ -45,7 +45,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
       .order('created_at', { ascending: true }),
     buildTeamStats(leagueId).catch(() => ({} as Record<number, any>)),
     af(`/standings?league=${leagueId}&season=${season}`).catch(() => ({ response: [] })),
+    supabaseAdmin.from('team_translations').select('team_id, korean_name').in('team_id', [sig.homeId, sig.awayId]),
   ]);
+
+  // 팀명 한글 (뉴스 검색·표기용)
+  let homeKo: string | null = null, awayKo: string | null = null;
+  for (const t of (trRes as any)?.data || []) {
+    if (t.team_id === sig.homeId) homeKo = t.korean_name;
+    if (t.team_id === sig.awayId) awayKo = t.korean_name;
+  }
 
   // KSM 팀 스탯(모델 입력값): 경기당 득점·실점, 선제골 시 승률
   const stat = (s: any) => {
@@ -122,7 +130,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
   } catch { /* 토토 데이터 없으면 생략 */ }
 
   return NextResponse.json({
-    match: { matchId: sig.matchId, league: sig.league, round: sig.round, kickoff: sig.kickoff, home: sig.home, away: sig.away, homeId: sig.homeId, awayId: sig.awayId },
+    match: { matchId: sig.matchId, league: sig.league, round: sig.round, kickoff: sig.kickoff, home: sig.home, away: sig.away, homeId: sig.homeId, awayId: sig.awayId, homeKo, awayKo },
     model: sig.model, market: sig.market, odds: sig.odds, signal: sig.signal,
     homeForm: toForm(homeFix.response, sig.homeId),
     awayForm: toForm(awayFix.response, sig.awayId),

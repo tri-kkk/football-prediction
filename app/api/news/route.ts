@@ -1,4 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+
+// 헤드라인 영→한 번역 (Gemini). 실패 시 원문 유지.
+async function translateTitlesToKo(titles: string[]): Promise<string[]> {
+  try {
+    if (!process.env.GEMINI_API_KEY) return titles
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+    const prompt = `다음 축구 뉴스 헤드라인들을 자연스러운 한국어로 번역해줘. 팀·선수 이름은 한국에서 통용되는 표기로. 입력과 같은 길이의 JSON 문자열 배열로만 출력(설명·코드블록 없이):\n${JSON.stringify(titles)}`
+    const result = await model.generateContent(prompt)
+    const text = result.response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    const arr = JSON.parse(text)
+    return Array.isArray(arr) && arr.length === titles.length ? arr.map((s: any) => String(s)) : titles
+  } catch (e) {
+    console.error('title translate error:', e)
+    return titles
+  }
+}
 
 // API 설정
 const NEWS_API_TOKEN = process.env.NEWS_API_TOKEN || 'Fh23c0qhklAz5xdPY35QlRJ41SaJEBDywe6uWfH7'
@@ -252,19 +270,19 @@ export async function GET(request: NextRequest) {
     }
 
     // 🔹 TrendCoach 경기 상세: 두 팀 관련 뉴스 (헤드라인)
-    const matchQ = searchParams.get('match') // "HomeTeam|AwayTeam"
+    const matchQ = searchParams.get('match') // "HomeTeam|AwayTeam" (영문 팀명 권장)
     if (matchQ) {
       const search = matchQ.split('|').map((t) => t.trim()).filter(Boolean).join(' | ')
-      let arts = filterArticles(await fetchNews(search, 'ko', 8))
-      const key = (a: ProcessedArticle) => a.title.toLowerCase().slice(0, 40)
-      if (arts.length < 3) {
-        const en = filterArticles(await fetchNews(search, 'en', 8))
-        const seen = new Set(arts.map(key))
-        arts = [...arts, ...en.filter((a) => !seen.has(key(a)))]
-      }
+      // 영어로 검색해 커버리지 확보
+      const arts = filterArticles(await fetchNews(search, 'en', 10))
       const usedIds = new Set<string>()
       const usedTitles = new Set<string>()
-      const unique = deduplicateArticles(arts, usedIds, usedTitles, 6)
+      let unique = deduplicateArticles(arts, usedIds, usedTitles, 6)
+      // 헤드라인만 한글 번역(translate=ko)
+      if (searchParams.get('translate') === 'ko' && unique.length) {
+        const ko = await translateTitlesToKo(unique.map((a) => a.title))
+        unique = unique.map((a, i) => ({ ...a, title: ko[i] || a.title }))
+      }
       return NextResponse.json({
         success: true,
         articles: unique,

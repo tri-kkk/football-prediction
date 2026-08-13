@@ -8,7 +8,7 @@ import { mainLoginUrl } from '@/lib/coachApi';
 interface FormItem { opponent: string; score: string; result: 'W' | 'D' | 'L'; isHome: boolean; date: string }
 interface H2HRow { date: string; home: string; away: string; homeScore: number | null; awayScore: number | null }
 interface Detail {
-  match: { matchId: string; league: string; round?: string; kickoff: string; home: string; away: string; homeId: number; awayId: number };
+  match: { matchId: string; league: string; round?: string; kickoff: string; home: string; away: string; homeId: number; awayId: number; homeKo?: string | null; awayKo?: string | null };
   model: { home: number; draw: number; away: number };
   market: { home: number; draw: number; away: number } | null;
   odds: { home: number | null; draw: number | null; away: number | null };
@@ -133,7 +133,7 @@ export default function MatchDetail() {
 
   useEffect(() => {
     if (!d) return;
-    fetch(`/api/news?match=${encodeURIComponent(d.match.home)}|${encodeURIComponent(d.match.away)}`)
+    fetch(`/api/news?match=${encodeURIComponent(d.match.home)}|${encodeURIComponent(d.match.away)}&translate=ko`)
       .then((r) => r.json())
       .then((j) => { if (Array.isArray(j.articles)) setNews(j.articles.slice(0, 4)); })
       .catch(() => {});
@@ -160,14 +160,20 @@ export default function MatchDetail() {
         <>
           {/* 헤더 */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-              <Emblem id={d.match.homeId} name={d.match.home} size={28} />
-              <span style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.match.home}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
+              <Emblem id={d.match.homeId} name={d.match.home} size={30} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 9.5, fontWeight: 800, color: '#79b0f0', letterSpacing: 1.2, marginBottom: 2 }}>홈</div>
+                <div style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.match.home}</div>
+              </div>
             </div>
-            <span style={{ fontSize: 11, color: '#898781', fontWeight: 700 }}>VS</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0, justifyContent: 'flex-end' }}>
-              <span style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>{d.match.away}</span>
-              <Emblem id={d.match.awayId} name={d.match.away} size={28} />
+            <span style={{ fontSize: 11, color: '#898781', fontWeight: 700, flex: '0 0 auto' }}>VS</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0, justifyContent: 'flex-end' }}>
+              <div style={{ minWidth: 0, textAlign: 'right' }}>
+                <div style={{ fontSize: 9.5, fontWeight: 800, color: '#eb8a5f', letterSpacing: 1.2, marginBottom: 2 }}>원정</div>
+                <div style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.match.away}</div>
+              </div>
+              <Emblem id={d.match.awayId} name={d.match.away} size={30} />
             </div>
           </div>
           <div style={{ fontSize: 11, color: '#898781', marginBottom: 14 }}>{d.match.league}{roundLabel(d.match.round) ? ` · ${roundLabel(d.match.round)}` : ''} · {kickoffStr(d.match.kickoff)}</div>
