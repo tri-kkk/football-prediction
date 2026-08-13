@@ -21,10 +21,8 @@ export function Ring({ score, grade }: { score: number; grade: string }) {
         <circle cx={33} cy={33} r={27} fill="none" stroke="#232320" strokeWidth={6} />
         <circle cx={33} cy={33} r={27} fill="none" stroke={color} strokeWidth={6} strokeLinecap="round" strokeDasharray={`${dash} ${c}`} />
       </svg>
-      <div style={{ position: 'absolute', top: 16, left: 0, right: 0, fontSize: 22, fontWeight: 800, color }}>
-        {grade}<div style={{ fontSize: 8.5, fontWeight: 700, color: '#898781', marginTop: 1 }}>시그널</div>
-      </div>
-      <div style={{ fontSize: 10, color: '#898781', fontWeight: 700, marginTop: 5 }}>신뢰도 <b style={{ color: '#c3c2b7' }}>{Math.round(score)}%</b></div>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 66, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, fontWeight: 800, color }}>{grade}</div>
+      <div style={{ fontSize: 10, color: '#898781', fontWeight: 700, marginTop: 6 }}>신뢰도 <b style={{ color: '#c3c2b7' }}>{Math.round(score)}%</b></div>
     </div>
   );
 }
