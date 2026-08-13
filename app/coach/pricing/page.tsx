@@ -2,7 +2,8 @@
 // app/coach/pricing/page.tsx — 코치 멤버쉽 결제(SeedPay). 웹 pricing 페이지의 SendPay 흐름을 미러.
 // coach-init → SendPay(form) → 메시지 콜백 → coach-callback 폼 전송.
 import { useEffect, useState } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { mainLoginUrl } from '@/lib/coachApi';
 
 declare global {
   interface Window { SendPay?: (form: HTMLFormElement, mode?: string) => void }
@@ -44,7 +45,7 @@ export default function CoachPricing() {
   }, []);
 
   const subscribe = async () => {
-    if (status !== 'authenticated') { signIn('google', { callbackUrl: '/coach/pricing' }); return; }
+    if (status !== 'authenticated') { window.location.href = mainLoginUrl(); return; }
     setLoading(true);
     try {
       const res = await fetch('/api/payment/seedpay/coach-init', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });

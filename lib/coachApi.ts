@@ -8,6 +8,14 @@ export class AuthError extends Error {
   constructor() { super('UNAUTHORIZED'); this.name = 'AuthError'; }
 }
 
+/** 로그인 URL — 코치 서브도메인이면 메인(www) 로그인으로, 그 외(프리뷰/로컬)는 동일 호스트 /login */
+export function mainLoginUrl(): string {
+  if (typeof window === 'undefined') return '/login';
+  return window.location.hostname.endsWith('trendsoccer.com')
+    ? 'https://www.trendsoccer.com/login'
+    : '/login';
+}
+
 export function getCoachToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('coach_token');

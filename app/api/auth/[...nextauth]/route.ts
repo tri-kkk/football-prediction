@@ -375,7 +375,12 @@ const handler = NextAuth({
     async redirect({ url, baseUrl }) {
       if (url.includes('/signup-complete')) return url
       if (url.startsWith('/')) return url
-      if (new URL(url).origin === baseUrl) return url
+      try {
+        const u = new URL(url)
+        if (u.origin === baseUrl) return url
+        // TrendCoach: .trendsoccer.com 서브도메인 간 리다이렉트 허용(SSO)
+        if (u.hostname === 'trendsoccer.com' || u.hostname.endsWith('.trendsoccer.com')) return url
+      } catch {}
       return baseUrl
     },
   },
