@@ -60,13 +60,21 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
   };
   const ksmStats = { home: stat((teamStats as any)[sig.homeId]), away: stat((teamStats as any)[sig.awayId]) };
 
-  // 리그 순위·골득실
-  const standRows = (standRes as any)?.response?.[0]?.league?.standings?.[0] || [];
+  // 리그 순위·골득실 — 현재 시즌이 개막 전(경기수 0)이면 직전 시즌 최종 순위로 폴백
+  const rowsOf = (res: any) => (res as any)?.response?.[0]?.league?.standings?.[0] || [];
+  let standRows: any[] = rowsOf(standRes);
+  let standSeason = Number(season);
+  const notStarted = standRows.length === 0 || standRows.every((x: any) => (x.all?.played || 0) === 0);
+  if (notStarted) {
+    const prev = await af(`/standings?league=${leagueId}&season=${standSeason - 1}`).catch(() => ({ response: [] }));
+    const prevRows = rowsOf(prev);
+    if (prevRows.length) { standRows = prevRows; standSeason = standSeason - 1; }
+  }
   const standOf = (id: number) => {
     const r = standRows.find((x: any) => x.team?.id === id);
     return r ? { rank: r.rank, points: r.points, gf: r.all?.goals?.for, ga: r.all?.goals?.against, gd: r.goalsDiff } : null;
   };
-  const standings = { home: standOf(sig.homeId), away: standOf(sig.awayId) };
+  const standings = { home: standOf(sig.homeId), away: standOf(sig.awayId), season: standSeason, isPrevious: standSeason !== Number(season) };
 
   // H2H (sig.home 관점 집계)
   const h2hRows = (h2hRes.response || []).map((m: any) => ({

@@ -18,7 +18,7 @@ interface Detail {
   trend: { t: string; h: number; d: number; a: number }[];
   toto: { home: number; draw: number; away: number; total: number } | null;
   ksmStats: { home: KsmStat | null; away: KsmStat | null };
-  standings: { home: Stand | null; away: Stand | null };
+  standings: { home: Stand | null; away: Stand | null; season: number; isPrevious: boolean };
 }
 interface KsmStat { gpg: number; gapg: number; fgWinRate: number | null }
 interface Stand { rank: number; points: number; gf: number; ga: number; gd: number }
@@ -216,6 +216,7 @@ export default function MatchDetail() {
                   </Fragment>
                 ))}
               </div>
+              {d.standings.isPrevious && <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 10 }}>새 시즌 개막 전 — {d.standings.season} 시즌 최종 순위 기준</div>}
             </Card>
           )}
 
