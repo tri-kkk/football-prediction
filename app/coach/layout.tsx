@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
 
 const TABS = [
-  { href: '/coach', label: '경기' },
+  { href: '/coach', label: '홈' },
+  { href: '/coach/matches', label: '경기' },
   { href: '/coach/bets', label: '기록' },
   { href: '/coach/report', label: '리포트' },
   { href: '/coach/settings', label: '설정' },
