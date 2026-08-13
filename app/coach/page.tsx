@@ -10,7 +10,7 @@ interface DashboardData {
   avgClv: number | null; clvSampleEnough: boolean; settledCount: number;
   open: { count: number; stake: number };
 }
-interface NewsItem { id: string; title: string; description: string; source: string; publishedAt: string; url: string }
+interface NewsItem { id: string; title: string; description: string; source: string; publishedAt: string; url: string; league?: string }
 
 const won = (n: number) => `${n >= 0 ? '+' : ''}${n.toLocaleString()}`;
 const timeAgo = (iso: string) => {
@@ -79,9 +79,9 @@ export default function CoachHome() {
   };
   useEffect(load, []);
   useEffect(() => {
-    fetch('/api/news?lang=ko')
+    fetch('/api/news?scope=bigleague')
       .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d.articles)) setNews(d.articles.slice(0, 3)); })
+      .then((d) => { if (Array.isArray(d.articles)) setNews(d.articles.slice(0, 4)); })
       .catch(() => {});
   }, []);
 
@@ -127,9 +127,12 @@ export default function CoachHome() {
           {news.map((n) => (
             <a key={n.id} href={n.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', gap: 11, background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: 12, marginBottom: 9, textDecoration: 'none' }}>
               <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                  {n.league && <span style={{ flex: '0 0 auto', fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: '#232320', color: '#9cc4f4' }}>{n.league}</span>}
+                  <span style={{ fontSize: 10.5, color: '#898781' }}>{n.source}{n.source && ' · '}{timeAgo(n.publishedAt)}</span>
+                </div>
                 <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4, marginBottom: 5, color: '#fff', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.title}</div>
-                {n.description && <div style={{ fontSize: 11.5, color: '#c3c2b7', lineHeight: 1.55, marginBottom: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.description}</div>}
-                <div style={{ fontSize: 10.5, color: '#898781' }}>{n.source}{n.source && ' · '}{timeAgo(n.publishedAt)}</div>
+                {n.description && <div style={{ fontSize: 11.5, color: '#c3c2b7', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.description}</div>}
               </div>
             </a>
           ))}

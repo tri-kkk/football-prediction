@@ -210,7 +210,47 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const lang = searchParams.get('lang') as 'en' | 'ko' | null
     const uiLang = searchParams.get('ui') as 'en' | 'ko' || 'ko'
-    
+
+    // 🔹 TrendCoach 전용: 축구 빅리그 소식만 (야구·K리그 제외, 플랫 목록)
+    if (searchParams.get('scope') === 'bigleague') {
+      const BIG = [
+        { tag: 'EPL', search: '프리미어리그 | 손흥민' },
+        { tag: '라리가', search: '라리가 | 레알 마드리드 | 바르셀로나' },
+        { tag: '분데스', search: '분데스리가 | 바이에른' },
+        { tag: '세리에A', search: '세리에A | 유벤투스 | 인터밀란' },
+        { tag: '챔스', search: '챔피언스리그' },
+      ]
+      const usedIds = new Set<string>()
+      const usedTitles = new Set<string>()
+      const perLeague = await Promise.all(
+        BIG.map(async (b) => {
+          const arts = filterArticles(await fetchNews(b.search, 'ko', 6))
+          return deduplicateArticles(arts, usedIds, usedTitles, 3).map((a) => ({ ...a, league: b.tag }))
+        })
+      )
+      const flat: (ProcessedArticle & { league: string })[] = []
+      // 리그별 라운드로빈으로 다양성 확보 후, 최신순 정렬
+      for (let i = 0; i < 3; i++) for (const arr of perLeague) if (arr[i]) flat.push(arr[i])
+
+      // ko 결과가 적으면 영어 빅리그로 보충
+      if (flat.length < 4) {
+        const enArts = filterArticles(
+          await fetchNews('Premier League | La Liga | Bundesliga | Serie A | Champions League', 'en', 12)
+        )
+        const more = deduplicateArticles(enArts, usedIds, usedTitles, 12 - flat.length).map((a) => ({ ...a, league: '해외축구' }))
+        flat.push(...more)
+      }
+
+      flat.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+
+      return NextResponse.json({
+        success: true,
+        articles: flat.slice(0, 10),
+        scope: 'bigleague',
+        updatedAt: new Date().toISOString(),
+      })
+    }
+
     // 🔹 사이드바용: 단순 기사 목록
     if (lang) {
       // 축구 + 야구 뉴스를 함께 가져와 섞음 (히어로/그리드 종목 확장)
