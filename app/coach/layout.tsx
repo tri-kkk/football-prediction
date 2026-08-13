@@ -1,7 +1,9 @@
 'use client';
 // app/coach/layout.tsx — 코치 앱 공통 셸(헤더 + 하단 탭 네비).
+// SessionProvider로 감싸 useSession/signIn 이 코치 하위 페이지에서 동작하게 함.
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { SessionProvider } from 'next-auth/react';
 
 const TABS = [
   { href: '/coach', label: '경기' },
@@ -14,6 +16,7 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
   const path = usePathname();
   const isActive = (href: string) => (href === '/coach' ? path === '/coach' : path.startsWith(href));
   return (
+    <SessionProvider>
     <div style={{ minHeight: '100vh', background: '#0d0d0d', color: '#fff', fontFamily: 'system-ui, "Malgun Gothic", sans-serif', maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <header style={{ padding: '18px 16px 8px', display: 'flex', alignItems: 'center', gap: 9 }}>
         <div style={{ width: 30, height: 30, borderRadius: 9, background: 'linear-gradient(135deg,#3987e5,#1c5cab)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 14 }}>TC</div>
@@ -28,5 +31,6 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
         ))}
       </nav>
     </div>
+    </SessionProvider>
   );
 }
