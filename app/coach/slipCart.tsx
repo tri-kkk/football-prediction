@@ -98,8 +98,9 @@ function SlipSheet({ onClose }: { onClose: () => void }) {
     const o = p === 'HOME' ? l.odds.home : p === 'DRAW' ? l.odds.draw : l.odds.away;
     const on = l.pick === p;
     return (
-      <button key={p} disabled={o == null} onClick={() => setPick(l.matchId, p)} style={{ flex: 1, border: `1.5px solid ${on ? '#3987e5' : 'rgba(255,255,255,.1)'}`, background: on ? 'rgba(57,135,229,.14)' : '#232320', color: o == null ? '#555' : on ? '#79b0f0' : '#c3c2b7', borderRadius: 9, padding: '7px 4px', cursor: o == null ? 'default' : 'pointer', fontSize: 11.5, fontWeight: 700 }}>
-        {PICK_KO[p]} {o != null ? o.toFixed(2) : '-'}
+      <button key={p} disabled={o == null} onClick={() => setPick(l.matchId, p)} style={{ flex: 1, border: `1px solid ${on ? '#3987e5' : 'rgba(255,255,255,.09)'}`, background: on ? '#3987e5' : '#2f2f2b', color: o == null ? '#5a5a55' : on ? '#fff' : '#d4d3cc', borderRadius: 10, padding: '10px 4px', cursor: o == null ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
+        <span style={{ fontSize: 12, fontWeight: 800 }}>{PICK_KO[p]}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 700, opacity: on ? 1 : .85 }}>{o != null ? o.toFixed(2) : '-'}</span>
       </button>
     );
   };
@@ -117,12 +118,12 @@ function SlipSheet({ onClose }: { onClose: () => void }) {
         {saved && <div style={{ background: 'rgba(12,163,12,.15)', color: '#4bd14b', fontSize: 12.5, fontWeight: 700, padding: 10, borderRadius: 10, marginBottom: 12, textAlign: 'center' }}>조합이 저장됐어요.</div>}
 
         {legs.map((l) => (
-          <div key={l.matchId} style={{ background: '#232320', borderRadius: 12, padding: 12, marginBottom: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.home} vs {l.away}</div>
-              <button onClick={() => remove(l.matchId)} style={{ border: 0, background: 'transparent', color: '#898781', fontSize: 15, cursor: 'pointer', flex: '0 0 auto', paddingLeft: 8 }}>✕</button>
+          <div key={l.matchId} style={{ background: '#232320', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.home} <span style={{ color: '#6b6a64', fontWeight: 700 }}>vs</span> {l.away}</div>
+              <button onClick={() => remove(l.matchId)} style={{ border: 0, background: 'transparent', color: '#898781', fontSize: 16, cursor: 'pointer', flex: '0 0 auto', paddingLeft: 8, lineHeight: 1 }}>✕</button>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>{(['HOME', 'DRAW', 'AWAY'] as Pick[]).map((p) => pickBtn(l, p))}</div>
+            <div style={{ display: 'flex', gap: 7 }}>{(['HOME', 'DRAW', 'AWAY'] as Pick[]).map((p) => pickBtn(l, p))}</div>
           </div>
         ))}
 
