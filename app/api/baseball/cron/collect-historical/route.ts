@@ -42,9 +42,19 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const season = searchParams.get('season') || '2026'
   const leagueParam = searchParams.get('league') || 'ALL'
-  const startDate = searchParams.get('startDate') || `${season}-02-01`
-  const endDate = searchParams.get('endDate') || `${season}-11-01`
-  const overwrite = searchParams.get('overwrite') === 'true'
+  let startDate = searchParams.get('startDate') || `${season}-02-01`
+  let endDate = searchParams.get('endDate') || `${season}-11-01`
+  let overwrite = searchParams.get('overwrite') === 'true'
+
+  // ⚡ 예정경기 시간/상태 갱신 모드: ?upcoming=N → 오늘~+N일을 overwrite로 재수집
+  //    (KBO 등 경기 시간 변경이 기존 행에 반영되도록)
+  const upcoming = parseInt(searchParams.get('upcoming') || '0', 10)
+  if (upcoming > 0) {
+    const kstMs = Date.now() + 9 * 3600 * 1000
+    startDate = new Date(kstMs).toISOString().split('T')[0]
+    endDate = new Date(kstMs + upcoming * 86400000).toISOString().split('T')[0]
+    overwrite = true
+  }
 
   const leagues = LEAGUE_MAP[leagueParam] || LEAGUE_MAP['ALL']
 
