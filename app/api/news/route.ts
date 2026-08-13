@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Anthropic from '@anthropic-ai/sdk'
 
-// 헤드라인 영→한 번역 (Gemini). 실패 시 원문 유지.
+// 헤드라인 영→한 번역 (Claude). 실패 시 원문 유지.
 async function translateTitlesToKo(titles: string[]): Promise<string[]> {
   try {
-    if (!process.env.GEMINI_API_KEY) return titles
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
-    const prompt = `다음 축구 뉴스 헤드라인들을 자연스러운 한국어로 번역해줘. 팀·선수 이름은 한국에서 통용되는 표기로. 입력과 같은 길이의 JSON 문자열 배열로만 출력(설명·코드블록 없이):\n${JSON.stringify(titles)}`
-    const result = await model.generateContent(prompt)
-    const text = result.response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    if (!process.env.ANTHROPIC_API_KEY) return titles
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const prompt = `Translate each football news headline to natural Korean. Use commonly-used Korean spellings for team and player names. Return ONLY a JSON array of strings with the same length and order as the input, nothing else.\n\nINPUT:\n${JSON.stringify(titles)}`
+    const msg = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const block: any = msg.content.find((c: any) => c.type === 'text')
+    let text = (block?.text || '').trim()
+    const m = text.match(/\[[\s\S]*\]/)
+    if (m) text = m[0]
     const arr = JSON.parse(text)
     return Array.isArray(arr) && arr.length === titles.length ? arr.map((s: any) => String(s)) : titles
   } catch (e) {
