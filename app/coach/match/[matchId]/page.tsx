@@ -2,7 +2,7 @@
 // app/coach/match/[matchId]/page.tsx — 경기 세부 데이터(회원 전용).
 import { useEffect, useState, Fragment } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Ring, Emblem, pct, kickoffStr, roundLabel } from '../../ui';
+import { Ring, Emblem, pct, kickoffStr, roundLabel, leagueLabel } from '../../ui';
 import { mainLoginUrl } from '@/lib/coachApi';
 
 interface FormItem { opponent: string; score: string; result: 'W' | 'D' | 'L'; isHome: boolean; date: string }
@@ -159,7 +159,7 @@ export default function MatchDetail() {
               <Emblem id={d.match.awayId} name={d.match.away} size={30} />
             </div>
           </div>
-          <div style={{ fontSize: 11, color: '#898781', marginBottom: 14 }}>{d.match.league}{roundLabel(d.match.round) ? ` · ${roundLabel(d.match.round)}` : ''} · {kickoffStr(d.match.kickoff)}</div>
+          <div style={{ fontSize: 11, color: '#898781', marginBottom: 14 }}>{leagueLabel(d.match.league)}{roundLabel(d.match.round) ? ` · ${roundLabel(d.match.round)}` : ''} · {kickoffStr(d.match.kickoff)}</div>
 
           {/* KSM 시그널 요약 */}
           {s && (

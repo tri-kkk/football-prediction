@@ -5,6 +5,24 @@ import Link from 'next/link';
 import { coachApi, type MatchSignal } from '@/lib/coachApi';
 
 export const GRADE_COLOR: Record<string, string> = { S: '#3987e5', A: '#0ca30c', B: '#eda100', C: '#898781' };
+
+// 리그 코드 → 국기 + 한글 리그명
+const LEAGUE_META: Record<string, { flag: string; name: string }> = {
+  PL: { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: '프리미어리그' },
+  PD: { flag: '🇪🇸', name: '라리가' },
+  BL1: { flag: '🇩🇪', name: '분데스리가' },
+  SA: { flag: '🇮🇹', name: '세리에A' },
+  FL1: { flag: '🇫🇷', name: '리그1' },
+  PPL: { flag: '🇵🇹', name: '프리메이라리가' },
+  DED: { flag: '🇳🇱', name: '에레디비시' },
+  CL: { flag: '🇪🇺', name: '챔피언스리그' },
+  EL: { flag: '🇪🇺', name: '유로파리그' },
+  ELC: { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: '챔피언십' },
+};
+export const leagueLabel = (code?: string) => {
+  const m = code ? LEAGUE_META[code] : null;
+  return m ? `${m.flag} ${m.name}` : (code || '');
+};
 export const pct = (v: number) => `${Math.round(v * 100)}%`;
 export const PICK_KO: Record<string, string> = { HOME: '홈', DRAW: '무', AWAY: '원정' };
 export const kickoffStr = (iso: string) => {
@@ -55,7 +73,7 @@ export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolea
     <div style={{ position: 'relative', background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 14, marginBottom: 11 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: '#898781' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ background: '#232320', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: '#c3c2b7' }}>{m.league}</span>
+          <span style={{ background: '#232320', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: '#c3c2b7' }}>{leagueLabel(m.league)}</span>
           {roundLabel(m.round) && <span style={{ background: 'rgba(57,135,229,.12)', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: '#9cc4f4' }}>{roundLabel(m.round)}</span>}
         </span>
         <span>{kickoffStr(m.kickoff)}</span>
