@@ -108,7 +108,7 @@ function SlipSheet({ onClose }: { onClose: () => void }) {
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 50 }} />
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, maxWidth: 480, margin: '0 auto', zIndex: 51, background: '#1a1a19', borderRadius: '22px 22px 0 0', borderTop: '1px solid rgba(255,255,255,.1)', padding: '14px 16px 24px', maxHeight: '88%', overflowY: 'auto' }}>
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, maxWidth: 480, margin: '0 auto', zIndex: 51, background: '#1a1a19', color: '#fff', fontFamily: 'system-ui, "Malgun Gothic", sans-serif', borderRadius: '22px 22px 0 0', borderTop: '1px solid rgba(255,255,255,.1)', padding: '14px 16px 24px', maxHeight: '88%', overflowY: 'auto' }}>
         <div style={{ width: 40, height: 4, borderRadius: 2, background: '#383835', margin: '2px auto 14px' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div style={{ fontSize: 16, fontWeight: 800 }}>조합 슬립 · {legs.length}경기</div>
