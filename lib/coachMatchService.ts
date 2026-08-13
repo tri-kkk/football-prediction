@@ -13,7 +13,7 @@ import {
 
 export interface MatchSignal {
   matchId: string; league: string; kickoff: string; home: string; away: string;
-  homeId: number; awayId: number;
+  homeId: number; awayId: number; round?: string;
   model: Probs; market: (Probs & { overround?: number }) | null;
   odds: { home: number | null; draw: number | null; away: number | null };
   signal: {
@@ -47,6 +47,7 @@ function buildFromFixture(f: any, stats: Record<number, any>, patMap: Record<str
   const base: MatchSignal = {
     matchId: String(f.fixture.id), league: leagueCode, kickoff: f.fixture.date,
     home: f.teams.home.name, away: f.teams.away.name, homeId: hId, awayId: aId,
+    round: f.league?.round ?? undefined,
     model: { home: 0, draw: 0, away: 0 }, market: null,
     odds: { home: o?.home_odds ?? null, draw: o?.draw_odds ?? null, away: o?.away_odds ?? null },
     signal: null,
@@ -99,10 +100,18 @@ async function forLeague(leagueCode: string): Promise<MatchSignal[]> {
     patternMap(cfg.id),
   ]);
   const now = Date.now();
-  const fixtures = (fixData.response || []).filter((f: any) => {
-    const short = f.fixture.status?.short;
-    return !FINISHED.has(short) && new Date(f.fixture.date).getTime() >= now - 3 * 3600_000; // 예정+진행 임박
-  });
+  const upcoming = (fixData.response || [])
+    .filter((f: any) => {
+      const short = f.fixture.status?.short;
+      return !FINISHED.has(short) && new Date(f.fixture.date).getTime() >= now - 3 * 3600_000; // 예정+진행 임박
+    })
+    .sort((a: any, b: any) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
+
+  // 라운드 단위 진행: 가장 이른 미종료 경기의 라운드만 공개.
+  // 그 라운드가 전부 끝나면 다음 미종료 경기가 다음 라운드가 되어 자동으로 넘어감.
+  const currentRound = upcoming[0]?.league?.round ?? null;
+  const fixtures = currentRound ? upcoming.filter((f: any) => f.league?.round === currentRound) : upcoming;
+
   const oMap = await oddsMap(fixtures.map((f: any) => String(f.fixture.id)));
   return fixtures.map((f: any) => buildFromFixture(f, stats, patMap, oMap[String(f.fixture.id)], leagueCode))
     .sort((x: MatchSignal, y: MatchSignal) => new Date(x.kickoff).getTime() - new Date(y.kickoff).getTime());

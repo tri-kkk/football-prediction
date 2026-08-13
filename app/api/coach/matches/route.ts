@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
           ? { ...m, teaser: true }
           : { ...m, signal: null, market: null, model: { home: 0, draw: 0, away: 0 }, locked: true }
       );
+      // 맛보기(공개) 카드를 맨 위로 올려 비회원에게 바로 보이게 함
+      matches.sort((a, b) => (b.teaser ? 1 : 0) - (a.teaser ? 1 : 0));
     }
     return NextResponse.json({ league, member, count: matches.length, matches });
   } catch (e: any) {

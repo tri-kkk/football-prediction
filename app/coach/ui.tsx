@@ -10,6 +10,12 @@ export const kickoffStr = (iso: string) => {
   try { return new Date(iso).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
   catch { return iso; }
 };
+// "Regular Season - 12" → "12R", 그 외(그룹/토너먼트)는 원문 유지
+export const roundLabel = (round?: string) => {
+  if (!round) return '';
+  const m = round.match(/(\d+)\s*$/);
+  return m ? `${m[1]}R` : round;
+};
 
 export function Ring({ score, grade }: { score: number; grade: string }) {
   const c = 2 * Math.PI * 27;
@@ -46,8 +52,11 @@ export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolea
   const s = m.signal;
   return (
     <div style={{ position: 'relative', background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 14, marginBottom: 11 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: '#898781' }}>
-        <span style={{ background: '#232320', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: '#c3c2b7' }}>{m.league}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: '#898781' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ background: '#232320', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: '#c3c2b7' }}>{m.league}</span>
+          {roundLabel(m.round) && <span style={{ background: 'rgba(57,135,229,.12)', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: '#9cc4f4' }}>{roundLabel(m.round)}</span>}
+        </span>
         <span>{kickoffStr(m.kickoff)}</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 4px', gap: 8 }}>
