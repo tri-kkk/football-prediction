@@ -114,7 +114,7 @@ export default function CoachHome() {
             </div>
           )}
           <div style={{ fontSize: 11, color: '#898781', lineHeight: 1.65, background: '#1a1a19', border: '1px solid rgba(255,255,255,.08)', borderLeft: '3px solid #fab219', borderRadius: 10, padding: '12px 13px', marginTop: 12 }}>
-            <b style={{ color: '#c3c2b7' }}>CLV(클로징 라인 밸류)</b>가 핵심 지표예요. 단기 승률·수익은 운이 섞이지만, 내 배당이 마감 배당보다 좋았는지(=CLV)는 <b style={{ color: '#c3c2b7' }}>진짜 실력</b>을 가장 잘 보여줍니다. 표본 200건 이상부터 신뢰하세요.
+            <b style={{ color: '#c3c2b7' }}>CLV(클로징 라인 밸류)</b>는 내가 베팅한 배당과 경기 직전 <b style={{ color: '#c3c2b7' }}>마감 배당</b>의 차이예요. 내 배당이 마감 배당보다 높았으면 시장보다 유리하게 잡은 것(+CLV), 낮았으면 불리하게 잡은 것(−CLV)입니다.
           </div>
         </>
       )}
