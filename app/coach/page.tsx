@@ -130,8 +130,7 @@ export default function CoachHome() {
                 {n.league && <span style={{ flex: '0 0 auto', fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: '#232320', color: '#9cc4f4' }}>{n.league}</span>}
                 <span style={{ fontSize: 10.5, color: '#898781' }}>{timeAgo(n.publishedAt)}</span>
               </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.45, marginBottom: n.description ? 6 : 0, color: '#fff' }}>{n.title}</div>
-              {n.description && <div style={{ fontSize: 11.5, color: '#b8b7b0', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.description}</div>}
+              <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.45, color: '#fff' }}>{n.title}</div>
             </div>
           ))}
         </>
