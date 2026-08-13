@@ -102,6 +102,9 @@ export async function GET() {
           ...p,
           home_team_logo: logos?.home ?? null,
           away_team_logo: logos?.away ?? null,
+          // D11: 카멜케이스 로고 (team_id CDN 규칙 우선, 없으면 조인 로고 fallback)
+          homeTeamLogo: p.home_team_id ? `https://media.api-sports.io/football/teams/${p.home_team_id}.png` : (logos?.home ?? null),
+          awayTeamLogo: p.away_team_id ? `https://media.api-sports.io/football/teams/${p.away_team_id}.png` : (logos?.away ?? null),
           prediction: {
             ...pred,
             confidence,                          // 0~100 (예: 48.4)

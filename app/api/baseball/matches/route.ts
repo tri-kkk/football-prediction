@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// ⚡ D1: 홈 「오늘의 경기」 병합 목록용 CDN 캐시 (축구 odds-from-db와 동일 60s)
+export const revalidate = 60
+
 // =====================================================
 // Baseball Matches API - 프론트엔드용
 // GET /api/baseball/matches

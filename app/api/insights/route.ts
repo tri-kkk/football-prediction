@@ -62,9 +62,9 @@ async function getMatchTrend(matchId: string): Promise<{ direction: 'UP' | 'DOWN
   try {
     const { data, error } = await supabase
       .from('match_odds_history')
-      .select('home_probability, collected_at')
+      .select('home_probability, created_at')
       .eq('match_id', matchId)
-      .order('collected_at', { ascending: true })
+      .order('created_at', { ascending: true })
       .limit(10)
 
     if (error || !data || data.length < 2) {

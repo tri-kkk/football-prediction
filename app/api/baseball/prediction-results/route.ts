@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const { data: matches, error: mErr } = await supabase
       .from('baseball_matches')
       .select(
-        'api_match_id, league, match_date, match_timestamp, home_team, home_team_ko, away_team, away_team_ko, home_score, away_score, status',
+        'api_match_id, league, match_date, match_timestamp, home_team, home_team_ko, away_team, away_team_ko, home_team_logo, away_team_logo, home_score, away_score, status',
       )
       .eq('status', 'FT')
       .neq('league', 'CPBL')
@@ -67,12 +67,16 @@ export async function GET(request: NextRequest) {
       const correct = predHome === actualHome
 
       evalGames.push({
+        matchId: m.api_match_id,                    // D9: 카드 탭 → 경기 상세 이동용
         league: m.league,
         date: m.match_date,
         homeTeam: pickName(m.home_team, m.home_team_ko),
         awayTeam: pickName(m.away_team, m.away_team_ko),
+        homeTeamLogo: m.home_team_logo ?? null,     // D9: 팀 엠블럼 (빈 팀 존재 가능 → 앱 폴백)
+        awayTeamLogo: m.away_team_logo ?? null,     // D9
         homeScore: m.home_score,
         awayScore: m.away_score,
+        predicted: predHome ? 'home' : 'away',      // D9: 서버 판정값 (현지화 문자열 매칭 회피)
         pickedTeam: predHome ? pickName(m.home_team, m.home_team_ko) : pickName(m.away_team, m.away_team_ko),
         confidence: Math.round(Math.max(o.ai_home_win_prob, o.ai_away_win_prob)),
         grade: o.ai_grade ?? null,

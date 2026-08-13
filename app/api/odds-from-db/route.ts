@@ -336,13 +336,13 @@ const LEAGUE_INFO: Record<string, { name: string; nameEn: string; priority: numb
     priority: 83, 
     logo: 'https://media.api-sports.io/football/leagues/200.png' 
   },
-  'ALG': { 
-    name: '알제리리그', 
-    nameEn: 'Ligue 1 Algeria', 
-    priority: 84, 
-    logo: 'https://media.api-sports.io/football/leagues/187.png' 
+  'ALG': {   // D7: 수집기 ALG = 호주 A리그(188). (알제리는 DZA로 매핑)
+    name: '호주 A리그',
+    nameEn: 'A-League',
+    priority: 76,
+    logo: 'https://media.api-sports.io/football/leagues/188.png'
   },
-  'TUN': { 
+  'TUN': {
     name: '튀니지리그', 
     nameEn: 'Tunisian Ligue 1', 
     priority: 85, 
@@ -453,6 +453,15 @@ const LEAGUE_INFO: Record<string, { name: string; nameEn: string; priority: numb
     priority: 60,
     logo: 'https://media.api-sports.io/football/leagues/96.png'
   },
+
+  // ===== D7: 수집기 코드 별칭 보정 (DB 저장 = 수집기 코드) =====
+  'UECL': { name: '컨퍼런스리그', nameEn: 'UEFA Conference League', priority: 3, logo: 'https://media.api-sports.io/football/leagues/848.png' },
+  'ACL':  { name: 'AFC 챔피언스리그 엘리트', nameEn: 'AFC Champions League Elite', priority: 77, logo: 'https://media.api-sports.io/football/leagues/17.png' },
+  'ACL2': { name: 'AFC 챔피언스리그 투', nameEn: 'AFC Champions League Two', priority: 78, logo: 'https://media.api-sports.io/football/leagues/18.png' },
+  'KNV':  { name: 'KNVB 베이커르', nameEn: 'KNVB Beker', priority: 69, logo: 'https://media.api-sports.io/football/leagues/90.png' },
+  'TSL':  { name: '튀르키예 쉬페르리그', nameEn: 'Süper Lig', priority: 64, logo: 'https://media.api-sports.io/football/leagues/203.png' },
+  'COP':  { name: '코파 리베르타도레스', nameEn: 'Copa Libertadores', priority: 90, logo: 'https://media.api-sports.io/football/leagues/13.png' },
+  'COS':  { name: '코파 수다메리카나', nameEn: 'Copa Sudamericana', priority: 91, logo: 'https://media.api-sports.io/football/leagues/11.png' },
 }
 
 // 리그 정보 가져오기 (없으면 기본값)

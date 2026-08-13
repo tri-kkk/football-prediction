@@ -43,9 +43,24 @@ export async function GET() {
       }
     }
     
+    // D10: 축구·야구 카드 통일용 camelCase 별칭 부여 (raw 필드도 유지 — 하위호환)
+    const mappedPicks = (picks || []).map((p: any) => ({
+      ...p,
+      matchId: p.match_id,
+      league: p.league_code,
+      homeTeam: p.home_team,
+      awayTeam: p.away_team,
+      homeScore: p.actual_home_score,
+      awayScore: p.actual_away_score,
+      homeTeamLogo: p.home_team_id ? `https://media.api-sports.io/football/teams/${p.home_team_id}.png` : null,  // D11
+      awayTeamLogo: p.away_team_id ? `https://media.api-sports.io/football/teams/${p.away_team_id}.png` : null,  // D11
+      predicted: (p.prediction?.recommendation?.pick ?? null)?.toLowerCase?.() ?? null,
+      date: p.commence_time,
+    }))
+
     return NextResponse.json({
       success: true,
-      picks: picks || [],
+      picks: mappedPicks,
       stats: {
         total,
         wins,
