@@ -15,11 +15,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: '멤버쉽 전용', code: 'MEMBERSHIP_REQUIRED' }, { status: 402 });
 
   const supabase = getServerSupabase();
-  const { data: bets, error } = await supabase
-    .from('user_bets').select('status, stake, payout, clv').eq('user_id', user.userId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const [betsRes, slipsRes] = await Promise.all([
+    supabase.from('user_bets').select('status, stake, payout, clv').eq('user_id', user.userId),
+    supabase.from('user_slips').select('status, stake, payout, clv').eq('user_id', user.userId),
+  ]);
+  if (betsRes.error) return NextResponse.json({ error: betsRes.error.message }, { status: 500 });
 
-  const rows = bets ?? [];
+  // 단식 + 조합 통합 집계
+  const rows = [...(betsRes.data ?? []), ...(slipsRes.data ?? [])];
   const agg = aggregate(rows as any);
   const open = rows.filter((b) => b.status === 'open');
   const openStake = open.reduce((s, b) => s + (b.stake ?? 0), 0);

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { coachApi, type MatchSignal } from '@/lib/coachApi';
+import { useSlipCart } from './slipCart';
 
 export const GRADE_COLOR: Record<string, string> = { S: '#3987e5', A: '#0ca30c', B: '#eda100', C: '#898781' };
 
@@ -69,6 +70,12 @@ export function Emblem({ id, name, size = 26 }: { id?: number; name: string; siz
 
 export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolean; onAdd: (m: MatchSignal) => void }) {
   const s = m.signal;
+  const cart = useSlipCart();
+  const inCart = cart.has(m.matchId);
+  const recPick = s && s.recommendation !== 'WATCH' ? s.recommendation : 'HOME';
+  const addToSlip = () =>
+    inCart ? cart.remove(m.matchId)
+      : cart.add({ matchId: m.matchId, home: m.home, away: m.away, league: m.league, kickoff: m.kickoff, grade: s?.grade, odds: m.odds, pick: recPick as any });
   return (
     <div style={{ position: 'relative', background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 14, marginBottom: 11 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: '#898781' }}>
@@ -112,10 +119,15 @@ export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolea
             </div>
           </div>
           {member ? (
-            <div style={{ display: 'flex', gap: 8, marginTop: 13 }}>
-              <Link href={`/coach/match/${m.matchId}`} style={{ flex: 1, textAlign: 'center', border: '1px solid #383835', background: '#232320', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, textDecoration: 'none' }}>세부 데이터</Link>
-              <button onClick={() => onAdd(m)} style={{ flex: 1, border: 0, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, cursor: 'pointer' }}>＋ 기록 추가</button>
-            </div>
+            <>
+              <div style={{ display: 'flex', gap: 8, marginTop: 13 }}>
+                <Link href={`/coach/match/${m.matchId}`} style={{ flex: 1, textAlign: 'center', border: '1px solid #383835', background: '#232320', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, textDecoration: 'none' }}>세부 데이터</Link>
+                <button onClick={() => onAdd(m)} style={{ flex: 1, border: 0, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, cursor: 'pointer' }}>＋ 기록 추가</button>
+              </div>
+              <button onClick={addToSlip} style={{ width: '100%', marginTop: 8, border: `1px solid ${inCart ? 'rgba(12,163,12,.5)' : 'rgba(255,255,255,.12)'}`, background: inCart ? 'rgba(12,163,12,.14)' : 'transparent', color: inCart ? '#4bd14b' : '#c3c2b7', fontWeight: 700, fontSize: 12.5, padding: 10, borderRadius: 11, cursor: 'pointer' }}>
+                {inCart ? '조합에 담김 ✓ (빼기)' : '＋ 조합 담기'}
+              </button>
+            </>
           ) : (
             <a href="/coach/pricing" style={{ display: 'block', textAlign: 'center', marginTop: 13, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, textDecoration: 'none' }}>멤버쉽 시작하고 기록하기</a>
           )}

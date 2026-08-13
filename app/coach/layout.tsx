@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
+import { SlipCartProvider } from './slipCart';
 
 const TABS = [
   { href: '/coach', label: '홈' },
@@ -18,6 +19,7 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
   const isActive = (href: string) => (href === '/coach' ? path === '/coach' : path.startsWith(href));
   return (
     <SessionProvider>
+    <SlipCartProvider>
     <div style={{ minHeight: '100vh', background: '#0d0d0d', color: '#fff', fontFamily: 'system-ui, "Malgun Gothic", sans-serif', maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <header style={{ padding: '20px 16px 12px', display: 'flex', alignItems: 'center', gap: 11, background: 'linear-gradient(180deg,#0f1620,transparent)' }}>
         <svg height={32} viewBox="30 6 62 104" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flex: '0 0 auto' }} aria-hidden>
@@ -39,6 +41,7 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
         ))}
       </nav>
     </div>
+    </SlipCartProvider>
     </SessionProvider>
   );
 }

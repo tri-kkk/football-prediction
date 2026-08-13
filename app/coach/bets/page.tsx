@@ -1,5 +1,5 @@
 'use client';
-// app/coach/bets/page.tsx — 내 기록(토계부). 진행중/완료 탭 + CLV.
+// app/coach/bets/page.tsx — 내 기록(토계부). 단식 + 조합(슬립). 진행중/완료 + CLV.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError } from '@/lib/coachApi';
 
@@ -11,14 +11,21 @@ const ST = {
   void: { t: '취소', c: '#c3c2b7', bg: 'rgba(137,135,129,.16)' },
   open: { t: '진행중', c: '#9cc4f4', bg: 'rgba(57,135,229,.16)' },
 } as const;
+const LEG_C: Record<string, string> = { won: '#4bd14b', lost: '#e66767', void: '#898781' };
 
 export default function BetsPage() {
-  const [bets, setBets] = useState<any[] | null>(null);
+  const [items, setItems] = useState<any[] | null>(null);
   const [tab, setTab] = useState<'open' | 'settled'>('open');
   const [state, setState] = useState<'loading' | 'ok' | 'guest' | 'auth' | 'error'>('loading');
 
   useEffect(() => {
-    coachApi.bets().then((r: any) => { setBets(r.bets); setState('ok'); })
+    Promise.all([coachApi.bets(), coachApi.slips()])
+      .then(([b, s]: any) => {
+        const singles = (b.bets || []).map((x: any) => ({ ...x, _type: 'single' }));
+        const combos = (s.slips || []).map((x: any) => ({ ...x, _type: 'combo' }));
+        const merged = [...singles, ...combos].sort((x, y) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime());
+        setItems(merged); setState('ok');
+      })
       .catch((e) => setState(e instanceof MembershipError ? 'guest' : e instanceof AuthError ? 'auth' : 'error'));
   }, []);
 
@@ -27,9 +34,10 @@ export default function BetsPage() {
   if (state === 'guest') return <Paywall />;
   if (state === 'error') return <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>불러오기 실패</p>;
 
-  const list = (bets || []).filter((b) => (tab === 'open' ? b.status === 'open' : b.status !== 'open'));
-  const openCnt = (bets || []).filter((b) => b.status === 'open').length;
-  const doneCnt = (bets || []).length - openCnt;
+  const all = items || [];
+  const list = all.filter((b) => (tab === 'open' ? b.status === 'open' : b.status !== 'open'));
+  const openCnt = all.filter((b) => b.status === 'open').length;
+  const doneCnt = all.length - openCnt;
 
   return (
     <>
@@ -42,33 +50,71 @@ export default function BetsPage() {
         ))}
       </div>
       {!list.length && <p style={{ color: '#898781', textAlign: 'center', marginTop: 30 }}>{tab === 'open' ? '진행중인 기록이 없어요.' : '완료된 기록이 없어요.'}</p>}
-      {list.map((b) => {
-        const st = ST[b.status as keyof typeof ST] || ST.open;
-        return (
-          <div key={b.id} style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: 13, marginBottom: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{b.home_team || b.match_id} {b.away_team ? `vs ${b.away_team}` : ''}</span>
-              <span style={{ fontSize: 10.5, fontWeight: 800, padding: '3px 8px', borderRadius: 6, color: st.c, background: st.bg }}>
-                {st.t}{b.status === 'won' ? ` +${(b.payout - b.stake).toLocaleString()}` : b.status === 'lost' ? ` −${b.stake.toLocaleString()}` : ''}
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: 14, marginTop: 10, fontSize: 11.5, color: '#898781' }}>
-              <span>픽 <b style={{ color: '#c3c2b7' }}>{PICK_KO[b.pick] || b.pick}</b></span>
-              <span>배당 <b style={{ color: '#c3c2b7' }}>{b.bet_odds}</b></span>
-              <span>스테이크 <b style={{ color: '#c3c2b7' }}>{Number(b.stake).toLocaleString()}</b></span>
-            </div>
-            <div style={{ marginTop: 11, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#232320', borderRadius: 10, padding: '9px 11px' }}>
-              {b.status === 'open' ? (
-                <><span style={{ fontSize: 11, color: '#898781' }}>정산 대기</span><span style={{ fontSize: 12, color: '#898781' }}>경기 후 자동 채점</span></>
-              ) : (
-                <><span style={{ fontSize: 11, color: '#898781' }}>CLV{b.close_odds ? ` (내 ${b.bet_odds} vs 마감 ${b.close_odds})` : ''}</span>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: b.clv == null ? '#898781' : b.clv >= 0 ? '#3ecb3e' : '#e66767' }}>{fmtPct(b.clv)}</span></>
-              )}
-            </div>
-          </div>
-        );
-      })}
+      {list.map((b) => (b._type === 'combo' ? <ComboCard key={`c${b.id}`} s={b} /> : <SingleCard key={`s${b.id}`} b={b} />))}
     </>
+  );
+}
+
+function statusTag(status: string, delta: React.ReactNode) {
+  const st = ST[status as keyof typeof ST] || ST.open;
+  return <span style={{ fontSize: 10.5, fontWeight: 800, padding: '3px 8px', borderRadius: 6, color: st.c, background: st.bg }}>{st.t}{delta}</span>;
+}
+
+function SingleCard({ b }: { b: any }) {
+  return (
+    <div style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: 13, marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>{b.home_team || b.match_id} {b.away_team ? `vs ${b.away_team}` : ''}</span>
+        {statusTag(b.status, b.status === 'won' ? ` +${(b.payout - b.stake).toLocaleString()}` : b.status === 'lost' ? ` −${b.stake.toLocaleString()}` : '')}
+      </div>
+      <div style={{ display: 'flex', gap: 14, marginTop: 10, fontSize: 11.5, color: '#898781' }}>
+        <span>픽 <b style={{ color: '#c3c2b7' }}>{PICK_KO[b.pick] || b.pick}</b></span>
+        <span>배당 <b style={{ color: '#c3c2b7' }}>{b.bet_odds}</b></span>
+        <span>스테이크 <b style={{ color: '#c3c2b7' }}>{Number(b.stake).toLocaleString()}</b></span>
+      </div>
+      <ClvPill b={b} />
+    </div>
+  );
+}
+
+function ComboCard({ s }: { s: any }) {
+  const legs = s.legs || [];
+  return (
+    <div style={{ background: '#1a1a19', border: '1px solid rgba(57,135,229,.25)', borderRadius: 14, padding: 13, marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 13, fontWeight: 800 }}><span style={{ fontSize: 10, fontWeight: 800, color: '#9cc4f4', background: 'rgba(57,135,229,.16)', padding: '2px 7px', borderRadius: 5, marginRight: 7 }}>조합</span>{s.legs_count}경기</span>
+        {statusTag(s.status, s.status === 'won' ? ` +${(s.payout - s.stake).toLocaleString()}` : s.status === 'lost' ? ` −${s.stake.toLocaleString()}` : '')}
+      </div>
+      <div style={{ display: 'flex', gap: 14, marginTop: 10, fontSize: 11.5, color: '#898781' }}>
+        <span>합산배당 <b style={{ color: '#79b0f0' }}>{Number(s.combined_odds).toFixed(2)}</b></span>
+        <span>스테이크 <b style={{ color: '#c3c2b7' }}>{Number(s.stake).toLocaleString()}</b></span>
+      </div>
+      <div style={{ marginTop: 11, borderTop: '1px solid #2c2c2a', paddingTop: 9 }}>
+        {legs.map((l: any) => (
+          <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', fontSize: 11.5 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+              <i style={{ width: 6, height: 6, borderRadius: '50%', flex: '0 0 auto', background: l.leg_status ? LEG_C[l.leg_status] : '#6b6a64' }} />
+              <span style={{ color: '#c3c2b7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.home_team} vs {l.away_team}</span>
+            </span>
+            <span style={{ color: '#898781', flex: '0 0 auto', paddingLeft: 8 }}>{PICK_KO[l.pick] || l.pick} <b style={{ color: '#c3c2b7' }}>{Number(l.bet_odds).toFixed(2)}</b></span>
+          </div>
+        ))}
+      </div>
+      <ClvPill b={s} />
+    </div>
+  );
+}
+
+function ClvPill({ b }: { b: any }) {
+  return (
+    <div style={{ marginTop: 11, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#232320', borderRadius: 10, padding: '9px 11px' }}>
+      {b.status === 'open' ? (
+        <><span style={{ fontSize: 11, color: '#898781' }}>정산 대기</span><span style={{ fontSize: 12, color: '#898781' }}>경기 후 자동 채점</span></>
+      ) : (
+        <><span style={{ fontSize: 11, color: '#898781' }}>CLV</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: b.clv == null ? '#898781' : b.clv >= 0 ? '#3ecb3e' : '#e66767' }}>{fmtPct(b.clv)}</span></>
+      )}
+    </div>
   );
 }
 

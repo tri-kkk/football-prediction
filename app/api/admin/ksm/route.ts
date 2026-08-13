@@ -31,6 +31,8 @@ const PROMO_CFG: Record<number, {
   39:  { lower: 40,  season: '2025', ids: [1346, 64, 57],   gf: 0.60, ga: 2.32, fgw: 0.51, form: 0.60 },
   // 라리가 ← 세군다(말라가/데포르티보/라싱 산탄데르). 9개 승격팀 실측: GF 0.75, GA 1.90, FGwr 0.68, form 0.60
   140: { lower: 141, season: '2025', ids: [535, 544, 4665], gf: 0.75, ga: 1.90, fgw: 0.68, form: 0.60 },
+  // 분데스리가 ← 2.분데스(샬케04/엘버스베르크). 6개 승격팀 실측: GF 0.67, GA 1.65, FGwr 0.68, form 0.50
+  78:  { lower: 79,  season: '2025', ids: [174, 1660],      gf: 0.67, ga: 1.65, fgw: 0.68, form: 0.50 },
 }
 
 function currentSeason(): number {

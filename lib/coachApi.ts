@@ -61,6 +61,8 @@ export interface MatchSignal {
   signal: Signal | null; teaser?: boolean; locked?: boolean;
 }
 
+export interface SlipLegInput { matchId: string; pick: string; betOdds: number }
+
 export const coachApi = {
   matches: (league = 'ALL') => req<{ league: string; member: boolean; count: number; matches: MatchSignal[] }>(`/api/coach/matches?league=${league}`),
   dashboard: () => req(`/api/coach/dashboard`),
@@ -68,4 +70,7 @@ export const coachApi = {
   bets: (status?: 'open' | 'settled') => req(`/api/coach/bets${status ? `?status=${status}` : ''}`),
   createBet: (b: { matchId: string; pick: string; stake: number; betOdds: number }) =>
     req(`/api/coach/bets`, { method: 'POST', body: JSON.stringify(b) }),
+  slips: (status?: 'open' | 'settled') => req<{ slips: any[] }>(`/api/coach/slips${status ? `?status=${status}` : ''}`),
+  createSlip: (s: { stake: number; legs: SlipLegInput[] }) =>
+    req(`/api/coach/slips`, { method: 'POST', body: JSON.stringify(s) }),
 };
