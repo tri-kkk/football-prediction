@@ -710,6 +710,9 @@ export default function AdminDashboard() {
   // ===== 유효기간 편집 상태 =====
   const [editingExpiry, setEditingExpiry] = useState<{ userId: string; value: string } | null>(null)
 
+  // 코치 멤버쉽(user_id → 만료일). subscriptions.product='coach' 기준.
+  const [coachMembers, setCoachMembers] = useState<Record<string, string>>({})
+
   // ===== 필터 상태 =====
   const [userFilter, setUserFilter] = useState<'all' | 'free' | 'premium'>('all')
   const [activityFilter, setActivityFilter] = useState<'all' | 'active7' | 'dormant30' | 'dormant90'>('all')
@@ -1016,8 +1019,21 @@ export default function AdminDashboard() {
       const data = await response.json()
       setUsers(data.users || [])
       setTotalUserCount(data.total || data.users?.length || 0)  // ✅ API의 정확한 count 사용
+      fetchCoachMembers()
     } catch (err: any) {
       console.error('Users fetch error:', err)
+    }
+  }
+
+  // 코치 멤버쉽(활성) 목록 로드
+  const fetchCoachMembers = async () => {
+    try {
+      const res = await fetch('/api/admin/coach-membership')
+      if (!res.ok) return
+      const data = await res.json()
+      setCoachMembers(data.members || {})
+    } catch (err) {
+      console.error('Coach members fetch error:', err)
     }
   }
 
@@ -2430,6 +2446,33 @@ export default function AdminDashboard() {
     await handleUpdateExpiry(userId, base.toISOString())
   }
 
+  // ==================== 코치 멤버쉽 부여/해지 ====================
+  const handleGrantCoach = async (userId: string, months: number) => {
+    try {
+      const res = await fetch('/api/admin/coach-membership', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, months }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data?.error || '실패')
+      fetchCoachMembers()
+    } catch (e: any) {
+      alert(`코치 등업 실패: ${e?.message ?? e}`)
+    }
+  }
+  const handleRevokeCoach = async (userId: string) => {
+    if (!confirm('코치 멤버쉽을 해지하시겠습니까?')) return
+    try {
+      const res = await fetch(`/api/admin/coach-membership?user_id=${userId}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data?.error || '실패')
+      fetchCoachMembers()
+    } catch (e: any) {
+      alert(`코치 해지 실패: ${e?.message ?? e}`)
+    }
+  }
+
   // 🗑️ 회원 완전 삭제 (테스트용) — FK 정리 + deleted_users 해시까지 제거 → 재가입 즉시 가능
   const handleDeleteUserPermanent = async (userId: string, email: string) => {
     if (!confirm(`'${email}' 회원을 완전히 삭제합니다.\n\n` +
@@ -3408,6 +3451,7 @@ export default function AdminDashboard() {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">가입 방식</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">등급</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">프리미엄 유효기간</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">코치 멤버쉽</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">마지막 접속</th>
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">액션</th>
                         </tr>
@@ -3415,7 +3459,7 @@ export default function AdminDashboard() {
                       <tbody className="divide-y divide-gray-700/50">
                         {filteredUsers.length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                            <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
                               회원이 없습니다
                             </td>
                           </tr>
@@ -3510,6 +3554,36 @@ export default function AdminDashboard() {
                                   </div>
                                 ) : (
                                   <span className="text-xs text-gray-600">-</span>
+                                )}
+                              </td>
+                              {/* 코치 멤버쉽 컬럼 */}
+                              <td className="px-4 py-4">
+                                {coachMembers[user.id] ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`text-xs font-medium ${
+                                      new Date(coachMembers[user.id]) < new Date(Date.now() + 7 * 86400000)
+                                        ? 'text-yellow-400'
+                                        : 'text-blue-400'
+                                    }`}>
+                                      🏅 {new Date(coachMembers[user.id]).toLocaleDateString('ko-KR')}
+                                    </span>
+                                    <button
+                                      onClick={() => handleGrantCoach(user.id, 1)}
+                                      className="px-1.5 py-0.5 bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/30 rounded text-[11px] text-blue-300"
+                                      title="코치 1개월 연장"
+                                    >+1M</button>
+                                    <button
+                                      onClick={() => handleRevokeCoach(user.id)}
+                                      className="px-1.5 py-0.5 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 rounded text-[11px] text-red-400"
+                                      title="코치 멤버쉽 해지"
+                                    >해지</button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleGrantCoach(user.id, 1)}
+                                    className="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 rounded text-xs text-blue-400 font-medium"
+                                    title="코치 멤버쉽 1개월 부여"
+                                  >코치 등업</button>
                                 )}
                               </td>
                               <td className="px-4 py-4 text-sm text-gray-400">
