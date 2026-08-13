@@ -123,18 +123,16 @@ export default function CoachHome() {
 
       {news.length > 0 && (state === 'ok' || state === 'guest') && (
         <>
-          {sect('최근 뉴스')}
+          {sect('최근 뉴스 · 헤드라인')}
           {news.map((n) => (
-            <a key={n.id} href={n.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', gap: 11, background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: 12, marginBottom: 9, textDecoration: 'none' }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
-                  {n.league && <span style={{ flex: '0 0 auto', fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: '#232320', color: '#9cc4f4' }}>{n.league}</span>}
-                  <span style={{ fontSize: 10.5, color: '#898781' }}>{n.source}{n.source && ' · '}{timeAgo(n.publishedAt)}</span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4, marginBottom: 5, color: '#fff', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.title}</div>
-                {n.description && <div style={{ fontSize: 11.5, color: '#c3c2b7', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.description}</div>}
+            <div key={n.id} style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: 13, marginBottom: 9 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+                {n.league && <span style={{ flex: '0 0 auto', fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: '#232320', color: '#9cc4f4' }}>{n.league}</span>}
+                <span style={{ fontSize: 10.5, color: '#898781' }}>{timeAgo(n.publishedAt)}</span>
               </div>
-            </a>
+              <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.45, marginBottom: n.description ? 6 : 0, color: '#fff' }}>{n.title}</div>
+              {n.description && <div style={{ fontSize: 11.5, color: '#b8b7b0', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.description}</div>}
+            </div>
           ))}
         </>
       )}

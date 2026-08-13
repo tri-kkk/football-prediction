@@ -54,6 +54,7 @@ export interface Signal {
 }
 export interface MatchSignal {
   matchId: string; league: string; kickoff: string; home: string; away: string;
+  homeId?: number; awayId?: number;
   model: { home: number; draw: number; away: number };
   market: { home: number; draw: number; away: number } | null;
   odds: { home: number | null; draw: number | null; away: number | null };

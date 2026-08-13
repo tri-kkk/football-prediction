@@ -35,6 +35,15 @@ export const Dots = ({ n }: { n: number }) => (
   </span>
 );
 
+// 팀 엠블럼(API-Football). 로고 로드 실패 시 이니셜 배지로 폴백.
+export function Emblem({ id, name, size = 26 }: { id?: number; name: string; size?: number }) {
+  const [err, setErr] = useState(false);
+  if (!id || err) {
+    return <div style={{ width: size, height: size, borderRadius: 8, background: '#232320', display: 'grid', placeItems: 'center', fontSize: size * 0.38, fontWeight: 800, color: '#c3c2b7', flex: '0 0 auto' }}>{name.slice(0, 3).toUpperCase()}</div>;
+  }
+  return <img src={`https://media.api-sports.io/football/teams/${id}.png`} alt="" width={size} height={size} loading="lazy" onError={() => setErr(true)} style={{ objectFit: 'contain', flex: '0 0 auto' }} />;
+}
+
 export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolean; onAdd: (m: MatchSignal) => void }) {
   const s = m.signal;
   return (
@@ -43,8 +52,16 @@ export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolea
         <span style={{ background: '#232320', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: '#c3c2b7' }}>{m.league}</span>
         <span>{kickoffStr(m.kickoff)}</span>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '12px 0 4px', fontWeight: 700, fontSize: 14.5 }}>
-        <span>{m.home}</span><span style={{ fontSize: 11, color: '#898781' }}>VS</span><span>{m.away}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 4px', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+          <Emblem id={m.homeId} name={m.home} />
+          <span style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.home}</span>
+        </div>
+        <span style={{ fontSize: 10.5, color: '#898781', fontWeight: 700, flex: '0 0 auto' }}>VS</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0, justifyContent: 'flex-end' }}>
+          <span style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>{m.away}</span>
+          <Emblem id={m.awayId} name={m.away} />
+        </div>
       </div>
       {s && (
         <>
@@ -127,8 +144,12 @@ export function BetSheet({ m, onClose, onSaved }: { m: MatchSignal; onClose: () 
           <button onClick={onClose} style={{ width: 30, height: 30, border: '1px solid rgba(255,255,255,.1)', borderRadius: 9, background: '#232320', color: '#fff', cursor: 'pointer' }}>✕</button>
         </div>
         <div style={{ background: '#232320', borderRadius: 12, padding: 12, marginBottom: 18 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 800 }}>{m.home} vs {m.away}</div>
-          <div style={{ fontSize: 11, color: '#898781', marginTop: 3 }}>{m.league} · {kickoffStr(m.kickoff)}{m.signal ? ` · KSM ${m.signal.grade}등급` : ''}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 800 }}>
+            <Emblem id={m.homeId} name={m.home} size={22} />{m.home}
+            <span style={{ color: '#898781', fontWeight: 700, fontSize: 11 }}>vs</span>
+            <Emblem id={m.awayId} name={m.away} size={22} />{m.away}
+          </div>
+          <div style={{ fontSize: 11, color: '#898781', marginTop: 6 }}>{m.league} · {kickoffStr(m.kickoff)}{m.signal ? ` · KSM ${m.signal.grade}등급` : ''}</div>
         </div>
         <div style={{ fontSize: 12, fontWeight: 700, color: '#c3c2b7', marginBottom: 9 }}>픽 선택</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>{pillBtn('HOME')}{pillBtn('DRAW')}{pillBtn('AWAY')}</div>
