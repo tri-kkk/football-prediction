@@ -33,6 +33,10 @@ const PROMO_CFG: Record<number, {
   140: { lower: 141, season: '2025', ids: [535, 544, 4665], gf: 0.75, ga: 1.90, fgw: 0.68, form: 0.60 },
   // 분데스리가 ← 2.분데스(샬케04/엘버스베르크). 6개 승격팀 실측: GF 0.67, GA 1.65, FGwr 0.68, form 0.50
   78:  { lower: 79,  season: '2025', ids: [174, 1660],      gf: 0.67, ga: 1.65, fgw: 0.68, form: 0.50 },
+  // 리그1 ← 리그2(트루아/르망). 6개 승격팀 실측: GF 0.73, GA 1.75, FGwr 0.70, form 0.55
+  61:  { lower: 62,  season: '2025', ids: [110, 1298],      gf: 0.73, ga: 1.75, fgw: 0.70, form: 0.55 },
+  // 세리에A ← 세리에B(프로시노네/베네치아/몬차). 9개 승격팀 실측: GF 0.66, GA 1.67, FGwr 0.55, form 0.53
+  135: { lower: 136, season: '2025', ids: [512, 517, 1579], gf: 0.66, ga: 1.67, fgw: 0.55, form: 0.53 },
 }
 
 function currentSeason(): number {
