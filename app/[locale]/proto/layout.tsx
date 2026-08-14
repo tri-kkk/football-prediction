@@ -1,19 +1,6 @@
-import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
-// 검색엔진에 노출되지 않도록 차단 (광고 정책 대응)
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-    nocache: true,
-    googleBot: {
-      index: false,
-      follow: false,
-      noimageindex: true,
-    },
-  },
-}
-
-export default function ProtoLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+// 프로토 계산기 서비스 비활성화 — 모든 접근을 홈으로 리다이렉트
+export default function ProtoLayout() {
+  redirect('/')
 }

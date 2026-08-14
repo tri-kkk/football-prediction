@@ -114,18 +114,6 @@ export default function AuthButton() {
               
               {/* 메뉴 항목 */}
               <div className="py-1">
-                {/* 프로토 계산기 - 한국어만 */}
-                {language === 'ko' && (
-                  <Link
-                    href="/proto"
-                    onClick={() => setShowDropdown(false)}
-                    className="block px-3 md:px-4 py-2 text-xs md:text-sm text-gray-300 hover:bg-gray-800"
-                  >
-                    <span className="mr-2">🎫</span>
-                    프로토 계산기
-                  </Link>
-                )}
-                
                 {isPremium && (
                   <button
                     onClick={() => {
