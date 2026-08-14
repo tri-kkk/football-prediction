@@ -36,14 +36,17 @@ export const leagueNameKo = (code?: string) => {
 type Tone = 'blue' | 'grn' | 'crit';
 const toneColor = (t?: Tone) => (t === 'blue' ? '#79b0f0' : t === 'grn' ? '#3ecb3e' : t === 'crit' ? '#e66767' : '#fff');
 // 탭 상단 요약용 헤더 밴드 (배경 에셋 + 글로우 + 글래스 콘텐츠). 밋밋한 상단을 브랜드 배경과 통일.
-export function HeaderBand({ title, children, style }: { title: string; children: React.ReactNode; style?: React.CSSProperties }) {
+export function HeaderBand({ title, children, style, action }: { title: string; children: React.ReactNode; style?: React.CSSProperties; action?: React.ReactNode }) {
   return (
     <div style={{ position: 'relative', overflow: 'hidden', border: '1px solid rgba(57,135,229,.22)', borderRadius: 18, padding: 16, margin: '16px 0 2px', ...style }}>
       <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/coach-header.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
       <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(16,21,29,.28),rgba(16,21,29,.52))' }} />
       <div style={{ position: 'relative' }}>
-        <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 7, letterSpacing: -.2 }}>
-          <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: '#5aa0f0', boxShadow: '0 0 7px #5aa0f0', flex: '0 0 auto' }} />{title}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 7, letterSpacing: -.2 }}>
+            <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: '#5aa0f0', boxShadow: '0 0 7px #5aa0f0', flex: '0 0 auto' }} />{title}
+          </div>
+          {action}
         </div>
         {children}
       </div>

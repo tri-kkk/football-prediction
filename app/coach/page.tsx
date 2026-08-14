@@ -85,6 +85,7 @@ export default function CoachHome() {
   const [dash, setDash] = useState<DashboardData | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [state, setState] = useState<'loading' | 'ok' | 'guest' | 'auth' | 'error'>('loading');
+  const [showClv, setShowClv] = useState(false);
   const [err, setErr] = useState('');
   const [sheet, setSheet] = useState<MatchSignal | null>(null);
 
@@ -121,7 +122,9 @@ export default function CoachHome() {
 
       {state === 'ok' && (
         <>
-          <HeaderBand title="내 성과 요약">
+          <HeaderBand title="내 성과 요약" action={
+            <button onClick={() => setShowClv((v) => !v)} className="tc-press" style={{ display: 'flex', alignItems: 'center', gap: 4, background: showClv ? 'rgba(57,135,229,.2)' : 'rgba(255,255,255,.07)', border: `1px solid ${showClv ? 'rgba(90,160,240,.4)' : 'rgba(255,255,255,.12)'}`, color: showClv ? '#9cc4f4' : '#c3c2b7', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', letterSpacing: .2 }}>CLV<span style={{ opacity: .7 }}>{showClv ? '✕' : '?'}</span></button>
+          }>
           {dash && dash.settledCount === 0 && dash.open.count === 0 ? (
             <div style={{ textAlign: 'center', padding: '6px 2px 4px' }}>
               <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 7 }}>아직 기록이 없어요</div>
@@ -137,7 +140,8 @@ export default function CoachHome() {
             </div>
           )}
           </HeaderBand>
-          <div style={{ background: '#161615', border: '1px solid rgba(255,255,255,.07)', borderRadius: 11, padding: '11px 12px', marginTop: 12 }}>
+          {showClv && (
+          <div className="tc-fade" style={{ background: '#161615', border: '1px solid rgba(255,255,255,.07)', borderRadius: 11, padding: '11px 12px', marginTop: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
               <span style={{ fontSize: 9.5, fontWeight: 800, color: '#12100c', background: '#fab219', padding: '2px 6px', borderRadius: 4, letterSpacing: .3, flex: '0 0 auto' }}>CLV</span>
               <span style={{ fontSize: 11.5, color: '#8f8d85' }}>클로징 라인 밸류 — 내 배당 vs 경기 직전 <b style={{ color: '#c3c2b7', fontWeight: 700 }}>마감 배당</b> 차이</span>
@@ -153,6 +157,7 @@ export default function CoachHome() {
               </div>
             </div>
           </div>
+          )}
         </>
       )}
 

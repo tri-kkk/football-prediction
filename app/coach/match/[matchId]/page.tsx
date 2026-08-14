@@ -1,7 +1,7 @@
 'use client';
 // app/coach/match/[matchId]/page.tsx — 경기 세부 데이터(회원 전용).
 import { useEffect, useState, Fragment } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Ring, Emblem, pct, kickoffStr, roundLabel, leagueLabel } from '../../ui';
 import { mainLoginUrl } from '@/lib/coachApi';
 
@@ -125,7 +125,6 @@ function TrendChart({ trend }: { trend: Detail['trend'] }) {
 
 export default function MatchDetail() {
   const { matchId } = useParams<{ matchId: string }>();
-  const router = useRouter();
   const [d, setD] = useState<Detail | null>(null);
   const [state, setState] = useState<'loading' | 'ok' | 'guest' | 'auth' | 'error'>('loading');
   const [err, setErr] = useState('');
@@ -145,8 +144,7 @@ export default function MatchDetail() {
   const s = d?.signal;
 
   return (
-    <div className="tc-slidein" style={{ paddingTop: 6 }}>
-      <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 0, color: '#c3c2b7', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: 8 }}>← 뒤로</button>
+    <div className="tc-slidein" style={{ paddingTop: 12 }}>
 
       {state === 'loading' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>불러오는 중…</p>}
       {state === 'auth' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요. <a href={mainLoginUrl()} style={{ color: '#79b0f0' }}>로그인</a></p>}
