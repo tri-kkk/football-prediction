@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { coachApi, MembershipError, AuthError, mainLoginUrl, type MatchSignal } from '@/lib/coachApi';
 import { MatchCard, BetSheet, Skeleton, HeaderBand, LoginRequired } from './ui';
 import { PullToRefresh } from './PullToRefresh';
+import { ExitGate } from './ExitGate';
 
 interface DashboardData {
   hitRate: number | null; profit: number; roi: number | null;
@@ -119,6 +120,7 @@ export default function CoachHome() {
 
   return (
     <PullToRefresh onRefresh={() => load(true)}>
+      <ExitGate />
       {state === 'loading' && <div style={{ paddingTop: 16 }}><Skeleton h={92} /><Skeleton h={150} /><Skeleton h={120} /></div>}
       {state === 'auth' && <LoginRequired href={mainLoginUrl()} />}
       {state === 'error' && <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>{err}</p>}
