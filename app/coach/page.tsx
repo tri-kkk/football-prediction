@@ -97,7 +97,7 @@ export default function CoachHome() {
 
   const load = (silent = false) => {
     if (!silent) setState('loading');
-    return coachApi.matches('ALL')
+    return coachApi.matches('ALL', silent) // 당겨서 새로고침(silent)이면 캐시 무시하고 갱신
       .then((r) => {
         setData(r); setState(r.member ? 'ok' : 'guest');
         if (r.member) coachApi.dashboard().then(setDash).catch(() => {});

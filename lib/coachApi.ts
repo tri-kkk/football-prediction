@@ -63,8 +63,26 @@ export interface MatchSignal {
 
 export interface SlipLegInput { matchId: string; pick: string; betOdds: number }
 
+// 경기 목록 클라 캐시: 홈↔경기 이동/리그 전환 시 60초 내 재요청은 즉시 반환.
+// 같은 리그 동시 요청은 dedup. force=true(당겨서 새로고침)면 캐시 무시하고 갱신.
+type MatchesRes = { league: string; member: boolean; count: number; matches: MatchSignal[] };
+const _matchCache = new Map<string, { t: number; data: MatchesRes }>();
+const _matchInflight = new Map<string, Promise<MatchesRes>>();
+const MATCHES_TTL = 60_000;
+
 export const coachApi = {
-  matches: (league = 'ALL') => req<{ league: string; member: boolean; count: number; matches: MatchSignal[] }>(`/api/coach/matches?league=${league}`),
+  matches: (league = 'ALL', force = false): Promise<MatchesRes> => {
+    const now = Date.now();
+    const hit = _matchCache.get(league);
+    if (!force && hit && now - hit.t < MATCHES_TTL) return Promise.resolve(hit.data);
+    const inflight = _matchInflight.get(league);
+    if (!force && inflight) return inflight;
+    const p = req<MatchesRes>(`/api/coach/matches?league=${league}`)
+      .then((d) => { _matchCache.set(league, { t: Date.now(), data: d }); _matchInflight.delete(league); return d; })
+      .catch((e) => { _matchInflight.delete(league); throw e; });
+    _matchInflight.set(league, p);
+    return p;
+  },
   dashboard: () => req(`/api/coach/dashboard`),
   report: () => req(`/api/coach/report`),
   bets: (status?: 'open' | 'settled') => req(`/api/coach/bets${status ? `?status=${status}` : ''}`),

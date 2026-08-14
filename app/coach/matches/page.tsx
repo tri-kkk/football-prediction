@@ -23,7 +23,7 @@ export default function MatchesPage() {
 
   const load = (lg: string, silent = false) => {
     if (!silent) setState('loading');
-    return coachApi.matches(lg)
+    return coachApi.matches(lg, silent) // 당겨서 새로고침(silent)이면 캐시 무시하고 갱신
       .then((r) => { setData(r); setState(r.member ? 'ok' : 'guest'); })
       .catch((e) => {
         if (e instanceof MembershipError) setState('guest');

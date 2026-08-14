@@ -6,14 +6,19 @@ import { getCoachUser } from '@/lib/coachAuth';
 import { checkCoachMembership } from '@/lib/checkCoachMembership';
 import { getMatchesWithSignals } from '@/lib/coachMatchService';
 
-export const revalidate = 300;
+// 경기 계산은 getMatchesWithSignals 내부에서 120초 공유 캐시됨(유저 무관).
+// 회원 게이팅은 유저별로 이 라우트에서 후처리하므로 라우트 자체는 동적 유지.
 
 export async function GET(req: NextRequest) {
   const league = req.nextUrl.searchParams.get('league') ?? 'ALL';
   const user = await getCoachUser(req);
-  const member = user ? await checkCoachMembership(user.userId) : false;
   try {
-    let matches = await getMatchesWithSignals(league);
+    // 멤버십 확인(DB)과 경기 계산(캐시)을 병렬로 — 워터폴 제거.
+    const [matches0, member] = await Promise.all([
+      getMatchesWithSignals(league),
+      user ? checkCoachMembership(user.userId) : Promise.resolve(false),
+    ]);
+    let matches = matches0;
 
     if (!member) {
       // 리그별 최고 등급 1경기씩 맛보기 공개 (ALL이면 리그마다 하나, 단일 리그면 그 리그 하나)

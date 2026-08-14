@@ -176,14 +176,35 @@ async function forLeagueInner(leagueCode: string): Promise<MatchSignal[]> {
     .sort((x: MatchSignal, y: MatchSignal) => new Date(x.kickoff).getTime() - new Date(y.kickoff).getTime());
 }
 
-/** 경기 목록 + 시그널. leagueCode='ALL'이면 지원 리그 전체. */
-export async function getMatchesWithSignals(leagueCode: string): Promise<MatchSignal[]> {
+async function computeMatchesWithSignals(leagueCode: string): Promise<MatchSignal[]> {
   const codes = leagueCode === 'ALL' ? Object.keys(LEAGUES) : [leagueCode];
   // allSettled: 리그 하나가 실패해도 나머지 리그는 정상 노출 (전체 500 방지).
   const settled = await Promise.allSettled(codes.map((c) => forLeague(c)));
   const lists = settled.map((r) => (r.status === 'fulfilled' ? r.value : []));
   const merged = lists.flat().sort((x, y) => new Date(x.kickoff).getTime() - new Date(y.kickoff).getTime());
   return applyKoreanNames(merged);
+}
+
+// 경기 계산은 유저 무관(회원 게이팅은 라우트에서 후처리) → 리그별 인메모리 캐시.
+// 배당은 30분 크론으로 갱신되므로 120초 캐시면 신선도/속도 균형이 맞음.
+// 캐시 히트 시 리그당 30~40개 Supabase 쿼리 + 모델 계산을 통째로 건너뜀.
+// 인플라이트 dedup: 동시에 들어온 같은 리그 요청은 한 번만 계산(몰림 방지).
+const _cache = new Map<string, { t: number; data: MatchSignal[] }>();
+const _inflight = new Map<string, Promise<MatchSignal[]>>();
+const CACHE_TTL = 120_000;
+
+/** 경기 목록 + 시그널. leagueCode='ALL'이면 지원 리그 전체. (120초 인메모리 캐시 + dedup) */
+export async function getMatchesWithSignals(leagueCode: string): Promise<MatchSignal[]> {
+  const now = Date.now();
+  const hit = _cache.get(leagueCode);
+  if (hit && now - hit.t < CACHE_TTL) return hit.data;
+  const inflight = _inflight.get(leagueCode);
+  if (inflight) return inflight;
+  const p = computeMatchesWithSignals(leagueCode)
+    .then((d) => { _cache.set(leagueCode, { t: Date.now(), data: d }); _inflight.delete(leagueCode); return d; })
+    .catch((e) => { _inflight.delete(leagueCode); throw e; });
+  _inflight.set(leagueCode, p);
+  return p;
 }
 
 /** 단건(기록 생성 시). matchId = API-Football fixture id */
