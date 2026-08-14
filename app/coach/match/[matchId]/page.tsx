@@ -2,7 +2,7 @@
 // app/coach/match/[matchId]/page.tsx — 경기 세부 데이터(회원 전용).
 import { useEffect, useState, Fragment } from 'react';
 import { useParams } from 'next/navigation';
-import { Ring, Emblem, pct, kickoffStr, roundLabel, leagueLabel, LoginRequired } from '../../ui';
+import { Ring, Emblem, pct, kickoffStr, roundLabel, leagueLabel, LoginRequired, Skeleton } from '../../ui';
 import { mainLoginUrl } from '@/lib/coachApi';
 
 interface FormItem { opponent: string; score: string; result: 'W' | 'D' | 'L'; isHome: boolean; date: string }
@@ -146,7 +146,14 @@ export default function MatchDetail() {
   return (
     <div className="tc-slidein" style={{ paddingTop: 12 }}>
 
-      {state === 'loading' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>불러오는 중…</p>}
+      {state === 'loading' && (
+        <div style={{ paddingTop: 6 }}>
+          <Skeleton h={74} r={16} mb={12} />
+          <Skeleton h={132} r={14} mb={11} />
+          <Skeleton h={104} r={14} mb={11} />
+          <Skeleton h={150} r={14} mb={11} />
+        </div>
+      )}
       {state === 'auth' && <LoginRequired href={mainLoginUrl()} />}
       {state === 'error' && <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>{err}</p>}
       {state === 'guest' && (
