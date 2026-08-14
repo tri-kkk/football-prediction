@@ -130,8 +130,9 @@ async function forLeague(leagueCode: string): Promise<MatchSignal[]> {
     : upcoming;
 
   const oMap = await oddsMap(fixtures.map((f: any) => String(f.fixture.id)));
-  // 현재 라운드 경기는 모두 노출. 배당 없는 경기는 카드에서 "배당 대기중"으로 기록만 잠금.
+  // 배당(1X2)이 모두 있는 경기만 노출 — 배당 없이 승부 추천만 뜨는 괴리 방지(친선·프리시즌 제외).
   return fixtures.map((f: any) => buildFromFixture(f, stats, patMap, oMap[String(f.fixture.id)], leagueCode))
+    .filter((m: MatchSignal) => m.odds.home != null && m.odds.draw != null && m.odds.away != null)
     .sort((x: MatchSignal, y: MatchSignal) => new Date(x.kickoff).getTime() - new Date(y.kickoff).getTime());
 }
 
