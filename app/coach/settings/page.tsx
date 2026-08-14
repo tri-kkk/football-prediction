@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { coachApi, MembershipError, mainLoginUrl } from '@/lib/coachApi';
 import { PageTitle } from '../ui';
+import { showToast } from '../toast';
 
 const Section = ({ children }: { children: React.ReactNode }) => (
   <div style={{ fontSize: 11.5, fontWeight: 800, color: '#8b8a84', letterSpacing: .5, margin: '22px 4px 9px' }}>{children}</div>
@@ -24,15 +25,18 @@ function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const [member, setMember] = useState<boolean | null>(null);
-  const [bankroll, setBankroll] = useState('500000');
+  const [bankroll, setBankroll] = useState('500000'); // 편집 중 초안
   const [unit, setUnit] = useState('15000');
+  const [savedBank, setSavedBank] = useState('500000'); // 마지막 저장값
+  const [savedUnit, setSavedUnit] = useState('15000');
   const [notifySettle, setNotifySettle] = useState(true);
   const [warnStake, setWarnStake] = useState(true);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setBankroll(localStorage.getItem('coach_bankroll') || '500000');
-      setUnit(localStorage.getItem('coach_unit') || '15000');
+      const b = localStorage.getItem('coach_bankroll') || '500000';
+      const u = localStorage.getItem('coach_unit') || '15000';
+      setBankroll(b); setUnit(u); setSavedBank(b); setSavedUnit(u);
       setNotifySettle(localStorage.getItem('coach_notify_settle') !== '0');
       setWarnStake(localStorage.getItem('coach_warn_stake') !== '0');
     }
@@ -43,9 +47,13 @@ export default function SettingsPage() {
     coachApi.dashboard().then(() => setMember(true)).catch((e) => setMember(e instanceof MembershipError ? false : null));
   }, [status]);
 
-  const saveBankroll = (b: string, u: string) => {
-    setBankroll(b); setUnit(u);
+  const norm = (v: string) => (v || '').replace(/[^0-9]/g, '');
+  const dirty = norm(bankroll) !== norm(savedBank) || norm(unit) !== norm(savedUnit);
+  const saveBankroll = () => {
+    const b = norm(bankroll) || '0', u = norm(unit) || '0';
     localStorage.setItem('coach_bankroll', b); localStorage.setItem('coach_unit', u);
+    setBankroll(b); setUnit(u); setSavedBank(b); setSavedUnit(u);
+    showToast('뱅크롤이 저장됐어요');
   };
   const toggleSettle = () => { const v = !notifySettle; setNotifySettle(v); localStorage.setItem('coach_notify_settle', v ? '1' : '0'); };
   const toggleWarn = () => { const v = !warnStake; setWarnStake(v); localStorage.setItem('coach_warn_stake', v ? '1' : '0'); };
@@ -98,10 +106,11 @@ export default function SettingsPage() {
         <>
           <Section>뱅크롤</Section>
           <Group>
-            <InputRow label="총 뱅크롤" value={bankroll} onChange={(v) => saveBankroll(v, unit)} />
-            <InputRow label="단위 베팅" value={unit} onChange={(v) => saveBankroll(bankroll, v)} last />
+            <InputRow label="총 뱅크롤" value={bankroll} onChange={setBankroll} />
+            <InputRow label="단위 베팅" value={unit} onChange={setUnit} last />
           </Group>
-          <div style={{ fontSize: 11, color: '#6b6a64', margin: '8px 4px 0', lineHeight: 1.5 }}>단위 베팅 = 1 유닛. 스테이크 초과 경고의 기준이 돼요.</div>
+          <button onClick={saveBankroll} disabled={!dirty} className="tc-press" style={{ width: '100%', marginTop: 10, border: 0, background: dirty ? '#3987e5' : '#1c1c1b', color: dirty ? '#fff' : '#6b6a64', fontWeight: 800, fontSize: 13, padding: 13, borderRadius: 12, cursor: dirty ? 'pointer' : 'default' }}>{dirty ? '저장' : '저장됨 ✓'}</button>
+          <div style={{ fontSize: 11, color: '#6b6a64', margin: '9px 4px 0', lineHeight: 1.5 }}>단위 베팅 = 1 유닛. 스테이크 초과 경고의 기준이 돼요.</div>
 
           <Section>알림</Section>
           <Group>

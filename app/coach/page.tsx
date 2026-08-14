@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { coachApi, MembershipError, AuthError, mainLoginUrl, type MatchSignal } from '@/lib/coachApi';
-import { MatchCard, BetSheet, Skeleton, HeaderBand } from './ui';
+import { MatchCard, BetSheet, Skeleton, HeaderBand, LoginRequired } from './ui';
 import { PullToRefresh } from './PullToRefresh';
 
 interface DashboardData {
@@ -120,7 +120,7 @@ export default function CoachHome() {
   return (
     <PullToRefresh onRefresh={() => load(true)}>
       {state === 'loading' && <div style={{ paddingTop: 16 }}><Skeleton h={92} /><Skeleton h={150} /><Skeleton h={120} /></div>}
-      {state === 'auth' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요. <a href={mainLoginUrl()} style={{ color: '#79b0f0' }}>로그인</a></p>}
+      {state === 'auth' && <LoginRequired href={mainLoginUrl()} />}
       {state === 'error' && <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>{err}</p>}
 
       {state === 'guest' && <Hero />}

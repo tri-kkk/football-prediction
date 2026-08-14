@@ -2,7 +2,7 @@
 // app/coach/matches/page.tsx — 경기 화면: 리그 필터 + KSM 시그널 카드 목록 + 기록 추가 시트.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError, mainLoginUrl, type MatchSignal } from '@/lib/coachApi';
-import { MatchCard, BetSheet, StatStrip, Skeleton, EmptyState } from '../ui';
+import { MatchCard, BetSheet, StatStrip, Skeleton, EmptyState, LoginRequired } from '../ui';
 import { PullToRefresh } from '../PullToRefresh';
 
 const LEAGUES: { key: string; label: string }[] = [
@@ -54,7 +54,7 @@ export default function MatchesPage() {
       </div>
 
       {state === 'loading' && <><Skeleton /><Skeleton /><Skeleton /></>}
-      {state === 'auth' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요. <a href={mainLoginUrl()} style={{ color: '#79b0f0' }}>로그인</a></p>}
+      {state === 'auth' && <LoginRequired href={mainLoginUrl()} />}
       {state === 'error' && <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>{err}</p>}
 
       {(state === 'ok' || state === 'guest') && data && (

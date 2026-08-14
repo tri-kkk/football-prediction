@@ -115,6 +115,27 @@ export function Skeleton({ h = 150, r = 16, mb = 11 }: { h?: number; r?: number;
   return <div className="tc-skel" style={{ height: h, borderRadius: r, marginBottom: mb }} />;
 }
 
+// 로그인 필요 화면 (헤더 글로우 배경 + 잠금 아이콘 + CTA). 텍스트만 있던 auth 상태를 고급지게.
+export function LoginRequired({ href, sub }: { href: string; sub?: string }) {
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', marginTop: 26, borderRadius: 20, border: '1px solid rgba(57,135,229,.3)', padding: '42px 24px 28px', textAlign: 'center' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/coach-header.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(16,21,29,.42),rgba(13,13,13,.72))' }} />
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ position: 'relative', width: 78, height: 78, marginBottom: 18, display: 'grid', placeItems: 'center' }}>
+          <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle,rgba(57,135,229,.4),transparent 68%)' }} />
+          <div style={{ position: 'relative', width: 64, height: 64, borderRadius: '50%', background: 'rgba(57,135,229,.16)', border: '1px solid rgba(90,160,240,.4)', display: 'grid', placeItems: 'center', color: '#7fb4f5' }}>
+            <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+          </div>
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 9, letterSpacing: -.3 }}>로그인이 필요해요</div>
+        <div style={{ fontSize: 12.5, color: '#aebccd', lineHeight: 1.6, maxWidth: 250, marginBottom: 20 }}>{sub || 'TrendSoccer 계정으로 로그인하면 나의 시그널·기록·CLV를 볼 수 있어요.'}</div>
+        <a href={href} style={{ display: 'block', width: '100%', maxWidth: 280, textAlign: 'center', background: 'linear-gradient(180deg,#4491ea,#3282e2)', color: '#fff', fontWeight: 800, fontSize: 13.5, padding: 13, borderRadius: 12, textDecoration: 'none', boxShadow: '0 6px 18px rgba(41,120,220,.32)' }}>TrendSoccer 계정으로 로그인</a>
+      </div>
+    </div>
+  );
+}
+
 // 빈 상태 (아이콘 + 안내 + 액션). 텍스트만 있던 empty를 브랜드 톤으로.
 export function EmptyState({ title, sub, action, icon }: { title: string; sub?: string; action?: React.ReactNode; icon?: React.ReactNode }) {
   return (

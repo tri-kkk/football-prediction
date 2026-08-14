@@ -1,8 +1,8 @@
 'use client';
 // app/coach/bets/page.tsx — 내 기록(토계부). 단식 + 조합(슬립). 진행중/완료 + CLV.
 import { useEffect, useState } from 'react';
-import { coachApi, MembershipError, AuthError } from '@/lib/coachApi';
-import { StatStrip, Skeleton, EmptyState } from '../ui';
+import { coachApi, MembershipError, AuthError, mainLoginUrl } from '@/lib/coachApi';
+import { StatStrip, Skeleton, EmptyState, LoginRequired } from '../ui';
 import { PullToRefresh } from '../PullToRefresh';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
@@ -43,7 +43,7 @@ export default function BetsPage() {
   useEffect(() => { load(); }, []);
 
   if (state === 'loading') return <div style={{ paddingTop: 16 }}><Skeleton h={58} r={12} /><Skeleton h={44} r={11} mb={12} /><Skeleton h={110} /><Skeleton h={110} /></div>;
-  if (state === 'auth') return <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요.</p>;
+  if (state === 'auth') return <LoginRequired href={mainLoginUrl()} sub="로그인하면 나의 기록·손익·CLV가 여기에 쌓여요." />;
   if (state === 'guest') return <Paywall />;
   if (state === 'error') return <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>불러오기 실패</p>;
 

@@ -2,7 +2,7 @@
 // app/coach/match/[matchId]/page.tsx — 경기 세부 데이터(회원 전용).
 import { useEffect, useState, Fragment } from 'react';
 import { useParams } from 'next/navigation';
-import { Ring, Emblem, pct, kickoffStr, roundLabel, leagueLabel } from '../../ui';
+import { Ring, Emblem, pct, kickoffStr, roundLabel, leagueLabel, LoginRequired } from '../../ui';
 import { mainLoginUrl } from '@/lib/coachApi';
 
 interface FormItem { opponent: string; score: string; result: 'W' | 'D' | 'L'; isHome: boolean; date: string }
@@ -147,7 +147,7 @@ export default function MatchDetail() {
     <div className="tc-slidein" style={{ paddingTop: 12 }}>
 
       {state === 'loading' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>불러오는 중…</p>}
-      {state === 'auth' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요. <a href={mainLoginUrl()} style={{ color: '#79b0f0' }}>로그인</a></p>}
+      {state === 'auth' && <LoginRequired href={mainLoginUrl()} />}
       {state === 'error' && <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>{err}</p>}
       {state === 'guest' && (
         <div style={{ background: 'linear-gradient(135deg,#1c2a40,#171d28)', border: '1px solid rgba(57,135,229,.3)', borderRadius: 16, padding: 20, textAlign: 'center', marginTop: 10 }}>
