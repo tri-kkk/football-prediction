@@ -45,9 +45,9 @@ export default function MatchesPage() {
           { k: 'S·A 시그널', v: `${saCount}`, tone: 'blue' },
           { k: '평균 이견', v: avgGap != null ? `${avgGap.toFixed(1)}%` : '—', tone: 'grn' },
         ]} help={
-          <div style={{ fontSize: 11.5, color: '#aebccd', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <div style={{ fontSize: 11.5, color: '#aebccd', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div><b style={{ color: '#9cc4f4' }}>S·A 시그널</b> · 신뢰도 상위 등급(S·A) 경기 수 — 강한 픽에 집중하면 좋아요.</div>
-            <div><b style={{ color: '#4bd14b' }}>평균 이견</b> · KSM 모델 확률과 시장(배당) 확률의 평균 차이예요. 클수록 시장과 다르게 본 경기가 많다는 뜻이에요.</div>
+            <div><b style={{ color: '#4bd14b' }}>평균 이견</b> · KSM 모델과 시장(배당)이 승부를 다르게 본 정도(%p)예요. 클수록 <b style={{ color: '#e6e5df' }}>주목할 경기</b>가 많다는 신호 — 다만 이견이 크다고 무조건 유리한 건 아니에요. 모델이 맞을 수도, 시장이 맞을 수도 있어요.</div>
           </div>
         } />;
       })()}
