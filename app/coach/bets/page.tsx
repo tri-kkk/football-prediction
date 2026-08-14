@@ -2,7 +2,7 @@
 // app/coach/bets/page.tsx — 내 기록(토계부). 단식 + 조합(슬립). 진행중/완료 + CLV.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError } from '@/lib/coachApi';
-import { StatStrip, Skeleton } from '../ui';
+import { StatStrip, Skeleton, EmptyState } from '../ui';
 import { PullToRefresh } from '../PullToRefresh';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
@@ -86,7 +86,23 @@ export default function BetsPage() {
           </button>
         ))}
       </div>
-      {!list.length && <p style={{ color: '#898781', textAlign: 'center', marginTop: 30 }}>{tab === 'open' ? '진행중인 기록이 없어요.' : '완료된 기록이 없어요.'}</p>}
+      {!list.length && (
+        <EmptyState
+          icon={<svg width={30} height={30} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round"><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M8 9.5h5M8 13.5h3.4" /><path d="m14.4 14.1 1.15 1.15 2.25-2.4" /></svg>}
+          title={tab === 'open' ? '진행중인 기록이 없어요' : '완료된 기록이 없어요'}
+          sub={range !== 'all' ? '이 기간엔 기록이 없어요. 기간을 넓혀서 확인해 보세요.' : tab === 'open' ? '경기에서 픽을 기록하면 여기에 쌓여요.' : '정산이 끝난 기록이 아직 없어요.'}
+          action={
+            <div style={{ display: 'flex', gap: 8 }}>
+              {range !== 'all' && (
+                <button onClick={() => setRange('all')} className="tc-press" style={{ border: '1px solid rgba(255,255,255,.12)', background: '#1a1a19', color: '#c3c2b7', fontWeight: 800, fontSize: 12.5, padding: '10px 16px', borderRadius: 11, cursor: 'pointer' }}>전체 기간 보기</button>
+              )}
+              {tab === 'open' && (
+                <a href="/coach/matches" className="tc-press" style={{ border: 0, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: '10px 16px', borderRadius: 11, textDecoration: 'none', display: 'inline-block' }}>경기 보러 가기</a>
+              )}
+            </div>
+          }
+        />
+      )}
       {list.map((b) => (b._type === 'combo' ? <ComboCard key={`c${b.id}`} s={b} /> : <SingleCard key={`s${b.id}`} b={b} />))}
     </PullToRefresh>
   );
