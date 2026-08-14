@@ -30,7 +30,7 @@ async function computeDetail(matchId: string) {
 
   const leagueId = LEAGUES[sig.league]?.id || 0;
   const season = currentSeason();
-  const [homeFix, awayFix, h2hRes, trendRes, teamStats, standRes, trRes, totoRes] = await Promise.all([
+  const [homeFix, awayFix, h2hRes, trendRes, teamStats, standRes, trRes, totoRes, homeStatRes, awayStatRes, injRes, scorersRes] = await Promise.all([
     af(`/fixtures?team=${sig.homeId}&last=5`).catch(() => ({ response: [] })),
     af(`/fixtures?team=${sig.awayId}&last=5`).catch(() => ({ response: [] })),
     af(`/fixtures/headtohead?h2h=${sig.homeId}-${sig.awayId}&last=6`).catch(() => ({ response: [] })),
@@ -48,6 +48,11 @@ async function computeDetail(matchId: string) {
       .select('home_team_en, away_team_en, vote_win, vote_draw, vote_lose, vote_total')
       .or(`home_team_en.ilike.%${sig.home}%,away_team_en.ilike.%${sig.home}%,home_team_en.ilike.%${sig.away}%,away_team_en.ilike.%${sig.away}%`)
       .limit(30),
+    // 팀 시즌 심층 스탯(팀별) · 결장/부상(경기별) · 리그 득점왕(리그별) — 전부 30분 fetch 캐시.
+    af(`/teams/statistics?team=${sig.homeId}&league=${leagueId}&season=${season}`).catch(() => ({ response: null })),
+    af(`/teams/statistics?team=${sig.awayId}&league=${leagueId}&season=${season}`).catch(() => ({ response: null })),
+    af(`/injuries?fixture=${matchId}`).catch(() => ({ response: [] })),
+    af(`/players/topscorers?league=${leagueId}&season=${season}`).catch(() => ({ response: [] })),
   ]);
 
   // 팀명 한글 (뉴스 검색·표기용)
@@ -80,11 +85,66 @@ async function computeDetail(matchId: string) {
     const prevRows = rowsOf(prev);
     if (prevRows.length) { standRows = prevRows; standSeason = standSeason - 1; }
   }
+  const wdl = (x: any) => (x ? { w: x.win ?? 0, d: x.draw ?? 0, l: x.lose ?? 0 } : null);
   const standOf = (id: number) => {
     const r = standRows.find((x: any) => x.team?.id === id);
-    return r ? { rank: r.rank, points: r.points, gf: r.all?.goals?.for, ga: r.all?.goals?.against, gd: r.goalsDiff } : null;
+    return r ? {
+      rank: r.rank, points: r.points, gf: r.all?.goals?.for, ga: r.all?.goals?.against, gd: r.goalsDiff,
+      form: r.form ?? null,          // 리그 폼 스트릭 (WWDLW) — standings에 포함, 추가 호출 0
+      homeRec: wdl(r.home), awayRec: wdl(r.away), // 홈/원정 성적 분리 — 추가 호출 0
+    } : null;
   };
   const standings = { home: standOf(sig.homeId), away: standOf(sig.awayId), season: standSeason, isPrevious: standSeason !== Number(season) };
+
+  // ── 팀 시즌 심층 스탯 (/teams/statistics) ──
+  const extractDeep = (res: any) => {
+    const r = res?.response;
+    if (!r) return null;
+    const num = (v: any) => (v == null || v === '' ? null : Number(v));
+    // 득점 시간대: 퍼센트 최고 구간
+    const mins = r.goals?.for?.minute || {};
+    let peak: string | null = null, peakPct = -1;
+    for (const k of Object.keys(mins)) {
+      const p = mins[k]?.percentage ? parseFloat(String(mins[k].percentage)) : 0;
+      if (p > peakPct) { peakPct = p; peak = k; }
+    }
+    const formation = Array.isArray(r.lineups) && r.lineups.length
+      ? [...r.lineups].sort((a: any, b: any) => (b.played || 0) - (a.played || 0))[0]?.formation ?? null
+      : null;
+    return {
+      played: r.fixtures?.played?.total ?? null,
+      cleanSheet: r.clean_sheet?.total ?? null,
+      failedToScore: r.failed_to_score?.total ?? null,
+      avgFor: num(r.goals?.for?.average?.total),
+      avgAgainst: num(r.goals?.against?.average?.total),
+      streakWin: r.biggest?.streak?.wins ?? null,
+      streakLose: r.biggest?.streak?.loses ?? null,
+      formation,
+      goalPeak: peakPct > 0 ? peak : null,
+    };
+  };
+  const teamDeep = { home: extractDeep(homeStatRes), away: extractDeep(awayStatRes) };
+
+  // ── 결장/부상 (/injuries?fixture) ──
+  const inj: { home: string[]; away: string[] } = { home: [], away: [] };
+  for (const it of (injRes as any)?.response || []) {
+    const nm = it.player?.name; if (!nm) continue;
+    const reason = it.player?.reason || it.reason || null;
+    const label = reason ? `${nm} (${reason})` : nm;
+    if (it.team?.id === sig.homeId && !inj.home.includes(label)) inj.home.push(label);
+    else if (it.team?.id === sig.awayId && !inj.away.includes(label)) inj.away.push(label);
+  }
+  const injuries = { home: inj.home.slice(0, 6), away: inj.away.slice(0, 6) };
+
+  // ── 팀 간판 득점원 (/players/topscorers, 리그 상위 내 매칭) ──
+  const topScorerFor = (teamId: number) => {
+    for (const p of (scorersRes as any)?.response || []) {
+      const st = (p.statistics || []).find((s: any) => s.team?.id === teamId);
+      if (st && (st.goals?.total ?? 0) > 0) return { name: p.player?.name ?? null, goals: st.goals?.total ?? null };
+    }
+    return null;
+  };
+  const topScorer = { home: topScorerFor(sig.homeId), away: topScorerFor(sig.awayId) };
 
   // 폼·H2H 상대팀 한글화: 관련 팀 id 전체 번역 로드
   const teamIdSet = new Set<number>();
@@ -143,6 +203,7 @@ async function computeDetail(matchId: string) {
     awayForm: toForm(awayFix.response, sig.awayId, koMap),
     h2h: h2hRows, h2hSummary: { home: hw, draw: d, away: aw },
     trend, toto, ksmStats, standings,
+    teamDeep, injuries, topScorer,
   };
 }
 

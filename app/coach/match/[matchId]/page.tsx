@@ -19,9 +19,15 @@ interface Detail {
   toto: { home: number; draw: number; away: number; total: number } | null;
   ksmStats: { home: KsmStat | null; away: KsmStat | null };
   standings: { home: Stand | null; away: Stand | null; season: number; isPrevious: boolean };
+  teamDeep: { home: TeamDeep | null; away: TeamDeep | null };
+  injuries: { home: string[]; away: string[] };
+  topScorer: { home: Scorer | null; away: Scorer | null };
 }
 interface KsmStat { gpg: number; gapg: number; fgWinRate: number | null }
-interface Stand { rank: number; points: number; gf: number; ga: number; gd: number }
+interface WDL { w: number; d: number; l: number }
+interface Stand { rank: number; points: number; gf: number; ga: number; gd: number; form?: string | null; homeRec?: WDL | null; awayRec?: WDL | null }
+interface TeamDeep { played: number | null; cleanSheet: number | null; failedToScore: number | null; avgFor: number | null; avgAgainst: number | null; streakWin: number | null; streakLose: number | null; formation: string | null; goalPeak: string | null }
+interface Scorer { name: string | null; goals: number | null }
 
 function StatCmp({ label, home, away, fmt, lowerBetter }: { label: string; home: number; away: number; fmt: (n: number) => string; lowerBetter?: boolean }) {
   const tot = home + away || 1;
@@ -47,6 +53,29 @@ function StatCmp({ label, home, away, fmt, lowerBetter }: { label: string; home:
 
 const RES_BG: Record<string, string> = { W: '#0ca30c', D: '#6b6a64', L: '#d03b3b' };
 const RES_KO: Record<string, string> = { W: '승', D: '무', L: '패' };
+
+// 리그 폼 스트릭 (최근 5경기, WWDLW)
+function FormPills({ form }: { form: string }) {
+  const arr = form.replace(/[^WDL]/g, '').slice(-5).split('');
+  if (!arr.length) return null;
+  return (
+    <span style={{ display: 'inline-flex', gap: 3 }}>
+      {arr.map((r, i) => (
+        <span key={i} style={{ width: 16, height: 16, borderRadius: 4, fontSize: 9.5, fontWeight: 800, color: '#fff', display: 'grid', placeItems: 'center', background: RES_BG[r] || '#6b6a64' }}>{RES_KO[r] || r}</span>
+      ))}
+    </span>
+  );
+}
+// 심층 스탯 한 줄 (지표 · 홈 · 원정)
+function DeepRow({ label, home, away }: { label: string; home: React.ReactNode; away: React.ReactNode }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0 16px', alignItems: 'center', margin: '9px 0', fontSize: 11.5 }}>
+      <span style={{ color: '#898781' }}>{label}</span>
+      <span style={{ color: '#79b0f0', fontWeight: 800, textAlign: 'right', fontVariantNumeric: 'tabular-nums', minWidth: 40 }}>{home ?? '-'}</span>
+      <span style={{ color: '#eb8a5f', fontWeight: 800, textAlign: 'right', fontVariantNumeric: 'tabular-nums', minWidth: 40 }}>{away ?? '-'}</span>
+    </div>
+  );
+}
 
 function Card({ title, children, mesh }: { title: string; children: React.ReactNode; mesh?: boolean }) {
   return (
@@ -263,6 +292,21 @@ export default function MatchDetail() {
                   </Fragment>
                 ))}
               </div>
+              {/* 홈/원정 성적 분리 + 리그 폼 (standings에 이미 포함 — 추가 호출 0) */}
+              {(d.standings.home?.homeRec || d.standings.home?.form || d.standings.away?.awayRec || d.standings.away?.form) && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #2c2c2a', display: 'grid', gap: 9 }}>
+                  {([['홈 성적', d.match.home, d.standings.home?.homeRec, d.standings.home?.form],
+                     ['원정 성적', d.match.away, d.standings.away?.awayRec, d.standings.away?.form]] as [string, string, WDL | null | undefined, string | null | undefined][]).map(([lbl, name, rec, form], i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: '#a7b6c8', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name} <span style={{ color: '#6b6a64' }}>· {lbl}</span></span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 9, flex: '0 0 auto' }}>
+                        {rec && <span style={{ fontSize: 11.5, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}><span style={{ color: '#3ecb3e' }}>{rec.w}</span><span style={{ color: '#6b6a64' }}>-{rec.d}-</span><span style={{ color: '#e66767' }}>{rec.l}</span></span>}
+                        {form && <FormPills form={form} />}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {d.standings.isPrevious && <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 10 }}>새 시즌 개막 전 — {d.standings.season} 시즌 최종 순위 기준</div>}
             </Card>
           )}
@@ -276,6 +320,69 @@ export default function MatchDetail() {
                 <StatCmp label="선제골 시 승률" home={d.ksmStats.home.fgWinRate} away={d.ksmStats.away.fgWinRate} fmt={(n) => `${Math.round(n * 100)}%`} />
               )}
               <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>KSM 모델이 쓰는 다시즌 합산 스탯 기준</div>
+            </Card>
+          )}
+
+          {/* 팀 시즌 심층 스탯 (API-Football /teams/statistics) */}
+          {(() => {
+            const th = d.teamDeep.home, ta = d.teamDeep.away;
+            if (!th && !ta) return null;
+            return (
+              <Card title="팀 시즌 심층 스탯">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0 16px', marginBottom: 4, fontSize: 10.5, fontWeight: 700, color: '#898781' }}>
+                  <span>지표</span>
+                  <span style={{ textAlign: 'right', color: '#79b0f0', minWidth: 40 }}>홈</span>
+                  <span style={{ textAlign: 'right', color: '#eb8a5f', minWidth: 40 }}>원정</span>
+                </div>
+                {th?.cleanSheet != null && ta?.cleanSheet != null && (
+                  <StatCmp label="클린시트 (무실점 경기)" home={th.cleanSheet} away={ta.cleanSheet} fmt={(n) => `${n}회`} />
+                )}
+                {th?.failedToScore != null && ta?.failedToScore != null && (
+                  <StatCmp label="무득점 경기 · 낮을수록 우위" home={th.failedToScore} away={ta.failedToScore} fmt={(n) => `${n}회`} lowerBetter />
+                )}
+                <DeepRow label="최다 연승" home={th?.streakWin != null ? `${th.streakWin}연승` : null} away={ta?.streakWin != null ? `${ta.streakWin}연승` : null} />
+                <DeepRow label="최다 연패" home={th?.streakLose != null ? `${th.streakLose}연패` : null} away={ta?.streakLose != null ? `${ta.streakLose}연패` : null} />
+                <DeepRow label="득점 강세 시간대" home={th?.goalPeak ? `${th.goalPeak}분` : null} away={ta?.goalPeak ? `${ta.goalPeak}분` : null} />
+                <DeepRow label="주 포메이션" home={th?.formation} away={ta?.formation} />
+                <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>{d.standings.season} 시즌 기준 · API-Football</div>
+              </Card>
+            );
+          })()}
+
+          {/* 간판 득점원 (API-Football /players/topscorers) */}
+          {(d.topScorer.home || d.topScorer.away) && (
+            <Card title="간판 득점원">
+              {([['홈', d.match.home, d.topScorer.home, '#79b0f0'], ['원정', d.match.away, d.topScorer.away, '#eb8a5f']] as [string, string, Scorer | null, string][]).map(([tag, team, sc, col]) => (
+                <div key={tag} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, margin: '9px 0', fontSize: 12 }}>
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: col, marginRight: 7 }}>{tag}</span>
+                    <span style={{ color: '#c3c2b7', fontWeight: 700 }}>{sc?.name || '리그 상위 기록 없음'}</span>
+                  </span>
+                  {sc?.goals != null && <span style={{ flex: '0 0 auto', fontWeight: 800, color: col, fontVariantNumeric: 'tabular-nums' }}>{sc.goals}골</span>}
+                </div>
+              ))}
+              <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>리그 득점 순위 기준 · 상위권 밖이면 미표시</div>
+            </Card>
+          )}
+
+          {/* 결장 · 부상 (API-Football /injuries) */}
+          {(d.injuries.home.length > 0 || d.injuries.away.length > 0) && (
+            <Card title="결장 · 부상">
+              {([['홈', d.match.home, d.injuries.home, '#79b0f0'], ['원정', d.match.away, d.injuries.away, '#eb8a5f']] as [string, string, string[], string][]).map(([tag, team, list, col]) => (
+                <div key={tag} style={{ margin: '9px 0' }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: col, marginBottom: 5 }}>{tag} · {team}</div>
+                  {list.length ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {list.map((nm, i) => (
+                        <span key={i} style={{ fontSize: 11, color: '#c3c2b7', background: '#232320', border: '1px solid rgba(217,89,38,.25)', padding: '3px 8px', borderRadius: 6 }}>{nm}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: '#6b6a64' }}>보고된 결장 없음</div>
+                  )}
+                </div>
+              ))}
+              <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>API-Football 부상/결장 리포트 기준</div>
             </Card>
           )}
 
