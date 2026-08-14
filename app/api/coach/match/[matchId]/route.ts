@@ -10,12 +10,13 @@ import { supabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-function toForm(fixtures: any[], teamId: number) {
+function toForm(fixtures: any[], teamId: number, ko: Record<number, string>) {
   return (fixtures || []).slice(0, 5).map((m: any) => {
     const isHome = m.teams.home.id === teamId;
     const result = m.teams.home.winner ? (isHome ? 'W' : 'L') : m.teams.away.winner ? (isHome ? 'L' : 'W') : 'D';
+    const opp = isHome ? m.teams.away : m.teams.home;
     return {
-      opponent: isHome ? m.teams.away.name : m.teams.home.name,
+      opponent: ko[opp.id] || opp.name,
       score: `${m.goals.home ?? '-'}-${m.goals.away ?? '-'}`,
       result, isHome, date: m.fixture.date,
     };
@@ -84,10 +85,21 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
   };
   const standings = { home: standOf(sig.homeId), away: standOf(sig.awayId), season: standSeason, isPrevious: standSeason !== Number(season) };
 
+  // 폼·H2H 상대팀 한글화: 관련 팀 id 전체 번역 로드
+  const teamIdSet = new Set<number>();
+  for (const arr of [homeFix.response, awayFix.response, h2hRes.response]) {
+    for (const mm of arr || []) { if (mm.teams?.home?.id) teamIdSet.add(mm.teams.home.id); if (mm.teams?.away?.id) teamIdSet.add(mm.teams.away.id); }
+  }
+  const koMap: Record<number, string> = {};
+  if (teamIdSet.size) {
+    const { data: trAll } = await supabaseAdmin.from('team_translations').select('team_id, korean_name').in('team_id', [...teamIdSet]);
+    for (const t of trAll || []) if (t.korean_name) koMap[t.team_id] = t.korean_name;
+  }
+
   // H2H (sig.home 관점 집계)
   const h2hRows = (h2hRes.response || []).map((m: any) => ({
     date: m.fixture.date,
-    home: m.teams.home.name, away: m.teams.away.name,
+    home: koMap[m.teams.home.id] || m.teams.home.name, away: koMap[m.teams.away.id] || m.teams.away.name,
     homeScore: m.goals.home, awayScore: m.goals.away,
   }));
   let hw = 0, d = 0, aw = 0;
@@ -132,8 +144,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ matchId: st
   return NextResponse.json({
     match: { matchId: sig.matchId, league: sig.league, round: sig.round, kickoff: sig.kickoff, home: sig.home, away: sig.away, homeId: sig.homeId, awayId: sig.awayId, homeKo, awayKo },
     model: sig.model, market: sig.market, odds: sig.odds, signal: sig.signal,
-    homeForm: toForm(homeFix.response, sig.homeId),
-    awayForm: toForm(awayFix.response, sig.awayId),
+    homeForm: toForm(homeFix.response, sig.homeId, koMap),
+    awayForm: toForm(awayFix.response, sig.awayId, koMap),
     h2h: h2hRows, h2hSummary: { home: hw, draw: d, away: aw },
     trend, toto, ksmStats, standings,
   });

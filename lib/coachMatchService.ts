@@ -27,6 +27,20 @@ export interface MatchSignal {
   teaser?: boolean; locked?: boolean;
 }
 
+// 팀명 한글화 (team_translations). 없으면 원문(영문) 유지.
+async function applyKoreanNames(matches: MatchSignal[]): Promise<MatchSignal[]> {
+  const ids = Array.from(new Set(matches.flatMap((m) => [m.homeId, m.awayId]).filter(Boolean)));
+  if (!ids.length) return matches;
+  const { data } = await supabaseAdmin.from('team_translations').select('team_id, korean_name').in('team_id', ids);
+  const ko: Record<number, string> = {};
+  for (const t of data || []) if (t.korean_name) ko[t.team_id] = t.korean_name;
+  for (const m of matches) {
+    if (ko[m.homeId]) m.home = ko[m.homeId];
+    if (ko[m.awayId]) m.away = ko[m.awayId];
+  }
+  return matches;
+}
+
 async function patternMap(leagueId: number): Promise<Record<string, any>> {
   const { data } = await supabaseAdmin.from('fg_patterns').select('*').eq('league_id', leagueId);
   const map: Record<string, any> = {};
@@ -125,7 +139,8 @@ async function forLeague(leagueCode: string): Promise<MatchSignal[]> {
 export async function getMatchesWithSignals(leagueCode: string): Promise<MatchSignal[]> {
   const codes = leagueCode === 'ALL' ? Object.keys(LEAGUES) : [leagueCode];
   const lists = await Promise.all(codes.map((c) => forLeague(c)));
-  return lists.flat().sort((x, y) => new Date(x.kickoff).getTime() - new Date(y.kickoff).getTime());
+  const merged = lists.flat().sort((x, y) => new Date(x.kickoff).getTime() - new Date(y.kickoff).getTime());
+  return applyKoreanNames(merged);
 }
 
 /** 단건(기록 생성 시). matchId = API-Football fixture id */
@@ -138,5 +153,6 @@ export async function getMatchSignal(matchId: string): Promise<MatchSignal | nul
   const [stats, patMap, oMap] = await Promise.all([
     buildTeamStats(leagueId), patternMap(leagueId), oddsMap([String(matchId)]),
   ]);
-  return buildFromFixture(f, stats, patMap, oMap[String(matchId)], leagueCode);
+  const built = buildFromFixture(f, stats, patMap, oMap[String(matchId)], leagueCode);
+  return (await applyKoreanNames([built]))[0];
 }
