@@ -90,6 +90,11 @@ export const Dots = ({ n }: { n: number }) => (
   </span>
 );
 
+// 스켈레톤 로더 (네이티브 느낌 로딩)
+export function Skeleton({ h = 150, r = 16, mb = 11 }: { h?: number; r?: number; mb?: number }) {
+  return <div className="tc-skel" style={{ height: h, borderRadius: r, marginBottom: mb }} />;
+}
+
 // 팀 엠블럼(API-Football). 로고 로드 실패 시 이니셜 배지로 폴백.
 export function Emblem({ id, name, size = 26 }: { id?: number; name: string; size?: number }) {
   const [err, setErr] = useState(false);
@@ -109,7 +114,7 @@ export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolea
     inCart ? cart.remove(m.matchId)
       : cart.add({ matchId: m.matchId, home: m.home, away: m.away, league: m.league, kickoff: m.kickoff, grade: s?.grade, odds: m.odds, pick: recPick as any });
   return (
-    <div style={{ position: 'relative', background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 14, marginBottom: 11 }}>
+    <div className="tc-press" style={{ position: 'relative', background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 14, marginBottom: 11 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: '#898781' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ background: '#232320', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: '#c3c2b7' }}>{leagueLabel(m.league)}</span>

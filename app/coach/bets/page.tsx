@@ -2,7 +2,7 @@
 // app/coach/bets/page.tsx — 내 기록(토계부). 단식 + 조합(슬립). 진행중/완료 + CLV.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError } from '@/lib/coachApi';
-import { StatStrip } from '../ui';
+import { StatStrip, Skeleton } from '../ui';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
 const PICK_KO: Record<string, string> = { HOME: '홈', DRAW: '무', AWAY: '원정' };
@@ -30,7 +30,7 @@ export default function BetsPage() {
       .catch((e) => setState(e instanceof MembershipError ? 'guest' : e instanceof AuthError ? 'auth' : 'error'));
   }, []);
 
-  if (state === 'loading') return <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>불러오는 중…</p>;
+  if (state === 'loading') return <div style={{ paddingTop: 16 }}><Skeleton h={58} r={12} /><Skeleton h={44} r={11} mb={12} /><Skeleton h={110} /><Skeleton h={110} /></div>;
   if (state === 'auth') return <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요.</p>;
   if (state === 'guest') return <Paywall />;
   if (state === 'error') return <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>불러오기 실패</p>;

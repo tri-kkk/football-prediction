@@ -2,7 +2,7 @@
 // app/coach/matches/page.tsx — 경기 화면: 리그 필터 + KSM 시그널 카드 목록 + 기록 추가 시트.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError, mainLoginUrl, type MatchSignal } from '@/lib/coachApi';
-import { MatchCard, BetSheet, StatStrip } from '../ui';
+import { MatchCard, BetSheet, StatStrip, Skeleton } from '../ui';
 
 const LEAGUES: { key: string; label: string }[] = [
   { key: 'ALL', label: '전체' },
@@ -47,13 +47,13 @@ export default function MatchesPage() {
         ]} />;
       })()}
 
-      <div style={{ display: 'flex', gap: 7, overflowX: 'auto', padding: '12px 0 4px', marginBottom: 10, scrollbarWidth: 'none' }}>
+      <div className="tc-snap tc-hidebar" style={{ display: 'flex', gap: 7, overflowX: 'auto', padding: '12px 0 4px', marginBottom: 10 }}>
         {LEAGUES.map((l) => (
           <button key={l.key} onClick={() => setLeague(l.key)} style={{ flex: '0 0 auto', border: `1px solid ${league === l.key ? '#383835' : 'rgba(255,255,255,.1)'}`, background: league === l.key ? '#232320' : '#1a1a19', color: league === l.key ? '#fff' : '#898781', fontWeight: 700, fontSize: 12.5, padding: '8px 14px', borderRadius: 11, cursor: 'pointer' }}>{l.label}</button>
         ))}
       </div>
 
-      {state === 'loading' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>불러오는 중…</p>}
+      {state === 'loading' && <><Skeleton /><Skeleton /><Skeleton /></>}
       {state === 'auth' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요. <a href={mainLoginUrl()} style={{ color: '#79b0f0' }}>로그인</a></p>}
       {state === 'error' && <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>{err}</p>}
       {saved && <div style={{ background: 'rgba(12,163,12,.15)', color: '#4bd14b', fontSize: 12.5, fontWeight: 700, padding: 10, borderRadius: 10, margin: '10px 0', textAlign: 'center' }}>기록이 저장됐어요.</div>}

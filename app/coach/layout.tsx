@@ -28,7 +28,19 @@ body { -webkit-overflow-scrolling: touch; }
 .tc-tab:active { transform: scale(.9); }
 .tc-noselect { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
 button, a, [role=button] { touch-action: manipulation; }
+.tc-press { transition: transform .09s ease, opacity .09s ease; }
+.tc-press:active { transform: scale(.985); opacity:.92; }
+@keyframes tcfade { from { opacity:0; transform: translateY(7px) } to { opacity:1; transform:none } }
+.tc-fade { animation: tcfade .24s ease both; }
+.tc-snap { scroll-snap-type: x proximity; }
+.tc-snap > * { scroll-snap-align: start; }
+.tc-hidebar::-webkit-scrollbar { display:none; }
+.tc-hidebar { -ms-overflow-style:none; scrollbar-width:none; }
+@keyframes tcshimmer { 0%{background-position:-220px 0} 100%{background-position:220px 0} }
+.tc-skel { background:#161615; background-image:linear-gradient(90deg,#161615,#22221f,#161615); background-size:220px 100%; background-repeat:no-repeat; animation:tcshimmer 1.15s infinite linear; }
 `;
+
+function haptic() { try { (navigator as any).vibrate?.(6); } catch {} }
 
 export default function CoachLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -50,13 +62,15 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
         </div>
       </header>
 
-      <main style={{ flex: 1, padding: '0 16px calc(env(safe-area-inset-bottom) + 92px)' }}>{children}</main>
+      <main style={{ flex: 1, padding: '0 16px calc(env(safe-area-inset-bottom) + 92px)' }}>
+        <div key={path} className="tc-fade">{children}</div>
+      </main>
 
       <nav className="tc-noselect" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, maxWidth: 480, margin: '0 auto', display: 'flex', background: 'rgba(13,13,13,.92)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderTop: '1px solid rgba(255,255,255,.08)', padding: '9px 6px calc(env(safe-area-inset-bottom) + 10px)', zIndex: 30 }}>
         {TABS.map((t) => {
           const on = isActive(t.href);
           return (
-            <Link key={t.href} href={t.href} className="tc-tab" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none', color: on ? '#3987e5' : '#8b8a84' }}>
+            <Link key={t.href} href={t.href} onClick={haptic} className="tc-tab" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none', color: on ? '#3987e5' : '#8b8a84' }}>
               <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={on ? 2.2 : 1.9} strokeLinecap="round" strokeLinejoin="round">{ICON[t.id]}</svg>
               <span style={{ fontSize: 10, fontWeight: 700 }}>{t.label}</span>
             </Link>
