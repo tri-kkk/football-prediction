@@ -50,7 +50,7 @@ function Hero() {
   );
 }
 
-function Kpi({ label, value, sub, tone, empty, hero }: { label: string; value: string; sub?: string; tone?: 'good' | 'crit'; empty?: boolean; hero?: boolean }) {
+function Kpi({ label, value, sub, tone, empty, hero, onInfo, infoActive }: { label: string; value: string; sub?: string; tone?: 'good' | 'crit'; empty?: boolean; hero?: boolean; onInfo?: () => void; infoActive?: boolean }) {
   const color = empty ? '#6b7789' : tone === 'good' ? '#3ecb3e' : tone === 'crit' ? '#e66767' : '#fff';
   return (
     <div style={{
@@ -58,7 +58,12 @@ function Kpi({ label, value, sub, tone, empty, hero }: { label: string; value: s
       border: `1px solid ${hero ? 'rgba(57,135,229,.34)' : 'rgba(255,255,255,.1)'}`,
       borderRadius: 14, padding: '14px 15px 13px', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
     }}>
-      <div style={{ fontSize: 11.5, color: '#a7b6c8', fontWeight: 700, letterSpacing: .2 }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+        <span style={{ fontSize: 11.5, color: '#a7b6c8', fontWeight: 700, letterSpacing: .2 }}>{label}</span>
+        {onInfo && (
+          <button onClick={onInfo} className="tc-press" aria-label={`${label} 설명`} style={{ width: 18, height: 18, flex: '0 0 auto', borderRadius: '50%', border: `1px solid ${infoActive ? 'rgba(90,160,240,.5)' : 'rgba(255,255,255,.18)'}`, background: infoActive ? 'rgba(57,135,229,.2)' : 'transparent', color: infoActive ? '#9cc4f4' : '#8f9dae', fontSize: 10.5, fontWeight: 800, lineHeight: 1, cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0 }}>{infoActive ? '✕' : '?'}</button>
+        )}
+      </div>
       <div style={{ fontSize: 26, fontWeight: 800, marginTop: 9, letterSpacing: -.6, lineHeight: 1, color, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: '#8f9dae', marginTop: 7 }}>{sub}</div>}
     </div>
@@ -122,9 +127,7 @@ export default function CoachHome() {
 
       {state === 'ok' && (
         <>
-          <HeaderBand title="내 성과 요약" action={
-            <button onClick={() => setShowClv((v) => !v)} className="tc-press" style={{ display: 'flex', alignItems: 'center', gap: 4, background: showClv ? 'rgba(57,135,229,.2)' : 'rgba(255,255,255,.07)', border: `1px solid ${showClv ? 'rgba(90,160,240,.4)' : 'rgba(255,255,255,.12)'}`, color: showClv ? '#9cc4f4' : '#c3c2b7', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', letterSpacing: .2 }}>CLV<span style={{ opacity: .7 }}>{showClv ? '✕' : '?'}</span></button>
-          }>
+          <HeaderBand title="내 성과 요약">
           {dash && dash.settledCount === 0 && dash.open.count === 0 ? (
             <div style={{ textAlign: 'center', padding: '6px 2px 4px' }}>
               <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 7 }}>아직 기록이 없어요</div>
@@ -135,7 +138,7 @@ export default function CoachHome() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Kpi label="적중률" empty={dash?.hitRate == null} value={dash?.hitRate != null ? `${(dash.hitRate * 100).toFixed(1)}%` : '—'} sub={dash ? `${dash.settledCount}건 정산` : ''} />
               <Kpi label="누적 손익" hero value={dash ? `${won(dash.profit)}원` : '—'} sub={dash?.roi != null ? `ROI ${dash.roi >= 0 ? '+' : ''}${(dash.roi * 100).toFixed(1)}%` : '정산 후 집계'} tone={dash ? (dash.profit > 0 ? 'good' : dash.profit < 0 ? 'crit' : undefined) : undefined} />
-              <Kpi label="평균 CLV" empty={dash?.avgClv == null} value={dash?.avgClv != null ? `${dash.avgClv >= 0 ? '+' : ''}${(dash.avgClv * 100).toFixed(1)}%` : '—'} sub={dash?.avgClv == null ? '표본 쌓는 중' : dash.clvSampleEnough ? '시장 대비 우위' : '표본 더 필요'} tone={dash?.avgClv != null ? (dash.avgClv > 0 ? 'good' : dash.avgClv < 0 ? 'crit' : undefined) : undefined} />
+              <Kpi label="평균 CLV" onInfo={() => setShowClv((v) => !v)} infoActive={showClv} empty={dash?.avgClv == null} value={dash?.avgClv != null ? `${dash.avgClv >= 0 ? '+' : ''}${(dash.avgClv * 100).toFixed(1)}%` : '—'} sub={dash?.avgClv == null ? '표본 쌓는 중' : dash.clvSampleEnough ? '시장 대비 우위' : '표본 더 필요'} tone={dash?.avgClv != null ? (dash.avgClv > 0 ? 'good' : dash.avgClv < 0 ? 'crit' : undefined) : undefined} />
               <Kpi label="진행중" empty={!dash || dash.open.count === 0} value={dash ? `${dash.open.count}건` : '—'} sub={dash && dash.open.count > 0 ? `스테이크 ${dash.open.stake.toLocaleString()}원` : '정산 대기 없음'} />
             </div>
           )}
