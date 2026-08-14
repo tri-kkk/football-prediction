@@ -107,15 +107,17 @@ async function forLeague(leagueCode: string): Promise<MatchSignal[]> {
     })
     .sort((a: any, b: any) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
 
-  // 라운드 단위 진행: 가장 이른 미종료 경기의 라운드만 공개.
-  // 그 라운드가 전부 끝나면 다음 미종료 경기가 다음 라운드가 되어 자동으로 넘어감.
+  // 라운드 단위 진행: 현재 라운드 노출. 단, 8일 이내 임박 경기는 라운드 라벨과 무관하게 노출
+  // (개막/편성 시 라운드 라벨이 갈려 임박 경기가 숨는 문제 방지).
   const currentRound = upcoming[0]?.league?.round ?? null;
-  const fixtures = currentRound ? upcoming.filter((f: any) => f.league?.round === currentRound) : upcoming;
+  const soon = now + 8 * 86400_000;
+  const fixtures = currentRound
+    ? upcoming.filter((f: any) => f.league?.round === currentRound || new Date(f.fixture.date).getTime() <= soon)
+    : upcoming;
 
   const oMap = await oddsMap(fixtures.map((f: any) => String(f.fixture.id)));
+  // 현재 라운드 경기는 모두 노출. 배당 없는 경기는 카드에서 "배당 대기중"으로 기록만 잠금.
   return fixtures.map((f: any) => buildFromFixture(f, stats, patMap, oMap[String(f.fixture.id)], leagueCode))
-    // 배당(1X2)이 모두 있는 경기만 노출 — 배당 없으면 CLV 채점·기록이 무의미하므로 숨김(수집되면 노출)
-    .filter((m: MatchSignal) => m.odds.home != null && m.odds.draw != null && m.odds.away != null)
     .sort((x: MatchSignal, y: MatchSignal) => new Date(x.kickoff).getTime() - new Date(y.kickoff).getTime());
 }
 

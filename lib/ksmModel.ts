@@ -12,8 +12,8 @@ export const LEAGUES: Record<string, { id: number; name: string }> = {
   FL1: { id: 61, name: '리그1' },
   SA: { id: 135, name: '세리에A' },
 };
-const ELC = 40;
-const PROMO_IDS = [1346, 64, 57]; // PL 승격팀 — 챔피언십 데이터 환산
+// 상위리그 → 2부리그 매핑. 승격팀(상위리그 표본이 얇은 팀)은 2부 데이터로 환산.
+const SECOND_DIV: Record<number, number> = { 39: 40, 78: 79, 140: 141, 135: 136, 61: 62 };
 export const FINISHED = new Set(['FT', 'AET', 'PEN']);
 
 const AF_HOST = 'v3.football.api-sports.io';
@@ -59,21 +59,26 @@ export async function buildTeamStats(leagueId: number): Promise<Record<number, a
   const byTeam: Record<number, any[]> = {};
   for (const r of rows || []) (byTeam[r.team_id] = byTeam[r.team_id] || []).push(r);
 
-  let elcByTeam: Record<number, any[]> = {};
-  if (leagueId === 39) {
-    const { data: elc } = await supabaseAdmin.from('fg_team_stats').select('*')
-      .eq('league_id', ELC).eq('season', '2025').in('team_id', PROMO_IDS);
-    for (const r of elc || []) (elcByTeam[r.team_id] = elcByTeam[r.team_id] || []).push(r);
+  // 승격팀 보강: 해당 상위리그의 2부 데이터 로드(모든 2부 팀). 상위리그에 자리잡은 팀은 스킵.
+  const secondId = SECOND_DIV[leagueId];
+  const secByTeam: Record<number, any[]> = {};
+  if (secondId) {
+    const { data: sec } = await supabaseAdmin.from('fg_team_stats').select('*')
+      .eq('league_id', secondId).in('season', ['2024', '2025', '2026']);
+    for (const r of sec || []) (secByTeam[r.team_id] = secByTeam[r.team_id] || []).push(r);
   }
+
   const stats: Record<number, any> = {};
-  const ids = new Set<number>([...Object.keys(byTeam).map(Number), ...Object.keys(elcByTeam).map(Number)]);
+  const ids = new Set<number>([...Object.keys(byTeam).map(Number), ...Object.keys(secByTeam).map(Number)]);
   for (const tid of ids) {
-    const plt = byTeam[tid] || [];
-    const pl2026 = plt.find((r: any) => r.season === '2026');
-    const stillPromo = leagueId === 39 && PROMO_IDS.includes(tid) && ((pl2026?.total_played || 0) < 5);
-    const src = stillPromo ? (elcByTeam[tid] || []) : plt;
+    const top = byTeam[tid] || [];
+    const top2026 = top.find((r: any) => r.season === '2026');
+    const played2026 = top2026?.total_played || 0;
+    // 상위리그 표본이 얇고(<5경기) 2부 데이터가 있으면 승격팀 → 2부 데이터 환산 사용
+    const usePromo = played2026 < 5 && (secByTeam[tid]?.length ?? 0) > 0;
+    const src = usePromo ? secByTeam[tid] : top;
     if (!src.length) continue;
-    stats[tid] = aggregate(src, stillPromo);
+    stats[tid] = aggregate(src, usePromo);
   }
   return stats;
 }
