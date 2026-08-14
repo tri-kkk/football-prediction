@@ -48,13 +48,16 @@ function StatCmp({ label, home, away, fmt, lowerBetter }: { label: string; home:
 const RES_BG: Record<string, string> = { W: '#0ca30c', D: '#6b6a64', L: '#d03b3b' };
 const RES_KO: Record<string, string> = { W: '승', D: '무', L: '패' };
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, children, mesh }: { title: string; children: React.ReactNode; mesh?: boolean }) {
   return (
-    <div style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: 14, marginBottom: 11 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ width: 3, height: 13, borderRadius: 2, background: '#3987e5' }} />{title}
+    <div style={{ position: 'relative', overflow: 'hidden', background: '#1a1a19', border: `1px solid ${mesh ? 'rgba(57,135,229,.28)' : 'rgba(255,255,255,.08)'}`, borderRadius: 14, padding: 14, marginBottom: 11 }}>
+      {mesh && <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/card-mesh.webp)', backgroundSize: 'cover', backgroundPosition: 'center', opacity: .4 }} />}
+      <div style={{ position: 'relative' }}>
+        <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 3, height: 13, borderRadius: 2, background: '#3987e5' }} />{title}
+        </div>
+        {children}
       </div>
-      {children}
     </div>
   );
 }
@@ -141,29 +144,35 @@ export default function MatchDetail() {
 
       {state === 'ok' && d && (
         <>
-          {/* 헤더 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
-              <Emblem id={d.match.homeId} name={d.match.home} size={30} />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 9.5, fontWeight: 800, color: '#79b0f0', letterSpacing: 1.2, marginBottom: 2 }}>홈</div>
-                <div style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.match.home}</div>
+          {/* 매치업 헤더 (필드 배경 밴드) */}
+          <div style={{ position: 'relative', overflow: 'hidden', border: '1px solid rgba(57,135,229,.28)', borderRadius: 16, padding: 15, marginBottom: 12 }}>
+            <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/card-pitch.webp)', backgroundSize: 'cover', backgroundPosition: 'right center' }} />
+            <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(16,21,29,.35),rgba(16,21,29,.62))' }} />
+            <div style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
+                  <Emblem id={d.match.homeId} name={d.match.home} size={34} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 9.5, fontWeight: 800, color: '#79b0f0', letterSpacing: 1.2, marginBottom: 2 }}>홈</div>
+                    <div style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.match.home}</div>
+                  </div>
+                </div>
+                <span style={{ fontSize: 11, color: '#a5b4c6', fontWeight: 800, flex: '0 0 auto' }}>VS</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0, justifyContent: 'flex-end' }}>
+                  <div style={{ minWidth: 0, textAlign: 'right' }}>
+                    <div style={{ fontSize: 9.5, fontWeight: 800, color: '#eb8a5f', letterSpacing: 1.2, marginBottom: 2 }}>원정</div>
+                    <div style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.match.away}</div>
+                  </div>
+                  <Emblem id={d.match.awayId} name={d.match.away} size={34} />
+                </div>
               </div>
-            </div>
-            <span style={{ fontSize: 11, color: '#898781', fontWeight: 700, flex: '0 0 auto' }}>VS</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0, justifyContent: 'flex-end' }}>
-              <div style={{ minWidth: 0, textAlign: 'right' }}>
-                <div style={{ fontSize: 9.5, fontWeight: 800, color: '#eb8a5f', letterSpacing: 1.2, marginBottom: 2 }}>원정</div>
-                <div style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.match.away}</div>
-              </div>
-              <Emblem id={d.match.awayId} name={d.match.away} size={30} />
+              <div style={{ fontSize: 11, color: '#9fb0c4', marginTop: 11 }}>{leagueLabel(d.match.league)}{roundLabel(d.match.round) ? ` · ${roundLabel(d.match.round)}` : ''} · {kickoffStr(d.match.kickoff)}</div>
             </div>
           </div>
-          <div style={{ fontSize: 11, color: '#898781', marginBottom: 14 }}>{leagueLabel(d.match.league)}{roundLabel(d.match.round) ? ` · ${roundLabel(d.match.round)}` : ''} · {kickoffStr(d.match.kickoff)}</div>
 
           {/* KSM 시그널 요약 */}
           {s && (
-            <Card title="KSM 시그널 요약">
+            <Card title="KSM 시그널 요약" mesh>
               <div style={{ display: 'flex', gap: 13, alignItems: 'center' }}>
                 <Ring score={s.score} grade={s.grade} />
                 <div style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: '#898781', lineHeight: 1.7 }}>
