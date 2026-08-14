@@ -79,30 +79,47 @@ function FormRow({ label, sub, form }: { label: string; sub: string; form: FormI
   );
 }
 
+// 라인 무브먼트 요약: 시가 → 현재 + 변동(%p) + 미니 스파크라인. 평평한 선보다 "얼마나 움직였나"가 바로 읽힘.
 function TrendChart({ trend }: { trend: Detail['trend'] }) {
   if (trend.length < 2) return <div style={{ fontSize: 11.5, color: '#898781', textAlign: 'center', padding: '10px 0' }}>배당 변동 데이터가 아직 충분하지 않아요.</div>;
-  const W = 300, H = 84;
-  const vals = trend.flatMap((p) => [p.h, p.d, p.a]);
-  let lo = Math.min(...vals), hi = Math.max(...vals);
-  const pad = (hi - lo) * 0.18 || 0.04; lo -= pad; hi += pad;
-  const rng = hi - lo || 1;
-  const xs = (i: number) => (i / (trend.length - 1)) * W;
-  const ys = (v: number) => H - ((v - lo) / rng) * H;
-  const line = (key: 'h' | 'd' | 'a') => trend.map((p, i) => `${xs(i).toFixed(1)},${ys(p[key]).toFixed(1)}`).join(' ');
-  const last = trend[trend.length - 1];
+  const open = trend[0], now = trend[trend.length - 1];
+  const rows = [
+    { key: 'h' as const, label: '홈', color: '#3987e5' },
+    { key: 'd' as const, label: '무', color: '#8b8a84' },
+    { key: 'a' as const, label: '원정', color: '#d95926' },
+  ];
+  const spark = (key: 'h' | 'd' | 'a', color: string) => {
+    const w = 50, h = 20;
+    const vals = trend.map((p) => p[key]);
+    const lo = Math.min(...vals), hi = Math.max(...vals), rng = (hi - lo) || 1;
+    const pts = trend.map((p, i) => `${((i / (trend.length - 1)) * w).toFixed(1)},${(h - ((p[key] - lo) / rng) * h).toFixed(1)}`).join(' ');
+    return <svg width={w} height={h} style={{ flex: '0 0 auto' }}><polyline fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" points={pts} /></svg>;
+  };
+  const deltas = rows.map((r) => ({ label: r.label, d: (now[r.key] - open[r.key]) * 100 }));
+  const top = deltas.reduce((a, b) => (b.d > a.d ? b : a));
+  const hint = top.d >= 0.3 ? `시가 대비 ${top.label} 쪽으로 배당이 모이는 중` : '시가 대비 큰 변동 없음';
   return (
-    <>
-      <div style={{ display: 'flex', gap: 14, fontSize: 11, fontWeight: 700, marginBottom: 8 }}>
-        <span style={{ color: '#79b0f0' }}>● 홈 {pct(last.h)}</span>
-        <span style={{ color: '#b8b7b0' }}>● 무 {pct(last.d)}</span>
-        <span style={{ color: '#eb8a5f' }}>● 원정 {pct(last.a)}</span>
-      </div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none">
-        <polyline fill="none" stroke="#3987e5" strokeWidth={2} points={line('h')} />
-        <polyline fill="none" stroke="#6b6a64" strokeWidth={2} points={line('d')} />
-        <polyline fill="none" stroke="#d95926" strokeWidth={2} points={line('a')} />
-      </svg>
-    </>
+    <div>
+      {rows.map((r, i) => {
+        const o = open[r.key], n = now[r.key], dpp = (n - o) * 100;
+        const up = dpp >= 0.05, dn = dpp <= -0.05;
+        const bg = up ? 'rgba(62,203,62,.14)' : dn ? 'rgba(230,103,103,.14)' : 'rgba(255,255,255,.06)';
+        const c = up ? '#4bd14b' : dn ? '#eb7a7a' : '#8b8a84';
+        const ar = up ? '▲' : dn ? '▼' : '―';
+        return (
+          <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 0', borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,.06)' : 'none' }}>
+            <span style={{ width: 9, height: 9, borderRadius: '50%', background: r.color, flex: '0 0 auto' }} />
+            <span style={{ fontSize: 12.5, fontWeight: 700, width: 30, flex: '0 0 auto' }}>{r.label}</span>
+            <span style={{ fontSize: 11, color: '#77756f', flex: '0 0 auto' }}>시가 {pct(o)}</span>
+            <span style={{ color: '#5c5a55', fontSize: 11, flex: '0 0 auto' }}>→</span>
+            <span style={{ fontSize: 15, fontWeight: 800, flex: '0 0 auto', fontVariantNumeric: 'tabular-nums' }}>{pct(n)}</span>
+            {spark(r.key, r.color)}
+            <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: bg, color: c, flex: '0 0 auto', whiteSpace: 'nowrap' }}>{ar} {Math.abs(dpp).toFixed(1)}%p</span>
+          </div>
+        );
+      })}
+      <div style={{ fontSize: 11, color: '#77756f', textAlign: 'center', marginTop: 10 }}>{hint}</div>
+    </div>
   );
 }
 
