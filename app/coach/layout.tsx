@@ -38,6 +38,10 @@ button, a, [role=button] { touch-action: manipulation; }
 .tc-hidebar { -ms-overflow-style:none; scrollbar-width:none; }
 @keyframes tcshimmer { 0%{background-position:-220px 0} 100%{background-position:220px 0} }
 .tc-skel { background:#161615; background-image:linear-gradient(90deg,#161615,#22221f,#161615); background-size:220px 100%; background-repeat:no-repeat; animation:tcshimmer 1.15s infinite linear; }
+@keyframes tcslideup { from { transform: translateY(100%) } to { transform: translateY(0) } }
+@keyframes tcscrim { from { opacity:0 } to { opacity:1 } }
+.tc-sheet { animation: tcslideup .28s cubic-bezier(.22,1,.36,1); }
+.tc-scrim { animation: tcscrim .22s ease; }
 `;
 
 function haptic() { try { (navigator as any).vibrate?.(6); } catch {} }
@@ -70,7 +74,7 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
         {TABS.map((t) => {
           const on = isActive(t.href);
           return (
-            <Link key={t.href} href={t.href} onClick={haptic} className="tc-tab" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none', color: on ? '#3987e5' : '#8b8a84' }}>
+            <Link key={t.href} href={t.href} onClick={() => { haptic(); if (on) window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="tc-tab" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none', color: on ? '#3987e5' : '#8b8a84' }}>
               <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={on ? 2.2 : 1.9} strokeLinecap="round" strokeLinejoin="round">{ICON[t.id]}</svg>
               <span style={{ fontSize: 10, fontWeight: 700 }}>{t.label}</span>
             </Link>

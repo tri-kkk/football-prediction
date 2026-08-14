@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { coachApi, type MatchSignal } from '@/lib/coachApi';
 import { useSlipCart } from './slipCart';
+import { useDragToClose } from './useDragToClose';
 
 export const GRADE_COLOR: Record<string, string> = { S: '#3987e5', A: '#0ca30c', B: '#eda100', C: '#898781' };
 
@@ -195,6 +196,7 @@ export function BetSheet({ m, onClose, onSaved }: { m: MatchSignal; onClose: () 
   const [stake, setStake] = useState<string>('15000');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  const { dragHandlers, sheetStyle } = useDragToClose(onClose);
 
   const o = parseFloat(odds) || 0;
   const st = parseInt(stake.replace(/[^0-9]/g, '')) || 0;
@@ -221,9 +223,9 @@ export function BetSheet({ m, onClose, onSaved }: { m: MatchSignal; onClose: () 
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 45 }} />
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, maxWidth: 480, margin: '0 auto', zIndex: 46, background: '#1a1a19', borderRadius: '22px 22px 0 0', borderTop: '1px solid rgba(255,255,255,.1)', padding: '14px 16px 24px', maxHeight: '90%', overflowY: 'auto' }}>
-        <div style={{ width: 40, height: 4, borderRadius: 2, background: '#383835', margin: '2px auto 14px' }} />
+      <div onClick={onClose} className="tc-scrim" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 45 }} />
+      <div className="tc-sheet" style={{ position: 'fixed', left: 0, right: 0, bottom: 0, maxWidth: 480, margin: '0 auto', zIndex: 46, background: '#1a1a19', borderRadius: '22px 22px 0 0', borderTop: '1px solid rgba(255,255,255,.1)', padding: '14px 16px 24px', maxHeight: '90%', overflowY: 'auto', ...sheetStyle }}>
+        <div {...dragHandlers} style={{ padding: '2px 0 12px', touchAction: 'none', cursor: 'grab' }}><div style={{ width: 40, height: 4, borderRadius: 2, background: '#383835', margin: '0 auto' }} /></div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div style={{ fontSize: 16, fontWeight: 800 }}>기록 추가</div>
           <button onClick={onClose} style={{ width: 30, height: 30, border: '1px solid rgba(255,255,255,.1)', borderRadius: 9, background: '#232320', color: '#fff', cursor: 'pointer' }}>✕</button>
