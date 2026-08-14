@@ -14,11 +14,11 @@ const TABS = [
   { href: '/coach/settings', label: '설정', id: 'set' },
 ];
 const ICON: Record<string, React.ReactNode> = {
-  home: <><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></>,
-  matches: <><circle cx="12" cy="12" r="9" /><path d="M12 3v18M3 12h18" /></>,
-  bets: <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 9h8M8 13h6" /></>,
-  report: <path d="M4 20V10M10 20V4M16 20v-7M20 20H2" />,
-  set: <><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" /><path d="M1 14h6M9 8h6M17 16h6" /></>,
+  home: <><path d="m3 9.2 9-6.8 9 6.8V20a1.6 1.6 0 0 1-1.6 1.6H4.6A1.6 1.6 0 0 1 3 20z" /><path d="M9.2 21.4V13h5.6v8.4" /></>,
+  matches: <><circle cx="12" cy="12" r="9" /><path d="M12 8.2l2.7 1.95-1.03 3.2h-3.34L9.3 10.15z" /><path d="M12 3.3V8.2M14.7 10.15l3.3-1.05M13.67 13.35l1.95 3.2M10.33 13.35l-1.95 3.2M9.3 10.15 6 9.1" /></>,
+  bets: <><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M8 9.5h5M8 13.5h3.4" /><path d="m14.4 14.1 1.15 1.15 2.25-2.4" /></>,
+  report: <><path d="M4 4v16h16" /><rect x="7" y="12" width="2.6" height="5.4" rx=".7" /><rect x="12" y="8.5" width="2.6" height="8.9" rx=".7" /><rect x="17" y="14.4" width="2.6" height="3" rx=".7" /></>,
+  set: <><line x1="21" x2="14" y1="6.5" y2="6.5" /><line x1="10" x2="3" y1="6.5" y2="6.5" /><circle cx="12" cy="6.5" r="2.1" /><line x1="21" x2="16" y1="12" y2="12" /><line x1="12" x2="3" y1="12" y2="12" /><circle cx="14" cy="12" r="2.1" /><line x1="21" x2="10" y1="17.5" y2="17.5" /><line x1="6" x2="3" y1="17.5" y2="17.5" /><circle cx="8" cy="17.5" r="2.1" /></>,
 };
 
 const GLOBAL_CSS = `
@@ -83,7 +83,10 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
           const on = isActive(t.href);
           return (
             <Link key={t.href} href={t.href} onClick={() => { haptic(); if (on) window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="tc-tab" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none', color: on ? '#3987e5' : '#8b8a84' }}>
-              <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={on ? 2.2 : 1.9} strokeLinecap="round" strokeLinejoin="round">{ICON[t.id]}</svg>
+              <span style={{ position: 'relative', display: 'grid', placeItems: 'center', width: 46, height: 28 }}>
+                <span style={{ position: 'absolute', inset: 0, borderRadius: 15, background: 'rgba(57,135,229,.16)', opacity: on ? 1 : 0, transform: on ? 'scale(1)' : 'scale(.8)', transition: 'opacity .18s ease, transform .18s ease' }} />
+                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative' }}>{ICON[t.id]}</svg>
+              </span>
               <span style={{ fontSize: 10, fontWeight: 700 }}>{t.label}</span>
             </Link>
           );
