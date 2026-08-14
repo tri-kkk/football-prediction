@@ -123,6 +123,7 @@ function FormRow({ label, sub, form }: { label: string; sub: string; form: FormI
 
 // 라인 무브먼트 요약: 시가 → 현재 + 변동(%p) + 미니 스파크라인. 평평한 선보다 "얼마나 움직였나"가 바로 읽힘.
 function TrendChart({ trend }: { trend: Detail['trend'] }) {
+  const pct2 = (v: number) => `${(v * 100).toFixed(2)}%`; // 배당 추이는 미세 변동이 중요 → 2자리
   if (trend.length < 2) return <div style={{ fontSize: 11.5, color: '#898781', textAlign: 'center', padding: '10px 0' }}>배당 변동 데이터가 아직 충분하지 않아요.</div>;
   const open = trend[0], now = trend[trend.length - 1];
   const rows = [
@@ -152,11 +153,11 @@ function TrendChart({ trend }: { trend: Detail['trend'] }) {
           <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 0', borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,.06)' : 'none' }}>
             <span style={{ width: 9, height: 9, borderRadius: '50%', background: r.color, flex: '0 0 auto' }} />
             <span style={{ fontSize: 12.5, fontWeight: 700, width: 30, flex: '0 0 auto' }}>{r.label}</span>
-            <span style={{ fontSize: 11, color: '#77756f', flex: '0 0 auto' }}>시가 {pct(o)}</span>
+            <span style={{ fontSize: 11, color: '#77756f', flex: '0 0 auto' }}>시가 {pct2(o)}</span>
             <span style={{ color: '#5c5a55', fontSize: 11, flex: '0 0 auto' }}>→</span>
-            <span style={{ fontSize: 15, fontWeight: 800, flex: '0 0 auto', fontVariantNumeric: 'tabular-nums' }}>{pct(n)}</span>
+            <span style={{ fontSize: 15, fontWeight: 800, flex: '0 0 auto', fontVariantNumeric: 'tabular-nums' }}>{pct2(n)}</span>
             {spark(r.key, r.color)}
-            <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: bg, color: c, flex: '0 0 auto', whiteSpace: 'nowrap' }}>{ar} {Math.abs(dpp).toFixed(1)}%p</span>
+            <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: bg, color: c, flex: '0 0 auto', whiteSpace: 'nowrap' }}>{ar} {Math.abs(dpp).toFixed(2)}%p</span>
           </div>
         );
       })}
