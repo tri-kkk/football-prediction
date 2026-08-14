@@ -21,23 +21,8 @@ const LEAGUES: Record<string, { id: number; name: string }> = {
   FL1: { id: 61, name: '리그1' },
   SA: { id: 135, name: '세리에A' },
 }
-// 1부 리그별 승격팀 처리: 하위리그(2부) id + 참조 시즌 + 승격팀 id + 2부→1부 환산계수
-// 환산계수는 실제 승격팀 신인시즌 데이터로 도출(득점/실점/선제골승률/폼 배율).
-const PROMO_CFG: Record<number, {
-  lower: number; season: string; ids: number[]
-  gf: number; ga: number; fgw: number; form: number
-}> = {
-  // PL ← 챔피언십(코번트리/헐시티/입스위치)
-  39:  { lower: 40,  season: '2025', ids: [1346, 64, 57],   gf: 0.60, ga: 2.32, fgw: 0.51, form: 0.60 },
-  // 라리가 ← 세군다(말라가/데포르티보/라싱 산탄데르). 9개 승격팀 실측: GF 0.75, GA 1.90, FGwr 0.68, form 0.60
-  140: { lower: 141, season: '2025', ids: [535, 544, 4665], gf: 0.75, ga: 1.90, fgw: 0.68, form: 0.60 },
-  // 분데스리가 ← 2.분데스(샬케04/엘버스베르크). 6개 승격팀 실측: GF 0.67, GA 1.65, FGwr 0.68, form 0.50
-  78:  { lower: 79,  season: '2025', ids: [174, 1660],      gf: 0.67, ga: 1.65, fgw: 0.68, form: 0.50 },
-  // 리그1 ← 리그2(트루아/르망). 6개 승격팀 실측: GF 0.73, GA 1.75, FGwr 0.70, form 0.55
-  61:  { lower: 62,  season: '2025', ids: [110, 1298],      gf: 0.73, ga: 1.75, fgw: 0.70, form: 0.55 },
-  // 세리에A ← 세리에B(프로시노네/베네치아/몬차). 9개 승격팀 실측: GF 0.66, GA 1.67, FGwr 0.55, form 0.53
-  135: { lower: 136, season: '2025', ids: [512, 517, 1579], gf: 0.66, ga: 1.67, fgw: 0.55, form: 0.53 },
-}
+const ELC = 40
+const PROMO_IDS = [1346, 64, 57] // PL 승격팀(코번트리/헐시티/입스위치) — 챔피언십 데이터 보유
 
 function currentSeason(): number {
   const now = new Date()
@@ -52,51 +37,67 @@ async function af(endpoint: string) {
   return res.json()
 }
 
+// 폴백: API-Football이 일정을 못 줄 때(쿼터/리밋/새시즌 미개시) 배당 DB(match_odds_latest)에서
+// 리그의 예정+최근 경기를 API fixtures 형태로 변환. 일정이 통째로 사라지는 것 방지.
+async function oddsFixtures(leagueCode: string): Promise<any[]> {
+  const cutoff = new Date(Date.now() - 3 * 3600_000).toISOString()
+  const { data } = await supabase
+    .from('match_odds_latest')
+    .select('match_id,home_team,away_team,home_team_id,away_team_id,commence_time,status,home_score,away_score,league_code')
+    .eq('league_code', leagueCode)
+    .gt('commence_time', cutoff)
+    .order('commence_time', { ascending: true })
+  return (data || []).map((r: any) => ({
+    fixture: { id: r.match_id, date: r.commence_time, status: { short: r.status || 'NS' } },
+    teams: { home: { id: r.home_team_id, name: r.home_team }, away: { id: r.away_team_id, name: r.away_team } },
+    league: { round: '' },
+    goals: { home: r.home_score ?? null, away: r.away_score ?? null },
+  }))
+}
+
 const SUMKEYS = [
   'home_played','home_wins','home_goals_for','home_goals_against',
   'home_first_goal_games','home_first_goal_wins','home_concede_first_games','home_concede_first_wins',
   'away_played','away_wins','away_goals_for','away_goals_against',
   'away_first_goal_games','away_first_goal_wins','away_concede_first_games','away_concede_first_wins',
 ]
-function aggregate(src: any[], promoted: boolean, f?: typeof PROMO_CFG[number]) {
+function aggregate(src: any[], promoted: boolean) {
   const F: any = { promoted }
   for (const k of SUMKEYS) F[k] = src.reduce((s: number, r: any) => s + (r[k] || 0), 0)
   const latest = src.reduce((a: any, b: any) => (parseInt(b.season) > parseInt(a.season) ? b : a))
   F.form_home_5 = latest.form_home_5; F.form_away_5 = latest.form_away_5
-  if (promoted && f) {
-    F.home_goals_for *= f.gf; F.away_goals_for *= f.gf
-    F.home_goals_against *= f.ga; F.away_goals_against *= f.ga
-    F.home_first_goal_wins *= f.fgw; F.away_first_goal_wins *= f.fgw
-    F.home_concede_first_wins *= f.fgw; F.away_concede_first_wins *= f.fgw
-    if (F.form_home_5 != null) F.form_home_5 *= f.form
-    if (F.form_away_5 != null) F.form_away_5 *= f.form
+  if (promoted) {
+    F.home_goals_for *= 0.6; F.away_goals_for *= 0.6
+    F.home_goals_against *= 2.32; F.away_goals_against *= 2.32
+    F.home_first_goal_wins *= 0.51; F.away_first_goal_wins *= 0.51
+    F.home_concede_first_wins *= 0.51; F.away_concede_first_wins *= 0.51
+    if (F.form_home_5 != null) F.form_home_5 *= 0.6
+    if (F.form_away_5 != null) F.form_away_5 *= 0.6
   }
   return F
 }
-// 리그별 팀 통계 (fg_team_stats 다시즌 합산). 승격팀은 2부 데이터를 1부로 환산(PL←챔피언십, 라리가←세군다).
+// 리그별 팀 통계 (fg_team_stats 다시즌 합산). PL은 승격팀 챔피언십 환산 반영.
 async function buildTeamStats(leagueId: number) {
   const { data: rows } = await supabase.from('fg_team_stats').select('*')
     .eq('league_id', leagueId).in('season', ['2023', '2024', '2025', '2026'])
   const byTeam: Record<number, any[]> = {}
   for (const r of rows || []) (byTeam[r.team_id] = byTeam[r.team_id] || []).push(r)
 
-  const cfg = PROMO_CFG[leagueId]
-  const lowerByTeam: Record<number, any[]> = {}
-  if (cfg) {
-    const { data: low } = await supabase.from('fg_team_stats').select('*')
-      .eq('league_id', cfg.lower).eq('season', cfg.season).in('team_id', cfg.ids)
-    for (const r of low || []) (lowerByTeam[r.team_id] = lowerByTeam[r.team_id] || []).push(r)
+  let elcByTeam: Record<number, any[]> = {}
+  if (leagueId === 39) {
+    const { data: elc } = await supabase.from('fg_team_stats').select('*')
+      .eq('league_id', ELC).eq('season', '2025').in('team_id', PROMO_IDS)
+    for (const r of elc || []) (elcByTeam[r.team_id] = elcByTeam[r.team_id] || []).push(r)
   }
-  const cur = String(currentSeason())
   const stats: Record<number, any> = {}
-  const ids = new Set<number>([...Object.keys(byTeam).map(Number), ...Object.keys(lowerByTeam).map(Number)])
+  const ids = new Set<number>([...Object.keys(byTeam).map(Number), ...Object.keys(elcByTeam).map(Number)])
   for (const tid of ids) {
-    const top = byTeam[tid] || []
-    const curRow = top.find((r: any) => r.season === cur)
-    const stillPromo = !!cfg && cfg.ids.includes(tid) && ((curRow?.total_played || 0) < 5)
-    const src = stillPromo ? (lowerByTeam[tid] || []) : top
+    const plt = byTeam[tid] || []
+    const pl2026 = plt.find((r: any) => r.season === '2026')
+    const stillPromo = leagueId === 39 && PROMO_IDS.includes(tid) && ((pl2026?.total_played || 0) < 5)
+    const src = stillPromo ? (elcByTeam[tid] || []) : plt
     if (!src.length) continue
-    stats[tid] = aggregate(src, stillPromo, cfg)
+    stats[tid] = aggregate(src, stillPromo)
   }
   return stats
 }
@@ -185,7 +186,9 @@ export async function GET(req: NextRequest) {
       const betMap: Record<number, any> = {}
       for (const b of betRows) betMap[b.match_id] = b
 
-      const fixtures = fixData.response || []
+      let fixtures = fixData.response || []
+      // API가 일정을 못 주면 배당 DB로 폴백 (라리가 등 새시즌/리밋 시 일정 사라짐 방지).
+      if (fixtures.length === 0) fixtures = await oddsFixtures(code)
       const fixIds = fixtures.map((f: any) => String(f.fixture.id))
       const { data: oddsRows } = await supabase
         .from('match_odds_latest').select('match_id,home_odds,draw_odds,away_odds').in('match_id', fixIds)
