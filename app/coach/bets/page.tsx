@@ -70,22 +70,25 @@ export default function BetsPage() {
         { k: '적중률', v: hit != null ? `${(hit * 100).toFixed(0)}%` : '—', tone: 'blue' },
         { k: '누적 손익', v: `${profit >= 0 ? '+' : ''}${profit.toLocaleString()}`, tone: profit > 0 ? 'grn' : profit < 0 ? 'crit' : undefined },
       ]} />
+      {/* 상단 컨트롤(범위 + 진행중/완료) 앱 헤더 아래에 고정 */}
+      <div style={{ position: 'sticky', top: 'calc(env(safe-area-inset-top) + 58px)', zIndex: 10, margin: '12px -16px 0', padding: '10px 16px 10px', background: 'rgba(13,13,13,.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
+        <div className="tc-hidebar" style={{ display: 'flex', gap: 7, marginBottom: 9, overflowX: 'auto' }}>
+          {RANGES.map((r) => {
+            const on = range === r.key;
+            return (
+              <button key={r.key} onClick={() => setRange(r.key)} className="tc-press" style={{ flex: '0 0 auto', border: `1px solid ${on ? 'rgba(90,160,240,.4)' : 'rgba(255,255,255,.1)'}`, background: on ? 'rgba(57,135,229,.16)' : '#1a1a19', color: on ? '#9cc4f4' : '#898781', fontWeight: 700, fontSize: 12, padding: '6px 13px', borderRadius: 999, cursor: 'pointer' }}>{r.label}</button>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['open', 'settled'] as const).map((k) => (
+            <button key={k} onClick={() => setTab(k)} style={{ flex: 1, border: `1px solid ${tab === k ? '#383835' : 'rgba(255,255,255,.1)'}`, background: tab === k ? '#232320' : '#1a1a19', color: tab === k ? '#fff' : '#898781', fontWeight: 700, fontSize: 12.5, padding: 9, borderRadius: 11, cursor: 'pointer' }}>
+              {k === 'open' ? `진행중 ${openCnt}` : `완료 ${doneCnt}`}
+            </button>
+          ))}
+        </div>
+      </div>
       <div style={{ height: 12 }} />
-      <div className="tc-hidebar" style={{ display: 'flex', gap: 7, marginBottom: 11, overflowX: 'auto' }}>
-        {RANGES.map((r) => {
-          const on = range === r.key;
-          return (
-            <button key={r.key} onClick={() => setRange(r.key)} className="tc-press" style={{ flex: '0 0 auto', border: `1px solid ${on ? 'rgba(90,160,240,.4)' : 'rgba(255,255,255,.1)'}`, background: on ? 'rgba(57,135,229,.16)' : '#1a1a19', color: on ? '#9cc4f4' : '#898781', fontWeight: 700, fontSize: 12, padding: '6px 13px', borderRadius: 999, cursor: 'pointer' }}>{r.label}</button>
-          );
-        })}
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        {(['open', 'settled'] as const).map((k) => (
-          <button key={k} onClick={() => setTab(k)} style={{ flex: 1, border: `1px solid ${tab === k ? '#383835' : 'rgba(255,255,255,.1)'}`, background: tab === k ? '#232320' : '#1a1a19', color: tab === k ? '#fff' : '#898781', fontWeight: 700, fontSize: 12.5, padding: 9, borderRadius: 11, cursor: 'pointer' }}>
-            {k === 'open' ? `진행중 ${openCnt}` : `완료 ${doneCnt}`}
-          </button>
-        ))}
-      </div>
       {!list.length && (
         <EmptyState
           icon={<svg width={30} height={30} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round"><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M8 9.5h5M8 13.5h3.4" /><path d="m14.4 14.1 1.15 1.15 2.25-2.4" /></svg>}
