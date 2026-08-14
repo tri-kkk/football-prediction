@@ -118,10 +118,12 @@ export function MatchCard({ m, member, onAdd, featured }: { m: MatchSignal; memb
       : cart.add({ matchId: m.matchId, home: m.home, away: m.away, league: m.league, kickoff: m.kickoff, grade: s?.grade, odds: m.odds, pick: recPick as any });
   return (
     <div className="tc-press" style={{ position: 'relative', overflow: 'hidden', background: '#1a1a19', border: `1px solid ${featured ? 'rgba(57,135,229,.35)' : 'rgba(255,255,255,.1)'}`, borderRadius: 16, padding: 14, marginBottom: 11 }}>
-      {featured && (<>
+      {featured ? (<>
         <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/card-pitch.webp)', backgroundSize: 'cover', backgroundPosition: 'right center' }} />
         <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,#1a1a19 26%,rgba(26,26,25,.35) 62%,rgba(26,26,25,.62))' }} />
-      </>)}
+      </>) : (
+        <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/card-mesh.webp)', backgroundSize: 'cover', backgroundPosition: 'center', opacity: .46 }} />
+      )}
       <div style={{ position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: '#898781' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
