@@ -208,7 +208,7 @@ export default function MatchDetail() {
               <div style={{ display: 'flex', gap: 13, alignItems: 'center' }}>
                 <Ring score={s.score} grade={s.grade} />
                 <div style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: '#898781', lineHeight: 1.7 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: s.recommendation === 'WATCH' ? '#898781' : '#79b0f0', marginBottom: 4 }}>형세 · {s.formType} · 추천 {s.recommendation === 'WATCH' ? '관망' : s.recommendationText}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: s.recommendation === 'WATCH' ? '#898781' : '#79b0f0', marginBottom: 4 }}>형세 · {s.formType} · {s.recommendation === 'WATCH' ? '관망' : s.recommendationText}</div>
                   <div>모델 확률 <b style={{ color: '#c3c2b7' }}>홈 {pct(d.model.home)} · 무 {pct(d.model.draw)} · 원정 {pct(d.model.away)}</b></div>
                   {d.market && <div>시장(마진제거) <b style={{ color: '#c3c2b7' }}>홈 {pct(d.market.home)} · 무 {pct(d.market.draw)} · 원정 {pct(d.market.away)}</b></div>}
                   {s.gap && <div>모델−시장 이견 <b style={{ color: '#79b0f0' }}>{s.gap.outcome === 'HOME' ? '홈' : s.gap.outcome === 'DRAW' ? '무' : '원정'} {s.gap.pp >= 0 ? '+' : ''}{s.gap.pp}%p</b></div>}

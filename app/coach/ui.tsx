@@ -95,9 +95,15 @@ export const roundLabel = (round?: string) => {
   return m ? `${m[1]}R` : round;
 };
 
+// 링 채움은 등급 단계 기준(S>A>B>C) — 신뢰도 점수만으로는 B/C가 비슷하게 차서 등급 구분이 안 됨.
+// 단계별 고정값에 점수로 미세 변주(±)를 줘 같은 등급끼리도 완전히 동일하진 않게.
+const GRADE_FILL: Record<string, number> = { S: 0.95, A: 0.72, B: 0.5, C: 0.28 };
 export function Ring({ score, grade }: { score: number; grade: string }) {
   const c = 2 * Math.PI * 27;
-  const dash = Math.max(0, Math.min(1, score / 100)) * c;
+  const base = GRADE_FILL[grade] ?? 0.15;
+  const nudge = (Math.max(0, Math.min(100, score)) / 100 - 0.5) * 0.08; // 점수 기반 미세 변주
+  const frac = Math.max(0.1, Math.min(1, base + nudge));
+  const dash = frac * c;
   const color = GRADE_COLOR[grade] || '#898781';
   const hot = grade === 'S' || grade === 'A'; // 상위 등급만 글로우
   return (
@@ -232,7 +238,7 @@ export function MatchCard({ m, member, onAdd, featured, index }: { m: MatchSigna
           <div style={{ display: 'flex', gap: 13, alignItems: 'center', marginTop: 11, paddingTop: 13, borderTop: '1px solid #2c2c2a' }}>
             <Ring score={s.score} grade={s.grade} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 7, color: s.recommendation === 'WATCH' ? '#898781' : '#79b0f0' }}>추천 {s.recommendation === 'WATCH' ? '관망' : s.recommendationText}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 7, color: s.recommendation === 'WATCH' ? '#898781' : '#79b0f0' }}>{s.recommendation === 'WATCH' ? '관망' : s.recommendationText}</div>
               <div style={{ fontSize: 11, color: '#898781', marginBottom: 5 }}>강약 홈 {s.strengths.home}·무 {s.strengths.draw}·원정 {s.strengths.away}</div>
               {s.totalMatches != null && s.histRate != null && <div style={{ fontSize: 11, color: '#898781', marginBottom: 5 }}>과거 이 형세 <b style={{ color: '#c3c2b7' }}>{s.totalMatches}경기</b> → <b style={{ color: '#c3c2b7' }}>{pct(s.histRate)}</b></div>}
               {s.gap && <div style={{ fontSize: 11, color: '#898781' }}>이견 <Dots n={s.gap.strength} /> {Math.abs(s.gap.pp) >= 7 ? '강함' : Math.abs(s.gap.pp) >= 3 ? '보통' : '낮음'}</div>}
