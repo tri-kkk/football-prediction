@@ -340,7 +340,8 @@ export default function MatchDetail() {
           {/* 팀 시즌 심층 스탯 (API-Football /teams/statistics) */}
           {(() => {
             const th = d.teamDeep.home, ta = d.teamDeep.away;
-            if (!th && !ta) return null;
+            // 경기 수 0(개막 전 등)이면 의미 있는 스탯이 없어 카드 자체를 숨김
+            if ((!th || !th.played) && (!ta || !ta.played)) return null;
             return (
               <Card title="팀 시즌 심층 스탯">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0 16px', marginBottom: 4, fontSize: 10.5, fontWeight: 700, color: '#898781' }}>

@@ -96,6 +96,18 @@ async function computeDetail(matchId: string) {
   };
   const standings = { home: standOf(sig.homeId), away: standOf(sig.awayId), season: standSeason, isPrevious: standSeason !== Number(season) };
 
+  // 새 시즌 개막 전이면(순위가 직전 시즌으로 폴백됨) 심층 스탯·득점왕도 같은 직전 시즌으로 재조회.
+  // 현재 시즌은 경기 수가 0이라 스탯이 전부 0/빈값으로 나오기 때문.
+  let hStatRes = homeStatRes, aStatRes = awayStatRes, scRes = scorersRes;
+  if (standSeason !== Number(season)) {
+    const [h2, a2, sc2] = await Promise.all([
+      af(`/teams/statistics?team=${sig.homeId}&league=${leagueId}&season=${standSeason}`).catch(() => ({ response: null })),
+      af(`/teams/statistics?team=${sig.awayId}&league=${leagueId}&season=${standSeason}`).catch(() => ({ response: null })),
+      af(`/players/topscorers?league=${leagueId}&season=${standSeason}`).catch(() => ({ response: [] })),
+    ]);
+    hStatRes = h2; aStatRes = a2; scRes = sc2;
+  }
+
   // ── 팀 시즌 심층 스탯 (/teams/statistics) ──
   const extractDeep = (res: any) => {
     const r = res?.response;
@@ -123,7 +135,7 @@ async function computeDetail(matchId: string) {
       goalPeak: peakPct > 0 ? peak : null,
     };
   };
-  const teamDeep = { home: extractDeep(homeStatRes), away: extractDeep(awayStatRes) };
+  const teamDeep = { home: extractDeep(hStatRes), away: extractDeep(aStatRes) };
 
   // ── 결장/부상 (/injuries?fixture) ──
   const inj: { home: string[]; away: string[] } = { home: [], away: [] };
@@ -138,7 +150,7 @@ async function computeDetail(matchId: string) {
 
   // ── 팀 간판 득점원 (/players/topscorers, 리그 상위 내 매칭) ──
   const topScorerFor = (teamId: number) => {
-    for (const p of (scorersRes as any)?.response || []) {
+    for (const p of (scRes as any)?.response || []) {
       const st = (p.statistics || []).find((s: any) => s.team?.id === teamId);
       if (st && (st.goals?.total ?? 0) > 0) return { name: p.player?.name ?? null, goals: st.goals?.total ?? null };
     }
