@@ -1,9 +1,25 @@
 'use client';
-// app/coach/settings/page.tsx — 설정: 멤버쉽 상태 · (회원)뱅크롤·알림 · 계정(NextAuth 세션 기반).
+// app/coach/settings/page.tsx — 설정: 멤버쉽 상태 · (회원)뱅크롤·알림 · 계정(NextAuth 세션 기반). 네이티브 그룹 리스트.
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { coachApi, MembershipError, mainLoginUrl } from '@/lib/coachApi';
 import { PageTitle } from '../ui';
+
+const Section = ({ children }: { children: React.ReactNode }) => (
+  <div style={{ fontSize: 11.5, fontWeight: 800, color: '#8b8a84', letterSpacing: .5, margin: '22px 4px 9px' }}>{children}</div>
+);
+const Group = ({ children }: { children: React.ReactNode }) => (
+  <div style={{ background: '#161615', border: '1px solid rgba(255,255,255,.07)', borderRadius: 14, overflow: 'hidden' }}>{children}</div>
+);
+const div = 'rgba(255,255,255,.06)';
+
+function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} aria-pressed={on} className="tc-press" style={{ width: 44, height: 26, borderRadius: 999, border: 0, background: on ? '#3987e5' : '#3a3a37', position: 'relative', cursor: 'pointer', flex: '0 0 auto', transition: 'background .18s' }}>
+      <span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.35)', transition: 'left .18s' }} />
+    </button>
+  );
+}
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -37,22 +53,20 @@ export default function SettingsPage() {
   const authed = status === 'authenticated';
   const isMember = authed && member === true;
 
-  const row = (l: string, r: React.ReactNode) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 13, padding: 14, marginBottom: 9 }}>
-      <span style={{ fontSize: 13.5, fontWeight: 600 }}>{l}</span><span style={{ fontSize: 12, color: '#898781', fontWeight: 600 }}>{r}</span>
+  const InputRow = ({ label, value, onChange, last }: { label: string; value: string; onChange: (v: string) => void; last?: boolean }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '13px 14px', borderBottom: last ? 'none' : `1px solid ${div}` }}>
+      <span style={{ fontSize: 13.5, fontWeight: 600, flex: '0 0 auto' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#232320', border: '1px solid rgba(255,255,255,.1)', borderRadius: 9, padding: '7px 11px', width: 150 }}>
+        <span style={{ color: '#8f8d85', fontSize: 13, flex: '0 0 auto' }}>₩</span>
+        <input value={Number((value || '').replace(/[^0-9]/g, '') || 0).toLocaleString()} onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ flex: 1, minWidth: 0, background: 'transparent', border: 0, color: '#fff', fontSize: 15, fontWeight: 700, textAlign: 'right', outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
+      </div>
     </div>
   );
-  const sect = (t: string) => <div style={{ fontSize: 12, fontWeight: 700, color: '#898781', margin: '18px 2px 10px', letterSpacing: .6 }}>{t}</div>;
-  const Switch = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
-    <button onClick={onClick} aria-pressed={on} style={{ width: 42, height: 24, borderRadius: 999, border: 0, background: on ? '#3987e5' : '#3a3a37', position: 'relative', cursor: 'pointer', flex: '0 0 auto', transition: 'background .15s' }}>
-      <span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
-    </button>
-  );
-  const toggleRow = (l: string, sub: string, on: boolean, onClick: () => void) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 13, padding: 14, marginBottom: 9 }}>
+  const ToggleRow = ({ label, sub, on, onClick, last }: { label: string; sub: string; on: boolean; onClick: () => void; last?: boolean }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '14px', borderBottom: last ? 'none' : `1px solid ${div}` }}>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{l}</div>
-        {sub && <div style={{ fontSize: 11, color: '#898781', marginTop: 3 }}>{sub}</div>}
+        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{label}</div>
+        {sub && <div style={{ fontSize: 11, color: '#898781', marginTop: 3, lineHeight: 1.45 }}>{sub}</div>}
       </div>
       <Switch on={on} onClick={onClick} />
     </div>
@@ -61,9 +75,17 @@ export default function SettingsPage() {
   return (
     <>
       <PageTitle title="설정" sub="멤버쉽 · 뱅크롤 · 알림 · 계정" />
-      {sect('멤버쉽')}
+
+      <Section>멤버쉽</Section>
       {isMember ? (
-        row('상태', '멤버쉽 이용 중 ✓')
+        <Group>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px' }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600 }}>상태</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 800, color: '#4bd14b' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4bd14b', boxShadow: '0 0 6px #4bd14b' }} />멤버쉽 이용 중
+            </span>
+          </div>
+        </Group>
       ) : (
         <div style={{ background: 'linear-gradient(135deg,#1c2a40,#171d28)', border: '1px solid rgba(57,135,229,.35)', borderRadius: 16, padding: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>TrendCoach 멤버쉽</div>
@@ -74,30 +96,39 @@ export default function SettingsPage() {
 
       {isMember && (
         <>
-          {sect('뱅크롤')}
-          <div style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 13, padding: 14, marginBottom: 9 }}>
-            <div style={{ fontSize: 12, color: '#898781', marginBottom: 8 }}>총 뱅크롤 (원)</div>
-            <input value={Number(bankroll.replace(/[^0-9]/g, '') || 0).toLocaleString()} onChange={(e) => saveBankroll(e.target.value.replace(/[^0-9]/g, ''), unit)} inputMode="numeric" style={{ width: '100%', background: '#232320', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, padding: '11px 12px', color: '#fff', fontSize: 15, fontWeight: 700 }} />
-            <div style={{ fontSize: 12, color: '#898781', margin: '12px 0 8px' }}>단위 베팅 (원)</div>
-            <input value={Number(unit.replace(/[^0-9]/g, '') || 0).toLocaleString()} onChange={(e) => saveBankroll(bankroll, e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ width: '100%', background: '#232320', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, padding: '11px 12px', color: '#fff', fontSize: 15, fontWeight: 700 }} />
-          </div>
+          <Section>뱅크롤</Section>
+          <Group>
+            <InputRow label="총 뱅크롤" value={bankroll} onChange={(v) => saveBankroll(v, unit)} />
+            <InputRow label="단위 베팅" value={unit} onChange={(v) => saveBankroll(bankroll, v)} last />
+          </Group>
+          <div style={{ fontSize: 11, color: '#6b6a64', margin: '8px 4px 0', lineHeight: 1.5 }}>단위 베팅 = 1 유닛. 스테이크 초과 경고의 기준이 돼요.</div>
 
-          {sect('알림')}
-          {toggleRow('마감배당·정산 알림', '경기 후 정산 결과와 CLV를 알려드려요', notifySettle, toggleSettle)}
-          {toggleRow('스테이크 초과 경고', '단위 베팅의 3배를 초과하면 기록 시 경고', warnStake, toggleWarn)}
+          <Section>알림</Section>
+          <Group>
+            <ToggleRow label="마감배당·정산 알림" sub="경기 후 정산 결과와 CLV를 알려드려요" on={notifySettle} onClick={toggleSettle} />
+            <ToggleRow label="스테이크 초과 경고" sub="단위 베팅의 3배를 초과하면 기록 시 경고" on={warnStake} onClick={toggleWarn} last />
+          </Group>
         </>
       )}
 
-      {sect('계정')}
+      <Section>계정</Section>
       {authed ? (
         <>
-          {row('로그인', session?.user?.email || 'TrendSoccer 계정')}
-          <button onClick={() => signOut({ callbackUrl: '/coach' })} style={{ width: '100%', border: '1px solid rgba(255,255,255,.1)', background: '#1a1a19', color: '#e66767', fontWeight: 700, fontSize: 13, padding: 13, borderRadius: 13, cursor: 'pointer' }}>로그아웃</button>
+          <Group>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '14px' }}>
+              <span style={{ fontSize: 13.5, fontWeight: 600, flex: '0 0 auto' }}>로그인</span>
+              <span style={{ fontSize: 12.5, color: '#8f8d85', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session?.user?.email || 'TrendSoccer 계정'}</span>
+            </div>
+          </Group>
+          <div style={{ height: 9 }} />
+          <Group>
+            <button onClick={() => signOut({ callbackUrl: '/coach' })} className="tc-press" style={{ width: '100%', border: 0, background: 'transparent', color: '#e66767', fontWeight: 800, fontSize: 13.5, padding: 15, cursor: 'pointer' }}>로그아웃</button>
+          </Group>
         </>
       ) : (
         <a href={mainLoginUrl()} style={{ display: 'block', textAlign: 'center', background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 13.5, padding: 13, borderRadius: 13, textDecoration: 'none' }}>TrendSoccer 계정으로 로그인</a>
       )}
-      <p style={{ fontSize: 11, color: '#6b6a64', textAlign: 'center', marginTop: 14, lineHeight: 1.5 }}>계정은 TrendSoccer와 공유돼요(.trendsoccer.com).</p>
+      <p style={{ fontSize: 11, color: '#6b6a64', textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>계정은 TrendSoccer와 공유돼요 (.trendsoccer.com).</p>
     </>
   );
 }
