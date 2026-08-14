@@ -15,9 +15,18 @@ const ST = {
 } as const;
 const LEG_C: Record<string, string> = { won: '#4bd14b', lost: '#e66767', void: '#898781' };
 
+const RANGES = [
+  { key: 'today', label: '오늘' },
+  { key: '7d', label: '7일' },
+  { key: '30d', label: '30일' },
+  { key: 'all', label: '전체' },
+] as const;
+type RangeKey = typeof RANGES[number]['key'];
+
 export default function BetsPage() {
   const [items, setItems] = useState<any[] | null>(null);
   const [tab, setTab] = useState<'open' | 'settled'>('open');
+  const [range, setRange] = useState<RangeKey>('7d');
   const [state, setState] = useState<'loading' | 'ok' | 'guest' | 'auth' | 'error'>('loading');
 
   const load = (silent = false) => {
@@ -38,7 +47,15 @@ export default function BetsPage() {
   if (state === 'guest') return <Paywall />;
   if (state === 'error') return <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>불러오기 실패</p>;
 
-  const all = items || [];
+  const allRaw = items || [];
+  // 날짜 범위 필터 (created_at 기준) — 기본 최근 7일
+  const now = Date.now();
+  let cutoff = 0;
+  if (range === 'today') { const s = new Date(); s.setHours(0, 0, 0, 0); cutoff = s.getTime(); }
+  else if (range === '7d') cutoff = now - 7 * 86400_000;
+  else if (range === '30d') cutoff = now - 30 * 86400_000;
+  const all = range === 'all' ? allRaw : allRaw.filter((b) => new Date(b.created_at).getTime() >= cutoff);
+
   const list = all.filter((b) => (tab === 'open' ? b.status === 'open' : b.status !== 'open'));
   const openCnt = all.filter((b) => b.status === 'open').length;
   const doneCnt = all.length - openCnt;
@@ -54,6 +71,14 @@ export default function BetsPage() {
         { k: '누적 손익', v: `${profit >= 0 ? '+' : ''}${profit.toLocaleString()}`, tone: profit > 0 ? 'grn' : profit < 0 ? 'crit' : undefined },
       ]} />
       <div style={{ height: 12 }} />
+      <div className="tc-hidebar" style={{ display: 'flex', gap: 7, marginBottom: 11, overflowX: 'auto' }}>
+        {RANGES.map((r) => {
+          const on = range === r.key;
+          return (
+            <button key={r.key} onClick={() => setRange(r.key)} className="tc-press" style={{ flex: '0 0 auto', border: `1px solid ${on ? 'rgba(90,160,240,.4)' : 'rgba(255,255,255,.1)'}`, background: on ? 'rgba(57,135,229,.16)' : '#1a1a19', color: on ? '#9cc4f4' : '#898781', fontWeight: 700, fontSize: 12, padding: '6px 13px', borderRadius: 999, cursor: 'pointer' }}>{r.label}</button>
+          );
+        })}
+      </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         {(['open', 'settled'] as const).map((k) => (
           <button key={k} onClick={() => setTab(k)} style={{ flex: 1, border: `1px solid ${tab === k ? '#383835' : 'rgba(255,255,255,.1)'}`, background: tab === k ? '#232320' : '#1a1a19', color: tab === k ? '#fff' : '#898781', fontWeight: 700, fontSize: 12.5, padding: 9, borderRadius: 11, cursor: 'pointer' }}>
