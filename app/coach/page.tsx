@@ -67,6 +67,19 @@ function Kpi({ label, value, sub, tone, empty, hero }: { label: string; value: s
 
 const sect = (t: string, color = '#898781') => <div style={{ fontSize: 12, fontWeight: 700, color, margin: '18px 2px 10px', letterSpacing: .6 }}>{t}</div>;
 
+// 뉴스 리그별 색 (스캔 편의 + 브랜드 색 구분)
+const newsColor = (lg?: string) => {
+  if (!lg) return '#5aa0f0';
+  if (lg.includes('라리가') || /la\s?liga/i.test(lg)) return '#e8613c';
+  if (/EPL|프리미어/i.test(lg)) return '#a855f7';
+  if (lg.includes('분데스')) return '#e2323a';
+  if (lg.includes('세리에')) return '#2e8be6';
+  if (lg.includes('리그1') || lg.includes('리그 1') || lg.includes('리그 1')) return '#1e6fd9';
+  if (lg.includes('챔스') || lg.includes('챔피언')) return '#3987e5';
+  if (lg.includes('유로파')) return '#f0932b';
+  return '#5aa0f0';
+};
+
 export default function CoachHome() {
   const [data, setData] = useState<{ member: boolean; matches: MatchSignal[] } | null>(null);
   const [dash, setDash] = useState<DashboardData | null>(null);
@@ -156,15 +169,19 @@ export default function CoachHome() {
       {news.length > 0 && (state === 'ok' || state === 'guest') && (
         <>
           {sect('최근 뉴스 · 헤드라인')}
-          {news.map((n) => (
-            <div key={n.id} style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: 13, marginBottom: 9 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
-                {n.league && <span style={{ flex: '0 0 auto', fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: '#232320', color: '#9cc4f4' }}>{n.league}</span>}
-                <span style={{ fontSize: 10.5, color: '#898781' }}>{timeAgo(n.publishedAt)}</span>
+          {news.map((n) => {
+            const c = newsColor(n.league);
+            return (
+              <div key={n.id} style={{ position: 'relative', overflow: 'hidden', background: '#161615', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: '12px 13px 12px 15px', marginBottom: 8 }}>
+                <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: c }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+                  {n.league && <span style={{ flex: '0 0 auto', fontSize: 9.5, fontWeight: 800, padding: '2px 7px', borderRadius: 5, letterSpacing: .2, background: `${c}22`, color: c }}>{n.league}</span>}
+                  <span style={{ fontSize: 10.5, color: '#77756f' }}>{timeAgo(n.publishedAt)}</span>
+                </div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.45, color: '#efeee9' }}>{n.title}</div>
               </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.45, color: '#fff' }}>{n.title}</div>
-            </div>
-          ))}
+            );
+          })}
         </>
       )}
 
