@@ -52,6 +52,15 @@ button, a, [role=button] { touch-action: manipulation; }
 .tc-toast { animation: tctoast .22s ease; }
 @keyframes tcslidein { from { transform: translateX(26px); opacity:0 } to { transform:none; opacity:1 } }
 .tc-slidein { animation: tcslidein .26s cubic-bezier(.22,1,.36,1); }
+/* 카드 stagger 등장 — 인라인 animation-delay로 순차 */
+@keyframes tccardin { from { opacity:0; transform: translateY(10px) } to { opacity:1; transform:none } }
+.tc-card-in { animation: tccardin .4s cubic-bezier(.2,.8,.2,1) both; }
+/* 시그널 상위등급(S·A) 글로우 펄스 */
+@keyframes tcgradeglow { 0%,100% { filter: drop-shadow(0 0 2px currentColor); opacity:.92 } 50% { filter: drop-shadow(0 0 8px currentColor); opacity:1 } }
+.tc-grade-hot { animation: tcgradeglow 2.4s ease-in-out infinite; }
+@keyframes tcgradepop { 0% { transform: scale(.6); opacity:0 } 60% { transform: scale(1.12) } 100% { transform: scale(1); opacity:1 } }
+.tc-grade-pop { animation: tcgradepop .5s cubic-bezier(.2,.9,.3,1.4) both; }
+@media (prefers-reduced-motion: reduce) { .tc-card-in,.tc-grade-hot,.tc-grade-pop { animation: none !important; } }
 `;
 
 function haptic() { try { (navigator as any).vibrate?.(6); } catch {} }

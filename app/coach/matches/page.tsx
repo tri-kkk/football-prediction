@@ -64,7 +64,7 @@ export default function MatchesPage() {
 
       {(state === 'ok' || state === 'guest') && data && (
         <>
-          {data.matches.map((m) => <MatchCard key={m.matchId} m={m} member={data.member} onAdd={setSheet} />)}
+          {data.matches.map((m, i) => <MatchCard key={m.matchId} m={m} member={data.member} onAdd={setSheet} index={i} />)}
           {!data.matches.length && (
             <EmptyState
               title="예정 경기가 없어요"

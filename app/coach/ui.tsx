@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { coachApi, type MatchSignal } from '@/lib/coachApi';
 import { useSlipCart } from './slipCart';
+import { haptic } from './haptic';
 import { useDragToClose } from './useDragToClose';
 import { showToast } from './toast';
 
@@ -98,13 +99,14 @@ export function Ring({ score, grade }: { score: number; grade: string }) {
   const c = 2 * Math.PI * 27;
   const dash = Math.max(0, Math.min(1, score / 100)) * c;
   const color = GRADE_COLOR[grade] || '#898781';
+  const hot = grade === 'S' || grade === 'A'; // 상위 등급만 글로우
   return (
     <div style={{ position: 'relative', width: 66, textAlign: 'center', flex: '0 0 auto' }}>
       <svg width={66} height={66} style={{ transform: 'rotate(-90deg)' }}>
         <circle cx={33} cy={33} r={27} fill="none" stroke="#232320" strokeWidth={6} />
-        <circle cx={33} cy={33} r={27} fill="none" stroke={color} strokeWidth={6} strokeLinecap="round" strokeDasharray={`${dash} ${c}`} />
+        <circle cx={33} cy={33} r={27} fill="none" stroke={color} strokeWidth={6} strokeLinecap="round" strokeDasharray={`${dash} ${c}`} className={hot ? 'tc-grade-hot' : undefined} style={hot ? { color } : undefined} />
       </svg>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 66, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, fontWeight: 800, color }}>{grade}</div>
+      <div className={hot ? 'tc-grade-pop' : undefined} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 66, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, fontWeight: 800, color, textShadow: hot ? `0 0 12px ${color}66` : undefined }}>{grade}</div>
       <div style={{ fontSize: 10, color: '#898781', fontWeight: 700, marginTop: 6 }}>신뢰도 <b style={{ color: '#c3c2b7' }}>{Math.round(score)}%</b></div>
     </div>
   );
@@ -174,17 +176,21 @@ export function Emblem({ id, name, size = 26 }: { id?: number; name: string; siz
   return <img src={`https://media.api-sports.io/football/teams/${id}.png`} alt="" width={size} height={size} loading="lazy" onError={() => setErr(true)} style={{ objectFit: 'contain', flex: '0 0 auto' }} />;
 }
 
-export function MatchCard({ m, member, onAdd, featured }: { m: MatchSignal; member: boolean; onAdd: (m: MatchSignal) => void; featured?: boolean }) {
+export function MatchCard({ m, member, onAdd, featured, index }: { m: MatchSignal; member: boolean; onAdd: (m: MatchSignal) => void; featured?: boolean; index?: number }) {
   const s = m.signal;
   const hasOdds = m.odds.home != null && m.odds.draw != null && m.odds.away != null;
   const cart = useSlipCart();
   const inCart = cart.has(m.matchId);
   const recPick = s && s.recommendation !== 'WATCH' ? s.recommendation : 'HOME';
-  const addToSlip = () =>
+  const addToSlip = () => {
+    haptic();
     inCart ? cart.remove(m.matchId)
       : cart.add({ matchId: m.matchId, home: m.home, away: m.away, league: m.league, kickoff: m.kickoff, grade: s?.grade, odds: m.odds, pick: recPick as any });
+  };
+  // 카드 stagger 등장: 인덱스별 지연(최대 6장까지만 단계적, 이후 동일).
+  const delay = index != null ? Math.min(index, 6) * 45 : 0;
   return (
-    <div className="tc-press" style={{ position: 'relative', overflow: 'hidden', background: '#1a1a19', border: `1px solid ${featured ? 'rgba(57,135,229,.35)' : 'rgba(255,255,255,.1)'}`, borderRadius: 16, padding: 14, marginBottom: 11 }}>
+    <div className="tc-press tc-card-in" style={{ animationDelay: `${delay}ms`, position: 'relative', overflow: 'hidden', background: '#1a1a19', border: `1px solid ${featured ? 'rgba(57,135,229,.35)' : 'rgba(255,255,255,.1)'}`, borderRadius: 16, padding: 14, marginBottom: 11 }}>
       {featured ? (<>
         <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/card-pitch.webp)', backgroundSize: 'cover', backgroundPosition: 'right center' }} />
         <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,#1a1a19 26%,rgba(26,26,25,.35) 62%,rgba(26,26,25,.62))' }} />
@@ -237,7 +243,7 @@ export function MatchCard({ m, member, onAdd, featured }: { m: MatchSignal; memb
               <>
                 <div style={{ display: 'flex', gap: 8, marginTop: 13 }}>
                   <Link href={`/coach/match/${m.matchId}`} style={{ flex: 1, textAlign: 'center', border: '1px solid #383835', background: '#232320', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, textDecoration: 'none' }}>세부 데이터</Link>
-                  <button onClick={() => onAdd(m)} style={{ flex: 1, border: 0, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, cursor: 'pointer' }}>＋ 기록 추가</button>
+                  <button onClick={() => { haptic(); onAdd(m); }} style={{ flex: 1, border: 0, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: 11, borderRadius: 11, cursor: 'pointer' }}>＋ 기록 추가</button>
                 </div>
                 <button onClick={addToSlip} style={{ width: '100%', marginTop: 8, border: `1px solid ${inCart ? 'rgba(12,163,12,.5)' : 'rgba(255,255,255,.12)'}`, background: inCart ? 'rgba(12,163,12,.14)' : 'transparent', color: inCart ? '#4bd14b' : '#c3c2b7', fontWeight: 700, fontSize: 12.5, padding: 10, borderRadius: 11, cursor: 'pointer' }}>
                   {inCart ? '조합에 담김 ✓ (빼기)' : '＋ 조합 담기'}

@@ -6,6 +6,7 @@ import { coachApi, MembershipError, mainLoginUrl } from '@/lib/coachApi';
 import { PageTitle, Skeleton } from '../ui';
 import { showToast } from '../toast';
 import { enablePush, disablePush, pushSupported } from '../pushClient';
+import { haptic } from '../haptic';
 
 const Section = ({ children }: { children: React.ReactNode }) => (
   <div style={{ fontSize: 11.5, fontWeight: 800, color: '#8b8a84', letterSpacing: .5, margin: '22px 4px 9px' }}>{children}</div>
@@ -17,7 +18,7 @@ const div = 'rgba(255,255,255,.06)';
 
 function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} aria-pressed={on} role="switch" aria-checked={on} className="tc-press" style={{ WebkitAppearance: 'none', appearance: 'none', WebkitTapHighlightColor: 'transparent', width: 46, height: 28, borderRadius: 999, border: on ? '1px solid rgba(57,135,229,.9)' : '1px solid rgba(255,255,255,.12)', background: on ? '#3987e5' : '#2e2e2b', padding: 0, position: 'relative', cursor: 'pointer', flex: '0 0 auto', transition: 'background .18s, border-color .18s' }}>
+    <button onClick={() => { haptic(); onClick(); }} aria-pressed={on} role="switch" aria-checked={on} className="tc-press" style={{ WebkitAppearance: 'none', appearance: 'none', WebkitTapHighlightColor: 'transparent', width: 46, height: 28, borderRadius: 999, border: on ? '1px solid rgba(57,135,229,.9)' : '1px solid rgba(255,255,255,.12)', background: on ? '#3987e5' : '#2e2e2b', padding: 0, position: 'relative', cursor: 'pointer', flex: '0 0 auto', transition: 'background .18s, border-color .18s' }}>
       <span style={{ position: 'absolute', top: 3, left: on ? 22 : 3, width: 21, height: 21, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,.4)', transition: 'left .18s' }} />
     </button>
   );
