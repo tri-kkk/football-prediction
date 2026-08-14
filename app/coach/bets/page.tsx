@@ -135,6 +135,7 @@ function SingleCard({ b }: { b: any }) {
         <span style={{ fontSize: 13, fontWeight: 700 }}>{b.home_team || b.match_id} {b.away_team ? `vs ${b.away_team}` : ''}</span>
         {statusTag(b.status, b.status === 'won' ? ` +${(b.payout - b.stake).toLocaleString()}` : b.status === 'lost' ? ` −${b.stake.toLocaleString()}` : '')}
       </div>
+      {metaLine(b) && <div style={{ fontSize: 10.5, color: '#6f6e68', marginTop: 4 }}>{metaLine(b)}</div>}
       <div style={{ display: 'flex', gap: 14, marginTop: 10, fontSize: 11.5, color: '#898781' }}>
         <span>픽 <b style={{ color: '#c3c2b7' }}>{PICK_KO[b.pick] || b.pick}</b></span>
         <span>배당 <b style={{ color: '#c3c2b7' }}>{b.bet_odds}</b></span>

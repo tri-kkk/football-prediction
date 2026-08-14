@@ -24,6 +24,8 @@ function snapshotForBet(sig: MatchSignal, pick: Pick) {
     league: sig.league ?? null,
     home_team: sig.home ?? null,
     away_team: sig.away ?? null,
+    kickoff: sig.kickoff ?? null,
+    round: sig.round ?? null,
     model_prob: sig.model?.[key] ?? null,
     model_market_gap: sig.market ? modelMarketGap(sig.model, sig.market, key) : null,
     signal_grade: sig.signal?.grade ?? null,
