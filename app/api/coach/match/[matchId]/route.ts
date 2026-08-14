@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCoachUser } from '@/lib/coachAuth';
 import { checkCoachMembership } from '@/lib/checkCoachMembership';
 import { getMatchSignal } from '@/lib/coachMatchService';
-import { af, buildTeamStats, LEAGUES, currentSeason } from '@/lib/ksmModel';
+import { af, buildTeamStats, LEAGUES, currentSeason, SECOND_DIV } from '@/lib/ksmModel';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -106,6 +106,16 @@ async function computeDetail(matchId: string) {
       af(`/players/topscorers?league=${leagueId}&season=${standSeason}`).catch(() => ({ response: [] })),
     ]);
     hStatRes = h2; aStatRes = a2; scRes = sc2;
+  }
+
+  // 승격팀 보강: 해당 시즌 1부 스탯이 비면(직전 시즌 2부 소속) 2부 리그에서 재조회.
+  const statEmpty = (res: any) => { const r = res?.response; return !r || !((r.fixtures?.played?.total ?? 0) > 0); };
+  const secondId = SECOND_DIV[leagueId];
+  if (secondId) {
+    const jobs: Promise<void>[] = [];
+    if (statEmpty(hStatRes)) jobs.push(af(`/teams/statistics?team=${sig.homeId}&league=${secondId}&season=${standSeason}`).then((r) => { if (!statEmpty(r)) hStatRes = r; }).catch(() => {}));
+    if (statEmpty(aStatRes)) jobs.push(af(`/teams/statistics?team=${sig.awayId}&league=${secondId}&season=${standSeason}`).then((r) => { if (!statEmpty(r)) aStatRes = r; }).catch(() => {}));
+    if (jobs.length) await Promise.all(jobs);
   }
 
   // ── 팀 시즌 심층 스탯 (/teams/statistics) ──
