@@ -91,12 +91,25 @@ function Card({ title, children, mesh }: { title: string; children: React.ReactN
   );
 }
 
+// 최근 5경기 득실 요약 (score "2-1" + isHome 로 우리팀 득/실 집계 — 추가 호출 0)
+function formGoals(form: FormItem[]) {
+  let gf = 0, ga = 0, n = 0;
+  for (const f of form) {
+    const m = /^(\d+)-(\d+)$/.exec((f.score || '').trim());
+    if (!m) continue;
+    const gh = +m[1], gaway = +m[2];
+    if (f.isHome) { gf += gh; ga += gaway; } else { gf += gaway; ga += gh; }
+    n++;
+  }
+  return { gf, ga, n };
+}
 function FormRow({ label, sub, form }: { label: string; sub: string; form: FormItem[] }) {
+  const g = formGoals(form);
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 0' }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 12.5, fontWeight: 700, color: '#c3c2b7' }}>{label}</div>
-        <div style={{ fontSize: 10.5, color: '#898781' }}>{sub}</div>
+        <div style={{ fontSize: 10.5, color: '#898781' }}>{sub}{g.n ? ` · 최근 ${g.n}경기 ${g.gf}득 ${g.ga}실 (평균 ${(g.gf / g.n).toFixed(1)}·${(g.ga / g.n).toFixed(1)})` : ''}</div>
       </div>
       <div style={{ display: 'flex', gap: 5 }}>
         {form.length === 0 ? <span style={{ fontSize: 11, color: '#6b6a64' }}>기록 없음</span> :
@@ -344,7 +357,37 @@ export default function MatchDetail() {
                 <DeepRow label="최다 연패" home={th?.streakLose != null ? `${th.streakLose}연패` : null} away={ta?.streakLose != null ? `${ta.streakLose}연패` : null} />
                 <DeepRow label="득점 강세 시간대" home={th?.goalPeak ? `${th.goalPeak}분` : null} away={ta?.goalPeak ? `${ta.goalPeak}분` : null} />
                 <DeepRow label="주 포메이션" home={th?.formation} away={ta?.formation} />
-                <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>{d.standings.season} 시즌 기준 · API-Football</div>
+                <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>{d.standings.season} 시즌 기준</div>
+              </Card>
+            );
+          })()}
+
+          {/* 득점 경향 (BTTS·오버) — 심층 스탯에서 파생, 추가 호출 0 */}
+          {(() => {
+            const th = d.teamDeep.home, ta = d.teamDeep.away;
+            if (!th || !ta || !th.played || !ta.played || th.avgFor == null || ta.avgFor == null || th.avgAgainst == null || ta.avgAgainst == null) return null;
+            const pScore = (t: TeamDeep) => (t.failedToScore != null && t.played ? Math.max(0, Math.min(1, 1 - t.failedToScore / t.played)) : null);
+            const ph = pScore(th), pa = pScore(ta);
+            const btts = ph != null && pa != null ? ph * pa : null;
+            const expHome = (th.avgFor + ta.avgAgainst) / 2;
+            const expAway = (ta.avgFor + th.avgAgainst) / 2;
+            const expTotal = expHome + expAway;
+            const bttsLabel = btts == null ? '-' : btts >= 0.55 ? '높음' : btts >= 0.38 ? '보통' : '낮음';
+            const bttsCol = btts == null ? '#c3c2b7' : btts >= 0.55 ? '#3ecb3e' : btts >= 0.38 ? '#c3c2b7' : '#e66767';
+            const overLabel = expTotal >= 3.0 ? '다득점(오버) 성향' : expTotal >= 2.4 ? '보통' : '소득점(언더) 성향';
+            const overCol = expTotal >= 3.0 ? '#3ecb3e' : expTotal >= 2.4 ? '#c3c2b7' : '#eb8a5f';
+            const row = (label: string, val: React.ReactNode) => (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '9px 0', fontSize: 12 }}>
+                <span style={{ color: '#898781' }}>{label}</span>
+                <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{val}</span>
+              </div>
+            );
+            return (
+              <Card title="득점 경향">
+                {btts != null && row('양팀 득점(BTTS) 가능성', <span style={{ color: bttsCol }}>{bttsLabel} <span style={{ color: '#6b6a64', fontWeight: 700 }}>({Math.round(btts * 100)}%)</span></span>)}
+                {row('예상 총득점', <span style={{ color: overCol }}>{expTotal.toFixed(1)}골 <span style={{ color: '#6b6a64', fontWeight: 700 }}>· {overLabel}</span></span>)}
+                {row('예상 득점 (홈 · 원정)', <span><span style={{ color: '#79b0f0' }}>{expHome.toFixed(1)}</span><span style={{ color: '#6b6a64' }}> · </span><span style={{ color: '#eb8a5f' }}>{expAway.toFixed(1)}</span></span>)}
+                <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>시즌 평균 득실 기반 추정치 · 참고용</div>
               </Card>
             );
           })()}
@@ -382,7 +425,7 @@ export default function MatchDetail() {
                   )}
                 </div>
               ))}
-              <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>API-Football 부상/결장 리포트 기준</div>
+              <div style={{ fontSize: 10.5, color: '#6b6a64', marginTop: 8 }}>부상·결장 리포트 기준</div>
             </Card>
           )}
 
