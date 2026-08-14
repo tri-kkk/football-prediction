@@ -35,19 +35,33 @@ export const leagueNameKo = (code?: string) => {
 // 섹션 헤더: 제목 + 미니 스탯바 (기능형)
 type Tone = 'blue' | 'grn' | 'crit';
 const toneColor = (t?: Tone) => (t === 'blue' ? '#79b0f0' : t === 'grn' ? '#3ecb3e' : t === 'crit' ? '#e66767' : '#fff');
+// 탭 상단 요약용 헤더 밴드 (배경 에셋 + 글로우 + 글래스 콘텐츠). 밋밋한 상단을 브랜드 배경과 통일.
+export function HeaderBand({ title, children, style }: { title: string; children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', border: '1px solid rgba(57,135,229,.22)', borderRadius: 18, padding: 16, margin: '16px 0 2px', ...style }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/coach-header.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(16,21,29,.28),rgba(16,21,29,.52))' }} />
+      <div style={{ position: 'relative' }}>
+        <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 7, letterSpacing: -.2 }}>
+          <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: '#5aa0f0', boxShadow: '0 0 7px #5aa0f0', flex: '0 0 auto' }} />{title}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 export function StatStrip({ title, stats }: { title: string; stats: { k: string; v: string; tone?: Tone }[] }) {
   return (
-    <div style={{ margin: '16px 0 2px' }}>
-      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 10, padding: '0 2px', letterSpacing: -.2 }}>{title}</div>
+    <HeaderBand title={title}>
       <div style={{ display: 'flex', gap: 8 }}>
         {stats.map((s, i) => (
-          <div key={i} style={{ flex: 1, minWidth: 0, background: '#1a1a19', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: '10px 12px' }}>
-            <div style={{ fontSize: 10.5, color: '#898781', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.k}</div>
+          <div key={i} style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, padding: '10px 12px', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
+            <div style={{ fontSize: 10.5, color: '#a7b6c8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.k}</div>
             <div style={{ fontSize: 17, fontWeight: 800, marginTop: 4, letterSpacing: -.4, color: toneColor(s.tone), fontVariantNumeric: 'tabular-nums' }}>{s.v}</div>
           </div>
         ))}
       </div>
-    </div>
+    </HeaderBand>
   );
 }
 export function PageTitle({ title, sub }: { title: string; sub?: string }) {
