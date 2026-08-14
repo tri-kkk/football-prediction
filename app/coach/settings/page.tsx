@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { coachApi, MembershipError, mainLoginUrl } from '@/lib/coachApi';
-import { PageTitle } from '../ui';
+import { PageTitle, Skeleton } from '../ui';
 import { showToast } from '../toast';
 import { enablePush, disablePush, pushSupported } from '../pushClient';
 
@@ -95,11 +95,25 @@ export default function SettingsPage() {
 
   const authed = status === 'authenticated';
   const isMember = authed && member === true;
+  const loading = status === 'loading' || (status === 'authenticated' && member === null);
 
   return (
     <>
       <PageTitle title="설정" sub="멤버쉽 · 뱅크롤 · 알림 · 계정" />
 
+      {loading ? (
+        <div className="tc-fade">
+          <Section>멤버쉽</Section>
+          <Skeleton h={62} />
+          <Section>뱅크롤</Section>
+          <Skeleton h={116} />
+          <Section>알림</Section>
+          <Skeleton h={116} />
+          <Section>계정</Section>
+          <Skeleton h={62} />
+        </div>
+      ) : (
+      <>
       <Section>멤버쉽</Section>
       {isMember ? (
         <Group>
@@ -154,6 +168,8 @@ export default function SettingsPage() {
         <a href={mainLoginUrl()} style={{ display: 'block', textAlign: 'center', background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 13.5, padding: 13, borderRadius: 13, textDecoration: 'none' }}>TrendSoccer 계정으로 로그인</a>
       )}
       <p style={{ fontSize: 11, color: '#6b6a64', textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>계정은 TrendSoccer와 공유돼요 (.trendsoccer.com).</p>
+      </>
+      )}
     </>
   );
 }
