@@ -57,7 +57,7 @@ export function StatStrip({ title, stats, help }: { title: string; stats: { k: s
   const [open, setOpen] = useState(false);
   return (
     <HeaderBand title={title} action={help ? (
-      <button onClick={() => setOpen((v) => !v)} className="tc-press" aria-label="도움말" style={{ width: 22, height: 22, flex: '0 0 auto', borderRadius: '50%', border: `1px solid ${open ? 'rgba(90,160,240,.5)' : 'rgba(255,255,255,.18)'}`, background: open ? 'rgba(57,135,229,.2)' : 'rgba(255,255,255,.05)', color: open ? '#9cc4f4' : '#aebccd', fontSize: 11.5, fontWeight: 800, lineHeight: 1, cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0 }}>{open ? '✕' : '?'}</button>
+      <button onClick={() => setOpen((v) => !v)} className="tc-press" aria-label="도움말" style={{ width: 16, height: 16, flex: '0 0 auto', borderRadius: '50%', border: `1px solid ${open ? 'rgba(250,178,25,.65)' : 'rgba(250,178,25,.42)'}`, background: open ? 'rgba(250,178,25,.24)' : 'rgba(250,178,25,.1)', color: '#fab219', fontSize: 9.5, fontWeight: 800, lineHeight: 1, cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0 }}>{open ? '✕' : '?'}</button>
     ) : undefined}>
       <div style={{ display: 'flex', gap: 8 }}>
         {stats.map((s, i) => (

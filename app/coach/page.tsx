@@ -61,7 +61,7 @@ function Kpi({ label, value, sub, tone, empty, hero, onInfo, infoActive }: { lab
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
         <span style={{ fontSize: 11.5, color: '#a7b6c8', fontWeight: 700, letterSpacing: .2 }}>{label}</span>
         {onInfo && (
-          <button onClick={onInfo} className="tc-press" aria-label={`${label} 설명`} style={{ width: 18, height: 18, flex: '0 0 auto', borderRadius: '50%', border: `1px solid ${infoActive ? 'rgba(90,160,240,.5)' : 'rgba(255,255,255,.18)'}`, background: infoActive ? 'rgba(57,135,229,.2)' : 'transparent', color: infoActive ? '#9cc4f4' : '#8f9dae', fontSize: 10.5, fontWeight: 800, lineHeight: 1, cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0 }}>{infoActive ? '✕' : '?'}</button>
+          <button onClick={onInfo} className="tc-press" aria-label={`${label} 설명`} style={{ width: 16, height: 16, flex: '0 0 auto', borderRadius: '50%', border: `1px solid ${infoActive ? 'rgba(250,178,25,.65)' : 'rgba(250,178,25,.42)'}`, background: infoActive ? 'rgba(250,178,25,.24)' : 'rgba(250,178,25,.1)', color: '#fab219', fontSize: 9.5, fontWeight: 800, lineHeight: 1, cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0 }}>{infoActive ? '✕' : '?'}</button>
         )}
       </div>
       <div style={{ fontSize: 26, fontWeight: 800, marginTop: 9, letterSpacing: -.6, lineHeight: 1, color, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
