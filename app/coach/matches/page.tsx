@@ -2,7 +2,7 @@
 // app/coach/matches/page.tsx — 경기 화면: 리그 필터 + KSM 시그널 카드 목록 + 기록 추가 시트.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError, mainLoginUrl, type MatchSignal } from '@/lib/coachApi';
-import { MatchCard, BetSheet, StatStrip, Skeleton } from '../ui';
+import { MatchCard, BetSheet, StatStrip, Skeleton, EmptyState } from '../ui';
 import { PullToRefresh } from '../PullToRefresh';
 
 const LEAGUES: { key: string; label: string }[] = [
@@ -60,7 +60,20 @@ export default function MatchesPage() {
       {(state === 'ok' || state === 'guest') && data && (
         <>
           {data.matches.map((m) => <MatchCard key={m.matchId} m={m} member={data.member} onAdd={setSheet} />)}
-          {!data.matches.length && <p style={{ color: '#898781', textAlign: 'center', marginTop: 30 }}>예정 경기가 없어요.</p>}
+          {!data.matches.length && (
+            <EmptyState
+              title="예정 경기가 없어요"
+              sub={league === 'ALL' ? '지금은 예정된 경기가 없어요. 잠시 후 다시 확인해 주세요.' : '이 리그엔 예정 경기가 없어요. 다른 리그를 선택해 보세요.'}
+              action={
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {league !== 'ALL' && (
+                    <button onClick={() => setLeague('ALL')} className="tc-press" style={{ border: '1px solid rgba(255,255,255,.12)', background: '#1a1a19', color: '#c3c2b7', fontWeight: 800, fontSize: 12.5, padding: '10px 16px', borderRadius: 11, cursor: 'pointer' }}>전체 리그 보기</button>
+                  )}
+                  <button onClick={() => load(league)} className="tc-press" style={{ border: 0, background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 12.5, padding: '10px 16px', borderRadius: 11, cursor: 'pointer' }}>새로고침</button>
+                </div>
+              }
+            />
+          )}
         </>
       )}
       {sheet && <BetSheet m={sheet} onClose={() => setSheet(null)} onSaved={() => load(league, true)} />}

@@ -115,6 +115,29 @@ export function Skeleton({ h = 150, r = 16, mb = 11 }: { h?: number; r?: number;
   return <div className="tc-skel" style={{ height: h, borderRadius: r, marginBottom: mb }} />;
 }
 
+// 빈 상태 (아이콘 + 안내 + 액션). 텍스트만 있던 empty를 브랜드 톤으로.
+export function EmptyState({ title, sub, action, icon }: { title: string; sub?: string; action?: React.ReactNode; icon?: React.ReactNode }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '40px 20px 30px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ position: 'relative', width: 78, height: 78, marginBottom: 18, display: 'grid', placeItems: 'center' }}>
+        <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle,rgba(57,135,229,.28),transparent 68%)' }} />
+        <div style={{ position: 'relative', width: 66, height: 66, borderRadius: '50%', background: 'rgba(57,135,229,.1)', border: '1px solid rgba(57,135,229,.3)', display: 'grid', placeItems: 'center', color: '#5aa0f0' }}>
+          {icon || (
+            <svg width={30} height={30} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 8.2l2.7 1.95-1.03 3.2h-3.34L9.3 10.15z" />
+              <path d="M12 3.3V8.2M14.7 10.15l3.3-1.05M13.67 13.35l1.95 3.2M10.33 13.35l-1.95 3.2M9.3 10.15 6 9.1" />
+            </svg>
+          )}
+        </div>
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{title}</div>
+      {sub && <div style={{ fontSize: 12.5, color: '#8f8d85', lineHeight: 1.6, maxWidth: 250, marginBottom: action ? 18 : 0 }}>{sub}</div>}
+      {action}
+    </div>
+  );
+}
+
 // 팀 엠블럼(API-Football). 로고 로드 실패 시 이니셜 배지로 폴백.
 export function Emblem({ id, name, size = 26 }: { id?: number; name: string; size?: number }) {
   const [err, setErr] = useState(false);
