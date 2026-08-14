@@ -3,7 +3,7 @@
 // 로고에서 연결망이 동심원 파동으로 퍼져나가는 연출. 최소 노출 후 fade out.
 import { useEffect, useRef, useState } from 'react';
 
-export function SplashScreen({ minMs = 1200 }: { minMs?: number }) {
+export function SplashScreen({ minMs = 3600 }: { minMs?: number }) {
   const [gone, setGone] = useState(false);
   const [fade, setFade] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
