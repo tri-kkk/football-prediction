@@ -124,20 +124,19 @@ export default function CoachHome() {
             </div>
           )}
           </HeaderBand>
-          <div style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: '13px 14px', marginTop: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: '#1a1a19', background: '#fab219', padding: '2px 7px', borderRadius: 5, letterSpacing: .3 }}>CLV</span>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: '#c3c2b7' }}>클로징 라인 밸류</span>
+          <div style={{ background: '#161615', border: '1px solid rgba(255,255,255,.07)', borderRadius: 11, padding: '11px 12px', marginTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+              <span style={{ fontSize: 9.5, fontWeight: 800, color: '#12100c', background: '#fab219', padding: '2px 6px', borderRadius: 4, letterSpacing: .3, flex: '0 0 auto' }}>CLV</span>
+              <span style={{ fontSize: 11.5, color: '#8f8d85' }}>클로징 라인 밸류 — 내 배당 vs 경기 직전 <b style={{ color: '#c3c2b7', fontWeight: 700 }}>마감 배당</b> 차이</span>
             </div>
-            <div style={{ fontSize: 12, color: '#9a988f', lineHeight: 1.55, marginBottom: 11 }}>내가 베팅한 배당과 경기 직전 <b style={{ color: '#c3c2b7' }}>마감 배당</b>의 차이</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11.5 }}>
-                <span style={{ fontWeight: 800, color: '#3ecb3e', flex: '0 0 auto', width: 40 }}>+CLV</span>
-                <span style={{ color: '#9a988f' }}>내 배당 &gt; 마감 배당 · <b style={{ color: '#c3c2b7' }}>시장보다 유리</b></span>
+            <div style={{ display: 'flex', gap: 7 }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 9px', borderRadius: 8, fontSize: 11, background: 'rgba(62,203,62,.09)', border: '1px solid rgba(62,203,62,.22)' }}>
+                <span style={{ fontWeight: 800, color: '#3ecb3e' }}>+CLV</span>
+                <span style={{ color: '#9a988f' }}>내 배당 높음 · <b style={{ color: '#c3c2b7' }}>시장 유리</b></span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 11.5 }}>
-                <span style={{ fontWeight: 800, color: '#e66767', flex: '0 0 auto', width: 40 }}>−CLV</span>
-                <span style={{ color: '#9a988f' }}>내 배당 &lt; 마감 배당 · <b style={{ color: '#c3c2b7' }}>시장보다 불리</b></span>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 9px', borderRadius: 8, fontSize: 11, background: 'rgba(230,103,103,.09)', border: '1px solid rgba(230,103,103,.22)' }}>
+                <span style={{ fontWeight: 800, color: '#e66767' }}>−CLV</span>
+                <span style={{ color: '#9a988f' }}>내 배당 낮음 · <b style={{ color: '#c3c2b7' }}>시장 불리</b></span>
               </div>
             </div>
           </div>
