@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
   const cfg = LEAGUES[code];
   if (!cfg) return NextResponse.json({ error: 'unknown league' }, { status: 400 });
   const commit = searchParams.get('commit') === '1';
+  const minSample = Math.max(0, parseInt(searchParams.get('min') || '5', 10) || 0); // 초소표본 패턴 제외
 
   const supabase = db();
   const stats = await buildTeamStats(cfg.id); // 라이브와 동일한 팀 통계
@@ -88,9 +89,9 @@ export async function GET(req: NextRequest) {
       description: `${cfg.name} 패턴 ${pattern} · ${total}경기 · ${recKo} ${Math.round(Math.max(hr, dr, ar) * 100)}%`,
       _hwa: `${c.h}/${c.d}/${c.a}`, // 미리보기용(삽입 안 함)
     };
-  }).sort((a, b) => b.total_matches - a.total_matches);
+  }).filter((r) => r.total_matches >= minSample).sort((a, b) => b.total_matches - a.total_matches);
 
-  const summary = { league: code, leagueId: cfg.id, totalHistory: history.length, used, skipped, patterns: rows.length };
+  const summary = { league: code, leagueId: cfg.id, minSample, totalHistory: history.length, used, skipped, patterns: rows.length };
 
   if (!commit) {
     return NextResponse.json({ mode: 'dry (미리보기)', ...summary, note: '실제 기록하려면 &commit=1 추가', rows });
