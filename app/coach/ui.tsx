@@ -53,9 +53,12 @@ export function HeaderBand({ title, children, style, action }: { title: string; 
     </div>
   );
 }
-export function StatStrip({ title, stats }: { title: string; stats: { k: string; v: string; tone?: Tone }[] }) {
+export function StatStrip({ title, stats, help }: { title: string; stats: { k: string; v: string; tone?: Tone }[]; help?: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
   return (
-    <HeaderBand title={title}>
+    <HeaderBand title={title} action={help ? (
+      <button onClick={() => setOpen((v) => !v)} className="tc-press" aria-label="도움말" style={{ width: 22, height: 22, flex: '0 0 auto', borderRadius: '50%', border: `1px solid ${open ? 'rgba(90,160,240,.5)' : 'rgba(255,255,255,.18)'}`, background: open ? 'rgba(57,135,229,.2)' : 'rgba(255,255,255,.05)', color: open ? '#9cc4f4' : '#aebccd', fontSize: 11.5, fontWeight: 800, lineHeight: 1, cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0 }}>{open ? '✕' : '?'}</button>
+    ) : undefined}>
       <div style={{ display: 'flex', gap: 8 }}>
         {stats.map((s, i) => (
           <div key={i} style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, padding: '10px 12px', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
@@ -64,6 +67,9 @@ export function StatStrip({ title, stats }: { title: string; stats: { k: string;
           </div>
         ))}
       </div>
+      {help && open && (
+        <div className="tc-fade" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.1)' }}>{help}</div>
+      )}
     </HeaderBand>
   );
 }

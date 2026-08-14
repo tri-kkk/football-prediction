@@ -21,6 +21,29 @@ function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
     </button>
   );
 }
+// 모듈 레벨 정의 — 부모 리렌더마다 재정의되면 input이 remount돼 포커스가 날아감(입력 끊김) 방지.
+function InputRow({ label, value, onChange, last }: { label: string; value: string; onChange: (v: string) => void; last?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '13px 14px', borderBottom: last ? 'none' : `1px solid ${div}` }}>
+      <span style={{ fontSize: 13.5, fontWeight: 600, flex: '0 0 auto' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#232320', border: '1px solid rgba(255,255,255,.1)', borderRadius: 9, padding: '7px 11px', width: 150 }}>
+        <span style={{ color: '#8f8d85', fontSize: 13, flex: '0 0 auto' }}>₩</span>
+        <input value={Number((value || '').replace(/[^0-9]/g, '') || 0).toLocaleString()} onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ flex: 1, minWidth: 0, background: 'transparent', border: 0, color: '#fff', fontSize: 15, fontWeight: 700, textAlign: 'right', outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
+      </div>
+    </div>
+  );
+}
+function ToggleRow({ label, sub, on, onClick, last }: { label: string; sub: string; on: boolean; onClick: () => void; last?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '14px', borderBottom: last ? 'none' : `1px solid ${div}` }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{label}</div>
+        {sub && <div style={{ fontSize: 11, color: '#898781', marginTop: 3, lineHeight: 1.45 }}>{sub}</div>}
+      </div>
+      <Switch on={on} onClick={onClick} />
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -60,25 +83,6 @@ export default function SettingsPage() {
 
   const authed = status === 'authenticated';
   const isMember = authed && member === true;
-
-  const InputRow = ({ label, value, onChange, last }: { label: string; value: string; onChange: (v: string) => void; last?: boolean }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '13px 14px', borderBottom: last ? 'none' : `1px solid ${div}` }}>
-      <span style={{ fontSize: 13.5, fontWeight: 600, flex: '0 0 auto' }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#232320', border: '1px solid rgba(255,255,255,.1)', borderRadius: 9, padding: '7px 11px', width: 150 }}>
-        <span style={{ color: '#8f8d85', fontSize: 13, flex: '0 0 auto' }}>₩</span>
-        <input value={Number((value || '').replace(/[^0-9]/g, '') || 0).toLocaleString()} onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ flex: 1, minWidth: 0, background: 'transparent', border: 0, color: '#fff', fontSize: 15, fontWeight: 700, textAlign: 'right', outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
-      </div>
-    </div>
-  );
-  const ToggleRow = ({ label, sub, on, onClick, last }: { label: string; sub: string; on: boolean; onClick: () => void; last?: boolean }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '14px', borderBottom: last ? 'none' : `1px solid ${div}` }}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{label}</div>
-        {sub && <div style={{ fontSize: 11, color: '#898781', marginTop: 3, lineHeight: 1.45 }}>{sub}</div>}
-      </div>
-      <Switch on={on} onClick={onClick} />
-    </div>
-  );
 
   return (
     <>

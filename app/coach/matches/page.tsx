@@ -40,11 +40,16 @@ export default function MatchesPage() {
         const withGap = ms.filter((m) => m.signal?.gap);
         const avgGap = withGap.length ? withGap.reduce((s, m) => s + Math.abs(m.signal!.gap!.pp), 0) / withGap.length : null;
         const saCount = ms.filter((m) => m.signal && (m.signal.grade === 'S' || m.signal.grade === 'A')).length;
-        return <StatStrip title="오늘의 경기" stats={[
-          { k: '예정 경기', v: `${ms.length}` },
-          { k: 'S·A 등급', v: `${saCount}`, tone: 'blue' },
+        return <StatStrip title="다가오는 경기" stats={[
+          { k: '경기', v: `${ms.length}` },
+          { k: 'S·A 시그널', v: `${saCount}`, tone: 'blue' },
           { k: '평균 이견', v: avgGap != null ? `${avgGap.toFixed(1)}%` : '—', tone: 'grn' },
-        ]} />;
+        ]} help={
+          <div style={{ fontSize: 11.5, color: '#aebccd', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div><b style={{ color: '#9cc4f4' }}>S·A 시그널</b> · 신뢰도 상위 등급(S·A) 경기 수 — 강한 픽에 집중하면 좋아요.</div>
+            <div><b style={{ color: '#4bd14b' }}>평균 이견</b> · KSM 모델 확률과 시장(배당) 확률의 평균 차이예요. 클수록 시장과 다르게 본 경기가 많다는 뜻이에요.</div>
+          </div>
+        } />;
       })()}
 
       <div className="tc-snap tc-hidebar" style={{ display: 'flex', gap: 7, overflowX: 'auto', padding: '12px 0 4px', marginBottom: 10 }}>
