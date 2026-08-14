@@ -14,7 +14,7 @@ export const LEAGUES: Record<string, { id: number; name: string }> = {
   J1: { id: 98, name: 'J1리그' },
 };
 // 상위리그 → 2부리그 매핑. 승격팀(상위리그 표본이 얇은 팀)은 2부 데이터로 환산.
-export const SECOND_DIV: Record<number, number> = { 39: 40, 78: 79, 140: 141, 135: 136, 61: 62 };
+export const SECOND_DIV: Record<number, number> = { 39: 40, 78: 79, 140: 141, 135: 136, 61: 62, 98: 99 };
 export const FINISHED = new Set(['FT', 'AET', 'PEN']);
 
 const AF_HOST = 'v3.football.api-sports.io';
