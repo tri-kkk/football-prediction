@@ -1,6 +1,7 @@
 'use client';
 // app/coach/ui.tsx — 코치 앱 공통 UI (시그널 링·경기 카드·기록 추가 시트). 홈/경기 화면 공유.
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { coachApi, type MatchSignal } from '@/lib/coachApi';
 import { useSlipCart } from './slipCart';
@@ -223,10 +224,10 @@ export function BetSheet({ m, onClose, onSaved }: { m: MatchSignal; onClose: () 
     <span onClick={() => setStake(String(v))} style={{ border: `1px solid ${st === v ? '#3987e5' : 'rgba(255,255,255,.1)'}`, color: st === v ? '#79b0f0' : '#c3c2b7', background: st === v ? 'rgba(57,135,229,.12)' : '#232320', fontSize: 11.5, fontWeight: 700, padding: '7px 11px', borderRadius: 9, cursor: 'pointer' }}>{label}</span>
   );
 
-  return (
+  const content = (
     <>
       <div onClick={onClose} className="tc-scrim" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 45 }} />
-      <div className="tc-sheet" style={{ position: 'fixed', left: 0, right: 0, bottom: 0, maxWidth: 480, margin: '0 auto', zIndex: 46, background: '#1a1a19', borderRadius: '22px 22px 0 0', borderTop: '1px solid rgba(255,255,255,.1)', padding: '14px 16px 24px', maxHeight: '90%', overflowY: 'auto', ...sheetStyle }}>
+      <div className="tc-sheet" style={{ position: 'fixed', left: 0, right: 0, bottom: 0, maxWidth: 480, margin: '0 auto', zIndex: 46, background: '#1a1a19', color: '#fff', fontFamily: 'system-ui, "Malgun Gothic", sans-serif', borderRadius: '22px 22px 0 0', borderTop: '1px solid rgba(255,255,255,.1)', padding: '14px 16px 24px', maxHeight: '90%', overflowY: 'auto', ...sheetStyle }}>
         <div {...dragHandlers} style={{ padding: '2px 0 12px', touchAction: 'none', cursor: 'grab' }}><div style={{ width: 40, height: 4, borderRadius: 2, background: '#383835', margin: '0 auto' }} /></div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div style={{ fontSize: 16, fontWeight: 800 }}>기록 추가</div>
@@ -259,4 +260,5 @@ export function BetSheet({ m, onClose, onSaved }: { m: MatchSignal; onClose: () 
       </div>
     </>
   );
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : null;
 }
