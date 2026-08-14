@@ -68,7 +68,7 @@ export default function MatchesPage() {
           {!data.matches.length && (
             <EmptyState
               title="예정 경기가 없어요"
-              sub={league === 'ALL' ? '지금은 예정된 경기가 없어요. 잠시 후 다시 확인해 주세요.' : '이 리그엔 예정 경기가 없어요. 다른 리그를 선택해 보세요.'}
+              sub={league === 'ALL' ? '새 일정이 올라오면 여기에 표시돼요. 잠시 후 다시 확인해 주세요.' : '이 리그는 지금 쉬어가는 중이에요. 다른 리그를 확인해 보세요.'}
               action={
                 <div style={{ display: 'flex', gap: 8 }}>
                   {league !== 'ALL' && (

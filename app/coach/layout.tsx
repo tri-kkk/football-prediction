@@ -60,7 +60,10 @@ button, a, [role=button] { touch-action: manipulation; }
 .tc-grade-hot { animation: tcgradeglow 2.4s ease-in-out infinite; }
 @keyframes tcgradepop { 0% { transform: scale(.6); opacity:0 } 60% { transform: scale(1.12) } 100% { transform: scale(1); opacity:1 } }
 .tc-grade-pop { animation: tcgradepop .5s cubic-bezier(.2,.9,.3,1.4) both; }
-@media (prefers-reduced-motion: reduce) { .tc-card-in,.tc-grade-hot,.tc-grade-pop { animation: none !important; } }
+/* 빈 상태 아이콘 — 차분히 숨쉬는 글로우 */
+@keyframes tcemptyglow { 0%,100% { opacity:.5; transform: scale(1) } 50% { opacity:.9; transform: scale(1.07) } }
+.tc-empty-glow { animation: tcemptyglow 3.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .tc-card-in,.tc-grade-hot,.tc-grade-pop,.tc-empty-glow { animation: none !important; } }
 `;
 
 function haptic() { try { (navigator as any).vibrate?.(6); } catch {} }

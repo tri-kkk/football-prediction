@@ -153,21 +153,22 @@ export function LoginRequired({ href, sub }: { href: string; sub?: string }) {
 // 빈 상태 (아이콘 + 안내 + 액션). 텍스트만 있던 empty를 브랜드 톤으로.
 export function EmptyState({ title, sub, action, icon }: { title: string; sub?: string; action?: React.ReactNode; icon?: React.ReactNode }) {
   return (
-    <div style={{ textAlign: 'center', padding: '40px 20px 30px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ position: 'relative', width: 78, height: 78, marginBottom: 18, display: 'grid', placeItems: 'center' }}>
-        <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle,rgba(57,135,229,.28),transparent 68%)' }} />
-        <div style={{ position: 'relative', width: 66, height: 66, borderRadius: '50%', background: 'rgba(57,135,229,.1)', border: '1px solid rgba(57,135,229,.3)', display: 'grid', placeItems: 'center', color: '#5aa0f0' }}>
+    <div style={{ textAlign: 'center', padding: '54px 24px 36px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ position: 'relative', width: 96, height: 96, marginBottom: 20, display: 'grid', placeItems: 'center' }}>
+        <div aria-hidden className="tc-empty-glow" style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: 'radial-gradient(circle,rgba(57,135,229,.30),transparent 66%)' }} />
+        <div aria-hidden style={{ position: 'absolute', inset: 10, borderRadius: '50%', border: '1px solid rgba(57,135,229,.14)' }} />
+        <div style={{ position: 'relative', width: 66, height: 66, borderRadius: '50%', background: 'linear-gradient(160deg,rgba(57,135,229,.17),rgba(57,135,229,.04))', border: '1px solid rgba(57,135,229,.32)', display: 'grid', placeItems: 'center', color: '#7fb4f5' }}>
           {icon || (
-            <svg width={30} height={30} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 8.2l2.7 1.95-1.03 3.2h-3.34L9.3 10.15z" />
-              <path d="M12 3.3V8.2M14.7 10.15l3.3-1.05M13.67 13.35l1.95 3.2M10.33 13.35l-1.95 3.2M9.3 10.15 6 9.1" />
+            <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round">
+              <rect x="3.2" y="5" width="17.6" height="15.5" rx="2.6" />
+              <path d="M3.2 9.4h17.6M8 3.2v3.6M16 3.2v3.6" />
+              <path d="M8.4 14.2h3.4" opacity="0.65" />
             </svg>
           )}
         </div>
       </div>
-      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{title}</div>
-      {sub && <div style={{ fontSize: 12.5, color: '#8f8d85', lineHeight: 1.6, maxWidth: 250, marginBottom: action ? 18 : 0 }}>{sub}</div>}
+      <div style={{ fontSize: 15.5, fontWeight: 800, marginBottom: 8, letterSpacing: -.3 }}>{title}</div>
+      {sub && <div style={{ fontSize: 12.5, color: '#8f8d85', lineHeight: 1.65, maxWidth: 248, marginBottom: action ? 20 : 0 }}>{sub}</div>}
       {action}
     </div>
   );
