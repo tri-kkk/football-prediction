@@ -64,7 +64,7 @@ function SlipBar({ onOpen }: { onOpen: () => void }) {
   if (!legs.length) return null;
   const combined = combinedOdds(legs.map((l) => ({ betOdds: oddsOf(l) })));
   return (
-    <div style={{ position: 'fixed', left: 0, right: 0, bottom: 62, maxWidth: 480, margin: '0 auto', zIndex: 40, padding: '0 12px' }}>
+    <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(env(safe-area-inset-bottom) + 70px)', maxWidth: 480, margin: '0 auto', zIndex: 40, padding: '0 12px' }}>
       <button onClick={onOpen} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: 0, borderRadius: 13, padding: '12px 16px', background: 'linear-gradient(135deg,#3987e5,#2b6fc4)', color: '#fff', cursor: 'pointer', boxShadow: '0 8px 24px rgba(57,135,229,.35)' }}>
         <span style={{ fontSize: 13, fontWeight: 800 }}>조합 {legs.length}경기</span>
         <span style={{ fontSize: 13.5, fontWeight: 800 }}>합산배당 {combined.toFixed(2)} ›</span>
