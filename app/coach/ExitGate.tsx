@@ -22,9 +22,10 @@ export function ExitGate() {
   const exit = () => {
     armed.current = false;
     setOpen(false);
+    // 1순위: TWA 최상위 탭 닫기 (대부분의 Bubblewrap TWA에서 동작)
     try { window.close(); } catch {}
-    // TWA 루트에서 guard+home 제거 → 앱 종료
-    setTimeout(() => { try { window.history.go(-2); } catch {} }, 10);
+    // 폴백: window.close가 막힌 경우 가드 해제 상태로 뒤로가기 → 루트에서 다음 물리 백이 종료.
+    setTimeout(() => { try { window.history.back(); } catch {} }, 60);
   };
 
   if (!open) return null;
