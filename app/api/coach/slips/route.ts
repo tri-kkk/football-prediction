@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     legRows.push({
       match_id: l.matchId, pick: l.pick, bet_odds: l.betOdds,
       league: sig.league ?? null, home_team: sig.home ?? null, away_team: sig.away ?? null,
-      kickoff: sig.kickoff ?? null, signal_grade: sig.signal?.grade ?? null,
+      kickoff: sig.kickoff ?? null, round: sig.round ?? null, signal_grade: sig.signal?.grade ?? null,
     });
   }
 

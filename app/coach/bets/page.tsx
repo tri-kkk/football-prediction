@@ -2,11 +2,23 @@
 // app/coach/bets/page.tsx — 내 기록(토계부). 단식 + 조합(슬립). 진행중/완료 + CLV.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError, mainLoginUrl } from '@/lib/coachApi';
-import { StatStrip, Skeleton, EmptyState, LoginRequired } from '../ui';
+import { StatStrip, Skeleton, EmptyState, LoginRequired, leagueLabel, roundLabel } from '../ui';
 import { PullToRefresh } from '../PullToRefresh';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
 const PICK_KO: Record<string, string> = { HOME: '홈', DRAW: '무', AWAY: '원정' };
+// 경기 날짜: "8.15(금) 04:00"
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+const fmtKick = (iso?: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}.${d.getDate()}(${WD[d.getDay()]}) ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+// 날짜 · 리그 · 라운드 (있는 것만)
+const metaLine = (o: { kickoff?: string; league?: string; round?: string }) =>
+  [fmtKick(o.kickoff), leagueLabel(o.league), roundLabel(o.round)].filter(Boolean).join(' · ');
 const ST = {
   won: { t: '적중', c: '#4bd14b', bg: 'rgba(12,163,12,.16)' },
   lost: { t: '미적중', c: '#e66767', bg: 'rgba(208,59,59,.16)' },
@@ -146,15 +158,21 @@ function ComboCard({ s }: { s: any }) {
         <span>스테이크 <b style={{ color: '#c3c2b7' }}>{Number(s.stake).toLocaleString()}</b></span>
       </div>
       <div style={{ marginTop: 11, borderTop: '1px solid #2c2c2a', paddingTop: 9 }}>
-        {legs.map((l: any) => (
-          <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0', fontSize: 11.5 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-              <i style={{ width: 6, height: 6, borderRadius: '50%', flex: '0 0 auto', background: l.leg_status ? LEG_C[l.leg_status] : '#6b6a64' }} />
-              <span style={{ color: '#c3c2b7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.home_team} vs {l.away_team}</span>
-            </span>
-            <span style={{ color: '#898781', flex: '0 0 auto', paddingLeft: 8 }}>{PICK_KO[l.pick] || l.pick} <b style={{ color: '#c3c2b7' }}>{Number(l.bet_odds).toFixed(2)}</b></span>
-          </div>
-        ))}
+        {legs.map((l: any) => {
+          const meta = metaLine(l);
+          return (
+            <div key={l.id} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '6px 0', fontSize: 11.5 }}>
+              <span style={{ display: 'flex', alignItems: 'flex-start', gap: 7, minWidth: 0 }}>
+                <i style={{ width: 6, height: 6, borderRadius: '50%', flex: '0 0 auto', marginTop: 5, background: l.leg_status ? LEG_C[l.leg_status] : '#6b6a64' }} />
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', color: '#c3c2b7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.home_team} vs {l.away_team}</span>
+                  {meta && <span style={{ display: 'block', color: '#6f6e68', fontSize: 10.5, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</span>}
+                </span>
+              </span>
+              <span style={{ color: '#898781', flex: '0 0 auto', paddingLeft: 8, marginTop: 1 }}>{PICK_KO[l.pick] || l.pick} <b style={{ color: '#c3c2b7' }}>{Number(l.bet_odds).toFixed(2)}</b></span>
+            </div>
+          );
+        })}
       </div>
       <ClvPill b={s} />
     </div>
