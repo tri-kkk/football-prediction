@@ -17,8 +17,8 @@ const div = 'rgba(255,255,255,.06)';
 
 function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} aria-pressed={on} className="tc-press" style={{ width: 44, height: 26, borderRadius: 999, border: 0, background: on ? '#3987e5' : '#3a3a37', position: 'relative', cursor: 'pointer', flex: '0 0 auto', transition: 'background .18s' }}>
-      <span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.35)', transition: 'left .18s' }} />
+    <button onClick={onClick} aria-pressed={on} role="switch" aria-checked={on} className="tc-press" style={{ WebkitAppearance: 'none', appearance: 'none', WebkitTapHighlightColor: 'transparent', width: 46, height: 28, borderRadius: 999, border: on ? '1px solid rgba(57,135,229,.9)' : '1px solid rgba(255,255,255,.12)', background: on ? '#3987e5' : '#2e2e2b', padding: 0, position: 'relative', cursor: 'pointer', flex: '0 0 auto', transition: 'background .18s, border-color .18s' }}>
+      <span style={{ position: 'absolute', top: 3, left: on ? 22 : 3, width: 21, height: 21, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,.4)', transition: 'left .18s' }} />
     </button>
   );
 }

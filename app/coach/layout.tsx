@@ -59,12 +59,17 @@ function haptic() { try { (navigator as any).vibrate?.(6); } catch {} }
 export default function CoachLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const isActive = (href: string) => (href === '/coach' ? path === '/coach' : path.startsWith(href));
-  useEffect(() => { registerSW(); }, []);
+  useEffect(() => {
+    registerSW();
+    // coach 서브도메인은 i18n 미적용 → Chrome이 언어를 오탐(독일어)해 번역 팝업이 뜸. 한국어 고정.
+    try { document.documentElement.lang = 'ko'; } catch {}
+  }, []);
   return (
     <SessionProvider>
     <SlipCartProvider>
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#0d0d0d" />
+    <meta name="google" content="notranslate" />
     <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
     <SplashScreen />
     <Toaster />
