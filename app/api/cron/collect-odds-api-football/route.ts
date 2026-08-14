@@ -299,7 +299,25 @@ export async function POST(request: Request) {
           `/fixtures?league=${league.id}&season=${season}&from=${from}&to=${to}`
         )
 
-        const fixtures = fixturesData.response || []
+        let fixtures = fixturesData.response || []
+
+        // 폴백: 연도제 리그가 0개면 인접 시즌(±1) 재시도
+        //   (J리그 추춘제 전환 등으로 api 시즌 번호가 어긋나는 경우 대응)
+        const CALENDAR_LEAGUES = ['KL1', 'KL2', 'J1', 'J2', 'MLS', 'BSA', 'ARG', 'CSL']
+        if (fixtures.length === 0 && CALENDAR_LEAGUES.includes(league.code)) {
+          for (const alt of [season + 1, season - 1]) {
+            const d = await fetchFromApiFootball(
+              `/fixtures?league=${league.id}&season=${alt}&from=${from}&to=${to}`
+            )
+            const f = d.response || []
+            if (f.length > 0) {
+              season = alt
+              fixtures = f
+              console.log(`  ↩️ 시즌 폴백 적용: ${league.code} → season ${alt} (${f.length}개)`)
+              break
+            }
+          }
+        }
         console.log(`📊 Found ${fixtures.length} fixtures (season: ${season})`)
 
         if (fixtures.length === 0) {
