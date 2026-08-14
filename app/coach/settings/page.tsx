@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { coachApi, MembershipError, mainLoginUrl } from '@/lib/coachApi';
 import { PageTitle } from '../ui';
 import { showToast } from '../toast';
+import { enablePush, disablePush, pushSupported } from '../pushClient';
 
 const Section = ({ children }: { children: React.ReactNode }) => (
   <div style={{ fontSize: 11.5, fontWeight: 800, color: '#8b8a84', letterSpacing: .5, margin: '22px 4px 9px' }}>{children}</div>
@@ -78,7 +79,18 @@ export default function SettingsPage() {
     setBankroll(b); setUnit(u); setSavedBank(b); setSavedUnit(u);
     showToast('뱅크롤이 저장됐어요');
   };
-  const toggleSettle = () => { const v = !notifySettle; setNotifySettle(v); localStorage.setItem('coach_notify_settle', v ? '1' : '0'); };
+  const toggleSettle = async () => {
+    const v = !notifySettle;
+    if (v) {
+      if (!pushSupported()) { showToast('이 기기/브라우저는 푸시를 지원하지 않아요', 'err'); return; }
+      const ok = await enablePush();
+      if (!ok) { showToast('알림 권한이 필요해요', 'err'); return; }
+      setNotifySettle(true); localStorage.setItem('coach_notify_settle', '1'); showToast('알림을 켰어요');
+    } else {
+      await disablePush();
+      setNotifySettle(false); localStorage.setItem('coach_notify_settle', '0');
+    }
+  };
   const toggleWarn = () => { const v = !warnStake; setWarnStake(v); localStorage.setItem('coach_warn_stake', v ? '1' : '0'); };
 
   const authed = status === 'authenticated';

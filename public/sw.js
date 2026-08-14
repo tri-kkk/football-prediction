@@ -1,6 +1,29 @@
-self.options = {
-    "domain": "5gvci.com",
-    "zoneId": 10181845
-}
-self.lary = ""
-importScripts('https://5gvci.com/act/files/service-worker.min.js?r=sw')
+/* TrendCoach service worker — 웹 푸시 (VAPID). TWA/브라우저 공용. */
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
+  const title = d.title || 'TrendCoach';
+  e.waitUntil(self.registration.showNotification(title, {
+    body: d.body || '',
+    icon: '/icon-512.png',
+    badge: '/icon-512.png',
+    tag: d.tag || undefined,
+    data: { url: d.url || '/' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ('focus' in c) { try { c.navigate(url); } catch (_) {} return c.focus(); }
+      }
+      return self.clients.openWindow(url);
+    })
+  );
+});

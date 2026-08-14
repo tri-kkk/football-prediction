@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.trendsoccer.coach",
+    "sha256_cert_fingerprints": ["01:B2:AB:69:2A:A0:B4:4E:60:8B:92:9F:30:9F:ED:D5:C8:36:AA:90:38:D8:D2:AC:E1:24:2B:F8:97:F8:AD:24"]
+  }
+}]

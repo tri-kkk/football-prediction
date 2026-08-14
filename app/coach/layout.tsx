@@ -1,10 +1,13 @@
 'use client';
 // app/coach/layout.tsx — 코치 앱 공통 셸(헤더 + 하단 탭). 네이티브 앱 느낌(스티키 헤더·아이콘 탭·세이프에어리어·터치 피드백).
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
 import { SlipCartProvider } from './slipCart';
 import { Toaster } from './toast';
+import { registerSW } from './pushClient';
+import { SplashScreen } from './SplashScreen';
 
 const TABS = [
   { href: '/coach', label: '홈', id: 'home' },
@@ -56,10 +59,14 @@ function haptic() { try { (navigator as any).vibrate?.(6); } catch {} }
 export default function CoachLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const isActive = (href: string) => (href === '/coach' ? path === '/coach' : path.startsWith(href));
+  useEffect(() => { registerSW(); }, []);
   return (
     <SessionProvider>
     <SlipCartProvider>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0d0d0d" />
     <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
+    <SplashScreen />
     <Toaster />
     <div style={{ minHeight: '100vh', background: '#0d0d0d', color: '#fff', fontFamily: 'system-ui, "Malgun Gothic", sans-serif', maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <header className="tc-noselect" style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 11, padding: 'calc(env(safe-area-inset-top) + 15px) 16px 12px', background: 'rgba(13,13,13,.72)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
