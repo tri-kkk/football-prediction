@@ -26,20 +26,26 @@ const timeAgo = (iso: string) => {
 
 function Hero() {
   return (
-    <div style={{ background: 'linear-gradient(160deg,#233450,#16202e 58%,#141a24)', border: '1px solid rgba(57,135,229,.35)', borderRadius: 20, padding: 20, margin: '10px 0 14px' }}>
-      <span style={{ display: 'inline-block', fontSize: 10.5, fontWeight: 800, background: 'rgba(57,135,229,.2)', color: '#9cc4f4', padding: '5px 11px', borderRadius: 999 }}>멤버쉽 전용 · 오늘 1경기 무료</span>
-      <div style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.34, margin: '13px 0 8px' }}>감이 아니라 <b style={{ color: '#5aa0f0' }}>데이터로</b><br />경기를 읽으세요</div>
-      <div style={{ fontSize: 12.5, color: '#c3c2b7', lineHeight: 1.6, marginBottom: 16 }}>KSM 시그널로 승부를 예측하고, 내 픽을 CLV로 채점받는 축구 분석 코치.</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginBottom: 18 }}>
+    <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(160deg,#233450,#16202e 58%,#141a24)', border: '1px solid rgba(57,135,229,.35)', borderRadius: 20, padding: 22, margin: '10px 0 14px' }}>
+      {/* 배경 에셋: 와이어프레임 구체 (우하단) */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/coach-hero-bg.webp)', backgroundSize: 'cover', backgroundPosition: 'right bottom', opacity: .92 }} />
+      {/* 텍스트 가독성용 좌측 어둡게 오버레이 */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(100deg,#141a24 22%,rgba(20,26,36,.66) 50%,rgba(20,26,36,.12) 100%)' }} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg,rgba(16,21,29,.55),transparent 42%)' }} />
+      <div style={{ position: 'relative' }}>
+      <div style={{ fontSize: 23, fontWeight: 800, lineHeight: 1.28, letterSpacing: -.5, margin: '2px 0 10px', maxWidth: 270 }}>감이 아니라 <b style={{ color: '#5aa0f0' }}>데이터로</b><br />경기를 읽으세요</div>
+      <div style={{ fontSize: 12.5, color: '#aebccd', lineHeight: 1.62, marginBottom: 20, maxWidth: 236 }}>KSM 시그널로 승부를 예측하고, 내 픽을 CLV로 채점받는 축구 분석 코치</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 22 }}>
         {[['KSM 시그널 · 승부 예측', false], ['CLV 자동 채점', true], ['코치 리포트 · 성과 진단', false]].map(([t, uniq], i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 600 }}>
-            <span style={{ width: 26, height: 26, flex: '0 0 auto', borderRadius: 8, background: 'rgba(57,135,229,.16)', display: 'grid', placeItems: 'center', color: '#5aa0f0', fontWeight: 800 }}>✓</span>
-            {t as string}{uniq && <span style={{ fontSize: 9.5, fontWeight: 800, background: 'rgba(12,163,12,.18)', color: '#4bd14b', padding: '2px 7px', borderRadius: 6 }}>국내 유일</span>}
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 600, maxWidth: 290 }}>
+            <span style={{ width: 24, height: 24, flex: '0 0 auto', borderRadius: 7, background: 'rgba(57,135,229,.16)', display: 'grid', placeItems: 'center', color: '#5aa0f0', fontWeight: 800, fontSize: 12 }}>✓</span>
+            {t as string}{uniq && <span style={{ fontSize: 9, fontWeight: 800, background: 'rgba(12,163,12,.2)', color: '#54d854', padding: '2px 6px', borderRadius: 5, letterSpacing: .2 }}>국내 유일</span>}
           </div>
         ))}
       </div>
-      <a href="/coach/pricing" style={{ display: 'block', textAlign: 'center', background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 14, padding: 13, borderRadius: 12, textDecoration: 'none' }}>멤버쉽 시작하기 · 월 ₩9,900</a>
-      <div style={{ textAlign: 'center', fontSize: 11, color: '#898781', marginTop: 10 }}>TrendSoccer 프리미엄이면 번들가 ₩6,900</div>
+      <a href="/coach/pricing" style={{ display: 'block', textAlign: 'center', background: 'linear-gradient(180deg,#4491ea,#3282e2)', color: '#fff', fontWeight: 800, fontSize: 14, padding: 14, borderRadius: 12, textDecoration: 'none', boxShadow: '0 6px 18px rgba(41,120,220,.32)' }}>멤버쉽 시작하기 · 월 ₩9,900</a>
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#93a2b3', marginTop: 11 }}>TrendSoccer 프리미엄이면 번들가 <b style={{ color: '#c8d6e6', fontWeight: 700 }}>₩6,900</b></div>
+      </div>
     </div>
   );
 }
