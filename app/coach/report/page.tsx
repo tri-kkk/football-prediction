@@ -2,6 +2,7 @@
 // app/coach/report/page.tsx — 코치 리포트: 리그/배당대/등급별 CLV 분해 + 코멘트.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError } from '@/lib/coachApi';
+import { leagueNameKo } from '../ui';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
 
@@ -16,14 +17,14 @@ function DivergingBar({ v }: { v: number | null }) {
   );
 }
 
-function Section({ title, rows }: { title: string; rows: any[] }) {
+function Section({ title, rows, fmtKey }: { title: string; rows: any[]; fmtKey?: (k: string) => string }) {
   return (
     <div style={{ background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: 13, marginBottom: 11 }}>
       <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 12 }}>{title}</div>
       {!rows.length && <div style={{ fontSize: 12, color: '#898781' }}>표본이 아직 없어요.</div>}
       {rows.map((g) => (
         <div key={g.key} style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '9px 0' }}>
-          <span style={{ width: 70, fontSize: 12, color: '#c3c2b7', fontWeight: 600 }}>{g.key} <span style={{ color: '#6b6a64', fontSize: 10 }}>({g.count})</span></span>
+          <span style={{ width: 82, fontSize: 12, color: '#c3c2b7', fontWeight: 600, flex: '0 0 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fmtKey ? fmtKey(g.key) : g.key} <span style={{ color: '#6b6a64', fontSize: 10 }}>({g.count})</span></span>
           <DivergingBar v={g.avgClv} />
           <span style={{ width: 54, textAlign: 'right', fontSize: 12, fontWeight: 800, color: g.avgClv == null ? '#898781' : g.avgClv >= 0 ? '#3ecb3e' : '#e66767' }}>{fmtPct(g.avgClv)}</span>
         </div>
@@ -54,7 +55,7 @@ export default function ReportPage() {
   return (
     <>
       <div style={{ fontSize: 12, fontWeight: 700, color: '#898781', margin: '18px 2px 10px', letterSpacing: .6 }}>코치 리포트</div>
-      <Section title="리그별 평균 CLV" rows={rep.byLeague} />
+      <Section title="리그별 평균 CLV" rows={rep.byLeague} fmtKey={leagueNameKo} />
       <div style={{ fontSize: 11, color: '#898781', textAlign: 'center', margin: '-4px 0 12px' }}>← 마이너스 · 0 · 플러스 →</div>
       <Section title="배당대별 평균 CLV" rows={rep.byOddsBand} />
       <Section title="시그널 등급별 평균 CLV" rows={rep.byGrade} />

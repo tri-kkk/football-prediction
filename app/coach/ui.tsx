@@ -24,6 +24,10 @@ export const leagueLabel = (code?: string) => {
   const m = code ? LEAGUE_META[code] : null;
   return m ? `${m.flag} ${m.name}` : (code || '');
 };
+export const leagueNameKo = (code?: string) => {
+  const m = code ? LEAGUE_META[code] : null;
+  return m ? m.name : (code || '');
+};
 export const pct = (v: number) => `${Math.round(v * 100)}%`;
 export const PICK_KO: Record<string, string> = { HOME: '홈', DRAW: '무', AWAY: '원정' };
 export const kickoffStr = (iso: string) => {
