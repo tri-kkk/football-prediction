@@ -123,6 +123,10 @@ function TrendChart({ trend }: { trend: Detail['trend'] }) {
   );
 }
 
+// 상세 클라 캐시: 목록→상세→뒤로→같은 경기 재진입 시 60초 내면 즉시 표시.
+const _detailCache = new Map<string, { t: number; data: Detail }>();
+const DETAIL_TTL = 60_000;
+
 export default function MatchDetail() {
   const { matchId } = useParams<{ matchId: string }>();
   const [d, setD] = useState<Detail | null>(null);
@@ -130,15 +134,21 @@ export default function MatchDetail() {
   const [err, setErr] = useState('');
 
   useEffect(() => {
+    const hit = _detailCache.get(matchId);
+    if (hit && Date.now() - hit.t < DETAIL_TTL) { setD(hit.data); setState('ok'); return; }
+    let alive = true;
     fetch(`/api/coach/match/${matchId}`)
       .then(async (r) => {
+        if (!alive) return;
         if (r.status === 401) { setState('auth'); return; }
         if (r.status === 402) { setState('guest'); return; }
         const body = await r.json();
         if (!r.ok) { setErr(body.error || '불러오기 실패'); setState('error'); return; }
+        _detailCache.set(matchId, { t: Date.now(), data: body });
         setD(body); setState('ok');
       })
-      .catch((e) => { setErr(e.message); setState('error'); });
+      .catch((e) => { if (alive) { setErr(e.message); setState('error'); } });
+    return () => { alive = false; };
   }, [matchId]);
 
   const s = d?.signal;

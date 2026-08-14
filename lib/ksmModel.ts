@@ -53,7 +53,24 @@ function aggregate(src: any[], promoted: boolean) {
 }
 
 /** 리그별 팀 통계 (fg_team_stats 다시즌 합산, PL 승격팀 챔스 환산) */
+// 팀 스탯은 크론으로만 갱신되는 DB 데이터 → 리그별 120초 인메모리 캐시 + dedup.
+// 상세 라우트에서 getMatchSignal + 직접 호출로 2번 부르던 중복도 캐시로 흡수됨.
+const _tsCache = new Map<number, { t: number; data: Record<number, any> }>();
+const _tsInflight = new Map<number, Promise<Record<number, any>>>();
+const TS_TTL = 120_000;
 export async function buildTeamStats(leagueId: number): Promise<Record<number, any>> {
+  const now = Date.now();
+  const hit = _tsCache.get(leagueId);
+  if (hit && now - hit.t < TS_TTL) return hit.data;
+  const inflight = _tsInflight.get(leagueId);
+  if (inflight) return inflight;
+  const p = _buildTeamStatsRaw(leagueId)
+    .then((d) => { _tsCache.set(leagueId, { t: Date.now(), data: d }); _tsInflight.delete(leagueId); return d; })
+    .catch((e) => { _tsInflight.delete(leagueId); throw e; });
+  _tsInflight.set(leagueId, p);
+  return p;
+}
+async function _buildTeamStatsRaw(leagueId: number): Promise<Record<number, any>> {
   const { data: rows } = await supabaseAdmin.from('fg_team_stats').select('*')
     .eq('league_id', leagueId).in('season', ['2023', '2024', '2025', '2026']);
   const byTeam: Record<number, any[]> = {};
