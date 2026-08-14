@@ -1,8 +1,8 @@
 'use client';
 // app/coach/report/page.tsx — 코치 리포트: 리그/배당대/등급별 CLV 분해 + 코멘트.
 import { useEffect, useState } from 'react';
-import { coachApi, MembershipError, AuthError } from '@/lib/coachApi';
-import { leagueNameKo, StatStrip, Skeleton } from '../ui';
+import { coachApi, MembershipError, AuthError, mainLoginUrl } from '@/lib/coachApi';
+import { leagueNameKo, StatStrip, Skeleton, LoginRequired } from '../ui';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
 
@@ -42,7 +42,7 @@ export default function ReportPage() {
   }, []);
 
   if (state === 'loading') return <div style={{ paddingTop: 16 }}><Skeleton h={58} r={12} /><Skeleton h={140} /><Skeleton h={140} /></div>;
-  if (state === 'auth') return <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요.</p>;
+  if (state === 'auth') return <LoginRequired href={mainLoginUrl()} sub="로그인하면 리그·배당대·등급별 CLV 진단을 볼 수 있어요." />;
   if (state === 'guest') return (
     <div style={{ marginTop: 40, textAlign: 'center' }}>
       <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>코치 리포트는 멤버쉽 전용</div>
