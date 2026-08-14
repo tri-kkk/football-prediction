@@ -2,6 +2,7 @@
 // app/coach/bets/page.tsx — 내 기록(토계부). 단식 + 조합(슬립). 진행중/완료 + CLV.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError } from '@/lib/coachApi';
+import { StatStrip } from '../ui';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
 const PICK_KO: Record<string, string> = { HOME: '홈', DRAW: '무', AWAY: '원정' };
@@ -38,10 +39,18 @@ export default function BetsPage() {
   const list = all.filter((b) => (tab === 'open' ? b.status === 'open' : b.status !== 'open'));
   const openCnt = all.filter((b) => b.status === 'open').length;
   const doneCnt = all.length - openCnt;
+  const settled = all.filter((b) => b.status === 'won' || b.status === 'lost');
+  const hit = settled.length ? settled.filter((b) => b.status === 'won').length / settled.length : null;
+  const profit = settled.reduce((s, b) => s + ((b.payout ?? 0) - b.stake), 0);
 
   return (
     <>
-      <div style={{ fontSize: 12, fontWeight: 700, color: '#898781', margin: '18px 2px 10px', letterSpacing: .6 }}>내 기록 (토계부)</div>
+      <StatStrip title="내 기록 · 토계부" stats={[
+        { k: '진행중', v: `${openCnt}건` },
+        { k: '적중률', v: hit != null ? `${(hit * 100).toFixed(0)}%` : '—', tone: 'blue' },
+        { k: '누적 손익', v: `${profit >= 0 ? '+' : ''}${profit.toLocaleString()}`, tone: profit > 0 ? 'grn' : profit < 0 ? 'crit' : undefined },
+      ]} />
+      <div style={{ height: 12 }} />
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         {(['open', 'settled'] as const).map((k) => (
           <button key={k} onClick={() => setTab(k)} style={{ flex: 1, border: `1px solid ${tab === k ? '#383835' : 'rgba(255,255,255,.1)'}`, background: tab === k ? '#232320' : '#1a1a19', color: tab === k ? '#fff' : '#898781', fontWeight: 700, fontSize: 12.5, padding: 9, borderRadius: 11, cursor: 'pointer' }}>

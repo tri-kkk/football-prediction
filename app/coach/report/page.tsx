@@ -2,7 +2,7 @@
 // app/coach/report/page.tsx — 코치 리포트: 리그/배당대/등급별 CLV 분해 + 코멘트.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError } from '@/lib/coachApi';
-import { leagueNameKo } from '../ui';
+import { leagueNameKo, StatStrip } from '../ui';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
 
@@ -54,7 +54,19 @@ export default function ReportPage() {
 
   return (
     <>
-      <div style={{ fontSize: 12, fontWeight: 700, color: '#898781', margin: '18px 2px 10px', letterSpacing: .6 }}>코치 리포트</div>
+      {(() => {
+        const grades = rep.byGrade || [];
+        const total = grades.reduce((s: number, g: any) => s + g.count, 0);
+        const clvRows = grades.filter((g: any) => g.avgClv != null);
+        const wCnt = clvRows.reduce((s: number, g: any) => s + g.count, 0);
+        const avgClv = wCnt ? clvRows.reduce((s: number, g: any) => s + g.avgClv * g.count, 0) / wCnt : null;
+        return <StatStrip title="코치 리포트" stats={[
+          { k: '표본', v: `${total}건` },
+          { k: '평균 CLV', v: avgClv != null ? `${avgClv >= 0 ? '+' : ''}${(avgClv * 100).toFixed(1)}%` : '—', tone: avgClv != null ? (avgClv >= 0 ? 'grn' : 'crit') : undefined },
+          { k: '분석 리그', v: `${(rep.byLeague || []).length}`, tone: 'blue' },
+        ]} />;
+      })()}
+      <div style={{ height: 12 }} />
       <Section title="리그별 평균 CLV" rows={rep.byLeague} fmtKey={leagueNameKo} />
       <div style={{ fontSize: 11, color: '#898781', textAlign: 'center', margin: '-4px 0 12px' }}>← 마이너스 · 0 · 플러스 →</div>
       <Section title="배당대별 평균 CLV" rows={rep.byOddsBand} />

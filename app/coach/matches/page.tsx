@@ -2,7 +2,7 @@
 // app/coach/matches/page.tsx — 경기 화면: 리그 필터 + KSM 시그널 카드 목록 + 기록 추가 시트.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError, mainLoginUrl, type MatchSignal } from '@/lib/coachApi';
-import { MatchCard, BetSheet } from '../ui';
+import { MatchCard, BetSheet, StatStrip } from '../ui';
 
 const LEAGUES: { key: string; label: string }[] = [
   { key: 'ALL', label: '전체' },
@@ -35,9 +35,19 @@ export default function MatchesPage() {
 
   return (
     <>
-      <div style={{ fontSize: 12, fontWeight: 700, color: '#898781', margin: '18px 2px 10px', letterSpacing: .6 }}>경기 · KSM 시그널</div>
+      {(() => {
+        const ms = data?.matches || [];
+        const withGap = ms.filter((m) => m.signal?.gap);
+        const avgGap = withGap.length ? withGap.reduce((s, m) => s + Math.abs(m.signal!.gap!.pp), 0) / withGap.length : null;
+        const saCount = ms.filter((m) => m.signal && (m.signal.grade === 'S' || m.signal.grade === 'A')).length;
+        return <StatStrip title="오늘의 경기" stats={[
+          { k: '예정 경기', v: `${ms.length}` },
+          { k: 'S·A 등급', v: `${saCount}`, tone: 'blue' },
+          { k: '평균 이견', v: avgGap != null ? `${avgGap.toFixed(1)}%` : '—', tone: 'grn' },
+        ]} />;
+      })()}
 
-      <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 4, marginBottom: 10, scrollbarWidth: 'none' }}>
+      <div style={{ display: 'flex', gap: 7, overflowX: 'auto', padding: '12px 0 4px', marginBottom: 10, scrollbarWidth: 'none' }}>
         {LEAGUES.map((l) => (
           <button key={l.key} onClick={() => setLeague(l.key)} style={{ flex: '0 0 auto', border: `1px solid ${league === l.key ? '#383835' : 'rgba(255,255,255,.1)'}`, background: league === l.key ? '#232320' : '#1a1a19', color: league === l.key ? '#fff' : '#898781', fontWeight: 700, fontSize: 12.5, padding: '8px 14px', borderRadius: 11, cursor: 'pointer' }}>{l.label}</button>
         ))}

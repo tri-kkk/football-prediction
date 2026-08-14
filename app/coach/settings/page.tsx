@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { coachApi, MembershipError, mainLoginUrl } from '@/lib/coachApi';
+import { PageTitle } from '../ui';
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -59,6 +60,7 @@ export default function SettingsPage() {
 
   return (
     <>
+      <PageTitle title="설정" sub="멤버쉽 · 뱅크롤 · 알림 · 계정" />
       {sect('멤버쉽')}
       {isMember ? (
         row('상태', '멤버쉽 이용 중 ✓')

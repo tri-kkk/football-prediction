@@ -28,6 +28,33 @@ export const leagueNameKo = (code?: string) => {
   const m = code ? LEAGUE_META[code] : null;
   return m ? m.name : (code || '');
 };
+
+// 섹션 헤더: 제목 + 미니 스탯바 (기능형)
+type Tone = 'blue' | 'grn' | 'crit';
+const toneColor = (t?: Tone) => (t === 'blue' ? '#79b0f0' : t === 'grn' ? '#3ecb3e' : t === 'crit' ? '#e66767' : '#fff');
+export function StatStrip({ title, stats }: { title: string; stats: { k: string; v: string; tone?: Tone }[] }) {
+  return (
+    <div style={{ margin: '16px 0 2px' }}>
+      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 10, padding: '0 2px', letterSpacing: -.2 }}>{title}</div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {stats.map((s, i) => (
+          <div key={i} style={{ flex: 1, minWidth: 0, background: '#1a1a19', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: '10px 12px' }}>
+            <div style={{ fontSize: 10.5, color: '#898781', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.k}</div>
+            <div style={{ fontSize: 17, fontWeight: 800, marginTop: 4, letterSpacing: -.4, color: toneColor(s.tone), fontVariantNumeric: 'tabular-nums' }}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+export function PageTitle({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <div style={{ margin: '16px 2px 4px' }}>
+      <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -.5 }}>{title}</div>
+      {sub && <div style={{ fontSize: 12, color: '#77756f', fontWeight: 600, marginTop: 4 }}>{sub}</div>}
+    </div>
+  );
+}
 export const pct = (v: number) => `${Math.round(v * 100)}%`;
 export const PICK_KO: Record<string, string> = { HOME: '홈', DRAW: '무', AWAY: '원정' };
 export const kickoffStr = (iso: string) => {
