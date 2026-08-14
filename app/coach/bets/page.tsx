@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError } from '@/lib/coachApi';
 import { StatStrip, Skeleton } from '../ui';
+import { PullToRefresh } from '../PullToRefresh';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
 const PICK_KO: Record<string, string> = { HOME: '홈', DRAW: '무', AWAY: '원정' };
@@ -19,8 +20,9 @@ export default function BetsPage() {
   const [tab, setTab] = useState<'open' | 'settled'>('open');
   const [state, setState] = useState<'loading' | 'ok' | 'guest' | 'auth' | 'error'>('loading');
 
-  useEffect(() => {
-    Promise.all([coachApi.bets(), coachApi.slips()])
+  const load = (silent = false) => {
+    if (!silent) setState('loading');
+    return Promise.all([coachApi.bets(), coachApi.slips()])
       .then(([b, s]: any) => {
         const singles = (b.bets || []).map((x: any) => ({ ...x, _type: 'single' }));
         const combos = (s.slips || []).map((x: any) => ({ ...x, _type: 'combo' }));
@@ -28,7 +30,8 @@ export default function BetsPage() {
         setItems(merged); setState('ok');
       })
       .catch((e) => setState(e instanceof MembershipError ? 'guest' : e instanceof AuthError ? 'auth' : 'error'));
-  }, []);
+  };
+  useEffect(() => { load(); }, []);
 
   if (state === 'loading') return <div style={{ paddingTop: 16 }}><Skeleton h={58} r={12} /><Skeleton h={44} r={11} mb={12} /><Skeleton h={110} /><Skeleton h={110} /></div>;
   if (state === 'auth') return <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요.</p>;
@@ -44,7 +47,7 @@ export default function BetsPage() {
   const profit = settled.reduce((s, b) => s + ((b.payout ?? 0) - b.stake), 0);
 
   return (
-    <>
+    <PullToRefresh onRefresh={() => load(true)}>
       <StatStrip title="내 기록 · 토계부" stats={[
         { k: '진행중', v: `${openCnt}건` },
         { k: '적중률', v: hit != null ? `${(hit * 100).toFixed(0)}%` : '—', tone: 'blue' },
@@ -60,7 +63,7 @@ export default function BetsPage() {
       </div>
       {!list.length && <p style={{ color: '#898781', textAlign: 'center', marginTop: 30 }}>{tab === 'open' ? '진행중인 기록이 없어요.' : '완료된 기록이 없어요.'}</p>}
       {list.map((b) => (b._type === 'combo' ? <ComboCard key={`c${b.id}`} s={b} /> : <SingleCard key={`s${b.id}`} b={b} />))}
-    </>
+    </PullToRefresh>
   );
 }
 

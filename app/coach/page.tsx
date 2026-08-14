@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { coachApi, MembershipError, AuthError, mainLoginUrl, type MatchSignal } from '@/lib/coachApi';
 import { MatchCard, BetSheet, Skeleton } from './ui';
+import { PullToRefresh } from './PullToRefresh';
 
 interface DashboardData {
   hitRate: number | null; profit: number; roi: number | null;
@@ -63,10 +64,10 @@ export default function CoachHome() {
   const [state, setState] = useState<'loading' | 'ok' | 'guest' | 'auth' | 'error'>('loading');
   const [err, setErr] = useState('');
   const [sheet, setSheet] = useState<MatchSignal | null>(null);
-  const [saved, setSaved] = useState(false);
 
-  const load = () => {
-    coachApi.matches('ALL')
+  const load = (silent = false) => {
+    if (!silent) setState('loading');
+    return coachApi.matches('ALL')
       .then((r) => {
         setData(r); setState(r.member ? 'ok' : 'guest');
         if (r.member) coachApi.dashboard().then(setDash).catch(() => {});
@@ -77,7 +78,7 @@ export default function CoachHome() {
         else { setErr(e.message); setState('error'); }
       });
   };
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
   useEffect(() => {
     fetch('/api/news?scope=bigleague')
       .then((r) => r.json())
@@ -88,11 +89,10 @@ export default function CoachHome() {
   const featured = data?.matches?.find((m) => !m.locked && m.signal) || data?.matches?.[0] || null;
 
   return (
-    <>
+    <PullToRefresh onRefresh={() => load(true)}>
       {state === 'loading' && <div style={{ paddingTop: 16 }}><Skeleton h={92} /><Skeleton h={150} /><Skeleton h={120} /></div>}
       {state === 'auth' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>로그인이 필요해요. <a href={mainLoginUrl()} style={{ color: '#79b0f0' }}>로그인</a></p>}
       {state === 'error' && <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>{err}</p>}
-      {saved && <div style={{ background: 'rgba(12,163,12,.15)', color: '#4bd14b', fontSize: 12.5, fontWeight: 700, padding: 10, borderRadius: 10, margin: '10px 0', textAlign: 'center' }}>기록이 저장됐어요.</div>}
 
       {state === 'guest' && <Hero />}
 
@@ -144,7 +144,7 @@ export default function CoachHome() {
         </>
       )}
 
-      {sheet && <BetSheet m={sheet} onClose={() => setSheet(null)} onSaved={() => { setSaved(true); load(); }} />}
-    </>
+      {sheet && <BetSheet m={sheet} onClose={() => setSheet(null)} onSaved={() => load(true)} />}
+    </PullToRefresh>
   );
 }

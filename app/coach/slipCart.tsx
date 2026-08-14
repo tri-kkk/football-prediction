@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { coachApi } from '@/lib/coachApi';
 import { combinedOdds } from '@/lib/coachSlip';
 import { useDragToClose } from './useDragToClose';
+import { showToast } from './toast';
 
 type Pick = 'HOME' | 'DRAW' | 'AWAY';
 export interface CartLeg {
@@ -79,7 +80,6 @@ function SlipSheet({ onClose }: { onClose: () => void }) {
   const [stake, setStake] = useState('15000');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
-  const [saved, setSaved] = useState(false);
   const { dragHandlers, sheetStyle } = useDragToClose(onClose);
 
   const combined = combinedOdds(legs.map((l) => ({ betOdds: oddsOf(l) })));
@@ -91,9 +91,9 @@ function SlipSheet({ onClose }: { onClose: () => void }) {
     setSaving(true); setErr('');
     try {
       await coachApi.createSlip({ stake: st, legs: legs.map((l) => ({ matchId: l.matchId, pick: l.pick, betOdds: oddsOf(l) })) });
-      setSaved(true); clear();
-      setTimeout(onClose, 900);
-    } catch (e: any) { setErr(e.message || '저장 실패'); setSaving(false); }
+      showToast('조합이 저장됐어요');
+      clear(); onClose();
+    } catch (e: any) { setErr(e.message || '저장 실패'); showToast(e.message || '저장 실패', 'err'); setSaving(false); }
   };
 
   const pickBtn = (l: CartLeg, p: Pick) => {
@@ -117,7 +117,6 @@ function SlipSheet({ onClose }: { onClose: () => void }) {
           <button onClick={clear} style={{ border: '1px solid rgba(255,255,255,.1)', background: '#232320', color: '#e66767', fontWeight: 700, fontSize: 11.5, padding: '6px 11px', borderRadius: 9, cursor: 'pointer' }}>전체 비우기</button>
         </div>
 
-        {saved && <div style={{ background: 'rgba(12,163,12,.15)', color: '#4bd14b', fontSize: 12.5, fontWeight: 700, padding: 10, borderRadius: 10, marginBottom: 12, textAlign: 'center' }}>조합이 저장됐어요.</div>}
 
         {legs.map((l) => (
           <div key={l.matchId} style={{ background: '#232320', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12, padding: 12, marginBottom: 10 }}>

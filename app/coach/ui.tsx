@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { coachApi, type MatchSignal } from '@/lib/coachApi';
 import { useSlipCart } from './slipCart';
 import { useDragToClose } from './useDragToClose';
+import { showToast } from './toast';
 
 export const GRADE_COLOR: Record<string, string> = { S: '#3987e5', A: '#0ca30c', B: '#eda100', C: '#898781' };
 
@@ -207,8 +208,9 @@ export function BetSheet({ m, onClose, onSaved }: { m: MatchSignal; onClose: () 
     setSaving(true); setErr('');
     try {
       await coachApi.createBet({ matchId: m.matchId, pick, stake: st, betOdds: o });
+      showToast('기록이 저장됐어요');
       onSaved(); onClose();
-    } catch (e: any) { setErr(e.message || '저장 실패'); setSaving(false); }
+    } catch (e: any) { setErr(e.message || '저장 실패'); showToast(e.message || '저장 실패', 'err'); setSaving(false); }
   };
 
   const pillBtn = (p: string) => (

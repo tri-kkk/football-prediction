@@ -125,7 +125,7 @@ export default function MatchDetail() {
   const s = d?.signal;
 
   return (
-    <div style={{ paddingTop: 6 }}>
+    <div className="tc-slidein" style={{ paddingTop: 6 }}>
       <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 0, color: '#c3c2b7', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: 8 }}>← 뒤로</button>
 
       {state === 'loading' && <p style={{ color: '#898781', marginTop: 40, textAlign: 'center' }}>불러오는 중…</p>}

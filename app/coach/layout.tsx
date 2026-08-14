@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
 import { SlipCartProvider } from './slipCart';
+import { Toaster } from './toast';
 
 const TABS = [
   { href: '/coach', label: '홈', id: 'home' },
@@ -42,6 +43,12 @@ button, a, [role=button] { touch-action: manipulation; }
 @keyframes tcscrim { from { opacity:0 } to { opacity:1 } }
 .tc-sheet { animation: tcslideup .28s cubic-bezier(.22,1,.36,1); }
 .tc-scrim { animation: tcscrim .22s ease; }
+@keyframes tcspin { to { transform: rotate(360deg) } }
+.tc-spin { animation: tcspin .7s linear infinite; }
+@keyframes tctoast { from { opacity:0; transform: translateY(-14px) } to { opacity:1; transform:none } }
+.tc-toast { animation: tctoast .22s ease; }
+@keyframes tcslidein { from { transform: translateX(26px); opacity:0 } to { transform:none; opacity:1 } }
+.tc-slidein { animation: tcslidein .26s cubic-bezier(.22,1,.36,1); }
 `;
 
 function haptic() { try { (navigator as any).vibrate?.(6); } catch {} }
@@ -53,6 +60,7 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
     <SessionProvider>
     <SlipCartProvider>
     <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
+    <Toaster />
     <div style={{ minHeight: '100vh', background: '#0d0d0d', color: '#fff', fontFamily: 'system-ui, "Malgun Gothic", sans-serif', maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <header className="tc-noselect" style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 11, padding: 'calc(env(safe-area-inset-top) + 15px) 16px 12px', background: 'rgba(13,13,13,.72)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
         <svg height={32} viewBox="30 6 62 104" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flex: '0 0 auto' }} aria-hidden>
