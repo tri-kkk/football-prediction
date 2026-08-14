@@ -105,11 +105,43 @@ function buildFromFixture(f: any, stats: Record<number, any>, patMap: Record<str
 }
 
 async function forLeague(leagueCode: string): Promise<MatchSignal[]> {
+  try {
+    return await forLeagueInner(leagueCode);
+  } catch (e) {
+    // 한 리그의 외부 API(API-Football 쿼터/리밋 등) 실패가 전체 목록을 무너뜨리지 않도록 격리.
+    console.error(`[coach] forLeague(${leagueCode}) failed:`, (e as any)?.message ?? e);
+    return [];
+  }
+}
+
+// 배당 DB(match_odds_latest)에서 리그의 예정 경기 로드 → API-Football fixtures 형태로 변환.
+// API가 일정을 못 줄 때(쿼터/리밋/새시즌 미개시)의 폴백 소스.
+async function oddsFixturesForLeague(leagueCode: string): Promise<{ fixtures: any[]; oMap: Record<string, any> }> {
+  const cutoff = new Date(Date.now() - 3 * 3600_000).toISOString();
+  const { data } = await supabaseAdmin
+    .from('match_odds_latest')
+    .select('match_id,home_team,away_team,home_team_id,away_team_id,commence_time,home_odds,draw_odds,away_odds,status,league_code')
+    .eq('league_code', leagueCode)
+    .gt('commence_time', cutoff)
+    .order('commence_time', { ascending: true });
+  const rows = data || [];
+  const fixtures = rows.map((r: any) => ({
+    fixture: { id: r.match_id, date: r.commence_time, status: { short: r.status || 'NS' } },
+    teams: { home: { id: r.home_team_id, name: r.home_team }, away: { id: r.away_team_id, name: r.away_team } },
+    league: { round: null },
+  }));
+  const oMap: Record<string, any> = {};
+  for (const r of rows) oMap[String(r.match_id)] = { home_odds: r.home_odds, draw_odds: r.draw_odds, away_odds: r.away_odds };
+  return { fixtures, oMap };
+}
+
+async function forLeagueInner(leagueCode: string): Promise<MatchSignal[]> {
   const cfg = LEAGUES[leagueCode];
   if (!cfg) return [];
   const season = currentSeason();
   const [fixData, stats, patMap] = await Promise.all([
-    af(`/fixtures?league=${cfg.id}&season=${season}`),
+    // API 실패는 폴백으로 넘김 (throw 대신 빈 응답).
+    af(`/fixtures?league=${cfg.id}&season=${season}`).catch(() => ({ response: [] })),
     buildTeamStats(cfg.id),
     patternMap(cfg.id),
   ]);
@@ -125,11 +157,19 @@ async function forLeague(leagueCode: string): Promise<MatchSignal[]> {
   // (개막/편성 시 라운드 라벨이 갈려 임박 경기가 숨는 문제 방지).
   const currentRound = upcoming[0]?.league?.round ?? null;
   const soon = now + 8 * 86400_000;
-  const fixtures = currentRound
+  let fixtures = currentRound
     ? upcoming.filter((f: any) => f.league?.round === currentRound || new Date(f.fixture.date).getTime() <= soon)
     : upcoming;
 
-  const oMap = await oddsMap(fixtures.map((f: any) => String(f.fixture.id)));
+  let oMap = await oddsMap(fixtures.map((f: any) => String(f.fixture.id)));
+
+  // 폴백: API-Football이 일정을 못 주면 배당 DB로 일정 구성 (일정이 통째로 사라지는 것 방지).
+  if (fixtures.length === 0) {
+    const fb = await oddsFixturesForLeague(leagueCode);
+    fixtures = fb.fixtures;
+    oMap = fb.oMap;
+  }
+
   // 배당(1X2)이 모두 있는 경기만 노출 — 배당 없이 승부 추천만 뜨는 괴리 방지(친선·프리시즌 제외).
   return fixtures.map((f: any) => buildFromFixture(f, stats, patMap, oMap[String(f.fixture.id)], leagueCode))
     .filter((m: MatchSignal) => m.odds.home != null && m.odds.draw != null && m.odds.away != null)
@@ -139,7 +179,9 @@ async function forLeague(leagueCode: string): Promise<MatchSignal[]> {
 /** 경기 목록 + 시그널. leagueCode='ALL'이면 지원 리그 전체. */
 export async function getMatchesWithSignals(leagueCode: string): Promise<MatchSignal[]> {
   const codes = leagueCode === 'ALL' ? Object.keys(LEAGUES) : [leagueCode];
-  const lists = await Promise.all(codes.map((c) => forLeague(c)));
+  // allSettled: 리그 하나가 실패해도 나머지 리그는 정상 노출 (전체 500 방지).
+  const settled = await Promise.allSettled(codes.map((c) => forLeague(c)));
+  const lists = settled.map((r) => (r.status === 'fulfilled' ? r.value : []));
   const merged = lists.flat().sort((x, y) => new Date(x.kickoff).getTime() - new Date(y.kickoff).getTime());
   return applyKoreanNames(merged);
 }
