@@ -23,6 +23,7 @@ const LEAGUE_META: Record<string, { flag: string; name: string }> = {
   CL: { flag: '🇪🇺', name: '챔피언스리그' },
   EL: { flag: '🇪🇺', name: '유로파리그' },
   ELC: { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: '챔피언십' },
+  J1: { flag: '🇯🇵', name: 'J1리그' },
 };
 export const leagueLabel = (code?: string) => {
   const m = code ? LEAGUE_META[code] : null;

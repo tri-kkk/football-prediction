@@ -12,6 +12,7 @@ const LEAGUES: { key: string; label: string }[] = [
   { key: 'BL1', label: '분데스' },
   { key: 'SA', label: '세리에A' },
   { key: 'FL1', label: '리그1' },
+  { key: 'J1', label: 'J1' },
 ];
 
 export default function MatchesPage() {

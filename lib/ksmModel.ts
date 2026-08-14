@@ -11,6 +11,7 @@ export const LEAGUES: Record<string, { id: number; name: string }> = {
   PD: { id: 140, name: '라리가' },
   FL1: { id: 61, name: '리그1' },
   SA: { id: 135, name: '세리에A' },
+  J1: { id: 98, name: 'J1리그' },
 };
 // 상위리그 → 2부리그 매핑. 승격팀(상위리그 표본이 얇은 팀)은 2부 데이터로 환산.
 export const SECOND_DIV: Record<number, number> = { 39: 40, 78: 79, 140: 141, 135: 136, 61: 62 };
