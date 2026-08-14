@@ -130,7 +130,7 @@ export default function CoachHome() {
           {state === 'guest'
             ? sect('오늘의 무료 시그널 · 맛보기', '#4bd14b')
             : sect('오늘의 경기 · KSM 시그널')}
-          <MatchCard m={featured} member={!!data?.member} onAdd={setSheet} />
+          <MatchCard m={featured} member={!!data?.member} onAdd={setSheet} featured />
           <Link href="/coach/matches" style={{ display: 'block', textAlign: 'center', border: '1px solid rgba(255,255,255,.1)', background: '#1a1a19', color: '#c3c2b7', fontWeight: 700, fontSize: 12.5, padding: 11, borderRadius: 12, textDecoration: 'none', marginBottom: 4 }}>전체 경기 보기 →</Link>
         </>
       )}

@@ -107,7 +107,7 @@ export function Emblem({ id, name, size = 26 }: { id?: number; name: string; siz
   return <img src={`https://media.api-sports.io/football/teams/${id}.png`} alt="" width={size} height={size} loading="lazy" onError={() => setErr(true)} style={{ objectFit: 'contain', flex: '0 0 auto' }} />;
 }
 
-export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolean; onAdd: (m: MatchSignal) => void }) {
+export function MatchCard({ m, member, onAdd, featured }: { m: MatchSignal; member: boolean; onAdd: (m: MatchSignal) => void; featured?: boolean }) {
   const s = m.signal;
   const hasOdds = m.odds.home != null && m.odds.draw != null && m.odds.away != null;
   const cart = useSlipCart();
@@ -117,7 +117,12 @@ export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolea
     inCart ? cart.remove(m.matchId)
       : cart.add({ matchId: m.matchId, home: m.home, away: m.away, league: m.league, kickoff: m.kickoff, grade: s?.grade, odds: m.odds, pick: recPick as any });
   return (
-    <div className="tc-press" style={{ position: 'relative', background: '#1a1a19', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 14, marginBottom: 11 }}>
+    <div className="tc-press" style={{ position: 'relative', overflow: 'hidden', background: '#1a1a19', border: `1px solid ${featured ? 'rgba(57,135,229,.35)' : 'rgba(255,255,255,.1)'}`, borderRadius: 16, padding: 14, marginBottom: 11 }}>
+      {featured && (<>
+        <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/card-pitch.webp)', backgroundSize: 'cover', backgroundPosition: 'right center' }} />
+        <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,#1a1a19 26%,rgba(26,26,25,.35) 62%,rgba(26,26,25,.62))' }} />
+      </>)}
+      <div style={{ position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: '#898781' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ background: '#232320', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: '#c3c2b7' }}>{leagueLabel(m.league)}</span>
@@ -180,6 +185,7 @@ export function MatchCard({ m, member, onAdd }: { m: MatchSignal; member: boolea
           )}
         </>
       )}
+      </div>
       {m.locked && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(20,20,19,.6)', backdropFilter: 'blur(3px)', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <div style={{ fontSize: 12.5, fontWeight: 800 }}>멤버쉽 전용</div>
