@@ -243,9 +243,14 @@ async function fetchFromApiFootball(endpoint: string) {
 
 export async function POST(request: Request) {
   try {
+    // ⚡ ?league=J1,J2 → 해당 리그만 수집(테스트/부분 갱신). 없으면 전체.
+    const leagueParam = new URL(request.url).searchParams.get('league')
+    const wanted = leagueParam ? leagueParam.split(',').map((s) => s.trim().toUpperCase()) : null
+    const targetLeagues = wanted ? LEAGUES.filter((l) => wanted.includes(l.code)) : LEAGUES
+
     console.log('🔥 ========== EXPANDED Odds Collection Started ==========')
     console.log('⏰ Time:', new Date().toISOString())
-    console.log(`📊 Total Leagues: ${LEAGUES.length}`)
+    console.log(`📊 Total Leagues: ${targetLeagues.length}${wanted ? ` (filter: ${wanted.join(',')})` : ''}`)
 
     const results = {
       success: true,
@@ -266,7 +271,7 @@ export async function POST(request: Request) {
     console.log('📅 Date range:', from, '~', to, '(21 days)')
 
     // 각 리그별로 처리
-    for (const league of LEAGUES) {
+    for (const league of targetLeagues) {
       try {
         console.log(`\n🔍 Processing ${league.name} (${league.code})...`)
 
