@@ -43,6 +43,25 @@ async function fetchApiResults(ids: string[]): Promise<Record<string, string>> {
   }
   return out;
 }
+// 진단용 — 경기별 API 상태(종료 여부)·결과 원시값 조회
+async function fetchApiRaw(ids: string[]): Promise<Record<string, any>> {
+  const out: Record<string, any> = {};
+  const key = process.env.API_FOOTBALL_KEY;
+  if (!key || !ids.length) return { _error: 'API_FOOTBALL_KEY 없음' } as any;
+  for (let i = 0; i < ids.length; i += 20) {
+    const batch = ids.slice(i, i + 20);
+    try {
+      const res = await fetch(`https://${AF_HOST}/fixtures?ids=${batch.join('-')}`, {
+        headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': AF_HOST }, cache: 'no-store',
+      });
+      const data = await res.json();
+      for (const f of data.response || []) {
+        out[String(f?.fixture?.id)] = { status: f?.fixture?.status?.short, homeWin: f?.teams?.home?.winner, awayWin: f?.teams?.away?.winner, result: apiResult(f) };
+      }
+    } catch (e: any) { out['_err' + i] = String(e?.message || e); }
+  }
+  return out;
+}
 
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -67,6 +86,17 @@ export async function POST(req: NextRequest) {
   // 폴백: DB에 결과 없는 경기는 API-Football에서 직접 조회 (J리그 등 미수집 리그 정산)
   const missing = matchIds.filter((id) => !finMap[id]);
   if (missing.length) Object.assign(finMap, await fetchApiResults(missing));
+
+  // 진단 모드: ?debug=1 → 정산 안 하고 경기별 상태만 반환
+  if (new URL(req.url).searchParams.get('debug') === '1') {
+    const dbHad = matchIds.filter((id) => (fins || []).some((f) => String(f.fixture_id) === id));
+    const api = await fetchApiRaw(matchIds);
+    return NextResponse.json({
+      debug: true, openTotal: openBets.length,
+      bets: openBets.map((b) => ({ match_id: String(b.match_id), pick: b.pick, dbResult: dbHad.includes(String(b.match_id)), resultUsed: finMap[String(b.match_id)] || null })),
+      apiRaw: api,
+    });
+  }
 
   // 3) 마감배당 스냅샷
   const { data: ocs } = await supabase
