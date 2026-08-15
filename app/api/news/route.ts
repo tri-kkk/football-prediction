@@ -229,47 +229,51 @@ function deduplicateArticles(
   return result
 }
 
+// 빅리그(번역 포함) 결과 인메모리 캐시 — 번역(Claude) 호출 비용 절감 + 20분마다 최신 갱신
+let bigCache: { t: number; data: any[] } | null = null
+const BIG_TTL = 20 * 60_000
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const lang = searchParams.get('lang') as 'en' | 'ko' | null
     const uiLang = searchParams.get('ui') as 'en' | 'ko' || 'ko'
 
-    // 🔹 TrendCoach 전용: 축구 빅리그 소식만 (야구·K리그 제외, 플랫 목록)
+    // 🔹 TrendCoach 전용: 축구 빅리그 소식만 (영어로 검색 → 헤드라인 한글 번역)
+    // thenewsapi 한국어(ko) 인덱스는 신선도가 떨어져 stale → 영어로 최신 기사 확보 후 제목만 한글 번역.
     if (searchParams.get('scope') === 'bigleague') {
+      if (bigCache && Date.now() - bigCache.t < BIG_TTL) {
+        return NextResponse.json({ success: true, articles: bigCache.data, scope: 'bigleague', updatedAt: new Date(bigCache.t).toISOString(), cached: true })
+      }
       const BIG = [
-        { tag: 'EPL', search: '프리미어리그 | 손흥민' },
-        { tag: '라리가', search: '라리가 | 레알 마드리드 | 바르셀로나' },
-        { tag: '분데스', search: '분데스리가 | 바이에른' },
-        { tag: '세리에A', search: '세리에A | 유벤투스 | 인터밀란' },
-        { tag: '챔스', search: '챔피언스리그' },
+        { tag: 'EPL', search: 'Premier League' },
+        { tag: '라리가', search: 'La Liga Real Madrid Barcelona' },
+        { tag: '분데스', search: 'Bundesliga Bayern' },
+        { tag: '세리에A', search: 'Serie A Juventus Inter Milan' },
+        { tag: '챔스', search: 'Champions League UEFA' },
       ]
       const usedIds = new Set<string>()
       const usedTitles = new Set<string>()
       const perLeague = await Promise.all(
         BIG.map(async (b) => {
-          const arts = filterArticles(await fetchNews(b.search, 'ko', 6))
+          const arts = filterArticles(await fetchNews(b.search, 'en', 6)) // 영어로 검색(최신 확보)
           return deduplicateArticles(arts, usedIds, usedTitles, 3).map((a) => ({ ...a, league: b.tag }))
         })
       )
       const flat: (ProcessedArticle & { league: string })[] = []
       // 리그별 라운드로빈으로 다양성 확보 후, 최신순 정렬
       for (let i = 0; i < 3; i++) for (const arr of perLeague) if (arr[i]) flat.push(arr[i])
-
-      // ko 결과가 적으면 영어 빅리그로 보충
-      if (flat.length < 4) {
-        const enArts = filterArticles(
-          await fetchNews('Premier League | La Liga | Bundesliga | Serie A | Champions League', 'en', 12)
-        )
-        const more = deduplicateArticles(enArts, usedIds, usedTitles, 12 - flat.length).map((a) => ({ ...a, league: '해외축구' }))
-        flat.push(...more)
-      }
-
       flat.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
+      const top = flat.slice(0, 10)
+      // 헤드라인 한글 번역 (원 설계)
+      const ko = await translateTitlesToKo(top.map((a) => a.title))
+      const translated = top.map((a, i) => ({ ...a, title: ko[i] || a.title }))
+
+      bigCache = { t: Date.now(), data: translated } // 20분 캐시 (번역 비용 절감 + 최신 유지)
       return NextResponse.json({
         success: true,
-        articles: flat.slice(0, 10),
+        articles: translated,
         scope: 'bigleague',
         updatedAt: new Date().toISOString(),
       })
