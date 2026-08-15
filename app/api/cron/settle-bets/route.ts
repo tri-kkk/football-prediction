@@ -56,7 +56,14 @@ async function fetchApiRaw(ids: string[]): Promise<Record<string, any>> {
       });
       const data = await res.json();
       for (const f of data.response || []) {
-        out[String(f?.fixture?.id)] = { status: f?.fixture?.status?.short, homeWin: f?.teams?.home?.winner, awayWin: f?.teams?.away?.winner, result: apiResult(f) };
+        out[String(f?.fixture?.id)] = {
+          status: f?.fixture?.status?.short,
+          date: f?.fixture?.date,
+          league: `${f?.league?.id} ${f?.league?.name}`,
+          season: f?.league?.season,
+          match: `${f?.teams?.home?.name} vs ${f?.teams?.away?.name}`,
+          result: apiResult(f),
+        };
       }
     } catch (e: any) { out['_err' + i] = String(e?.message || e); }
   }
