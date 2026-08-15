@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getServerSession } from 'next-auth'
+import { getMobileSession } from '@/lib/mobile-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -225,9 +226,13 @@ export async function GET(request: NextRequest) {
   const _secret = process.env.CRON_SECRET
   const _isInternal = !!_secret && request.headers.get('x-internal-secret') === _secret
   if (!_isInternal) {
-    const _session = await getServerSession()
-    if (!(_session as any)?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    // 모바일 JWT(Bearer) 우선 허용 → 없으면 웹 NextAuth 쿠키 세션 확인
+    const _mobile = await getMobileSession(request)
+    if (!_mobile) {
+      const _session = await getServerSession()
+      if (!(_session as any)?.user?.email) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      }
     }
   }
 
