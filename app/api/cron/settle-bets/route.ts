@@ -5,11 +5,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/mobile-auth';
 import { settleBet, pickKey, type Pick } from '@/lib/coachSignal';
 import { settleSlip, type SettleLeg } from '@/lib/coachSlip';
+import { FINISHED } from '@/lib/ksmModel';
 
 const closeOddsFor = (oc: any, pick: string): number | null =>
   oc ? (pick === 'HOME' ? oc.home_odds : pick === 'DRAW' ? oc.draw_odds : oc.away_odds) : null;
 
 export const dynamic = 'force-dynamic';
+
+// API-Football 결과 폴백 — fg_match_history에 결과가 없는 경기(미수집 리그 등)를 API에서 직접 조회.
+// 정산은 최신 결과가 필요하므로 캐시 미사용(no-store).
+const AF_HOST = 'v3.football.api-sports.io';
+function apiResult(f: any): 'HOME' | 'AWAY' | 'DRAW' | null {
+  const short = f?.fixture?.status?.short;
+  if (!FINISHED.has(short)) return null;
+  if (f?.teams?.home?.winner === true) return 'HOME';
+  if (f?.teams?.away?.winner === true) return 'AWAY';
+  return 'DRAW'; // 종료됐는데 승자 없음 = 무승부
+}
+async function fetchApiResults(ids: string[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  const key = process.env.API_FOOTBALL_KEY;
+  if (!key || !ids.length) return out;
+  for (let i = 0; i < ids.length; i += 20) { // API-Football ids= 최대 20개 배치
+    const batch = ids.slice(i, i + 20);
+    try {
+      const res = await fetch(`https://${AF_HOST}/fixtures?ids=${batch.join('-')}`, {
+        headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': AF_HOST },
+        cache: 'no-store',
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      for (const f of data.response || []) {
+        const r = apiResult(f);
+        if (r && f?.fixture?.id != null) out[String(f.fixture.id)] = r;
+      }
+    } catch { /* skip batch */ }
+  }
+  return out;
+}
 
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -31,6 +64,9 @@ export async function POST(req: NextRequest) {
     .from('fg_match_history').select('fixture_id, result').in('fixture_id', matchIds.map(Number));
   const finMap: Record<string, string> = {};
   for (const f of fins || []) finMap[String(f.fixture_id)] = f.result; // 'HOME'|'AWAY'|'DRAW'
+  // 폴백: DB에 결과 없는 경기는 API-Football에서 직접 조회 (J리그 등 미수집 리그 정산)
+  const missing = matchIds.filter((id) => !finMap[id]);
+  if (missing.length) Object.assign(finMap, await fetchApiResults(missing));
 
   // 3) 마감배당 스냅샷
   const { data: ocs } = await supabase
@@ -69,6 +105,8 @@ export async function POST(req: NextRequest) {
       .from('fg_match_history').select('fixture_id, result').in('fixture_id', slipMatchIds.map(Number));
     const sFinMap: Record<string, string> = {};
     for (const f of sFins || []) sFinMap[String(f.fixture_id)] = f.result;
+    const sMissing = slipMatchIds.filter((id) => !sFinMap[id]);
+    if (sMissing.length) Object.assign(sFinMap, await fetchApiResults(sMissing));
     const { data: sOcs } = await supabase
       .from('match_odds_latest').select('match_id, home_odds, draw_odds, away_odds').in('match_id', slipMatchIds);
     const sOcMap: Record<string, any> = {};
