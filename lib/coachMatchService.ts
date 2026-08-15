@@ -117,7 +117,7 @@ async function forLeague(leagueCode: string): Promise<MatchSignal[]> {
 // 배당 DB(match_odds_latest)에서 리그의 예정 경기 로드 → API-Football fixtures 형태로 변환.
 // API가 일정을 못 줄 때(쿼터/리밋/새시즌 미개시)의 폴백 소스.
 async function oddsFixturesForLeague(leagueCode: string): Promise<{ fixtures: any[]; oMap: Record<string, any> }> {
-  const cutoff = new Date(Date.now() - 3 * 3600_000).toISOString();
+  const cutoff = new Date(Date.now()).toISOString(); // 시작 전(예정)만 — 킥오프 지난 경기 제외
   const { data } = await supabaseAdmin
     .from('match_odds_latest')
     .select('match_id,home_team,away_team,home_team_id,away_team_id,commence_time,home_odds,draw_odds,away_odds,status,league_code')
@@ -149,7 +149,7 @@ async function forLeagueInner(leagueCode: string): Promise<MatchSignal[]> {
   const upcoming = (fixData.response || [])
     .filter((f: any) => {
       const short = f.fixture.status?.short;
-      return !FINISHED.has(short) && new Date(f.fixture.date).getTime() >= now - 3 * 3600_000; // 예정+진행 임박
+      return !FINISHED.has(short) && new Date(f.fixture.date).getTime() >= now; // 시작 전(예정)만 — 킥오프 지나면 제외
     })
     .sort((a: any, b: any) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
 
