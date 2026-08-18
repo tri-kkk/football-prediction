@@ -2,6 +2,7 @@
 // app/coach/TierBadge.tsx — 헤더 등급 배지(분할) + 탭 시 이용권/구독 바텀시트.
 //  메인 프리미엄=골드, 코치=블루 다이아. 둘 다 보유 시 분할 배지.
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { coachApi, type MeRes } from '@/lib/coachApi';
 import { haptic } from './haptic';
 
@@ -78,10 +79,11 @@ function PlanSheet({ me, onClose }: { me: MeRes; onClose: () => void }) {
   const activeChip = <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 7, color: '#4bd14b', background: 'rgba(75,209,75,.13)', border: '1px solid rgba(75,209,75,.3)', whiteSpace: 'nowrap' }}>이용중</span>;
   const ctaChip = (label: string) => <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 7, color: BLUE, background: 'rgba(57,135,229,.14)', border: '1px solid rgba(57,135,229,.32)', whiteSpace: 'nowrap' }}>{label}</span>;
 
-  return (
-    <div onClick={onClose} className="tc-scrim" style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,.58)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      <div onClick={(e) => e.stopPropagation()} className="tc-sheet" style={{ maxWidth: 480, width: '100%', margin: '0 auto', background: 'radial-gradient(120% 70% at 82% 0%, #1c2233 0%, #14161f 58%, #101013 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(255,255,255,.1)', borderBottom: 0, padding: '10px 16px calc(env(safe-area-inset-bottom) + 22px)' }}>
-        <div style={{ width: 38, height: 4, borderRadius: 3, background: 'rgba(255,255,255,.22)', margin: '0 auto 16px' }} />
+  if (typeof document === 'undefined') return null;
+  // 헤더의 backdrop-filter가 fixed의 컨테이닝 블록이 되므로 body로 포털 → 화면 중앙 모달.
+  return createPortal(
+    <div onClick={onClose} className="tc-scrim" style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,.62)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 16px' }}>
+      <div onClick={(e) => e.stopPropagation()} className="tc-fade" style={{ maxWidth: 400, width: '100%', maxHeight: '86vh', overflowY: 'auto', background: 'radial-gradient(120% 70% at 82% 0%, #1c2233 0%, #14161f 58%, #101013 100%)', borderRadius: 20, border: '1px solid rgba(255,255,255,.1)', padding: '18px 16px 16px', boxShadow: '0 24px 60px rgba(0,0,0,.55)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 14 }}>내 구독</div>
 
         {/* 메인 프리미엄 (골드) */}
@@ -104,7 +106,8 @@ function PlanSheet({ me, onClose }: { me: MeRes; onClose: () => void }) {
 
         <button onClick={onClose} className="tc-press" style={{ width: '100%', marginTop: 8, border: 0, background: 'rgba(255,255,255,.06)', color: '#c9c8bf', fontWeight: 800, fontSize: 13.5, padding: 13, borderRadius: 12, cursor: 'pointer' }}>닫기</button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

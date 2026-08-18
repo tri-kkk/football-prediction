@@ -14,7 +14,17 @@ export default function AuthButton() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [coach, setCoach] = useState<{ active: boolean; expiresAt: string | null } | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // 코치 플랜 보유 여부(두 등급 배지·모달용). 코치 앱과 동일한 /api/coach/me 사용.
+  useEffect(() => {
+    if (status !== 'authenticated') { setCoach(null); return }
+    fetch('/api/coach/me')
+      .then((r) => r.json())
+      .then((d) => setCoach(d?.coach ?? null))
+      .catch(() => setCoach(null))
+  }, [status])
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -54,6 +64,7 @@ export default function AuthButton() {
   // 로그인 상태
   if (session?.user) {
     const isPremium = (session.user as any).tier === 'premium'
+    const hasCoach = coach?.active === true
     const userEmail = session.user.email || ''
     const userName = session.user.name || userEmail.split('@')[0]
     const premiumExpiresAt = (session.user as any).premium_expires_at
@@ -82,14 +93,23 @@ export default function AuthButton() {
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center gap-1 transition-colors"
             >
-              {/* 티어 배지 */}
-              <span className={`px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-bold rounded ${
-                isPremium
-                  ? 'bg-yellow-500 text-black'
-                  : 'bg-gray-600 text-gray-200'
-              }`}>
-                {isPremium ? (language === 'ko' ? '프리미엄' : 'Premium') : (language === 'ko' ? '무료' : 'Free')}
-              </span>
+              {/* 티어 배지 — 메인 프리미엄(골드)·코치(블루), 둘 다면 분할 */}
+              {isPremium && hasCoach ? (
+                <span className="inline-flex items-center rounded overflow-hidden border border-white/20 text-[10px] md:text-xs font-bold">
+                  <span className="px-1.5 py-0.5 bg-yellow-500 text-black">{language === 'ko' ? '프리미엄' : 'Premium'}</span>
+                  <span className="px-1.5 py-0.5 bg-blue-500 text-white">{language === 'ko' ? '코치' : 'Coach'}</span>
+                </span>
+              ) : hasCoach ? (
+                <span className="px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-bold rounded bg-blue-500 text-white">
+                  {language === 'ko' ? '코치' : 'Coach'}
+                </span>
+              ) : (
+                <span className={`px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-bold rounded ${
+                  isPremium ? 'bg-yellow-500 text-black' : 'bg-gray-600 text-gray-200'
+                }`}>
+                  {isPremium ? (language === 'ko' ? '프리미엄' : 'Premium') : (language === 'ko' ? '무료' : 'Free')}
+                </span>
+              )}
 
               {/* 화살표 */}
               <svg
@@ -114,7 +134,7 @@ export default function AuthButton() {
               
               {/* 메뉴 항목 */}
               <div className="py-1">
-                {isPremium && (
+                {(isPremium || hasCoach) && (
                   <button
                     onClick={() => {
                       setShowDropdown(false)
@@ -170,12 +190,16 @@ export default function AuthButton() {
 
         {/* 구독 관리 모달 */}
         {showModal && (
-          <SubscriptionModal 
-            onClose={() => setShowModal(false)} 
+          <SubscriptionModal
+            onClose={() => setShowModal(false)}
             userEmail={userEmail}
             language={language}
             premiumExpiresAt={premiumExpiresAt}
             promoCode={promoCode}
+            isPremium={isPremium}
+            hasCoach={hasCoach}
+            coachExpiresAt={coach?.expiresAt || null}
+            coachBundleEligible={isPremium && !hasCoach}
           />
         )}
         
@@ -221,18 +245,26 @@ export default function AuthButton() {
  * - 구독기간 정확히 표시 ✅
  * - 에러 처리 개선 ✅
  */
-function SubscriptionModal({ 
-  onClose, 
+function SubscriptionModal({
+  onClose,
   userEmail,
   language,
   premiumExpiresAt,
-  promoCode
-}: { 
+  promoCode,
+  isPremium,
+  hasCoach,
+  coachExpiresAt,
+  coachBundleEligible
+}: {
   onClose: () => void
   userEmail: string
   language: 'ko' | 'en'
   premiumExpiresAt?: string
   promoCode?: string
+  isPremium?: boolean
+  hasCoach?: boolean
+  coachExpiresAt?: string | null
+  coachBundleEligible?: boolean
 }) {
   // ✅ 모든 훅은 early return 이전에 선언 (Rules of Hooks)
   const [mounted, setMounted] = useState(false)
@@ -388,7 +420,7 @@ function SubscriptionModal({
             <div className="text-center mb-6">
               <div className="text-3xl mb-2">💎</div>
               <h2 className="text-white font-bold text-xl">
-                {language === 'ko' ? '프리미엄 이용권' : 'Premium Pass'}
+                {language === 'ko' ? '내 구독' : 'My Subscriptions'}
               </h2>
               {promoCode && (
                 <div className="inline-block mt-2 px-3 py-1 bg-green-500/20 rounded-full">
@@ -457,7 +489,43 @@ function SubscriptionModal({
                 <span className="text-white">{formatDate(expiresAt)}</span>
               </div>
             </div>
-            
+
+            {/* 코치 플랜 (블루) — 보유 시 상태, 미보유 시 시작하기 */}
+            {hasCoach ? (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rotate-45 rounded-[2px]" style={{ background: 'linear-gradient(135deg,#8fc0ff,#3d82e6)' }} />
+                    <span className="text-white text-sm font-bold">{language === 'ko' ? '코치 플랜' : 'Coach Plan'}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-400/30">{language === 'ko' ? '코치' : 'Coach'}</span>
+                  </div>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30">{language === 'ko' ? '이용중' : 'Active'}</span>
+                </div>
+                <div className="text-gray-400 text-xs mt-2">
+                  {language === 'ko' ? '만료일: ' : 'Expires: '}{formatDate(coachExpiresAt || null)}
+                  {(() => { const d = calculateDaysRemaining(coachExpiresAt || null); return d != null ? (language === 'ko' ? ` · ${d}일 남음` : ` · ${d}d left`) : '' })()}
+                </div>
+              </div>
+            ) : (
+              <a
+                href="/coach/pricing"
+                onClick={onClose}
+                className="block bg-white/5 border border-dashed border-white/20 rounded-xl p-4 mb-6 hover:border-blue-400/40 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rotate-45 rounded-[2px] opacity-60" style={{ background: 'linear-gradient(135deg,#8fc0ff,#3d82e6)' }} />
+                    <span className="text-gray-200 text-sm font-bold">{language === 'ko' ? '코치 플랜' : 'Coach Plan'}</span>
+                  </div>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30">{language === 'ko' ? '시작하기' : 'Start'}</span>
+                </div>
+                <div className="text-gray-400 text-xs mt-2">
+                  {language === 'ko' ? 'KSM 시그널 · CLV 채점 · 코치 리포트' : 'KSM signals · CLV scoring · Coach report'}
+                  {coachBundleEligible ? <span className="text-green-400 font-bold">{language === 'ko' ? ' · 번들가 ₩6,900' : ' · Bundle ₩6,900'}</span> : ''}
+                </div>
+              </a>
+            )}
+
             {/* 버튼 */}
             <div className="space-y-3">
               {daysRemaining !== null && daysRemaining <= 7 && daysRemaining > 0 && (
