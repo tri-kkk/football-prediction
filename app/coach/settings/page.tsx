@@ -126,10 +126,29 @@ export default function SettingsPage() {
           </div>
         </Group>
       ) : (
-        <div style={{ background: 'linear-gradient(135deg,#1c2a40,#171d28)', border: '1px solid rgba(57,135,229,.35)', borderRadius: 16, padding: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>TrendCoach 멤버쉽</div>
-          <p style={{ fontSize: 12, color: '#c3c2b7', lineHeight: 1.6, margin: '0 0 12px' }}>CLV 자동 채점 · 코치 리포트 · 무제한 기록 · 광고 제거</p>
-          <a href="/coach/pricing" style={{ display: 'block', textAlign: 'center', background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 13.5, padding: 12, borderRadius: 11, textDecoration: 'none' }}>멤버쉽 시작하기</a>
+        <div style={{ position: 'relative', overflow: 'hidden', background: 'radial-gradient(120% 90% at 85% 0%, #1b2c46 0%, #141d2b 60%, #10151d 100%)', border: '1px solid rgba(57,135,229,.35)', borderRadius: 16, padding: '18px 16px', boxShadow: '0 12px 30px rgba(0,0,0,.35)' }}>
+          <div aria-hidden style={{ position: 'absolute', top: -60, right: -40, width: 180, height: 180, background: 'radial-gradient(circle, rgba(57,135,229,.3), transparent 68%)', filter: 'blur(4px)' }} />
+          <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/card-mesh.webp)', backgroundSize: 'cover', backgroundPosition: 'center', opacity: .14 }} />
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1, color: '#7fb4f5', background: 'rgba(57,135,229,.14)', border: '1px solid rgba(57,135,229,.3)', padding: '2px 8px', borderRadius: 999 }}>PREMIUM</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>TrendCoach 멤버쉽</span>
+            </div>
+            <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
+              {['KSM 시그널 · 승부 예측 (전체 경기)', 'CLV 자동 채점 · 국내 유일', '코치 리포트 · 무제한 기록'].map((t, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: '#dbe4ef' }}>
+                  <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#4bd14b" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ flex: '0 0 auto' }}><path d="M20 6 9 17l-5-5" /></svg>
+                  {t}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 12 }}>
+              <span style={{ fontSize: 21, fontWeight: 800, color: '#fff' }}>₩9,900</span>
+              <span style={{ fontSize: 11, color: '#8f9dae' }}>/월</span>
+              <span style={{ fontSize: 11, color: '#7ee87e', fontWeight: 700, marginLeft: 'auto' }}>프리미엄 회원 ₩6,900</span>
+            </div>
+            <a href="/coach/pricing" className="tc-press" style={{ display: 'block', textAlign: 'center', background: 'linear-gradient(180deg,#4491ea,#2f74d0)', color: '#fff', fontWeight: 800, fontSize: 13.5, padding: 12, borderRadius: 11, textDecoration: 'none', boxShadow: '0 6px 16px rgba(41,120,220,.34)' }}>멤버쉽 시작하기</a>
+          </div>
         </div>
       )}
 
