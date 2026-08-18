@@ -17,59 +17,64 @@ export function createClientSupabase() {
   );
 }
 
+// 코치 구독(product='coach')은 메인 프리미엄이 아님. product 기본값은 'trendsoccer'(NOT NULL)이라
+// .neq('product','coach')로 메인 프리미엄만 정확히 조회한다.
 /**
- * 사용자가 프리미엄 회원인지 확인
+ * 사용자가 (메인 TrendSoccer) 프리미엄 회원인지 확인
  */
 export async function checkPremium(userId: string): Promise<boolean> {
   const supabase = createClientSupabase();
-  
+
   const { data } = await supabase
     .from("subscriptions")
     .select("expires_at")
     .eq("user_id", userId)
+    .neq("product", "coach")
     .eq("status", "active")
     .gt("expires_at", new Date().toISOString())
     .order("expires_at", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   return !!data;
 }
 
 /**
- * 프리미엄 만료일 조회
+ * (메인) 프리미엄 만료일 조회
  */
 export async function getPremiumExpiry(userId: string): Promise<Date | null> {
   const supabase = createClientSupabase();
-  
+
   const { data } = await supabase
     .from("subscriptions")
     .select("expires_at")
     .eq("user_id", userId)
+    .neq("product", "coach")
     .eq("status", "active")
     .gt("expires_at", new Date().toISOString())
     .order("expires_at", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   return data ? new Date(data.expires_at) : null;
 }
 
 /**
- * 구독 정보 전체 조회
+ * (메인) 구독 정보 전체 조회
  */
 export async function getSubscriptionInfo(userId: string) {
   const supabase = createClientSupabase();
-  
+
   const { data } = await supabase
     .from("subscriptions")
     .select("*")
     .eq("user_id", userId)
+    .neq("product", "coach")
     .eq("status", "active")
     .gt("expires_at", new Date().toISOString())
     .order("expires_at", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (!data) return null;
 

@@ -8,6 +8,7 @@ import { SlipCartProvider } from './slipCart';
 import { Toaster } from './toast';
 import { registerSW } from './pushClient';
 import { SplashScreen } from './SplashScreen';
+import { TierBadge } from './TierBadge';
 
 const TABS = [
   { href: '/coach', label: '홈', id: 'home' },
@@ -96,6 +97,7 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
           <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -.4 }}>Trend<span style={{ background: 'linear-gradient(100deg,#5aa0f0,#3987e5)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Coach</span></div>
           <div style={{ fontSize: 9.5, color: '#8b8a84', fontWeight: 700, marginTop: 6, letterSpacing: 2.4 }}>KSM SIGNAL COACH</div>
         </div>
+        <TierBadge />
       </header>
 
       <main style={{ flex: 1, padding: '0 16px calc(env(safe-area-inset-bottom) + 92px)' }}>

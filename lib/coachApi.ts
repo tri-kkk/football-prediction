@@ -70,7 +70,29 @@ const _matchCache = new Map<string, { t: number; data: MatchesRes }>();
 const _matchInflight = new Map<string, Promise<MatchesRes>>();
 const MATCHES_TTL = 60_000;
 
+// 두 등급 상태(메인 프리미엄 / 코치). 헤더 배지·이용권 시트에서 사용. 60초 캐시.
+export interface MeRes {
+  authed: boolean;
+  ts: { active: boolean; expiresAt: string | null };
+  coach: { active: boolean; expiresAt: string | null; plan: string | null };
+  bundleEligible: boolean;
+}
+let _meCache: { t: number; data: MeRes } | null = null;
+let _meInflight: Promise<MeRes> | null = null;
+const ME_TTL = 60_000;
+export function clearMeCache() { _meCache = null; }
+
 export const coachApi = {
+  me: (force = false): Promise<MeRes> => {
+    const now = Date.now();
+    if (!force && _meCache && now - _meCache.t < ME_TTL) return Promise.resolve(_meCache.data);
+    if (!force && _meInflight) return _meInflight;
+    const p = req<MeRes>(`/api/coach/me`)
+      .then((d) => { _meCache = { t: Date.now(), data: d }; _meInflight = null; return d; })
+      .catch((e) => { _meInflight = null; throw e; });
+    _meInflight = p;
+    return p;
+  },
   matches: (league = 'ALL', force = false): Promise<MatchesRes> => {
     const now = Date.now();
     const hit = _matchCache.get(league);

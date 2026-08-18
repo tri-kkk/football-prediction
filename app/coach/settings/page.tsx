@@ -2,7 +2,7 @@
 // app/coach/settings/page.tsx — 설정: 멤버쉽 상태 · (회원)뱅크롤·알림 · 계정(NextAuth 세션 기반). 네이티브 그룹 리스트.
 import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { coachApi, MembershipError, mainLoginUrl } from '@/lib/coachApi';
+import { coachApi, MembershipError, mainLoginUrl, type MeRes } from '@/lib/coachApi';
 import { PageTitle, Skeleton } from '../ui';
 import { showToast } from '../toast';
 import { enablePush, disablePush, pushSupported } from '../pushClient';
@@ -47,9 +47,32 @@ function ToggleRow({ label, sub, on, onClick, last }: { label: string; sub: stri
   );
 }
 
+const TG = '#ffd451', TB = '#7fb4f5';
+function TierStatusRow({ tone, title, tag, expiresAt, last }: { tone: 'gold' | 'blue'; title: string; tag: string; expiresAt: string | null; last?: boolean }) {
+  const c = tone === 'gold' ? TG : TB;
+  const days = expiresAt ? Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000)) : null;
+  const dstr = expiresAt ? (() => { const d = new Date(expiresAt); const p = (n: number) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; })() : '—';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 14px', borderBottom: last ? 'none' : `1px solid ${div}` }}>
+      <span style={{ width: 11, height: 11, transform: 'rotate(45deg)', borderRadius: 2, background: tone === 'gold' ? 'linear-gradient(135deg,#ffe07a,#f5b70e)' : 'linear-gradient(135deg,#8fc0ff,#3d82e6)', flex: '0 0 auto' }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7 }}>
+          {title}
+          <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 999, color: c, background: tone === 'gold' ? 'rgba(245,197,24,.13)' : 'rgba(57,135,229,.15)', border: `1px solid ${c}44` }}>{tag}</span>
+        </div>
+        <div style={{ fontSize: 11, color: '#898781', marginTop: 3 }}>만료 {dstr}{days != null ? ` · ${days}일 남음` : ''}</div>
+      </div>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 800, color: '#4bd14b', flex: '0 0 auto' }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4bd14b', boxShadow: '0 0 6px #4bd14b' }} />이용중
+      </span>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const [member, setMember] = useState<boolean | null>(null);
+  const [me, setMe] = useState<MeRes | null>(null);
   const [bankroll, setBankroll] = useState('500000'); // 편집 중 초안
   const [unit, setUnit] = useState('15000');
   const [savedBank, setSavedBank] = useState('500000'); // 마지막 저장값
@@ -68,8 +91,9 @@ export default function SettingsPage() {
   }, []);
   useEffect(() => {
     if (status === 'loading') return;
-    if (status !== 'authenticated') { setMember(false); return; }
+    if (status !== 'authenticated') { setMember(false); setMe(null); return; }
     coachApi.dashboard().then(() => setMember(true)).catch((e) => setMember(e instanceof MembershipError ? false : null));
+    coachApi.me().then(setMe).catch(() => setMe(null));
   }, [status]);
 
   const norm = (v: string) => (v || '').replace(/[^0-9]/g, '');
@@ -116,16 +140,16 @@ export default function SettingsPage() {
       ) : (
       <>
       <Section>멤버쉽</Section>
-      {isMember ? (
-        <Group>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px' }}>
-            <span style={{ fontSize: 13.5, fontWeight: 600 }}>상태</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 800, color: '#4bd14b' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4bd14b', boxShadow: '0 0 6px #4bd14b' }} />멤버쉽 이용 중
-            </span>
-          </div>
-        </Group>
-      ) : (
+      {/* 두 등급 상태: 메인 프리미엄(골드) · 코치 플랜(블루) */}
+      {me && (me.ts.active || me.coach.active) && (
+        <div style={{ marginBottom: (me.coach.active) ? 0 : 10 }}>
+          <Group>
+            {me.ts.active && <TierStatusRow tone="gold" title="트렌드사커 프리미엄" tag="메인" expiresAt={me.ts.expiresAt} last={!me.coach.active} />}
+            {me.coach.active && <TierStatusRow tone="blue" title="코치 플랜" tag="코치" expiresAt={me.coach.expiresAt} last />}
+          </Group>
+        </div>
+      )}
+      {isMember ? null : (
         <div style={{ position: 'relative', overflow: 'hidden', background: 'radial-gradient(120% 90% at 85% 0%, #1b2c46 0%, #141d2b 60%, #10151d 100%)', border: '1px solid rgba(57,135,229,.35)', borderRadius: 16, padding: '18px 16px', boxShadow: '0 12px 30px rgba(0,0,0,.35)' }}>
           <div aria-hidden style={{ position: 'absolute', top: -60, right: -40, width: 180, height: 180, background: 'radial-gradient(circle, rgba(57,135,229,.3), transparent 68%)', filter: 'blur(4px)' }} />
           <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/card-mesh.webp)', backgroundSize: 'cover', backgroundPosition: 'center', opacity: .14 }} />
