@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     // 1️⃣ users 테이블에서 사용자 조회
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id, email, tier, created_at')
+      .select('id, email, tier, created_at, premium_expires_at')
       .eq('email', email)
       .maybeSingle()  // 없으면 null 반환 (에러 아님)
 
@@ -63,8 +63,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 무료 사용자면
-    if (userData.tier !== 'premium') {
+    // ✅ effective 프리미엄 판정: tier 컬럼 OR 유효한 트라이얼/프로모(premium_expires_at 미래)
+    //    트라이얼 유저는 tier 컬럼이 free여도 premium_expires_at가 살아있으면 프리미엄으로 인정
+    const nowMs = Date.now()
+    const trialActive = !!userData.premium_expires_at && new Date(userData.premium_expires_at).getTime() > nowMs
+    const isPremium = userData.tier === 'premium' || trialActive
+
+    // 무료 사용자면 (tier free + 트라이얼도 없음)
+    if (!isPremium) {
       console.log('ℹ️ 무료 사용자:', email)
       return NextResponse.json(
         {
@@ -97,8 +103,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 구독이 없으면 (비정상 상황)
+    // 유료 구독은 없지만 트라이얼/프로모가 유효하면 → Trial 프리미엄으로 반환
     if (!subscription) {
+      if (trialActive) {
+        console.log('🎁 트라이얼/프로모 프리미엄:', email)
+        return NextResponse.json(
+          {
+            plan: 'Trial',
+            status: 'active',
+            startedAt: userData.created_at,
+            expiresAt: userData.premium_expires_at,
+            tier: 'premium',
+            daysRemaining: calculateDaysRemaining(userData.premium_expires_at),
+            planDetail: 'trial',
+            price: 0,
+            cancelledAt: null
+          },
+          { status: 200 }
+        )
+      }
+      // 구독도 트라이얼도 없음 (비정상 상황)
       console.log('⚠️ 활성 구독 없음:', email)
       return NextResponse.json(
         {
