@@ -1158,8 +1158,8 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
           {/* 상세 정보 - 펼침 상태일 때만 */}
           {isExpanded && (
             <>
-              {/* 🌍 데이터 부족 안내 (월드컵/국가전 등 fg_team_stats에 통계 없는 매치) */}
-              {(prediction as any)?.noStatsAvailable && (
+              {/* 🌍 데이터 부족 안내 — 국가대표 대회에만(월드컵/네이션스/친선/아프리카). CL/EL 등 클럽대회 제외 */}
+              {(prediction as any)?.noStatsAvailable && ['WC', 'UNL', 'AFCON', 'AMATCH'].includes(match.league_code) && (
                 <div className="bg-amber-900/20 border border-amber-700/40 rounded-lg p-3 mb-2 text-center">
                   <div className="text-amber-300 text-sm font-semibold mb-1">⚠️ {language === 'ko' ? '분석 데이터 미지원' : 'Analysis Not Available'}</div>
                   <div className="text-xs text-amber-200/80">
