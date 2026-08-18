@@ -390,4 +390,24 @@ const handler = NextAuth({
   },
 })
 
-export { handler as GET, handler as POST }
+export { handler as GET }
+
+// 🔧 로그아웃 시 "호스트 전용" 세션 쿠키까지 만료시킨다.
+//    세션 쿠키를 .trendsoccer.com 도메인 쿠키로 전환한 뒤, 과거 호스트 전용
+//    (__Secure-next-auth.session-token @ www.trendsoccer.com) 쿠키가 남아
+//    NextAuth signOut(도메인 쿠키만 만료)로는 로그아웃이 풀리지 않던 문제 해결.
+export async function POST(req: Request, ctx: any) {
+  const res: Response = await (handler as any)(req, ctx)
+  try {
+    if (new URL(req.url).pathname.endsWith('/signout')) {
+      const isProd = process.env.NODE_ENV === 'production'
+      const name = isProd ? '__Secure-next-auth.session-token' : 'next-auth.session-token'
+      // Domain 미지정 = 호스트 전용 변형 만료 (도메인 쿠키는 NextAuth가 이미 처리)
+      res.headers.append(
+        'Set-Cookie',
+        `${name}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax${isProd ? '; Secure' : ''}`
+      )
+    }
+  } catch {}
+  return res
+}
