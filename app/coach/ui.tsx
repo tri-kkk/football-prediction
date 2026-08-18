@@ -271,9 +271,9 @@ export function MatchCard({ m, member, onAdd, featured, index }: { m: MatchSigna
       )}
       </div>
       {m.locked && (
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(20,20,19,.6)', backdropFilter: 'blur(3px)', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 800 }}>멤버쉽 전용</div>
-          <a href="/coach/pricing" style={{ background: '#3987e5', color: '#fff', fontWeight: 700, fontSize: 11.5, padding: '8px 15px', borderRadius: 10, textDecoration: 'none' }}>잠금 해제</a>
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(20,20,19,.6)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, color: '#aebccd' }}>
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+          <span style={{ fontSize: 12, fontWeight: 800 }}>멤버쉽 전용</span>
         </div>
       )}
     </div>
