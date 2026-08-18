@@ -215,8 +215,9 @@ export default function KSMBettingPanel() {
                 const e = edit[m.match_id] || { pick: '', stake: '', odds: '' }
                 const st = m.bet?.status
                 const pl = profit(m.bet)
+                const fin = m.finished
                 return (
-                  <tr key={m.match_id} className={`border-t border-gray-800 hover:bg-gray-800/40 ${m.signal ? 'bg-sky-500/5' : ''}`}>
+                  <tr key={m.match_id} className={`border-t border-gray-800 hover:bg-gray-800/40 ${fin ? 'opacity-50' : m.signal ? 'bg-sky-500/5' : ''}`}>
                     <td className="px-3 py-2">
                       <div className="font-medium">{m.home_team} <span className="text-gray-500">vs</span> {m.away_team}</div>
                       <div className="text-gray-500 text-xs">
@@ -260,8 +261,8 @@ export default function KSMBettingPanel() {
                       <span className="text-gray-300">{m.recommendation || '-'}</span>
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <select value={e.pick} onChange={(ev) => pickChange(m, ev.target.value)}
-                        className="bg-gray-700 text-white rounded px-2 py-1 text-xs border border-gray-600">
+                      <select value={e.pick} disabled={fin} onChange={(ev) => pickChange(m, ev.target.value)}
+                        className="bg-gray-700 text-white rounded px-2 py-1 text-xs border border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed">
                         <option value="">-</option>
                         <option value="home">홈승</option>
                         <option value="draw">무</option>
@@ -269,19 +270,21 @@ export default function KSMBettingPanel() {
                       </select>
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <input type="number" value={e.stake} placeholder="0"
+                      <input type="number" value={e.stake} placeholder="0" disabled={fin}
                         onChange={(ev) => setEdit((p) => ({ ...p, [m.match_id]: { ...e, stake: ev.target.value } }))}
-                        className="bg-gray-700 text-white rounded px-2 py-1 text-xs border border-gray-600 w-16 text-right" />
+                        className="bg-gray-700 text-white rounded px-2 py-1 text-xs border border-gray-600 w-16 text-right disabled:opacity-40 disabled:cursor-not-allowed" />
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <input type="number" step="0.01" value={e.odds} placeholder="1.00"
+                      <input type="number" step="0.01" value={e.odds} placeholder="1.00" disabled={fin}
                         onChange={(ev) => setEdit((p) => ({ ...p, [m.match_id]: { ...e, odds: ev.target.value } }))}
-                        className="bg-gray-700 text-white rounded px-2 py-1 text-xs border border-gray-600 w-16 text-right" />
+                        className="bg-gray-700 text-white rounded px-2 py-1 text-xs border border-gray-600 w-16 text-right disabled:opacity-40 disabled:cursor-not-allowed" />
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <button onClick={() => save(m)} disabled={savingId === m.match_id}
-                        className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs px-3 py-1 rounded">
-                        {savingId === m.match_id ? '…' : '저장'}</button>
+                      {fin
+                        ? <span className="text-gray-500 text-xs">마감</span>
+                        : <button onClick={() => save(m)} disabled={savingId === m.match_id}
+                            className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs px-3 py-1 rounded">
+                            {savingId === m.match_id ? '…' : '저장'}</button>}
                     </td>
                     <td className="px-2 py-2 text-center text-xs">
                       {m.bet?.actual_result ? <span className="text-gray-300">{PICK_LABEL[m.bet.actual_result]}</span> : <span className="text-gray-600">-</span>}
