@@ -500,22 +500,25 @@ function SubscriptionModal({
               </div>
             </div>
 
-            {/* 코치 플랜 (블루) — 보유 시 상태, 미보유 시 시작하기 */}
+            {/* 코치 플랜 (블루) — 보유 시 카드 탭으로 코치 앱 점프, 미보유 시 시작하기 */}
             {hasCoach ? (
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
+              <a href="/coach" onClick={onClose} className="block bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6 hover:border-blue-400/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rotate-45 rounded-[2px]" style={{ background: 'linear-gradient(135deg,#8fc0ff,#3d82e6)' }} />
                     <span className="text-white text-sm font-bold">{language === 'ko' ? '코치 플랜' : 'Coach Plan'}</span>
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-400/30">{language === 'ko' ? '코치' : 'Coach'}</span>
                   </div>
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30">{language === 'ko' ? '이용중' : 'Active'}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30">{language === 'ko' ? '이용중' : 'Active'}</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#93b4d6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                  </span>
                 </div>
                 <div className="text-gray-400 text-xs mt-2">
                   {language === 'ko' ? '만료일: ' : 'Expires: '}{formatDate(coachExpiresAt || null)}
                   {(() => { const d = calculateDaysRemaining(coachExpiresAt || null); return d != null ? (language === 'ko' ? ` · ${d}일 남음` : ` · ${d}d left`) : '' })()}
                 </div>
-              </div>
+              </a>
             ) : (
               <a
                 href="/coach/pricing"

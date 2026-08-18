@@ -13,6 +13,17 @@ function mainPremiumUrl(): string {
     ? 'https://www.trendsoccer.com/premium/pricing'
     : '/premium/pricing';
 }
+/** 트렌드사커 메인 홈 — 코치에서 메인으로 점프 */
+function mainSiteUrl(): string {
+  if (typeof window === 'undefined') return '/';
+  return window.location.hostname.endsWith('trendsoccer.com')
+    ? 'https://www.trendsoccer.com'
+    : '/';
+}
+/** 외부/교차 이동 표시 아이콘 (↗) */
+function Jump() {
+  return <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#9aa7b8" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" style={{ flex: '0 0 auto' }}><path d="M7 17 17 7M9 7h8v8" /></svg>;
+}
 
 const GOLD = '#ffd451', BLUE = '#7fb4f5';
 function Diamond({ c, s = 9 }: { c: string; s?: number }) {
@@ -86,9 +97,11 @@ function PlanSheet({ me, onClose }: { me: MeRes; onClose: () => void }) {
       <div onClick={(e) => e.stopPropagation()} className="tc-fade" style={{ maxWidth: 400, width: '100%', maxHeight: '86vh', overflowY: 'auto', background: 'radial-gradient(120% 70% at 82% 0%, #1c2233 0%, #14161f 58%, #101013 100%)', borderRadius: 20, border: '1px solid rgba(255,255,255,.1)', padding: '18px 16px 16px', boxShadow: '0 24px 60px rgba(0,0,0,.55)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 14 }}>내 구독</div>
 
-        {/* 메인 프리미엄 (골드) */}
+        {/* 메인 프리미엄 (골드) — 보유 시 카드 탭으로 트렌드사커 메인 점프 */}
         {tsA ? (
-          <PlanCard tone="gold" title="트렌드사커 프리미엄" tag="메인" meta={`만료 ${fmtDate(me.ts.expiresAt)}${tsDays != null ? ` · ${tsDays}일 남음` : ''}`} right={activeChip} />
+          <a href={mainSiteUrl()} style={{ textDecoration: 'none', display: 'block' }}>
+            <PlanCard tone="gold" title="트렌드사커 프리미엄" tag="메인" meta={`만료 ${fmtDate(me.ts.expiresAt)}${tsDays != null ? ` · ${tsDays}일 남음` : ''}`} right={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>{activeChip}<Jump /></span>} />
+          </a>
         ) : (
           <a href={mainPremiumUrl()} style={{ textDecoration: 'none' }}>
             <PlanCard tone="off" toneDot="gold" title="트렌드사커 프리미엄" meta="메인 사이트 예측·분석 전체 · 광고 최소화" right={ctaChip('시작하기')} />
