@@ -2,7 +2,7 @@
 // app/coach/report/page.tsx — 코치 리포트: 리그/배당대/등급별 CLV 분해 + 코멘트.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError, mainLoginUrl } from '@/lib/coachApi';
-import { leagueNameKo, StatStrip, Skeleton, LoginRequired } from '../ui';
+import { leagueNameKo, StatStrip, Skeleton, LoginRequired, MemberGate } from '../ui';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
 
@@ -43,13 +43,7 @@ export default function ReportPage() {
 
   if (state === 'loading') return <div style={{ paddingTop: 16 }}><Skeleton h={58} r={12} /><Skeleton h={140} /><Skeleton h={140} /></div>;
   if (state === 'auth') return <LoginRequired href={mainLoginUrl()} sub="로그인하면 리그·배당대·등급별 CLV 진단을 볼 수 있어요." />;
-  if (state === 'guest') return (
-    <div style={{ marginTop: 40, textAlign: 'center' }}>
-      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>코치 리포트는 멤버쉽 전용</div>
-      <p style={{ fontSize: 12.5, color: '#c3c2b7', marginBottom: 16 }}>리그·배당대·등급별 CLV 진단을 열어보세요.</p>
-      <a href="/coach/pricing" style={{ background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 13, padding: '11px 18px', borderRadius: 12, textDecoration: 'none' }}>멤버쉽 시작하기</a>
-    </div>
-  );
+  if (state === 'guest') return <MemberGate title="코치 리포트는 멤버쉽 전용" sub="리그·배당대·등급별 CLV 진단을 열어보세요." />;
   if (state === 'error') return <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>불러오기 실패</p>;
 
   return (

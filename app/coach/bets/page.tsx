@@ -2,7 +2,7 @@
 // app/coach/bets/page.tsx — 내 기록(토계부). 단식 + 조합(슬립). 진행중/완료 + CLV.
 import { useEffect, useState } from 'react';
 import { coachApi, MembershipError, AuthError, mainLoginUrl } from '@/lib/coachApi';
-import { StatStrip, Skeleton, EmptyState, LoginRequired, leagueLabel, roundLabel } from '../ui';
+import { StatStrip, Skeleton, EmptyState, LoginRequired, MemberGate, leagueLabel, roundLabel } from '../ui';
 import { PullToRefresh } from '../PullToRefresh';
 
 const fmtPct = (v: number | null) => (v == null ? '-' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
@@ -56,7 +56,7 @@ export default function BetsPage() {
 
   if (state === 'loading') return <div style={{ paddingTop: 16 }}><Skeleton h={58} r={12} /><Skeleton h={44} r={11} mb={12} /><Skeleton h={110} /><Skeleton h={110} /></div>;
   if (state === 'auth') return <LoginRequired href={mainLoginUrl()} sub="로그인하면 나의 기록·손익·CLV가 여기에 쌓여요." />;
-  if (state === 'guest') return <Paywall />;
+  if (state === 'guest') return <MemberGate title="기록 · CLV는 멤버쉽 전용" sub="내 픽을 기록하고 CLV로 자동 채점받아 보세요." />;
   if (state === 'error') return <p style={{ color: '#e66767', marginTop: 40, textAlign: 'center' }}>불러오기 실패</p>;
 
   const allRaw = items || [];
@@ -189,16 +189,6 @@ function ClvPill({ b }: { b: any }) {
         <><span style={{ fontSize: 11, color: '#898781' }}>CLV</span>
           <span style={{ fontSize: 14, fontWeight: 800, color: b.clv == null ? '#898781' : b.clv >= 0 ? '#3ecb3e' : '#e66767' }}>{fmtPct(b.clv)}</span></>
       )}
-    </div>
-  );
-}
-
-function Paywall() {
-  return (
-    <div style={{ marginTop: 40, textAlign: 'center' }}>
-      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>멤버쉽 전용</div>
-      <p style={{ fontSize: 12.5, color: '#c3c2b7', marginBottom: 16 }}>기록·CLV 채점은 멤버쉽에서 이용할 수 있어요.</p>
-      <a href="/coach/pricing" style={{ background: '#3987e5', color: '#fff', fontWeight: 800, fontSize: 13, padding: '11px 18px', borderRadius: 12, textDecoration: 'none' }}>멤버쉽 시작하기</a>
     </div>
   );
 }

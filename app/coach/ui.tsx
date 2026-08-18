@@ -152,6 +152,30 @@ export function LoginRequired({ href, sub }: { href: string; sub?: string }) {
   );
 }
 
+// 멤버쉽 게이트 (비회원 페이월) — 기록·리포트 등 회원 전용 화면 공통.
+export function MemberGate({ title = '멤버쉽 전용', sub }: { title?: string; sub?: string }) {
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', marginTop: 26, borderRadius: 20, border: '1px solid rgba(57,135,229,.32)', padding: '40px 24px 26px', textAlign: 'center' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/coach-header.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(16,21,29,.5),rgba(13,13,13,.78))' }} />
+      <div aria-hidden style={{ position: 'absolute', top: -50, right: -30, width: 180, height: 180, background: 'radial-gradient(circle, rgba(57,135,229,.3), transparent 68%)', filter: 'blur(4px)' }} />
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ position: 'relative', width: 78, height: 78, marginBottom: 15, display: 'grid', placeItems: 'center' }}>
+          <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle,rgba(57,135,229,.45),transparent 68%)' }} />
+          <div style={{ position: 'relative', width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(160deg,rgba(57,135,229,.22),rgba(57,135,229,.06))', border: '1px solid rgba(90,160,240,.45)', display: 'grid', placeItems: 'center', color: '#7fb4f5' }}>
+            <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l4.5 3L12 5l4.5 6L21 8l-1.5 10h-15L3 8z" /></svg>
+          </div>
+        </div>
+        <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.2, color: '#7fb4f5', background: 'rgba(57,135,229,.16)', border: '1px solid rgba(57,135,229,.35)', padding: '2px 9px', borderRadius: 999, marginBottom: 11 }}>PREMIUM</span>
+        <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 9, letterSpacing: -.3 }}>{title}</div>
+        <div style={{ fontSize: 12.5, color: '#aebccd', lineHeight: 1.6, maxWidth: 250, marginBottom: 20 }}>{sub || 'KSM 시그널·CLV·리포트를 전부 이용할 수 있어요.'}</div>
+        <a href="/coach/pricing" className="tc-press" style={{ display: 'block', width: '100%', maxWidth: 280, textAlign: 'center', background: 'linear-gradient(180deg,#4491ea,#2f74d0)', color: '#fff', fontWeight: 800, fontSize: 13.5, padding: 13, borderRadius: 12, textDecoration: 'none', boxShadow: '0 6px 18px rgba(41,120,220,.34)' }}>멤버쉽 시작하기</a>
+        <div style={{ fontSize: 11, color: '#8a99ab', marginTop: 12 }}>월 <b style={{ color: '#c8d6e6' }}>₩9,900</b> · 프리미엄 회원 ₩6,900</div>
+      </div>
+    </div>
+  );
+}
+
 // 빈 상태 (아이콘 + 안내 + 액션). 텍스트만 있던 empty를 브랜드 톤으로.
 export function EmptyState({ title, sub, action, icon }: { title: string; sub?: string; action?: React.ReactNode; icon?: React.ReactNode }) {
   return (
