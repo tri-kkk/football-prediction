@@ -93,11 +93,21 @@ export default function AuthButton() {
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center gap-1 transition-colors"
             >
-              {/* 티어 배지 — 메인 프리미엄(골드)·코치(블루), 둘 다면 분할 */}
+              {/* 티어 배지 — 메인 프리미엄(골드)·코치(블루), 둘 다면 아웃라인 캡슐 분할 */}
               {isPremium && hasCoach ? (
-                <span className="inline-flex items-center rounded overflow-hidden border border-white/20 text-[10px] md:text-xs font-bold">
-                  <span className="px-1.5 py-0.5 bg-yellow-500 text-black">{language === 'ko' ? '프리미엄' : 'Premium'}</span>
-                  <span className="px-1.5 py-0.5 bg-blue-500 text-white">{language === 'ko' ? '코치' : 'Coach'}</span>
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold"
+                  style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.14)' }}
+                >
+                  <span className="inline-flex items-center gap-1" style={{ color: '#ffd451' }}>
+                    <span style={{ width: 7, height: 7, transform: 'rotate(45deg)', borderRadius: 1.5, background: 'linear-gradient(135deg,#ffe07a,#f5b70e)', flex: '0 0 auto' }} />
+                    {language === 'ko' ? '프리미엄' : 'Premium'}
+                  </span>
+                  <span style={{ width: 1, height: 11, background: 'rgba(255,255,255,.18)', flex: '0 0 auto' }} />
+                  <span className="inline-flex items-center gap-1" style={{ color: '#7fb4f5' }}>
+                    <span style={{ width: 7, height: 7, transform: 'rotate(45deg)', borderRadius: 1.5, background: 'linear-gradient(135deg,#8fc0ff,#3d82e6)', flex: '0 0 auto' }} />
+                    {language === 'ko' ? '코치' : 'Coach'}
+                  </span>
                 </span>
               ) : hasCoach ? (
                 <span className="px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-bold rounded bg-blue-500 text-white">
