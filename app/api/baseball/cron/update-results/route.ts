@@ -23,15 +23,14 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-    // 1. 오늘과 어제 날짜
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
+    // 1. KST 기준 최근 4일 (정체 경기까지 재조회)
+    //   🔥 기존: UTC new Date() 어제~오늘(2일) → match_date(KST)와 불일치 + 창 좁아
+    //      라이브로 박힌 경기가 하루 지나면 창 밖으로 나가 영구 정체되던 버그 대응
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    const todayStr = kstNow.toISOString().split('T')[0]
+    const yesterdayStr = new Date(kstNow.getTime() - 4 * 86400000).toISOString().split('T')[0]
 
-    const todayStr = today.toISOString().split('T')[0]
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
-
-    console.log(`📅 업데이트 대상: ${yesterdayStr}, ${todayStr}`)
+    console.log(`📅 업데이트 대상(KST): ${yesterdayStr} ~ ${todayStr}`)
     
     // 2. DB에서 업데이트가 필요한 경기 조회
     // - 진행 중인 경기 (NS, LIVE, IN1~IN15, 1H~15H, BT, HT)
