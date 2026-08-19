@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
       datesToQuery.map(d =>
         fetch(`https://v1.baseball.api-sports.io/games?date=${d}`, {
           headers: { 'x-apisports-key': BASEBALL_API_KEY },
-          next: { revalidate: 0 },
+          // Vercel Data Cache가 api-sports 응답을 캐시해 스코어가 얼어붙는 것을 방지
+          cache: 'no-store',
         })
       )
     )
