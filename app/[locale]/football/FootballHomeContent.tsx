@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from '../../teamLogos'
 import H2HModal from '../../components/H2HModal'
-import PullToRefresh from '../../components/PullToRefresh'
 import { getTeamId } from '../../utils/teamIdMapping'
 import { useLanguage } from '../../contexts/LanguageContext'
 import LineupModal from '../../components/LineupModal'
@@ -2200,9 +2199,6 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
-
-      {/* 당겨서 새로고침 (6안) — 인디케이터+제스처, 콘텐츠 비이동 */}
-      <PullToRefresh onRefresh={() => new Promise<void>((res) => { setRefreshTick((x) => x + 1); setTimeout(res, 800) })} />
 
       {/* ✅ 체험판 만료 모달 */}
       {showTrialExpiredModal && (

@@ -9,6 +9,7 @@ import GoogleTagManager from '../GoogleTagManager'
 import Clarity from '../components/Clarity'
 import NavMenu from '../components/NavMenu'
 import BottomNavigation from '../components/BottomNavigation'
+import PullToRefresh from '../components/PullToRefresh'
 import { LanguageProvider } from '../contexts/LanguageContext'
 import { Providers } from '../providers'
 import SignupIncentiveBanner from '../components/SignupIncentiveBanner'
@@ -390,6 +391,7 @@ export default async function LocaleLayout({
                 <Footer />
 
                 {/* 모바일 하단 네비게이션 */}
+                <PullToRefresh />
                 <BottomNavigation />
 
                 {/* 첫 방문 앱 설치 배너 */}

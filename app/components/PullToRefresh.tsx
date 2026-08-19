@@ -8,7 +8,7 @@ export default function PullToRefresh({
   onRefresh,
   children,
 }: {
-  onRefresh: () => Promise<void> | void
+  onRefresh?: () => Promise<void> | void
   children?: React.ReactNode
 }) {
   const [pull, setPull] = useState(0)       // 0~MAX
@@ -42,8 +42,13 @@ export default function PullToRefresh({
       if (pullRef.current >= TRIGGER) {
         setRefreshing(true)
         setPull(TRIGGER)
-        try { await onRefresh() } catch {}
-        setTimeout(() => { setRefreshing(false); setPull(0) }, 450)
+        if (onRefresh) {
+          try { await onRefresh() } catch {}
+          setTimeout(() => { setRefreshing(false); setPull(0) }, 450)
+        } else {
+          // 기본 동작: 페이지 새로고침 (전역 사용)
+          if (typeof window !== 'undefined') window.location.reload()
+        }
       } else {
         setPull(0)
       }
