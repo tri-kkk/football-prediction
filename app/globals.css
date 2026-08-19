@@ -261,3 +261,18 @@ button, a, [role="button"] { touch-action: manipulation; }
 @keyframes tsCardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .ts-card-in { animation: tsCardIn .4s cubic-bezier(.2,.8,.2,1) both; }
 @media (prefers-reduced-motion: reduce) { .ts-card-in { animation: none !important; } }
+
+/* 스켈레톤 로딩 (4안) — shimmer */
+@keyframes tsShimmer { 0% { background-position: -220px 0; } 100% { background-position: 220px 0; } }
+.ts-skel { background:#161615; background-image:linear-gradient(90deg,#161615,#22221f,#161615); background-size:220px 100%; background-repeat:no-repeat; animation: tsShimmer 1.15s infinite linear; }
+@media (prefers-reduced-motion: reduce) { .ts-skel { animation: none !important; } }
+
+/* 스피너 (PTR 6안) */
+@keyframes tsSpin { to { transform: rotate(360deg); } }
+
+/* 모달→바텀시트 (5안) — 모바일에서만 슬라이드업 */
+@media (max-width: 639px) {
+  @keyframes tsSheetUp { from { transform: translateY(100%); } to { transform: none; } }
+  .tc-sheet-anim { animation: tsSheetUp .28s cubic-bezier(.22,1,.36,1); }
+}
+@media (prefers-reduced-motion: reduce) { .tc-sheet-anim { animation: none !important; } }

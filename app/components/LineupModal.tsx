@@ -112,7 +112,7 @@ export default function LineupModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       {/* 배경 오버레이 */}
@@ -122,7 +122,7 @@ export default function LineupModal({
 
       {/* 모달 컨텐츠 */}
       <div 
-        className={`relative w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl ${
+        className={`relative w-full max-w-6xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-2xl tc-sheet-anim ${
           darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
         }`}
         onClick={(e) => e.stopPropagation()}

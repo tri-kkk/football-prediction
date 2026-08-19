@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType } from 'lightweight-charts'
 import { getTeamLogo, TEAM_NAME_KR } from '../../teamLogos'
 import H2HModal from '../../components/H2HModal'
+import PullToRefresh from '../../components/PullToRefresh'
 import { getTeamId } from '../../utils/teamIdMapping'
 import { useLanguage } from '../../contexts/LanguageContext'
 import LineupModal from '../../components/LineupModal'
@@ -650,6 +651,7 @@ export default function FootballHomeContent() {
     const [h2hModalOpen, setH2hModalOpen] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshTick, setRefreshTick] = useState(0) // 당겨서 새로고침 트리거(6안)
   const [error, setError] = useState<string | null>(null)
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null)
   const [trendData, setTrendData] = useState<{ [key: number]: TrendData[] }>({})
@@ -1715,7 +1717,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
     }
 
   fetchMatches()
-}, [selectedLeague])
+}, [selectedLeague, refreshTick])
 
   // 순위표 데이터 가져오기
   const fetchStandings = async (league: string) => {
@@ -2198,6 +2200,9 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
+
+      {/* 당겨서 새로고침 (6안) — 인디케이터+제스처, 콘텐츠 비이동 */}
+      <PullToRefresh onRefresh={() => new Promise<void>((res) => { setRefreshTick((x) => x + 1); setTimeout(res, 800) })} />
 
       {/* ✅ 체험판 만료 모달 */}
       {showTrialExpiredModal && (
@@ -2714,13 +2719,34 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
         {/* 상단 광고 배너 */}
         
 
-        {/* 로딩 */}
+        {/* 로딩 — 스켈레톤 (4안) */}
         {loading && (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4 animate-bounce">⚽</div>
-            <p className={`text-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              {t('common.loading')}
-            </p>
+          <div className="grid gap-6 grid-cols-1">
+            {[0, 1].map((g) => (
+              <div key={g} className="rounded-2xl overflow-hidden border border-gray-800/60">
+                <div className="px-4 py-3 flex items-center gap-2">
+                  <div className="ts-skel" style={{ width: 20, height: 20, borderRadius: 6 }} />
+                  <div className="ts-skel" style={{ width: 120, height: 14, borderRadius: 6 }} />
+                  <div className="ts-skel ml-auto" style={{ width: 26, height: 18, borderRadius: 999 }} />
+                </div>
+                <div className="divide-y divide-gray-900">
+                  {[0, 1, 2, 3].map((r) => (
+                    <div key={r} className="px-3 py-3 flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="ts-skel" style={{ width: 44, height: 12, borderRadius: 6 }} />
+                        <div className="ts-skel" style={{ width: 120, height: 13, borderRadius: 6 }} />
+                        <div className="ts-skel ml-auto" style={{ width: 34, height: 13, borderRadius: 6 }} />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="ts-skel" style={{ width: 44, height: 12, borderRadius: 6 }} />
+                        <div className="ts-skel" style={{ width: 96, height: 13, borderRadius: 6 }} />
+                      </div>
+                      <div className="ts-skel" style={{ height: 6, borderRadius: 6, marginTop: 2 }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

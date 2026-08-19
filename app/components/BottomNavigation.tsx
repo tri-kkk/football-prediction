@@ -1,8 +1,8 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
 import { useLocale } from 'next-intl'
-import { Link } from '@/i18n/navigation'
+// next-intl usePathname → 로케일 프리픽스가 제거된 경로 반환(홈=항상 '/'). 활성 판정 정확.
+import { Link, usePathname } from '@/i18n/navigation'
 
 export const MENU_OPEN_EVENT = 'trendsoccer:open-mobile-menu'
 
