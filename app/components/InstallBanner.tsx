@@ -186,18 +186,25 @@ export default function InstallBanner() {
             {isAndroid ? (
               <button
                 onClick={handleInstall}
-                className="relative w-full py-3.5 rounded-[14px] font-extrabold text-[14.5px] text-[#082018] transition-all duration-200 active:scale-[0.985] overflow-hidden group flex items-center justify-center gap-2.5"
-                style={{ background: 'linear-gradient(120deg,#7DE38A,#3EC5E8)', boxShadow: '0 10px 24px rgba(62,197,232,.28)' }}
+                aria-label="Get it on Google Play"
+                className="relative w-full py-3 rounded-[14px] transition-all duration-200 active:scale-[0.985] flex items-center justify-center gap-2.5"
+                style={{ background: '#ffffff', boxShadow: '0 10px 26px rgba(0,0,0,.34)' }}
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 -translate-x-full group-active:translate-x-full transition-transform duration-700" />
-                {/* Google Play 삼각형 */}
-                <svg width="17" height="18" viewBox="0 0 24 26" className="relative">
-                  <path d="M2 2.2 13.4 13 2 23.8c-.6-.3-1-.9-1-1.7V3.9c0-.8.4-1.4 1-1.7Z" fill="#082018" fillOpacity=".92" />
-                  <path d="m16.5 9.9 3.9 2.2c1 .6 1 1.9 0 2.5l-3.9 2.2L13.7 13l2.8-3.1Z" fill="#082018" fillOpacity=".62" />
-                  <path d="M2 2.2c.2-.1.5-.2.8-.2.3 0 .6.1.9.3L16.5 9.9 13.7 13 2 2.2Z" fill="#082018" />
-                  <path d="M13.7 13l2.8 3.1L4.6 23.7c-.6.4-1.3.4-1.8.1L13.7 13Z" fill="#082018" fillOpacity=".8" />
+                {/* 공식 Google Play 멀티컬러 마크 (클립패스로 4색) */}
+                <svg width="21" height="23" viewBox="0 0 24 24" aria-hidden>
+                  <defs>
+                    <clipPath id="gpTri">
+                      <path d="M4 2.6c0-.83.9-1.35 1.62-.94l13.1 7.56c.72.42.72 1.46 0 1.88L5.62 22.34C4.9 22.75 4 22.23 4 21.4z" />
+                    </clipPath>
+                  </defs>
+                  <g clipPath="url(#gpTri)">
+                    <rect x="0" y="0" width="24" height="12" fill="#17C3E8" />
+                    <rect x="0" y="12" width="24" height="12" fill="#25D07C" />
+                    <rect x="12.6" y="0" width="11.4" height="12" fill="#F8CE3B" />
+                    <rect x="12.6" y="12" width="11.4" height="12" fill="#F1554C" />
+                  </g>
                 </svg>
-                <span className="relative">{t.buttonAndroid}</span>
+                <span style={{ color: '#3c4043', fontSize: 17, fontWeight: 600, letterSpacing: .2 }}>Google Play</span>
               </button>
             ) : (
               <button
