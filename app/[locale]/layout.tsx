@@ -10,6 +10,7 @@ import Clarity from '../components/Clarity'
 import NavMenu from '../components/NavMenu'
 import BottomNavigation from '../components/BottomNavigation'
 import ScrollTopOnNav from '../components/ScrollTopOnNav'
+import SplashScreen from '../components/SplashScreen'
 import PullToRefresh from '../components/PullToRefresh'
 import { LanguageProvider } from '../contexts/LanguageContext'
 import { Providers } from '../providers'
@@ -376,6 +377,7 @@ export default async function LocaleLayout({
 
                 {/* 🔥 통합 GNB - NavMenu */}
                 <Suspense fallback={null}>
+                  <SplashScreen />
                   <NavMenu />
                 </Suspense>
 
