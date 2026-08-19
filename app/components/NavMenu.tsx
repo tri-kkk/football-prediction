@@ -253,11 +253,11 @@ export default function NavMenu() {
 
       {mobileOpen && (
         <>
-          <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setMobileOpen(false)} aria-hidden="true" />
-          <div className="md:hidden fixed top-0 left-0 right-0 bg-[#0f0f0f] border-b border-gray-800 z-50 max-h-screen overflow-y-auto">
-            <div className="sticky top-0 bg-[#0f0f0f]/95 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center justify-between">
-              <span className="text-sm font-bold text-gray-200">{L('메뉴', locale)}</span>
-              <button type="button" onClick={() => setMobileOpen(false)} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium">{L('닫기 ✕', locale)}</button>
+          <div className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-[2px] z-[65]" onClick={() => setMobileOpen(false)} aria-hidden="true" />
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#141414] border-t border-white/10 rounded-t-2xl z-[70] max-h-[82vh] overflow-y-auto tc-sheet-anim" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <div className="sticky top-0 bg-[#141414]/95 backdrop-blur px-4 pt-2.5 pb-3 border-b border-white/10">
+              <div className="w-9 h-1 rounded-full bg-white/25 mx-auto mb-2.5" />
+              <span className="text-sm font-extrabold text-white">{L('메뉴', locale)}</span>
             </div>
             <div className="px-4 py-3 space-y-3">
               {flat.length > 0 && (
@@ -265,7 +265,7 @@ export default function NavMenu() {
                   {flat.map((it) => {
                     const a = isActive(pathname, it)
                     return (
-                      <Link key={it.ko} href={it.href || '#'} onClick={() => setMobileOpen(false)} className={['block px-3 py-3 rounded-lg text-sm font-bold border', a ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'text-white hover:bg-gray-800/60 border-transparent'].join(' ')}>{L(it.ko, locale)}</Link>
+                      <Link key={it.ko} href={it.href || '#'} onClick={() => setMobileOpen(false)} className={['ts-press block px-3 py-3 rounded-xl text-sm font-bold border', a ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'text-white bg-white/[0.03] hover:bg-gray-800/60 border-white/[0.06]'].join(' ')}>{L(it.ko, locale)}</Link>
                     )
                   })}
                 </div>
@@ -282,7 +282,7 @@ export default function NavMenu() {
                       {g.children!.map((sub) => {
                         const subActive = isSubActive(pathname, search, sub.href)
                         return (
-                          <Link key={sub.href} href={sub.href} onClick={() => setMobileOpen(false)} className={['flex items-center gap-2.5 px-3 py-2 rounded-md text-sm', subActive ? 'bg-emerald-500/10 text-emerald-300' : 'text-gray-300 hover:bg-gray-800/60'].join(' ')}>
+                          <Link key={sub.href} href={sub.href} onClick={() => setMobileOpen(false)} className={['ts-press flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm', subActive ? 'bg-emerald-500/10 text-emerald-300' : 'text-gray-300 hover:bg-gray-800/60'].join(' ')}>
                             {sub.logo ? (
                               <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center shrink-0 p-0.5">
                                 <img src={sub.logo} alt="" className="max-w-full max-h-full object-contain" loading="lazy" />
