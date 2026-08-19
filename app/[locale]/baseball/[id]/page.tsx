@@ -688,10 +688,31 @@ export default function BaseballDetailPage() {
   // 로딩
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-3"></div>
-          <p className="text-gray-400 text-sm">{t('로딩 중...', 'Loading...')}</p>
+      <div className="min-h-screen bg-[#0f0f0f]">
+        <div className="home-container mx-auto px-4 pt-4 pb-24 space-y-4">
+          <div className="ts-skel" style={{ height: 40, width: 130, borderRadius: 10 }} />
+          <div className="ts-card overflow-hidden ts-card-in p-4">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div className="ts-skel" style={{ width: 56, height: 56, borderRadius: '50%' }} />
+                <div className="ts-skel" style={{ width: 64, height: 13, borderRadius: 5 }} />
+              </div>
+              <div className="ts-skel" style={{ width: 40, height: 24, borderRadius: 7 }} />
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div className="ts-skel" style={{ width: 56, height: 56, borderRadius: '50%' }} />
+                <div className="ts-skel" style={{ width: 64, height: 13, borderRadius: 5 }} />
+              </div>
+            </div>
+            <div className="ts-skel" style={{ width: '100%', height: 12, borderRadius: 6 }} />
+          </div>
+          {[0,1].map(i => (
+            <div key={i} className="ts-card overflow-hidden ts-card-in p-4 space-y-3" style={{ animationDelay: `${(i+1) * 70}ms` }}>
+              <div className="ts-skel" style={{ width: 120, height: 15, borderRadius: 5 }} />
+              <div className="ts-skel" style={{ width: '100%', height: 60, borderRadius: 12 }} />
+              <div className="ts-skel" style={{ width: '85%', height: 12, borderRadius: 5 }} />
+              <div className="ts-skel" style={{ width: '65%', height: 12, borderRadius: 5 }} />
+            </div>
+          ))}
         </div>
       </div>
     )
@@ -705,7 +726,7 @@ export default function BaseballDetailPage() {
           <div className="text-4xl mb-3">⚾</div>
           <h1 className="text-base font-bold text-white mb-2">{t('경기를 찾을 수 없습니다', 'Match not found')}</h1>
           <p className="text-red-400 text-sm mb-4">{error}</p>
-          <Link href="/baseball" className="inline-block px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+          <Link href="/baseball" className="inline-block px-4 py-2 rounded-lg text-sm font-semibold text-emerald-300 transition-colors" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)' }}>
             {t('돌아가기', 'Back')}
           </Link>
         </div>

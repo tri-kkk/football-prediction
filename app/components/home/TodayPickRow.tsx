@@ -309,7 +309,7 @@ export default function TodayPickRow({
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="min-h-[148px] animate-pulse rounded-2xl border border-gray-800 bg-gray-900"
+              className="ts-skel min-h-[148px] rounded-2xl"
             />
           ))}
         </div>

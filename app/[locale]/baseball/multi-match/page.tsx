@@ -353,8 +353,34 @@ export default function ComboPicksPage() {
 
         {/* ====== 로딩 ====== */}
         {loading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <div className="space-y-4">
+            {[0,1,2].map(i => (
+              <div key={i} className="ts-card overflow-hidden ts-card-in" style={{ animationDelay: `${i * 70}ms` }}>
+                <div className="flex items-center justify-between px-5 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <div className="ts-skel" style={{ width: 52, height: 20, borderRadius: 6 }} />
+                    <div className="ts-skel" style={{ width: 70, height: 14, borderRadius: 5 }} />
+                  </div>
+                  <div className="ts-skel" style={{ width: 44, height: 18, borderRadius: 6 }} />
+                </div>
+                <div className="px-5 py-3 space-y-3">
+                  {[0,1].map(j => (
+                    <div key={j} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className="ts-skel" style={{ width: 36, height: 36, borderRadius: '50%' }} />
+                        <div className="ts-skel" style={{ width: 64, height: 12, borderRadius: 5 }} />
+                      </div>
+                      <div className="ts-skel" style={{ width: 30, height: 12, borderRadius: 5 }} />
+                      <div className="flex items-center gap-2 flex-1 justify-end">
+                        <div className="ts-skel" style={{ width: 64, height: 12, borderRadius: 5 }} />
+                        <div className="ts-skel" style={{ width: 36, height: 36, borderRadius: '50%' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mx-5 mb-3 ts-skel" style={{ height: 46, borderRadius: 12 }} />
+              </div>
+            ))}
           </div>
         )}
 

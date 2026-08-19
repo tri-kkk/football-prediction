@@ -58,7 +58,7 @@ export default function MagazineRow({ locale = 'ko', count = 3 }: { locale?: str
       {loading ? (
         <div className="grid grid-cols-3 gap-3">
           {Array.from({ length: count }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-xl bg-gray-800" />
+            <div key={i} className="ts-skel h-28 rounded-xl" />
           ))}
         </div>
       ) : (

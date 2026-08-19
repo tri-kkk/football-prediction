@@ -51,7 +51,7 @@ export default function MatchReportsRow() {
 
   if (loading) {
     return (
-      <div className="rounded-xl bg-gray-900/40 border border-gray-800 h-32 animate-pulse" />
+      <div className="ts-skel rounded-xl h-32" />
     )
   }
   if (posts.length === 0) return null

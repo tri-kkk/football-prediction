@@ -50,7 +50,7 @@ export default function NewsGrid({ locale = 'ko', count = 8 }: { locale?: string
       {loading ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: count }).map((_, i) => (
-            <div key={i} className="aspect-[4/3] animate-pulse rounded-xl bg-gray-800" />
+            <div key={i} className="ts-skel aspect-[4/3] rounded-xl" />
           ))}
         </div>
       ) : articles.length === 0 ? (

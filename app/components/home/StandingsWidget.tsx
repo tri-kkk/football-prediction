@@ -72,7 +72,7 @@ export default function StandingsWidget({ locale = 'ko' }: { locale?: string }) 
       {loading ? (
         <div className="space-y-1.5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-6 animate-pulse rounded bg-gray-800" />
+            <div key={i} className="ts-skel h-6 rounded" />
           ))}
         </div>
       ) : rows.length === 0 ? (

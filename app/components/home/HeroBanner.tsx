@@ -68,7 +68,7 @@ export default function HeroBanner({ locale = 'ko' }: { locale?: string }) {
   }, [isDesktop])
 
   if (loading) {
-    return <div className="h-full min-h-[170px] w-full animate-pulse rounded-2xl bg-gray-800 sm:min-h-[230px]" />
+    return <div className="ts-skel h-full min-h-[170px] w-full rounded-2xl sm:min-h-[230px]" />
   }
 
   if (leads.length === 0) {

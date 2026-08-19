@@ -734,9 +734,35 @@ export default function BaseballPredictionsPage() {
       {/* 메인 콘텐츠 */}
       <div className="home-container mx-auto px-4 pt-5 pb-24">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E0A93B] mb-4" />
-            <p className="text-gray-400">{language === 'ko' ? 'AI가 분석 중입니다...' : 'AI is analyzing...'}</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-center gap-2 pb-1">
+              <span className="ts-spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+              <p className="text-[13px] text-gray-500">{language === 'ko' ? 'AI가 분석 중입니다…' : 'AI is analyzing…'}</p>
+            </div>
+            {[0,1,2,3].map(i => (
+              <div key={i} className="ts-card overflow-hidden ts-card-in" style={{ animationDelay: `${i * 60}ms` }}>
+                <div className="h-[2px] w-full ts-skel" />
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <div className="ts-skel" style={{ width: 90, height: 16, borderRadius: 6 }} />
+                  <div className="ts-skel" style={{ width: 48, height: 18, borderRadius: 9 }} />
+                </div>
+                <div className="px-4 pt-2 pb-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col items-center gap-2 flex-1">
+                      <div className="ts-skel" style={{ width: 44, height: 44, borderRadius: '50%' }} />
+                      <div className="ts-skel" style={{ width: 56, height: 12, borderRadius: 5 }} />
+                    </div>
+                    <div className="ts-skel" style={{ width: 22, height: 14, borderRadius: 5 }} />
+                    <div className="flex flex-col items-center gap-2 flex-1">
+                      <div className="ts-skel" style={{ width: 44, height: 44, borderRadius: '50%' }} />
+                      <div className="ts-skel" style={{ width: 56, height: 12, borderRadius: 5 }} />
+                    </div>
+                  </div>
+                  <div className="ts-skel" style={{ width: '100%', height: 10, borderRadius: 6 }} />
+                  <div className="ts-skel mt-3" style={{ width: '70%', height: 34, borderRadius: 10 }} />
+                </div>
+              </div>
+            ))}
           </div>
         ) : predictions.length === 0 ? (
           <div className="text-center py-20">

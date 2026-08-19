@@ -262,13 +262,18 @@ button, a, [role="button"] { touch-action: manipulation; }
 .ts-card-in { animation: tsCardIn .4s cubic-bezier(.2,.8,.2,1) both; }
 @media (prefers-reduced-motion: reduce) { .ts-card-in { animation: none !important; } }
 
-/* 스켈레톤 로딩 (4안) — shimmer */
+/* 스켈레톤 로딩 (4안) — 글래스 톤 shimmer sweep (통일) */
 @keyframes tsShimmer { 0% { background-position: -220px 0; } 100% { background-position: 220px 0; } }
-.ts-skel { background:#161615; background-image:linear-gradient(90deg,#161615,#22221f,#161615); background-size:220px 100%; background-repeat:no-repeat; animation: tsShimmer 1.15s infinite linear; }
-@media (prefers-reduced-motion: reduce) { .ts-skel { animation: none !important; } }
+@keyframes tsSkelSweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.ts-skel { position:relative; overflow:hidden; background:rgba(255,255,255,.045); border-radius:10px; }
+.ts-skel::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg, transparent, rgba(255,255,255,.09), transparent); transform:translateX(-100%); animation: tsSkelSweep 1.5s ease-in-out infinite; }
+.ts-skel-soft { background:rgba(255,255,255,.03); }
+@media (prefers-reduced-motion: reduce) { .ts-skel::after { animation: none !important; } }
 
-/* 스피너 (PTR 6안) */
+/* 스피너 (PTR 6안 / 통일 로딩) — 브랜드 그린 링 */
 @keyframes tsSpin { to { transform: rotate(360deg); } }
+.ts-spinner { width:34px; height:34px; border-radius:9999px; border:2.5px solid rgba(255,255,255,.12); border-top-color:#6dff5c; animation: tsSpin .7s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .ts-spinner { animation: none !important; } }
 
 /* 모달→바텀시트 (5안) — 모바일에서만 슬라이드업 */
 @media (max-width: 639px) {

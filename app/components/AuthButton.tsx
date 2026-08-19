@@ -60,7 +60,7 @@ export default function AuthButton() {
   // 로딩 중 — 코치 조회 완료 전까지 스켈레톤 유지(프리미엄→프리미엄+코치 플래시 방지)
   if (status === 'loading' || (status === 'authenticated' && !coachLoaded)) {
     return (
-      <div className="w-16 md:w-20 h-7 md:h-8 bg-gray-700 rounded-lg animate-pulse" />
+      <div className="ts-skel w-16 md:w-20 h-7 md:h-8 rounded-lg" />
     )
   }
 
