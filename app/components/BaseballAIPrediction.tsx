@@ -77,7 +77,7 @@ function Section({ color, label, badge, children }: {
   color: string; label: string; badge?: React.ReactNode; children: React.ReactNode
 }) {
   return (
-    <div className="px-4 py-4" style={{ background: '#0d1117' }}>
+    <div className="px-4 py-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-1 h-4 rounded-full flex-shrink-0" style={{ background: color }} />
@@ -286,7 +286,7 @@ export default function BaseballAIPrediction({
   }
 
   return (
-    <div style={{ background: '#0d1117' }}>
+    <div className="mx-4 mb-4 ts-card overflow-hidden">
 
       {/* 메인 헤더 */}
       <div className="px-4 py-2.5 flex items-center justify-between"
@@ -313,7 +313,7 @@ export default function BaseballAIPrediction({
       </div>
 
       {loading && !pred && (
-        <div style={{ background: '#0d1117' }}>
+        <div>
           <LoadingDots />
         </div>
       )}

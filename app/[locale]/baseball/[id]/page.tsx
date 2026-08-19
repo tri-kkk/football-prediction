@@ -1521,7 +1521,7 @@ export default function BaseballDetailPage() {
               />
             ) : (
               /* 🔒 비회원/무료회원: 잠금 UI */
-              <div className="mx-0 overflow-hidden relative" style={{ background: 'linear-gradient(180deg, #0e1421, #0a0f1a)', border: '1px solid rgba(255,255,255,.08)' }}>
+              <div className="mx-4 mb-4 ts-card overflow-hidden relative">
                 {/* 상단 그라데이션 라인 */}
                 <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #2563eb, #7c3aed, #10b981)' }} />
 
