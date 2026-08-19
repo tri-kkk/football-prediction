@@ -985,7 +985,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
           </div>
           <Link
             href="/login"
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white rounded-lg font-bold text-sm transition-all"
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#F7D774] to-[#E0A93B] hover:brightness-110 text-[#241905] rounded-lg font-bold text-sm transition-all"
           >
             {language === 'ko' ? '무료로 시작하기' : 'Get Started Free'}
           </Link>
@@ -995,7 +995,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
         </div>
       ) : loading ? (
         <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E0A93B] mx-auto"></div>
           <div className="text-gray-400 text-sm mt-2">{t.loading}</div>
         </div>
       ) : error ? (
@@ -1017,7 +1017,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
                 </div>
                 <Link
                   href="/login"
-                  className="inline-block px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors"
+                  className="inline-block px-6 py-2.5 bg-gradient-to-r from-[#F7D774] to-[#E0A93B] hover:brightness-110 text-[#241905] rounded-lg font-medium transition-colors"
                 >
                   {language === 'ko' ? '무료 가입하기' : 'Sign Up Free'}
                 </Link>
@@ -1941,7 +1941,7 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
               </div>
               <Link 
                 href="/login"
-                className="inline-block px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors"
+                className="inline-block px-6 py-2.5 bg-gradient-to-r from-[#F7D774] to-[#E0A93B] hover:brightness-110 text-[#241905] rounded-lg font-medium transition-colors"
               >
                 {language === 'ko' ? '무료로 시작하기' : 'Start Free'}
               </Link>
@@ -3199,7 +3199,7 @@ export default function PremiumPredictPage() {
           <main className="flex-1 min-w-0">
             {loading ? (
               <div className="text-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E0A93B] mx-auto"></div>
                 <p className="text-gray-400 mt-4">{t.loading}</p>
               </div>
             ) : filteredMatches.length === 0 ? (

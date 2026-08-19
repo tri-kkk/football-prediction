@@ -531,8 +531,8 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
               {isLoggedIn ? (
                 <button
                   onClick={() => router.push('/premium/pricing')}
-                  className="px-5 py-1.5 rounded-full text-[11px] font-bold text-white transition-all active:scale-95"
-                  style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}>
+                  className="px-5 py-1.5 rounded-full text-[11px] font-bold text-[#241905] transition-all active:scale-95"
+                  style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)' }}>
                   {language === 'ko' ? '프리미엄 →' : 'Upgrade →'}
                 </button>
               ) : (
@@ -545,8 +545,8 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
                   </button>
                   <button
                     onClick={() => router.push('/premium/pricing')}
-                    className="px-3 py-1.5 rounded-full text-[11px] font-bold text-white transition-all active:scale-95"
-                    style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}>
+                    className="px-3 py-1.5 rounded-full text-[11px] font-bold text-[#241905] transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)' }}>
                     {language === 'ko' ? '프리미엄 →' : 'Premium →'}
                   </button>
                 </div>
@@ -740,7 +740,7 @@ export default function BaseballPredictionsPage() {
       <div className="home-container mx-auto px-4 pt-5 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E0A93B] mb-4" />
             <p className="text-gray-400">{language === 'ko' ? 'AI가 분석 중입니다...' : 'AI is analyzing...'}</p>
           </div>
         ) : predictions.length === 0 ? (
@@ -784,8 +784,8 @@ export default function BaseballPredictionsPage() {
                     </div>
                     <button
                       onClick={() => router.push('/premium/pricing')}
-                      className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold text-white whitespace-nowrap transition-all active:scale-95"
-                      style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}>
+                      className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold text-[#241905] whitespace-nowrap transition-all active:scale-95"
+                      style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)' }}>
                       {language === 'ko' ? '업그레이드 →' : 'Upgrade →'}
                     </button>
                   </div>
