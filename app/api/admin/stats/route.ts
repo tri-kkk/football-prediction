@@ -149,26 +149,30 @@ export async function POST(request: NextRequest) {
     // 월간 예상 수익 (활성 구독 기준)
     const { data: activeSubs } = await supabase
       .from('subscriptions')
-      .select('plan, price')
+      .select('plan, price, product')
       .eq('status', 'active')
 
-    const monthlyRevenue = (activeSubs || []).reduce((sum, sub) => {
-      if (sub.plan === 'yearly') {
-        return sum + Math.round((sub.price || 79000) / 12)
-      }
-      return sum + (sub.price || 9900)
-    }, 0)
+    const subMonthlyValue = (sub: any) =>
+      sub.plan === 'yearly' ? Math.round((sub.price || 79000) / 12) : (sub.price || 9900)
+    const monthlyRevenue = (activeSubs || []).reduce((sum, sub) => sum + subMonthlyValue(sub), 0)
+    const coachMonthlyRevenue = (activeSubs || [])
+      .filter((sub: any) => sub.product === 'coach')
+      .reduce((sum, sub) => sum + subMonthlyValue(sub), 0)
+    const trendsoccerMonthlyRevenue = monthlyRevenue - coachMonthlyRevenue
 
     // 이번 달 총 수익
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const { data: monthlySubsData } = await supabase
       .from('subscriptions')
-      .select('price, plan')
+      .select('price, plan, product')
       .gte('started_at', monthStart)
 
-    const thisMonthRevenue = (monthlySubsData || []).reduce((sum, sub) => {
-      return sum + (sub.price || (sub.plan === 'yearly' ? 79000 : 9900))
-    }, 0)
+    const subValue = (sub: any) => (sub.price || (sub.plan === 'yearly' ? 79000 : 9900))
+    const thisMonthRevenue = (monthlySubsData || []).reduce((sum, sub) => sum + subValue(sub), 0)
+    const coachThisMonthRevenue = (monthlySubsData || [])
+      .filter((sub: any) => sub.product === 'coach')
+      .reduce((sum, sub) => sum + subValue(sub), 0)
+    const trendsoccerThisMonthRevenue = thisMonthRevenue - coachThisMonthRevenue
 
     return NextResponse.json({
       summary: {
@@ -179,6 +183,10 @@ export async function POST(request: NextRequest) {
         active_subscriptions: activeSubscriptions || 0,
         monthly_revenue: monthlyRevenue,
         this_month_revenue: thisMonthRevenue,
+        coach_monthly_revenue: coachMonthlyRevenue,
+        coach_this_month_revenue: coachThisMonthRevenue,
+        trendsoccer_monthly_revenue: trendsoccerMonthlyRevenue,
+        trendsoccer_this_month_revenue: trendsoccerThisMonthRevenue,
         premium_rate: totalUsers ? ((premiumUsers || 0) / totalUsers * 100).toFixed(1) : '0',
       }
     })

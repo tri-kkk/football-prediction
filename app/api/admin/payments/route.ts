@@ -33,8 +33,19 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // 🟦 Coach(TrendCoach) 매출 분리 — payments엔 product 컬럼이 없어 goods_name으로 판별
+    const isCoach = (p: any) => typeof p.goods_name === 'string' && p.goods_name.includes('TrendCoach')
+    const coachPayments = successPayments.filter(isCoach)
+    const coachRevenue = coachPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+    const coachTodayRevenue = todayPayments.filter(isCoach).reduce((sum, p) => sum + (p.amount || 0), 0)
+    const trendsoccerRevenue = totalRevenue - coachRevenue
+    const trendsoccerTodayRevenue = todayRevenue - coachTodayRevenue
+
+    // 각 결제행에 상품 라벨 부여(프론트 표기용)
+    const labeledPayments = (payments || []).map(p => ({ ...p, product: isCoach(p) ? 'coach' : 'trendsoccer' }))
+
     return NextResponse.json({
-      payments: payments || [],
+      payments: labeledPayments,
       stats: {
         totalPayments: (payments || []).length,
         successCount: successPayments.length,
@@ -43,6 +54,12 @@ export async function GET(request: NextRequest) {
         todayRevenue,
         todayCount: todayPayments.length,
         monthlyRevenue,
+        // Coach vs TrendSoccer 분리
+        coachRevenue,
+        coachTodayRevenue,
+        coachCount: coachPayments.length,
+        trendsoccerRevenue,
+        trendsoccerTodayRevenue,
       }
     })
   } catch (error: any) {

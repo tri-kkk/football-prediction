@@ -5161,6 +5161,11 @@ export default function AdminDashboard() {
               return d.toDateString() === now.toDateString()
             }).reduce((sum, p) => sum + (p.amount || 0), 0)
 
+            // 🟦 Coach(TrendCoach) vs 사커 매출 분리 (product는 payments API가 goods_name으로 판별해 부여)
+            const coachRevenue = filtered.filter(p => p.product === 'coach').reduce((sum, p) => sum + (p.amount || 0), 0)
+            const soccerRevenue = totalRevenue - coachRevenue
+            const coachCount = filtered.filter(p => p.product === 'coach').length
+
             // 월별 집계
             const monthly: Record<string, number> = {}
             filtered.forEach(p => {
@@ -5177,7 +5182,11 @@ export default function AdminDashboard() {
                   <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 rounded-xl p-5 border border-emerald-500/30">
                     <div className="text-xs text-emerald-400 mb-1">실제 총 매출</div>
                     <div className="text-2xl font-bold text-white">{formatCurrency(totalRevenue)}</div>
-                    <div className="text-xs text-gray-500 mt-1">성공 결제만 집계</div>
+                    <div className="text-[11px] mt-1.5 flex items-center gap-1.5 flex-wrap">
+                      <span className="text-emerald-400">사커 {formatCurrency(soccerRevenue)}</span>
+                      <span className="text-gray-600">·</span>
+                      <span className="text-blue-300">코치 {formatCurrency(coachRevenue)} ({coachCount}건)</span>
+                    </div>
                   </div>
                   <div className="bg-gray-800/50 rounded-xl p-4 md:p-5 border border-gray-700/50">
                     <div className="text-xs text-gray-400 mb-1">오늘 매출</div>
@@ -5232,6 +5241,7 @@ export default function AdminDashboard() {
                           <tr className="bg-gray-900/50">
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">일시</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">이메일</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">상품</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">플랜</th>
                             <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">금액</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">카드</th>
@@ -5246,6 +5256,13 @@ export default function AdminDashboard() {
                                 {formatDateTime(p.created_at)}
                               </td>
                               <td className="px-4 py-3 text-sm text-white">{p.user_email}</td>
+                              <td className="px-4 py-3">
+                                {p.product === 'coach' ? (
+                                  <span className="px-2 py-1 rounded text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">코치</span>
+                                ) : (
+                                  <span className="px-2 py-1 rounded text-xs font-medium bg-emerald-500/15 text-emerald-400">사커</span>
+                                )}
+                              </td>
                               <td className="px-4 py-3">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
                                   p.plan === 'yearly' ? 'bg-orange-500/20 text-orange-400' :

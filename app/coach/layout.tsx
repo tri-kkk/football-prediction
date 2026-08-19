@@ -78,6 +78,12 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
     // coach 서브도메인은 i18n 미적용 → Chrome이 언어를 오탐(독일어)해 번역 팝업이 뜸. 한국어 고정.
     try { document.documentElement.lang = 'ko'; } catch {}
   }, []);
+  // 탭/페이지 이동 시 항상 최상단으로 (sticky 헤더에 콘텐츠 최상단이 짤리는 현상 방지)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.hash) return;
+    window.scrollTo(0, 0);
+  }, [path]);
   return (
     <SessionProvider>
     <SlipCartProvider>
