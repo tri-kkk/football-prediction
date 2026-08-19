@@ -504,7 +504,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
           </div>
         ) : isLocked ? (
           <div className="relative rounded-xl overflow-hidden mt-1"
-            style={{ border: '1px solid rgba(245,158,11,0.12)' }}>
+            style={{ border: '1px solid rgba(245,196,81,0.28)', boxShadow: '0 10px 30px -14px rgba(224,169,59,0.28)' }}>
             {/* 블러 배경 콘텐츠 */}
             <div className="blur-md pointer-events-none select-none px-3 py-3" aria-hidden="true">
               <ConfidenceBar homeProb={50} awayProb={50} language={language} />
@@ -514,34 +514,39 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
                 <span className="text-emerald-300 font-black text-sm tabular-nums">●●%</span>
               </div>
             </div>
-            {/* 잠금 오버레이 */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2"
-              style={{ background: 'rgba(10,10,15,0.92)' }}>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm">🔒</span>
-                <span className="text-[12px] font-bold" style={{ color: '#fbbf24' }}>
+            {/* 잠금 오버레이 — 프리미엄 골드 */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 px-4"
+              style={{ background: 'radial-gradient(120% 100% at 50% 0%, rgba(245,196,81,0.10), rgba(9,10,14,0.94) 62%)' }}>
+              <div className="pointer-events-none absolute inset-x-8 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(245,196,81,0.55), transparent)' }} />
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: 'rgba(245,196,81,0.14)', border: '1px solid rgba(245,196,81,0.35)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F5C451" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                </span>
+                <span className="text-[12.5px] font-extrabold tracking-tight" style={{ color: '#F5C451' }}>
                   TOP {language === 'ko' ? '프리미엄 전용' : 'Premium Only'}
                 </span>
               </div>
               {isLoggedIn ? (
                 <button
                   onClick={() => router.push('/premium/pricing')}
-                  className="px-5 py-1.5 rounded-full text-[11px] font-bold text-[#241905] transition-all active:scale-95"
-                  style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)' }}>
+                  className="relative overflow-hidden px-5 py-1.5 rounded-full text-[11px] font-bold text-[#241905] transition-all active:scale-95"
+                  style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)', boxShadow: '0 4px 16px -4px rgba(224,169,59,0.5)' }}>
+                  <span className="ts-shine" />
                   {language === 'ko' ? '프리미엄 →' : 'Upgrade →'}
                 </button>
               ) : (
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => router.push('/login')}
-                    className="px-3 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95"
-                    style={{ background: '#252829', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.14)' }}>
+                    className="px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: '#cbd5e1', border: '1px solid rgba(255,255,255,0.12)' }}>
                     {language === 'ko' ? '로그인' : 'Sign in'}
                   </button>
                   <button
                     onClick={() => router.push('/premium/pricing')}
-                    className="px-3 py-1.5 rounded-full text-[11px] font-bold text-[#241905] transition-all active:scale-95"
-                    style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)' }}>
+                    className="relative overflow-hidden px-3.5 py-1.5 rounded-full text-[11px] font-bold text-[#241905] transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)', boxShadow: '0 4px 16px -4px rgba(224,169,59,0.5)' }}>
+                    <span className="ts-shine" />
                     {language === 'ko' ? '프리미엄 →' : 'Premium →'}
                   </button>
                 </div>
