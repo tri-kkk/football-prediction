@@ -279,21 +279,20 @@ export default function TodayPickRow({
         </div>
 
         {/* 추천 + 신뢰도 */}
-        <div className="rounded-xl border border-white/[0.06] bg-black/20 p-2">
-          <div className="flex items-baseline justify-between">
-            <span className="text-[10px] text-gray-500">{isKo ? '추천' : 'Pick'}</span>
-            {view.oddsText && <span className="text-[11px] text-gray-400">{view.oddsText}</span>}
+        <div className="rounded-xl border border-white/[0.06] bg-black/20 p-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-baseline gap-1.5 min-w-0">
+              <span className="shrink-0 text-[10px] text-gray-500">{isKo ? '추천' : 'Pick'}</span>
+              <span className="line-clamp-1 text-sm font-bold text-[#A3FF4C]">{view.pickedTeam}</span>
+              {view.oddsText && <span className="shrink-0 text-[10px] text-gray-400">{view.oddsText}</span>}
+            </div>
+            {conf != null && (
+              <span className="shrink-0 text-[11px] font-bold text-gray-300">{isKo ? '신뢰도' : 'Conf'} {conf}%</span>
+            )}
           </div>
-          <div className="mt-0.5 line-clamp-1 text-sm font-bold text-[#A3FF4C]">{view.pickedTeam}</div>
           {conf != null && (
-            <div className="mt-1.5">
-              <div className="mb-0.5 flex items-center justify-between text-[10px] text-gray-500">
-                <span>{isKo ? '신뢰도' : 'Confidence'}</span>
-                <span className="font-medium text-gray-300">{conf}%</span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
-                <div className="h-full rounded-full bg-[#A3FF4C]" style={{ width: `${conf}%` }} />
-              </div>
+            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
+              <div className="h-full rounded-full bg-[#A3FF4C]" style={{ width: `${conf}%` }} />
             </div>
           )}
         </div>
