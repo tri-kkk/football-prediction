@@ -9,6 +9,7 @@ import { Toaster } from './toast';
 import { registerSW } from './pushClient';
 import { SplashScreen } from './SplashScreen';
 import { TierBadge } from './TierBadge';
+import BrandSwitch from '@/app/components/BrandSwitch';
 
 const TABS = [
   { href: '/coach', label: '홈', id: 'home' },
@@ -94,7 +95,10 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
         </svg>
         <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,.13)', flex: '0 0 auto', margin: '0 3px' }} />
         <div style={{ lineHeight: 1 }}>
-          <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -.4 }}>Trend<span style={{ background: 'linear-gradient(100deg,#5aa0f0,#3987e5)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Coach</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 19, fontWeight: 800, letterSpacing: -.4 }}>
+            <span>Trend<span style={{ background: 'linear-gradient(100deg,#5aa0f0,#3987e5)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Coach</span></span>
+            <BrandSwitch current="coach" />
+          </div>
           <div style={{ fontSize: 9.5, color: '#8b8a84', fontWeight: 700, marginTop: 6, letterSpacing: 2.4 }}>KSM SIGNAL COACH</div>
         </div>
         <TierBadge />

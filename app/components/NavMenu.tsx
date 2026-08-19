@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { useLocale } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import AuthButton from './AuthButton'
-import LanguageToggle from './LanguageToggle'
+import BrandSwitch from './BrandSwitch'
 
 interface SubItem { ko: string; href: string; logo?: string }
 interface MenuItem { ko: string; href?: string; matchPaths?: string[]; children?: SubItem[] }
@@ -216,11 +216,13 @@ export default function NavMenu() {
     <>
       <header className="md:hidden sticky top-0 z-50 backdrop-blur-md border-b border-gray-800" style={{ backgroundColor: 'rgba(10, 10, 10, 0.92)' }}>
         <div className="flex items-center justify-between px-4 h-12">
-          <Link href="/" className="flex items-center" aria-label="TrendSoccer">
-            <img src="/logo.svg" alt="TrendSoccer" className="h-7 w-auto" />
-          </Link>
+          <div className="flex items-center gap-0.5">
+            <Link href="/" className="flex items-center" aria-label="TrendSoccer">
+              <img src="/logo.svg" alt="TrendSoccer" className="h-7 w-auto" />
+            </Link>
+            <BrandSwitch current="soccer" />
+          </div>
           <div className="flex items-center gap-2">
-            <LanguageToggle />
             <AuthButton />
           </div>
         </div>
@@ -232,7 +234,6 @@ export default function NavMenu() {
             <img src="/logo.svg" alt="TrendSoccer" className="h-9 w-auto" />
           </Link>
           <div className="flex items-center gap-3">
-            <LanguageToggle />
             <AuthButton />
           </div>
         </div>
