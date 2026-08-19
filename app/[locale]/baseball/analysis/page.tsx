@@ -248,14 +248,14 @@ function GradeBadge({ grade, size = 'sm', analyzing = false, language = 'ko' }: 
     return (
       <span
         className={`${sizeClass} rounded font-bold`}
-        style={{ background: '#252829', color: '#94a3b8', border: '1px solid #334155', letterSpacing: '0.04em' }}
+        style={{ background: '#252829', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.14)', letterSpacing: '0.04em' }}
       >
         {language === 'ko' ? '분석 중' : 'Analyzing'}
       </span>
     )
   }
   const styles = {
-    PICK: { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', shadow: '0 0 10px rgba(245,158,11,0.3)' },
+    PICK: { bg: 'linear-gradient(135deg, #F7D774, #E0A93B)', color: '#241905', shadow: '0 0 10px rgba(245,196,81,0.35)' },
     GOOD: { bg: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', shadow: 'none' },
     PASS: { bg: '#374151', color: '#9ca3af', shadow: 'none' },
   }
@@ -396,12 +396,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
 
   return (
     <div
-      className="rounded-xl overflow-hidden transition-all hover:translate-y-[-2px]"
-      style={{
-        background: '#252829',
-        border: isPick ? '1px solid rgba(245,158,11,0.18)' : '1px solid rgba(255,255,255,0.05)',
-        boxShadow: isPick ? '0 4px 24px rgba(245,158,11,0.05)' : '0 2px 10px rgba(0,0,0,0.3)',
-      }}
+      className={`ts-card ts-card-hover overflow-hidden ${isPick ? 'ts-card-gold' : ''}`}
     >
       {/* 리그 컬러 탑라인 */}
       <div className="h-[2px] w-full" style={{ background: leagueColor }} />
@@ -476,7 +471,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
         {/* 투수 데이터 분석 중 안내 (KBO/NPB) */}
         {isAnalyzing && (
           <div className="px-3 py-2.5 rounded-lg text-center mb-3"
-            style={{ background: '#252829', border: '1px solid #334155' }}>
+            style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.14)' }}>
             <p className="text-[12px] font-bold" style={{ color: '#e2e8f0' }}>
               {language === 'ko' ? '선발투수 데이터 반영 중' : 'Calculating pitcher matchup'}
             </p>
@@ -491,10 +486,10 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
         {/* 확률 바 + 분석 — TOP 잠금 시 통합 블러 */}
         {isAnalyzing ? (
           <div className="relative rounded-xl overflow-hidden mt-1"
-            style={{ border: '1px solid #334155' }}>
+            style={{ border: '1px solid rgba(255,255,255,0.14)' }}>
             <div className="blur-md pointer-events-none select-none px-3 py-3" aria-hidden="true">
               <ConfidenceBar homeProb={50} awayProb={50} language={language} />
-              <div className="flex items-center gap-2 mt-3" style={{ background: 'rgba(30,41,59,0.5)', padding: '8px 12px', borderRadius: '8px' }}>
+              <div className="flex items-center gap-2 mt-3" style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 12px', borderRadius: '8px' }}>
                 <span className="text-gray-500 font-bold text-sm">██████</span>
                 <span className="text-[10px] text-gray-600">—</span>
                 <span className="text-gray-500 font-black text-sm tabular-nums">●●%</span>
@@ -540,7 +535,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
                   <button
                     onClick={() => router.push('/login')}
                     className="px-3 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95"
-                    style={{ background: '#252829', color: '#94a3b8', border: '1px solid #334155' }}>
+                    style={{ background: '#252829', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.14)' }}>
                     {language === 'ko' ? '로그인' : 'Sign in'}
                   </button>
                   <button

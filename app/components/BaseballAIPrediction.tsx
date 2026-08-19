@@ -65,7 +65,7 @@ function SemiGauge({ pct, color, size = 110 }: { pct: number; color: string; siz
   const offset = circumference * (1 - pct / 100)
   return (
     <svg width={size} height={size * 0.58} viewBox="0 0 100 55">
-      <path d="M 12 50 A 38 38 0 0 1 88 50" fill="none" stroke="#1e293b" strokeWidth="8" strokeLinecap="round" />
+      <path d="M 12 50 A 38 38 0 0 1 88 50" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="8" strokeLinecap="round" />
       <path d="M 12 50 A 38 38 0 0 1 88 50" fill="none" stroke={color} strokeWidth="8" strokeLinecap="round"
         strokeDasharray={circumference} strokeDashoffset={offset}
         style={{ filter: `drop-shadow(0 0 6px ${color}80)` }} />
@@ -85,7 +85,7 @@ function Section({ color, label, badge, children }: {
         </div>
         {badge}
       </div>
-      <div className="rounded-2xl overflow-hidden" style={{ background: '#0f1623', border: '1px solid #1e293b' }}>
+      <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)' }}>
         {children}
       </div>
     </div>
@@ -139,7 +139,7 @@ function MirrorBar({ awayShare, height = 6 }: { awayShare: number; height?: numb
   return (
     <div
       className="mt-1.5 rounded-full overflow-hidden flex"
-      style={{ height, background: '#0b1118', border: '1px solid #1e2a3a' }}
+      style={{ height, background: '#0b1118', border: '1px solid rgba(255,255,255,.08)' }}
       role="img"
       aria-label={`away ${awayShare.toFixed(0)}% / home ${homeShare.toFixed(0)}%`}
     >
@@ -290,7 +290,7 @@ export default function BaseballAIPrediction({
 
       {/* 메인 헤더 */}
       <div className="px-4 py-2.5 flex items-center justify-between"
-        style={{ background: 'linear-gradient(90deg, #1e3a5f, #1a2744)', borderBottom: '1px solid #334155' }}>
+        style={{ background: 'rgba(255,255,255,.03)', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
@@ -306,7 +306,7 @@ export default function BaseballAIPrediction({
           </span>
         ) : pred ? (
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: '#334155', color: '#94a3b8' }}>
+            style={{ background: 'rgba(255,255,255,.08)', color: '#94a3b8' }}>
             {t('분석 중', 'Updating')}
           </span>
         ) : null}
@@ -331,7 +331,7 @@ export default function BaseballAIPrediction({
           {/* 🔔 투수 미발표 안내 (KBO/NPB만) */}
           {dq && !dq.hasPitcherData && league && league !== 'MLB' && (
             <div className="mx-4 mt-3 mb-1 px-4 py-3 rounded-lg text-center"
-              style={{ background: '#1e293b', border: '1px solid #334155' }}>
+              style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
               <p className="text-[13px] font-bold" style={{ color: '#e2e8f0' }}>
                 {t('선발투수 데이터 반영 중', 'Calculating pitcher matchup')}
               </p>
@@ -372,7 +372,7 @@ export default function BaseballAIPrediction({
                       <p className="text-sm font-bold mt-1" style={{ color: '#e2e8f0' }}>{AN}</p>
                     </div>
                     <div className="flex flex-col items-center gap-3 px-3">
-                      <span className="text-sm font-black" style={{ color: '#334155' }}>VS</span>
+                      <span className="text-sm font-black" style={{ color: 'rgba(255,255,255,.28)' }}>VS</span>
                     </div>
                     <div className="flex-1 flex flex-col items-center">
                       <div className="relative">
@@ -411,7 +411,7 @@ export default function BaseballAIPrediction({
               </div>
               {/* 중앙 */}
               <div className="flex flex-col items-center gap-3 px-3">
-                <span className="text-sm font-black" style={{ color: '#334155' }}>VS</span>
+                <span className="text-sm font-black" style={{ color: 'rgba(255,255,255,.28)' }}>VS</span>
                 <div className="w-16 h-1.5 rounded-full overflow-hidden flex">
                   <div className="h-full rounded-l-full" style={{ width: `${pred.awayWinProb}%`, background: 'linear-gradient(90deg, #ef4444, #f87171)' }} />
                   <div className="h-full rounded-r-full flex-1" style={{ background: 'linear-gradient(90deg, #60a5fa, #3b82f6)' }} />
@@ -434,7 +434,7 @@ export default function BaseballAIPrediction({
             {ins?.summary && (
               <div className="px-4 pb-4">
                 <div className="rounded-xl px-3.5 py-2.5"
-                  style={{ background: '#1e293b60', border: '1px solid #334155' }}>
+                  style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
                   <p className="text-[12px] leading-relaxed text-center break-keep" style={{ color: '#cbd5e1' }}>
                     {ins.summary
                       .split(homeTeam).join(HN)
@@ -683,7 +683,7 @@ export default function BaseballAIPrediction({
                                   style={{ color: awayBetter ? '#ef4444' : '#64748b' }}>
                                   {awayVal.toFixed(1)}
                                 </span>
-                                <span className="text-[9px]" style={{ color: '#334155' }}>vs</span>
+                                <span className="text-[9px]" style={{ color: 'rgba(255,255,255,.28)' }}>vs</span>
                                 <span className="text-[13px] font-black tabular-nums"
                                   style={{ color: homeBetter ? '#3b82f6' : '#64748b' }}>
                                   {homeVal.toFixed(1)}
@@ -767,7 +767,7 @@ export default function BaseballAIPrediction({
                                   style={{ color: winner === 'away' ? '#ef4444' : '#64748b' }}>
                                   {awayVal != null ? fmt(awayVal) : '-'}
                                 </span>
-                                <span className="text-[9px]" style={{ color: '#334155' }}>vs</span>
+                                <span className="text-[9px]" style={{ color: 'rgba(255,255,255,.28)' }}>vs</span>
                                 <span className="text-[13px] font-black tabular-nums"
                                   style={{ color: winner === 'home' ? '#3b82f6' : '#64748b' }}>
                                   {homeVal != null ? fmt(homeVal) : '-'}
