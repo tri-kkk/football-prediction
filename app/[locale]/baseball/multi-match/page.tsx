@@ -236,8 +236,7 @@ export default function ComboPicksPage() {
       <div className="home-container mx-auto px-4 pt-5 pb-24">
 
         {/* ====== 상단 헤더 ====== */}
-        <div className="rounded-2xl p-5 mb-5 relative overflow-hidden"
-          style={{ background: '#252829' }}>
+        <div className="ts-card p-5 mb-5 relative overflow-hidden">
           {/* 배경 장식 */}
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -248,7 +247,7 @@ export default function ComboPicksPage() {
                   : t('경기 시작 전 분석 예정', 'Analysis pending')}
               </p>
             </div>
-            <div className="flex rounded-lg overflow-hidden" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}>
               {(['today', 'history'] as const).map(v => (
                 <button key={v} onClick={() => { setTab(v); if (v === 'history') setWeekOffset(0) }}
                   className={`px-4 py-2 text-xs font-bold transition-all ${tab === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
@@ -262,7 +261,7 @@ export default function ComboPicksPage() {
           {/* 주간 네비게이션 (히스토리 탭) */}
           {tab === 'history' && (
             <div className="flex items-center justify-between rounded-xl px-4 py-3 mb-3"
-              style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}>
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <button onClick={() => setWeekOffset(prev => prev - 1)}
                 className="flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:brightness-125 active:scale-95"
                 style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
@@ -296,7 +295,7 @@ export default function ComboPicksPage() {
               },
               { label: t('평균 지수', 'AVG INDEX'), value: String(avgOdds), subValue: null as string | null, color: '#fbbf24' },
             ].map((item, i) => (
-              <div key={i} className="rounded-xl p-3.5 text-center" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.04)' }}>
+              <div key={i} className="rounded-xl p-3.5 text-center" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.04)' }}>
                 <div className="text-[10px] font-semibold tracking-wider mb-1.5" style={{ color: '#64748b' }}>{item.label}</div>
                 <div className="text-2xl font-black" style={{ color: item.color }}>{item.value}</div>
                 {item.subValue && (
@@ -345,7 +344,7 @@ export default function ComboPicksPage() {
               className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${league === l.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
               style={league === l.id
                 ? { background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.25)' }
-                : { background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }
+                : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }
               }>
               {language === 'en' ? l.nameEn : l.name}
             </button>
@@ -361,7 +360,7 @@ export default function ComboPicksPage() {
 
         {/* ====== 프리미엄 잠금 ====== */}
         {!loading && !hasAccess && (
-          <div className="rounded-2xl overflow-hidden relative" style={{ background: '#252829', border: '1px solid rgba(16,185,129,0.12)' }}>
+          <div className="ts-card overflow-hidden relative" style={{ border: '1px solid rgba(16,185,129,0.22)' }}>
             {/* 배경 글로우 */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-[100px] rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: 'radial-gradient(circle, #10b981, transparent)' }} />
 
@@ -448,14 +447,14 @@ export default function ComboPicksPage() {
 
           if (tab === 'history') {
             return (
-              <div className="rounded-xl px-5 py-6 text-center" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="rounded-xl px-5 py-6 text-center" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <p className="text-sm text-gray-500">{t('아직 히스토리가 없습니다', 'No history yet')}</p>
               </div>
             )
           }
 
           return (
-            <div className="rounded-2xl overflow-hidden" style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div className="ts-card overflow-hidden">
               <div className="px-5 py-5">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -528,7 +527,7 @@ function ComboCard({ combo, t, language, cleanMd }: {
     win:       { bg: 'rgba(16,185,129,0.04)', accent: '#10b981', badgeBg: 'rgba(16,185,129,0.15)', label: t('적중', 'WIN'), border: 'rgba(16,185,129,0.15)' },
     lose:      { bg: 'rgba(239,68,68,0.03)', accent: '#ef4444', badgeBg: 'rgba(239,68,68,0.15)', label: t('미적중', 'LOSE'), border: 'rgba(239,68,68,0.12)' },
     partial:   { bg: 'rgba(245,158,11,0.03)', accent: '#f59e0b', badgeBg: 'rgba(245,158,11,0.15)', label: t('부분', 'PARTIAL'), border: 'rgba(245,158,11,0.12)' },
-    cancelled: { bg: 'rgba(255,255,255,0.015)', accent: '#4b5563', badgeBg: 'rgba(75,85,99,0.15)', label: t('취소', 'VOID'), border: '#252829' },
+    cancelled: { bg: 'rgba(255,255,255,0.015)', accent: '#4b5563', badgeBg: 'rgba(75,85,99,0.15)', label: t('취소', 'VOID'), border: 'rgba(255,255,255,0.06)' },
   }
   const rs = RS[combo.result] || RS.pending
   const isSafe = combo.fold_count === 2
@@ -575,7 +574,7 @@ function ComboCard({ combo, t, language, cleanMd }: {
 
       {/* 하단 통계 바 */}
       <div className="mx-5 mb-3 rounded-xl px-4 py-3 flex items-center justify-between"
-        style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.04)' }}>
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.04)' }}>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>{t('배당', 'Odds')}</span>
@@ -694,7 +693,7 @@ function MatchRow({ pick, index, t, isLast, language }: {
           </span>
           {!isPickHome && (
             <span className="text-[8px] font-black px-2.5 py-0.5 rounded-full tracking-wide"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>TOP</span>
+              style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)', color: '#241905', boxShadow: '0 2px 8px rgba(245,196,81,0.3)' }}>TOP</span>
           )}
         </div>
 
@@ -725,7 +724,7 @@ function MatchRow({ pick, index, t, isLast, language }: {
               <div className="relative">
                 <div className="w-px h-3" style={{ background: 'rgba(255,255,255,0.06)' }} />
                 <div className="w-7 h-7 rounded-full flex items-center justify-center -my-0.5"
-                  style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <span className="text-[9px] font-black" style={{ color: '#475569' }}>VS</span>
                 </div>
                 <div className="w-px h-3" style={{ background: 'rgba(255,255,255,0.06)' }} />
@@ -742,7 +741,7 @@ function MatchRow({ pick, index, t, isLast, language }: {
           </span>
           {isPickHome && (
             <span className="text-[8px] font-black px-2.5 py-0.5 rounded-full tracking-wide"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>TOP</span>
+              style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)', color: '#241905', boxShadow: '0 2px 8px rgba(245,196,81,0.3)' }}>TOP</span>
           )}
         </div>
       </div>
@@ -763,7 +762,7 @@ function MatchRow({ pick, index, t, isLast, language }: {
       </div>
 
       {/* 프로그레스 바 */}
-      <div className="mt-2 mx-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#252829' }}>
+      <div className="mt-2 mx-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
         <div className="h-full rounded-full transition-all duration-500"
           style={{ width: `${pickProb}%`, background: `linear-gradient(90deg, ${barColor}, ${barColor}cc)` }} />
       </div>
