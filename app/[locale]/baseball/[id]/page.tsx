@@ -1545,7 +1545,7 @@ export default function BaseballDetailPage() {
               /* 🔒 비회원/무료회원: 잠금 UI */
               <div className="mx-4 mb-4 ts-card overflow-hidden relative">
                 {/* 상단 그라데이션 라인 */}
-                <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #2563eb, #7c3aed, #10b981)' }} />
+                <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #F7D774, #E0A93B, #10b981)' }} />
 
                 {/* 헤더 */}
                 <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,.04)' }}>
@@ -1615,8 +1615,9 @@ export default function BaseballDetailPage() {
                       {/* 프리미엄 전환 */}
                       <button
                         onClick={() => router.push('/premium/pricing')}
-                        className="w-full flex items-center justify-center gap-1.5 px-5 py-3 rounded-xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.98]"
-                        style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: '#fff', boxShadow: '0 6px 22px rgba(124,58,237,0.32)' }}>
+                        className="relative overflow-hidden w-full flex items-center justify-center gap-1.5 px-5 py-3 rounded-xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.98]"
+                        style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)', color: '#241905', boxShadow: '0 6px 22px rgba(224,169,59,0.34)' }}>
+                        <span className="ts-shine" />
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M3 7l4.5 4L12 5l4.5 6L21 7l-1.5 12h-15z"/>
                         </svg>
