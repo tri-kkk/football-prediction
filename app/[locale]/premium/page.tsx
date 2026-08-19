@@ -978,19 +978,10 @@ function MatchPredictionCard({ match, onAnalyze, onClear, language, t }: {
           <div className="text-white font-bold mb-1">
             {language === 'ko' ? '회원 전용 분석' : 'Members-only Analysis'}
           </div>
-          <div className="text-gray-400 text-sm mb-4">
+          <div className="text-gray-400 text-sm">
             {language === 'ko'
               ? '로그인하면 이 경기의 통계 분석을 볼 수 있어요'
               : 'Log in to view this match analysis'}
-          </div>
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#F7D774] to-[#E0A93B] hover:brightness-110 text-[#241905] rounded-lg font-bold text-sm transition-all"
-          >
-            {language === 'ko' ? '무료로 시작하기' : 'Get Started Free'}
-          </Link>
-          <div className="text-gray-500 text-xs mt-3">
-            {language === 'ko' ? '30초 가입 · 결제 정보 필요 없음' : 'Sign up in 30s · No payment'}
           </div>
         </div>
       ) : loading ? (
