@@ -585,13 +585,14 @@ export default function BaseballDetailPage() {
   const isLive = isLiveBaseballStatus(match?.status)
   const currentInning = isLive ? extractInningNumber(match?.status) : null
 
-  // 라이브 경기 30초 폴링 (/api/baseball/live → API-Sports 직접 조회 + DB 업데이트)
+  // 라이브 경기 15초 폴링 (/api/baseball/live → API-Sports 직접 조회 + DB 업데이트)
   useEffect(() => {
     if (!matchId || !isLive) return
 
     async function pollLive() {
       try {
-        const res = await fetch('/api/baseball/live')
+        // 캐시 무효화: 타임스탬프 쿼리 + no-store 로 브라우저/CDN 캐시가 스코어를 얼리지 않도록
+        const res = await fetch(`/api/baseball/live?t=${Date.now()}`, { cache: 'no-store' })
         const data = await res.json()
         if (data.success && data.matches?.length > 0) {
           // matchId에 해당하는 경기만 찾기
@@ -611,7 +612,7 @@ export default function BaseballDetailPage() {
     }
 
     pollLive()
-    const interval = setInterval(pollLive, 30000)
+    const interval = setInterval(pollLive, 15000)
     return () => clearInterval(interval)
   }, [matchId, isLive])
 
@@ -688,31 +689,10 @@ export default function BaseballDetailPage() {
   // 로딩
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0f0f]">
-        <div className="home-container mx-auto px-4 pt-4 pb-24 space-y-4">
-          <div className="ts-skel" style={{ height: 40, width: 130, borderRadius: 10 }} />
-          <div className="ts-card overflow-hidden ts-card-in p-4">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex flex-col items-center gap-2 flex-1">
-                <div className="ts-skel" style={{ width: 56, height: 56, borderRadius: '50%' }} />
-                <div className="ts-skel" style={{ width: 64, height: 13, borderRadius: 5 }} />
-              </div>
-              <div className="ts-skel" style={{ width: 40, height: 24, borderRadius: 7 }} />
-              <div className="flex flex-col items-center gap-2 flex-1">
-                <div className="ts-skel" style={{ width: 56, height: 56, borderRadius: '50%' }} />
-                <div className="ts-skel" style={{ width: 64, height: 13, borderRadius: 5 }} />
-              </div>
-            </div>
-            <div className="ts-skel" style={{ width: '100%', height: 12, borderRadius: 6 }} />
-          </div>
-          {[0,1].map(i => (
-            <div key={i} className="ts-card overflow-hidden ts-card-in p-4 space-y-3" style={{ animationDelay: `${(i+1) * 70}ms` }}>
-              <div className="ts-skel" style={{ width: 120, height: 15, borderRadius: 5 }} />
-              <div className="ts-skel" style={{ width: '100%', height: 60, borderRadius: 12 }} />
-              <div className="ts-skel" style={{ width: '85%', height: 12, borderRadius: 5 }} />
-              <div className="ts-skel" style={{ width: '65%', height: 12, borderRadius: 5 }} />
-            </div>
-          ))}
+      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-3"></div>
+          <p className="text-gray-400 text-sm">{t('로딩 중...', 'Loading...')}</p>
         </div>
       </div>
     )
@@ -722,11 +702,11 @@ export default function BaseballDetailPage() {
   if (error || !match) {
     return (
       <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
-        <div className="bg-white/[0.045] rounded-lg shadow p-6 text-center max-w-sm w-full border border-white/[0.08]/20">
+        <div className="bg-[#1a1f2e] rounded-lg shadow p-6 text-center max-w-sm w-full border border-gray-800/20">
           <div className="text-4xl mb-3">⚾</div>
           <h1 className="text-base font-bold text-white mb-2">{t('경기를 찾을 수 없습니다', 'Match not found')}</h1>
           <p className="text-red-400 text-sm mb-4">{error}</p>
-          <Link href="/baseball" className="inline-block px-4 py-2 rounded-lg text-sm font-semibold text-emerald-300 transition-colors" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)' }}>
+          <Link href="/baseball" className="inline-block px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
             {t('돌아가기', 'Back')}
           </Link>
         </div>
@@ -752,7 +732,7 @@ export default function BaseballDetailPage() {
 
       {/* 모바일 경기 네비 - xl 미만에서만 표시 */}
       {todayMatches.length > 0 && (
-        <div className="xl:hidden bg-white/[0.03] border-b border-white/[0.08]/30">
+        <div className="xl:hidden bg-[#141824] border-b border-gray-800/30">
           {/* 리그 탭 */}
           {(() => {
             const leagues = ['ALL', ...Array.from(new Set(todayMatches.map((m: any) => m.league))).sort()]
@@ -765,7 +745,7 @@ export default function BaseballDetailPage() {
                     className={`flex-shrink-0 px-2.5 py-0.5 rounded text-[10px] font-bold transition-colors ${
                       sidebarLeague === lg
                         ? lg === 'ALL' ? 'bg-gray-600 text-white' : `${LEAGUE_COLORS[lg] || 'bg-gray-600'} text-white`
-                        : 'bg-white/[0.045] text-gray-500'
+                        : 'bg-gray-800/50 text-gray-500'
                     }`}
                   >
                     {lg}
@@ -802,7 +782,7 @@ export default function BaseballDetailPage() {
                     className={`flex-shrink-0 flex flex-col justify-between px-2.5 py-2 rounded-lg min-w-[120px] transition-colors border ${
                       isCurrent
                         ? 'bg-blue-600/15 border-blue-500/40'
-                        : 'bg-white/[0.045] border-white/[0.08]/20 hover:bg-white/5'
+                        : 'bg-[#1a1f2e] border-gray-800/20 hover:bg-white/5'
                     }`}
                   >
                     {/* 상태 */}
@@ -859,8 +839,8 @@ export default function BaseballDetailPage() {
 
         {/* 왼쪽 사이드바 - PC only */}
         <aside className="hidden xl:block w-60 flex-shrink-0 sticky top-[72px] self-start">
-          <div className="bg-white/[0.045] rounded-xl overflow-hidden">
-            <div className="px-4 py-3 bg-white/[0.03]">
+          <div className="bg-[#1a1f2e] rounded-xl overflow-hidden">
+            <div className="px-4 py-3 bg-[#141824]">
               <span className="text-xs font-bold text-gray-400 tracking-wider uppercase">{t('경기 목록', 'Match List')}</span>
               {/* 리그 탭 */}
               {(() => {
@@ -874,7 +854,7 @@ export default function BaseballDetailPage() {
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
                           sidebarLeague === lg
                             ? lg === 'ALL' ? 'bg-gray-600 text-white' : `${LEAGUE_COLORS[lg] || 'bg-gray-600'} text-white`
-                            : 'bg-white/[0.05] text-gray-500 hover:text-gray-300'
+                            : 'bg-gray-800/60 text-gray-500 hover:text-gray-300'
                         }`}
                       >
                         {lg}
@@ -961,7 +941,7 @@ export default function BaseballDetailPage() {
         {/* 메인 컨텐츠 */}
         <div className="flex-1 min-w-0 max-w-2xl mx-auto xl:mx-0">
         {/* 메인 스코어 카드 */}
-        <div className="ts-card overflow-hidden">
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, #141824 0%, #1a1f2e 100%)' }}>
           {/* 리그 + 상태 */}
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2.5">
@@ -981,7 +961,7 @@ export default function BaseballDetailPage() {
               </span>
             ) : isFinished ? (
               <span className="px-2.5 py-1 rounded-full text-[10px] font-bold"
-                style={{ background: 'rgba(255,255,255,.08)', color: '#64748b' }}>
+                style={{ background: '#1e293b', color: '#64748b' }}>
                 {t('경기 종료', 'Final')}
               </span>
             ) : (
@@ -1086,9 +1066,9 @@ export default function BaseballDetailPage() {
 
         {/* 선발 투수 스탯 - MLB 전용 별도 카드 */}
         {match.league === 'MLB' && (
-          <div className="mt-3 ts-card overflow-hidden">
+          <div className="mt-3 rounded-2xl overflow-hidden" style={{ background: '#0f1623', border: '1px solid #1e293b' }}>
             {/* 헤더 */}
-            <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+            <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid #1e293b' }}>
               <div className="w-1 h-5 rounded-full bg-cyan-500" />
               <span className="text-white text-sm font-bold">{t('선발 투수', 'Starting Pitchers')}</span>
             </div>
@@ -1157,7 +1137,7 @@ export default function BaseballDetailPage() {
                           )}
                           {stats?.prev && (
                             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                              !stats.current ? 'bg-blue-600/30 text-blue-400' : 'bg-white/[0.06] text-gray-500'
+                              !stats.current ? 'bg-blue-600/30 text-blue-400' : 'bg-gray-700/60 text-gray-500'
                             }`}>
                               {prevYear}
                             </span>
@@ -1175,7 +1155,7 @@ export default function BaseballDetailPage() {
                                   { label: 'WHIP', value: s.whip },
                                   { label: 'K/9', value: s.strikeoutsPer9Inn ? parseFloat(s.strikeoutsPer9Inn).toFixed(1) : '-' },
                                 ].map(({ label, value }) => (
-                                  <div key={label} className="bg-white/[0.045] rounded-lg py-2 text-center">
+                                  <div key={label} className="bg-gray-900/70 rounded-lg py-2 text-center">
                                     <p className="text-[11px] text-gray-400 mb-0.5">{label}</p>
                                     <p className="text-sm font-bold text-white">{value ?? '-'}</p>
                                   </div>
@@ -1187,7 +1167,7 @@ export default function BaseballDetailPage() {
                                   { label: 'IP', value: s.inningsPitched },
                                   { label: 'K', value: s.strikeOuts },
                                 ].map(({ label, value }) => (
-                                  <div key={label} className="bg-white/[0.045] rounded-lg py-2 text-center">
+                                  <div key={label} className="bg-gray-900/70 rounded-lg py-2 text-center">
                                     <p className="text-[11px] text-gray-400 mb-0.5">{label}</p>
                                     <p className="text-sm font-bold text-white">{value ?? '-'}</p>
                                   </div>
@@ -1199,7 +1179,7 @@ export default function BaseballDetailPage() {
 
                         {/* 작년 스탯 */}
                         {stats?.prev && (
-                          <div className={`${stats?.current ? 'mt-3 pt-3 border-t border-white/[0.08]/50' : 'space-y-2'}`}>
+                          <div className={`${stats?.current ? 'mt-3 pt-3 border-t border-gray-800/50' : 'space-y-2'}`}>
                             {stats?.current && (
                               <p className="text-[10px] text-gray-600 text-center mb-2">{prevYear} {t('시즌', 'Season')}</p>
                             )}
@@ -1209,7 +1189,7 @@ export default function BaseballDetailPage() {
                                 { label: 'WHIP', value: stats.prev.whip },
                                 { label: 'K', value: stats.prev.strikeOuts },
                               ].map(({ label, value }) => (
-                                <div key={label} className="bg-white/[0.025] rounded-lg py-2 text-center">
+                                <div key={label} className="bg-gray-900/40 rounded-lg py-2 text-center">
                                   <p className="text-[11px] text-gray-400 mb-0.5">{label}</p>
                                   <p className={`text-sm font-bold ${stats?.current ? 'text-gray-500' : 'text-white'}`}>{value ?? '-'}</p>
                                 </div>
@@ -1251,7 +1231,7 @@ export default function BaseballDetailPage() {
                           if (strengths.length === 0 && weakness.length === 0) return null
 
                           return (
-                            <div className="mt-3 pt-3 border-t border-white/[0.08]/50 flex flex-col gap-1.5">
+                            <div className="mt-3 pt-3 border-t border-gray-800/50 flex flex-col gap-1.5">
                               {strengths.map((s, i) => (
                                 <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold"
                                   style={{ background: '#05966915', color: '#34d399' }}>
@@ -1286,10 +1266,11 @@ export default function BaseballDetailPage() {
 
             {/* Claude AI 투수 매치업 분석 */}
             {(pitcherAnalysisLoading || pitcherAnalysis) && (
-              <div className="mx-4 mb-4 ts-card overflow-hidden">
+              <div className="mx-4 mb-4 rounded-2xl overflow-hidden"
+                style={{ background: 'linear-gradient(145deg, #0f172a, #131c2e)', border: '1px solid #334155' }}>
                 {/* 헤더 */}
                 <div className="px-4 py-2.5 flex items-center justify-between"
-                  style={{ background: 'rgba(255,255,255,.03)', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+                  style={{ background: 'linear-gradient(90deg, #1e3a5f, #1a2744)', borderBottom: '1px solid #334155' }}>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
                       style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
@@ -1337,8 +1318,8 @@ export default function BaseballDetailPage() {
         {/* 선발 투수 - KBO/NPB/CPBL */}
         {(match.league === 'KBO' || match.league === 'NPB' || match.league === 'CPBL') &&
           (kboNpbHomePitcher || kboNpbAwayPitcher || kboNpbPitcherLoading) && (
-            <div className="mt-3 ts-card overflow-hidden">
-              <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+            <div className="mt-3 rounded-2xl overflow-hidden" style={{ background: '#0f1623', border: '1px solid #1e293b' }}>
+              <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid #1e293b' }}>
                 <div className="w-1 h-5 rounded-full bg-cyan-500" />
                 <span className="text-white text-sm font-bold">{t('선발 투수', 'Starting Pitchers')}</span>
               </div>
@@ -1354,7 +1335,7 @@ export default function BaseballDetailPage() {
                       <span className={`text-xs font-bold mb-2 ${accentColor}`}>{label}</span>
                       {/* NPB 선발 초상 (Yahoo) — 있을 때만, 로드 실패 시 숨김 */}
                       {image && (
-                        <div className="w-24 h-28 rounded-xl mb-2.5 overflow-hidden bg-white/[0.035] flex items-end justify-center">
+                        <div className="w-24 h-28 rounded-xl mb-2.5 overflow-hidden bg-gray-900/60 flex items-end justify-center">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={image}
@@ -1391,7 +1372,7 @@ export default function BaseballDetailPage() {
                             { label: stats.whip != null ? 'WHIP' : 'BB', value: stats.whip != null ? Number(stats.whip).toFixed(2) : (stats.walks ?? '-') },
                             { label: 'K',   value: stats.strikeouts ?? '-' },
                           ].map(({ label, value }) => (
-                            <div key={label} className="bg-white/[0.045] rounded-lg py-2 text-center">
+                            <div key={label} className="bg-gray-900/70 rounded-lg py-2 text-center">
                               <p className="text-[11px] text-gray-400 mb-0.5">{label}</p>
                               <p className="text-sm font-bold text-white">{value}</p>
                             </div>
@@ -1431,7 +1412,7 @@ export default function BaseballDetailPage() {
                             return text
                           }
                           return (
-                          <div className="mt-2 pt-2 border-t border-white/[0.08]/50 flex flex-wrap gap-1">
+                          <div className="mt-2 pt-2 border-t border-gray-800/50 flex flex-wrap gap-1">
                             {stats.strengths?.map((s: string, i: number) => (
                               <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
                                 style={{ background: '#05966920', color: '#34d399', border: '1px solid #05966940' }}>
@@ -1449,7 +1430,7 @@ export default function BaseballDetailPage() {
                         })()}
                         {/* 전년도 스탯 */}
                         {prevStats && (
-                          <div className="mt-3 pt-2 border-t border-white/[0.10]/40">
+                          <div className="mt-3 pt-2 border-t border-gray-700/40">
                             <p className="text-[10px] text-gray-500 text-center mb-1.5">{prevStats.season} {t('시즌', 'Season')}</p>
                             <div className="grid grid-cols-3 gap-1.5">
                               {[
@@ -1457,7 +1438,7 @@ export default function BaseballDetailPage() {
                                 { label: 'WHIP', value: prevStats.whip != null ? Number(prevStats.whip).toFixed(2) : '-' },
                                 { label: 'K', value: prevStats.strikeouts ?? '-' },
                               ].map(({ label, value }) => (
-                                <div key={label} className="bg-white/[0.025] rounded-lg py-1.5 text-center">
+                                <div key={label} className="bg-gray-900/40 rounded-lg py-1.5 text-center">
                                   <p className="text-[10px] text-gray-500 mb-0.5">{label}</p>
                                   <p className="text-xs text-gray-400">{value}</p>
                                 </div>
@@ -1481,9 +1462,10 @@ export default function BaseballDetailPage() {
 
               {/* Claude AI 투수 매치업 분석 */}
               {(pitcherAnalysisLoading || pitcherAnalysis) && (
-                <div className="mx-4 mb-4 ts-card overflow-hidden">
+                <div className="mx-4 mb-4 rounded-2xl overflow-hidden"
+                  style={{ background: 'linear-gradient(145deg, #0f172a, #131c2e)', border: '1px solid #334155' }}>
                   <div className="px-4 py-2.5 flex items-center justify-between"
-                    style={{ background: 'rgba(255,255,255,.03)', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+                    style={{ background: 'linear-gradient(90deg, #1e3a5f, #1a2744)', borderBottom: '1px solid #334155' }}>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
                         style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
@@ -1542,12 +1524,12 @@ export default function BaseballDetailPage() {
               />
             ) : (
               /* 🔒 비회원/무료회원: 잠금 UI */
-              <div className="mx-4 mb-4 ts-card overflow-hidden relative">
+              <div className="mx-0 overflow-hidden relative" style={{ background: 'linear-gradient(180deg, #0e1421, #0a0f1a)', border: '1px solid #1e293b' }}>
                 {/* 상단 그라데이션 라인 */}
                 <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #2563eb, #7c3aed, #10b981)' }} />
 
                 {/* 헤더 */}
-                <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,.04)' }}>
+                <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: '1px solid #18233a' }}>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
                       style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
@@ -1558,7 +1540,7 @@ export default function BaseballDetailPage() {
                     <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>{t('AI 야구 분석', 'AI Baseball Analysis')}</span>
                   </div>
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-                    style={{ background: '#0b1220', color: '#64748b', border: '1px solid rgba(255,255,255,.08)' }}>
+                    style={{ background: '#0b1220', color: '#64748b', border: '1px solid #1e293b' }}>
                     {t('미열람', 'Locked')}
                   </span>
                 </div>
@@ -1577,12 +1559,12 @@ export default function BaseballDetailPage() {
                         <div className="text-2xl font-black" style={{ color: '#60a5fa' }}>38%</div>
                       </div>
                     </div>
-                    <div className="h-2 rounded-full mb-4" style={{ background: 'rgba(255,255,255,.08)' }}>
+                    <div className="h-2 rounded-full mb-4" style={{ background: '#1e293b' }}>
                       <div className="h-2 rounded-full w-3/5" style={{ background: 'linear-gradient(90deg, #f87171, #60a5fa)' }} />
                     </div>
                     <div className="space-y-2">
                       {[1,2,3,4].map(i => (
-                        <div key={i} className="h-3 rounded-full" style={{ background: 'rgba(255,255,255,.08)', width: `${85 - i * 12}%` }} />
+                        <div key={i} className="h-3 rounded-full" style={{ background: '#1e293b', width: `${85 - i * 12}%` }} />
                       ))}
                     </div>
                   </div>
@@ -1657,8 +1639,8 @@ export default function BaseballDetailPage() {
 
         {/* ===== 라이브 실황 카드 (DB 기반 R/H/E) ===== */}
         {isLive && (
-          <div className="mt-3 rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,.03)', border: '1px solid #ef444430' }}>
-            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+          <div className="mt-3 rounded-2xl overflow-hidden" style={{ background: '#0f1623', border: '1px solid #ef444430' }}>
+            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #1e293b' }}>
               <div className="flex items-center gap-2.5">
                 <div className="w-1 h-5 rounded-full bg-red-500" />
                 <span className="relative flex h-2 w-2">
@@ -1669,16 +1651,16 @@ export default function BaseballDetailPage() {
                   LIVE · {currentInning}{t('회 진행 중', 'th inning')}
                 </span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,.08)', color: '#64748b' }}>{t('30초 자동 갱신', 'Auto-refresh 30s')}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: '#1e293b', color: '#64748b' }}>{t('30초 자동 갱신', 'Auto-refresh 30s')}</span>
             </div>
 
             {/* R/H/E */}
             <div className="px-4 py-4">
-              <div className="grid grid-cols-4 text-center text-xs border border-white/[0.08] rounded-lg overflow-hidden">
-                <div className="bg-white/[0.03] py-1.5 text-gray-500 font-medium"></div>
-                <div className="bg-white/[0.03] py-1.5 text-gray-400 font-bold">R</div>
-                <div className="bg-white/[0.03] py-1.5 text-gray-400 font-bold">H</div>
-                <div className="bg-white/[0.03] py-1.5 text-gray-400 font-bold">E</div>
+              <div className="grid grid-cols-4 text-center text-xs border border-gray-800 rounded-lg overflow-hidden">
+                <div className="bg-gray-800/30 py-1.5 text-gray-500 font-medium"></div>
+                <div className="bg-gray-800/30 py-1.5 text-gray-400 font-bold">R</div>
+                <div className="bg-gray-800/30 py-1.5 text-gray-400 font-bold">H</div>
+                <div className="bg-gray-800/30 py-1.5 text-gray-400 font-bold">E</div>
 
                 {/* 원정 */}
                 <div className="py-2 text-gray-300 font-medium text-[11px] truncate px-1">
@@ -1689,12 +1671,12 @@ export default function BaseballDetailPage() {
                 <div className="py-2 text-gray-300">{liveErrors?.away ?? '-'}</div>
 
                 {/* 홈 */}
-                <div className="py-2 text-gray-300 font-medium text-[11px] border-t border-white/[0.08] truncate px-1">
+                <div className="py-2 text-gray-300 font-medium text-[11px] border-t border-gray-800 truncate px-1">
                   {language === 'ko' ? (match.home.teamKo || TEAM_NAME_KO[match.home.team] || match.home.team.split(' ').pop()) : match.home.team.split(' ').pop()}
                 </div>
-                <div className="py-2 text-white font-black border-t border-white/[0.08]">{match.home.score ?? '-'}</div>
-                <div className="py-2 text-gray-300 border-t border-white/[0.08]">{liveHits?.home ?? '-'}</div>
-                <div className="py-2 text-gray-300 border-t border-white/[0.08]">{liveErrors?.home ?? '-'}</div>
+                <div className="py-2 text-white font-black border-t border-gray-800">{match.home.score ?? '-'}</div>
+                <div className="py-2 text-gray-300 border-t border-gray-800">{liveHits?.home ?? '-'}</div>
+                <div className="py-2 text-gray-300 border-t border-gray-800">{liveErrors?.home ?? '-'}</div>
               </div>
             </div>
           </div>
@@ -1702,8 +1684,8 @@ export default function BaseballDetailPage() {
 
         {/* 이닝 스코어보드 - 라이브 or 종료 (DB 기반 통합) */}
         {(isFinished || isLive) && innings.length > 0 && (
-          <div className="mt-3 ts-card overflow-hidden">
-            <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+          <div className="mt-3 rounded-2xl overflow-hidden" style={{ background: '#0f1623', border: '1px solid #1e293b' }}>
+            <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid #1e293b' }}>
               <div className="w-1 h-5 rounded-full bg-blue-500" />
               <span className="text-white text-sm font-bold tracking-tight">{t('이닝 스코어', 'Inning Score')}</span>
               {isLive && (
@@ -1718,7 +1700,7 @@ export default function BaseballDetailPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-white/[0.045]">
+                <thead className="bg-gray-800/50">
                   <tr>
                     <th className="px-2 py-2 text-left text-gray-400 font-medium w-16">{t('팀', 'Team')}</th>
                     {innings.map((inn) => (
@@ -1728,12 +1710,12 @@ export default function BaseballDetailPage() {
                           : 'text-gray-400'
                       }`}>{inn.inning}</th>
                     ))}
-                    <th className="px-2 py-2 text-center font-medium text-white bg-white/[0.035] w-8">R</th>
+                    <th className="px-2 py-2 text-center font-medium text-white bg-gray-700/30 w-8">R</th>
                   </tr>
                 </thead>
                 <tbody>
                   {/* 원정팀 */}
-                  <tr className="border-t border-white/[0.08]/10">
+                  <tr className="border-t border-gray-800/10">
                     <td className="px-2 py-2">
                       <div className="flex items-center gap-1">
                         <TeamLogo src={match.away.logo} team={match.away.teamKo} size="sm" />
@@ -1751,12 +1733,12 @@ export default function BaseballDetailPage() {
                           : 'text-gray-400'
                       }`}>{inn.away}</td>
                     ))}
-                    <td className={`px-2 py-2 text-center font-semibold bg-white/[0.045] ${(match.away.score ?? 0) > (match.home.score ?? 0) ? 'text-emerald-600' : 'text-gray-300'}`}>
+                    <td className={`px-2 py-2 text-center font-semibold bg-gray-800/50 ${(match.away.score ?? 0) > (match.home.score ?? 0) ? 'text-emerald-600' : 'text-gray-300'}`}>
                       {match.away.score}
                     </td>
                   </tr>
                   {/* 홈팀 */}
-                  <tr className="border-t border-white/[0.08]/10">
+                  <tr className="border-t border-gray-800/10">
                     <td className="px-2 py-2">
                       <div className="flex items-center gap-1">
                         <TeamLogo src={match.home.logo} team={match.home.teamKo} size="sm" />
@@ -1774,7 +1756,7 @@ export default function BaseballDetailPage() {
                           : 'text-gray-400'
                       }`}>{inn.home}</td>
                     ))}
-                    <td className={`px-2 py-2 text-center font-semibold bg-white/[0.045] ${(match.home.score ?? 0) > (match.away.score ?? 0) ? 'text-emerald-600' : 'text-gray-300'}`}>
+                    <td className={`px-2 py-2 text-center font-semibold bg-gray-800/50 ${(match.home.score ?? 0) > (match.away.score ?? 0) ? 'text-emerald-600' : 'text-gray-300'}`}>
                       {match.home.score}
                     </td>
                   </tr>
@@ -1787,12 +1769,12 @@ export default function BaseballDetailPage() {
 
         {/* H2H */}
         {(h2hData?.success && h2hData.count > 0) && (
-          <div className="mx-4 mt-3 ts-card overflow-hidden">
-            <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+          <div className="mx-4 mt-3 rounded-2xl overflow-hidden" style={{ background: '#0f1623', border: '1px solid #1e293b' }}>
+            <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: '1px solid #1e293b' }}>
               <div className="w-1 h-5 rounded-full bg-amber-500" />
               <span className="text-sm font-bold text-white">{t('상대 전적', 'Head to Head')}</span>
               <span className="text-[11px] px-2 py-0.5 rounded-full font-bold ml-auto"
-                style={{ background: 'rgba(255,255,255,.08)', color: '#94a3b8' }}>
+                style={{ background: '#1e293b', color: '#94a3b8' }}>
                 {h2hData.summary.homeWins}{t('승', 'W')} - {h2hData.summary.awayWins}{t('패', 'L')}
               </span>
             </div>
@@ -1842,7 +1824,7 @@ export default function BaseballDetailPage() {
                 const homeName = language === 'ko' ? getKoreanName(game.homeTeam) : game.homeTeam
                 return (
                   <div key={game.id} className="flex items-center px-4 py-3 gap-2"
-                    style={{ borderTop: idx > 0 ? '1px solid rgba(255,255,255,.08)' : 'none' }}>
+                    style={{ borderTop: idx > 0 ? '1px solid #1e293b' : 'none' }}>
                     {/* 날짜 */}
                     <span className="text-[11px] w-9 flex-shrink-0 font-medium" style={{ color: '#94a3b8' }}>
                       {new Date(game.date).toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-US', { month: 'numeric', day: 'numeric' })}
@@ -1872,13 +1854,13 @@ export default function BaseballDetailPage() {
 
         {/* 배당률 */}
         {match.odds && (
-          <div className="mx-4 mt-3 ts-card overflow-hidden">
-            <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+          <div className="mx-4 mt-3 rounded-2xl overflow-hidden" style={{ background: '#0f1623', border: '1px solid #1e293b' }}>
+            <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: '1px solid #1e293b' }}>
               <div className="w-1 h-5 rounded-full bg-purple-500" />
               <span className="text-sm font-bold text-white">{t('배당률', 'Odds')}</span>
               {match.odds?.bookmaker && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-medium ml-auto"
-                  style={{ background: 'rgba(255,255,255,.08)', color: '#64748b' }}>
+                  style={{ background: '#1e293b', color: '#64748b' }}>
                   {match.odds.bookmaker}
                 </span>
               )}
@@ -1888,10 +1870,10 @@ export default function BaseballDetailPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-2xl p-4 text-center" style={{
                   background: isFinished && match.away.score !== null && match.home.score !== null
-                    ? match.away.score > match.home.score ? '#ef444415' : 'rgba(255,255,255,.03)'
+                    ? match.away.score > match.home.score ? '#ef444415' : '#0f172a'
                     : '#ef444410',
                   border: `1px solid ${isFinished && match.away.score !== null && match.home.score !== null
-                    ? match.away.score > match.home.score ? '#ef444450' : 'rgba(255,255,255,.08)'
+                    ? match.away.score > match.home.score ? '#ef444450' : '#1e293b'
                     : '#ef444430'}`
                 }}>
                   <p className="text-[11px] font-semibold mb-2 flex items-center justify-center gap-1" style={{ color: '#94a3b8' }}>
@@ -1899,21 +1881,21 @@ export default function BaseballDetailPage() {
                     {isFinished && match.away.score !== null && match.home.score !== null && (
                       match.away.score > match.home.score
                         ? <span className="text-emerald-400 text-xs">✓</span>
-                        : <span style={{ color: 'rgba(255,255,255,.08)' }}>✗</span>
+                        : <span style={{ color: '#334155' }}>✗</span>
                     )}
                   </p>
                   <p className="text-3xl font-black tabular-nums" style={{
                     color: isFinished && match.away.score !== null && match.home.score !== null
-                      ? match.away.score > match.home.score ? '#f87171' : 'rgba(255,255,255,.08)'
+                      ? match.away.score > match.home.score ? '#f87171' : '#334155'
                       : '#f87171'
                   }}>{match.odds.awayWinOdds}</p>
                 </div>
                 <div className="rounded-2xl p-4 text-center" style={{
                   background: isFinished && match.away.score !== null && match.home.score !== null
-                    ? match.home.score > match.away.score ? '#3b82f615' : 'rgba(255,255,255,.03)'
+                    ? match.home.score > match.away.score ? '#3b82f615' : '#0f172a'
                     : '#3b82f610',
                   border: `1px solid ${isFinished && match.away.score !== null && match.home.score !== null
-                    ? match.home.score > match.away.score ? '#3b82f650' : 'rgba(255,255,255,.08)'
+                    ? match.home.score > match.away.score ? '#3b82f650' : '#1e293b'
                     : '#3b82f630'}`
                 }}>
                   <p className="text-[11px] font-semibold mb-2 flex items-center justify-center gap-1" style={{ color: '#94a3b8' }}>
@@ -1921,19 +1903,19 @@ export default function BaseballDetailPage() {
                     {isFinished && match.away.score !== null && match.home.score !== null && (
                       match.home.score > match.away.score
                         ? <span className="text-emerald-400 text-xs">✓</span>
-                        : <span style={{ color: 'rgba(255,255,255,.08)' }}>✗</span>
+                        : <span style={{ color: '#334155' }}>✗</span>
                     )}
                   </p>
                   <p className="text-3xl font-black tabular-nums" style={{
                     color: isFinished && match.away.score !== null && match.home.score !== null
-                      ? match.home.score > match.away.score ? '#60a5fa' : 'rgba(255,255,255,.08)'
+                      ? match.home.score > match.away.score ? '#60a5fa' : '#334155'
                       : '#60a5fa'
                   }}>{match.odds.homeWinOdds}</p>
                 </div>
               </div>
               {/* 오버/언더 */}
               {match.odds.overUnderLine && (
-                <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,.08)' }}>
+                <div className="mt-3 pt-3" style={{ borderTop: '1px solid #1e293b' }}>
                   {/* 헤더 */}
                   <div className="flex items-center justify-between mb-2.5 px-1">
                     <p className="text-[11px] font-semibold" style={{ color: '#475569' }}>
@@ -1960,9 +1942,9 @@ export default function BaseballDetailPage() {
                       : [{ line: bestLine, over: match.odds.overOdds, under: match.odds.underOdds }]
 
                     return (
-                      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,.08)' }}>
+                      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #1e293b' }}>
                         {/* 컬럼 헤더 */}
-                        <div className="grid grid-cols-3 px-3 py-1.5" style={{ background: '#0a0f1a', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+                        <div className="grid grid-cols-3 px-3 py-1.5" style={{ background: '#0a0f1a', borderBottom: '1px solid #1e293b' }}>
                           <p className="text-[10px] font-semibold" style={{ color: '#475569' }}>Line</p>
                           <p className="text-[10px] font-semibold text-center" style={{ color: '#f87171' }}>Over</p>
                           <p className="text-[10px] font-semibold text-right" style={{ color: '#60a5fa' }}>Under</p>
@@ -1979,8 +1961,8 @@ export default function BaseballDetailPage() {
                               key={l.line}
                               className="grid grid-cols-3 px-3 py-2.5 items-center"
                               style={{
-                                background: isBest ? 'rgba(255,255,255,.06)' : 'transparent',
-                                borderTop: idx > 0 ? '1px solid rgba(255,255,255,.08)30' : 'none',
+                                background: isBest ? '#1e293b40' : 'transparent',
+                                borderTop: idx > 0 ? '1px solid #1e293b30' : 'none',
                               }}
                             >
                               {/* 라인 */}
@@ -2004,7 +1986,7 @@ export default function BaseballDetailPage() {
                               <div className="text-center">
                                 <span
                                   className="text-sm font-black tabular-nums"
-                                  style={{ color: overHit ? '#34d399' : isFinished ? 'rgba(255,255,255,.08)' : '#f87171' }}
+                                  style={{ color: overHit ? '#34d399' : isFinished ? '#334155' : '#f87171' }}
                                 >
                                   {l.over}
                                 </span>
@@ -2017,7 +1999,7 @@ export default function BaseballDetailPage() {
                               <div className="text-right">
                                 <span
                                   className="text-sm font-black tabular-nums"
-                                  style={{ color: underHit ? '#34d399' : isFinished ? 'rgba(255,255,255,.08)' : '#60a5fa' }}
+                                  style={{ color: underHit ? '#34d399' : isFinished ? '#334155' : '#60a5fa' }}
                                 >
                                   {l.under}
                                 </span>
@@ -2046,14 +2028,14 @@ export default function BaseballDetailPage() {
 
         {/* 관련 경기 */}
         {match.relatedMatches && match.relatedMatches.length > 0 && (
-          <div className="mx-4 mt-3 ts-card overflow-hidden">
-            <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+          <div className="mx-4 mt-3 rounded-2xl overflow-hidden" style={{ background: '#0f1623', border: '1px solid #1e293b' }}>
+            <div className="px-4 py-3 flex items-center gap-2.5" style={{ borderBottom: '1px solid #1e293b' }}>
               <div className="w-1 h-5 rounded-full bg-gray-500" />
               <span className="text-white text-sm font-bold tracking-tight">{t('관련 경기', 'Related Games')}</span>
             </div>
             <div className="divide-y">
               {match.relatedMatches.slice(0, 3).map((related) => (
-                <Link key={related.id} href={`/baseball/${related.id}`} className="flex items-center px-4 py-3 hover:bg-white/[0.045]">
+                <Link key={related.id} href={`/baseball/${related.id}`} className="flex items-center px-4 py-3 hover:bg-gray-800/50">
                   <span className="text-[10px] text-gray-400 w-12">{related.date?.slice(5)}</span>
                   <div className="flex items-center gap-1.5 flex-1">
                     <TeamLogo src={related.awayLogo} team={related.awayTeam} size="sm" />

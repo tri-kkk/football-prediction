@@ -25,6 +25,12 @@ const SUPPORTED_LEAGUES: Record<number, string> = {
 // 허용된 league ID Set (이 외의 경기는 무시)
 const ALLOWED_LEAGUE_IDS = new Set(Object.keys(SUPPORTED_LEAGUES).map(Number))
 
+// 라이브 응답은 절대 캐시되면 안 됨 (스코어가 얼어붙는 원인)
+const NO_STORE_HEADERS = { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     if (!BASEBALL_API_KEY) {
@@ -78,7 +84,7 @@ export async function GET(request: NextRequest) {
     console.log(`✅ 전체 ${allGames.length}경기 중 업데이트 대상 ${liveGames.length}경기`)
 
     if (liveGames.length === 0) {
-      return NextResponse.json({ success: true, count: 0, matches: [] })
+      return NextResponse.json({ success: true, count: 0, matches: [] }, { headers: NO_STORE_HEADERS })
     }
 
     // DB 업데이트 (service role key 사용)
@@ -189,7 +195,7 @@ export async function GET(request: NextRequest) {
       count: matches.length,
       matches,
       timestamp: new Date().toISOString(),
-    })
+    }, { headers: NO_STORE_HEADERS })
 
   } catch (error: any) {
     console.error('❌ 야구 라이브 오류:', error)
