@@ -53,7 +53,8 @@ export default function SignupPage() {
         </div>
 
         {/* 48시간 무료 체험 배너 — 브랜드 에메랄드 톤 */}
-        <div className="mb-5 flex items-center justify-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3">
+        <div className="relative overflow-hidden mb-5 flex items-center justify-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3">
+          <span className="ts-shine" style={{ background: 'linear-gradient(110deg, transparent, rgba(163,255,140,.22), transparent)' }} />
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
           <p className="text-center text-[13px] font-medium text-emerald-300">
             {isKo ? (
@@ -69,7 +70,8 @@ export default function SignupPage() {
         </div>
 
         {/* 인증 카드 */}
-        <div className="rounded-3xl p-6 sm:p-7 overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(30,30,33,.98), rgba(18,18,20,.98))', border: '1px solid rgba(255,255,255,.1)', boxShadow: '0 28px 64px -16px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06)' }}>
+        <div className="relative rounded-3xl p-6 sm:p-7 overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(30,30,33,.98), rgba(18,18,20,.98))', border: '1px solid rgba(163,255,140,.16)', boxShadow: '0 28px 64px -16px rgba(0,0,0,.85), 0 10px 46px -10px rgba(120,240,150,.18), inset 0 1px 0 rgba(255,255,255,.06)' }}>
+          <div className="pointer-events-none absolute inset-x-6 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(163,255,140,.6), transparent)' }} />
           <h2 className="text-center text-lg font-bold text-white">{isKo ? '회원가입' : 'Sign Up'}</h2>
           <p className="mb-6 mt-1 text-center text-sm text-gray-500">
             {isKo ? '소셜 계정으로 간편하게 시작하세요' : 'Get started with your social account'}
