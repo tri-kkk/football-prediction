@@ -662,8 +662,8 @@ function DeleteAccountModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       {/* 배경 */}
       <div 
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -671,17 +671,17 @@ function DeleteAccountModal({
       />
       
       {/* 모달 */}
-      <div className="relative bg-[#1a1a1a] border border-gray-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+      <div className="relative w-full max-w-sm p-5 overflow-hidden" style={{ borderRadius: 18, background: 'linear-gradient(180deg, rgba(28,28,31,.99), rgba(17,17,19,.99))', border: '1px solid rgba(255,255,255,.1)', boxShadow: '0 28px 64px -16px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06)' }}>
         {/* 헤더 */}
-        <div className="text-center mb-6">
-          <div className="text-4xl mb-3">⚠️</div>
-          <h2 className="text-white font-bold text-xl">
+        <div className="text-center mb-4">
+          <div className="text-3xl mb-2.5">⚠️</div>
+          <h2 className="text-white font-bold text-lg">
             {language === 'ko' ? '회원 탈퇴' : 'Delete Account'}
           </h2>
         </div>
         
         {/* 경고 */}
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3.5 mb-4">
           <ul className="text-red-400 text-sm space-y-2">
             <li className="flex items-start gap-2">
               <span>•</span>
@@ -711,7 +711,7 @@ function DeleteAccountModal({
         </div>
         
         {/* 확인 입력 */}
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="text-gray-400 text-sm block mb-2">
             {language === 'ko' 
               ? `탈퇴를 확인하려면 "${requiredText}"를 입력하세요` 
@@ -721,18 +721,18 @@ function DeleteAccountModal({
             type="text"
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
-            className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white text-center focus:outline-none focus:border-red-500"
+            className="w-full px-4 py-2.5 bg-black/40 border border-white/[0.08] rounded-xl text-white text-center focus:outline-none focus:border-red-500"
             placeholder={requiredText}
             disabled={isDeleting}
           />
         </div>
         
         {/* 버튼 */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <button
             onClick={handleDelete}
             disabled={!isConfirmed || isDeleting}
-            className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${
+            className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all ${
               isConfirmed && !isDeleting
                 ? 'bg-red-600 hover:bg-red-500 text-white'
                 : 'bg-gray-700 text-gray-500 cursor-not-allowed'
@@ -745,12 +745,13 @@ function DeleteAccountModal({
           <button
             onClick={onClose}
             disabled={isDeleting}
-            className="w-full py-3 text-gray-400 hover:text-white rounded-xl text-sm transition-colors"
+            className="w-full py-2.5 text-gray-400 hover:text-white rounded-xl text-sm transition-colors"
           >
             {language === 'ko' ? '취소' : 'Cancel'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
