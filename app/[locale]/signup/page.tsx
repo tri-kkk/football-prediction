@@ -25,7 +25,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#0a0b0d] flex items-start justify-center px-4 py-8 sm:py-12">
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#08080a] flex items-start justify-center px-4 py-8 sm:py-12">
       {/* 브랜드 톤 그라디언트 글로우 */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" />
@@ -69,7 +69,7 @@ export default function SignupPage() {
         </div>
 
         {/* 인증 카드 */}
-        <div className="rounded-3xl border border-gray-800 bg-[#15181a] p-6 shadow-2xl sm:p-7">
+        <div className="rounded-3xl p-6 sm:p-7 overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(30,30,33,.98), rgba(18,18,20,.98))', border: '1px solid rgba(255,255,255,.1)', boxShadow: '0 28px 64px -16px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06)' }}>
           <h2 className="text-center text-lg font-bold text-white">{isKo ? '회원가입' : 'Sign Up'}</h2>
           <p className="mb-6 mt-1 text-center text-sm text-gray-500">
             {isKo ? '소셜 계정으로 간편하게 시작하세요' : 'Get started with your social account'}
@@ -113,10 +113,10 @@ export default function SignupPage() {
           </div>
 
           {/* 등급별 혜택 — 무료 / 프리미엄 2칸 카드 (브랜드 톤) */}
-          <div className="mt-5 border-t border-gray-800 pt-5">
+          <div className="mt-5 border-t border-white/[0.08] pt-5">
             <div className="grid grid-cols-2 gap-2.5">
               {/* 무료 */}
-              <div className="rounded-2xl border border-gray-800 bg-[#101315] p-3.5">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3.5">
                 <div className="mb-2 flex items-center gap-1.5">
                   <span className="text-[13px] font-extrabold text-emerald-400">{isKo ? '무료' : 'Free'}</span>
                   <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">
@@ -135,28 +135,28 @@ export default function SignupPage() {
                 </ul>
               </div>
               {/* 프리미엄 */}
-              <div className="rounded-2xl border border-[#A3FF4C]/35 bg-gradient-to-b from-[#A3FF4C]/[0.06] to-transparent p-3.5">
+              <div className="rounded-2xl border border-[#F5C451]/35 bg-gradient-to-b from-[#F5C451]/[0.08] to-transparent p-3.5">
                 <div className="mb-2 flex items-center gap-1.5">
-                  <span className="text-[13px] font-extrabold text-[#A3FF4C]">{isKo ? '프리미엄' : 'Premium'}</span>
-                  <span className="rounded bg-[#A3FF4C] px-1.5 py-0.5 text-[9px] font-bold text-black">
+                  <span className="text-[13px] font-extrabold text-[#F5C451]">{isKo ? '프리미엄' : 'Premium'}</span>
+                  <span className="rounded bg-gradient-to-r from-[#F7D774] to-[#E0A93B] px-1.5 py-0.5 text-[9px] font-bold text-[#241905]">
                     {isKo ? '48h 무료' : '48h free'}
                   </span>
                 </div>
                 <ul className="space-y-1.5">
                   <li className="flex gap-1.5 text-[11.5px] font-medium text-gray-200">
-                    <span className="text-[#A3FF4C]">★</span>
+                    <span className="text-[#F5C451]">★</span>
                     {isKo ? '축구 AI 픽 (전 리그)' : 'Football AI picks'}
                   </li>
                   <li className="flex gap-1.5 text-[11.5px] font-medium text-gray-200">
-                    <span className="text-[#A3FF4C]">★</span>
+                    <span className="text-[#F5C451]">★</span>
                     {isKo ? '야구 조합 분석 무제한' : 'Unlimited baseball combos'}
                   </li>
                   <li className="flex gap-1.5 text-[11.5px] text-gray-300">
-                    <span className="text-[#A3FF4C]">·</span>
+                    <span className="text-[#F5C451]">·</span>
                     {isKo ? 'AI 심층 팀 분석' : 'In-depth AI analysis'}
                   </li>
                   <li className="flex gap-1.5 text-[11.5px] text-gray-300">
-                    <span className="text-[#A3FF4C]">·</span>
+                    <span className="text-[#F5C451]">·</span>
                     {isKo ? '광고 완전 제거' : 'Ad-free'}
                   </li>
                 </ul>
