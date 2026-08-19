@@ -256,3 +256,8 @@ button, a, [role="button"] { touch-action: manipulation; }
   .ts-press, .ts-tab { transition: none !important; }
   .ts-press:active, .ts-tab:active { transform: none !important; }
 }
+
+/* 카드 등장 stagger (3안) — 경기 카드 순차 fade-in */
+@keyframes tsCardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.ts-card-in { animation: tsCardIn .4s cubic-bezier(.2,.8,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .ts-card-in { animation: none !important; } }

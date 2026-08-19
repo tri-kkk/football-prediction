@@ -2891,7 +2891,7 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
 
                               {/* 경기 목록 */}
                               <div className={`divide-y ${darkMode ? 'divide-gray-900' : 'divide-gray-100'}`}>
-                                {leagueMatches.map((match) => {
+                                {leagueMatches.map((match, matchIdx) => {
                                   const currentTrend = trendData[match.id]
                                   const latestTrend = currentTrend?.[currentTrend.length - 1]
                                   const previousTrend = currentTrend?.[currentTrend.length - 2]
@@ -2911,17 +2911,18 @@ const standingsLeagues = availableLeagues.filter(l => !CUP_COMPETITIONS.includes
                                   const isExpanded = expandedMatchId === match.id
 
                                   return (
-                                    <div 
+                                    <div
                                       key={match.id}
                                       id={`match-card-${match.id}`}
-                                      className={`transition-all duration-300 ${
+                                      className={`ts-card-in transition-all duration-300 ${
                                         isExpanded ? 'bg-[#0d1f0d]' : ''
                                       }`}
+                                      style={{ animationDelay: `${Math.min(matchIdx, 8) * 40}ms` }}
                                     >
                                       {/* ━━━ 경기 행 (클릭 가능) ━━━ */}
-                                      <div 
-                                        onClick={() => handleMatchClick(match)}
-                                        className={`cursor-pointer px-3 py-2.5 md:py-3 md:px-4 ${
+                                      <div
+                                        onClick={() => { try { (navigator as any).vibrate?.(5) } catch {}; handleMatchClick(match) }}
+                                        className={`ts-press cursor-pointer px-3 py-2.5 md:py-3 md:px-4 ${
                                           darkMode ? 'hover:bg-[#1a1a1a]' : 'hover:bg-gray-50'
                                         } ${isExpanded ? '!bg-[#0d1f0d]' : ''}`}
                                       >
