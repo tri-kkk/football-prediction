@@ -239,3 +239,20 @@ body {
     max-width: 1600px;
   }
 }
+
+/* ==============================================
+   네이티브 앱 터치 감각 (2안) — 모바일 앱 느낌
+   ============================================== */
+* { -webkit-tap-highlight-color: transparent; }
+html, body { overscroll-behavior-y: none; }
+body { -webkit-overflow-scrolling: touch; }
+button, a, [role="button"] { touch-action: manipulation; }
+/* 눌리는 물성: 버튼/카드에 .ts-press, 하단탭에 .ts-tab */
+.ts-press { transition: transform .09s ease, opacity .09s ease; }
+.ts-press:active { transform: scale(.98); opacity: .94; }
+.ts-tab { transition: transform .1s ease, color .12s ease; }
+.ts-tab:active { transform: scale(.9); }
+@media (prefers-reduced-motion: reduce) {
+  .ts-press, .ts-tab { transition: none !important; }
+  .ts-press:active, .ts-tab:active { transform: none !important; }
+}
