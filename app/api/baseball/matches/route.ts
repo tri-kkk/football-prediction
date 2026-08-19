@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// ⚡ D1: 홈 「오늘의 경기」 병합 목록용 CDN 캐시 (축구 odds-from-db와 동일 60s)
-export const revalidate = 60
-
 // =====================================================
 // Baseball Matches API - 프론트엔드용
 // GET /api/baseball/matches
@@ -43,11 +40,26 @@ function hasInningData(innings: any): boolean {
 }
 function correctBaseballStatus(rawStatus: string | null | undefined, timestamp: any, innings: any): string {
   const status = rawStatus || 'NS'
-  if (!['NS', 'SCHEDULED', 'TBD'].includes(status)) return status
-  if (!hasInningData(innings)) return status // 진짜 미시작 경기
   const t = timestamp ? new Date(timestamp).getTime() : 0
-  const elapsedH = t ? (Date.now() - t) / 3_600_000 : 99
-  return elapsedH >= 4 ? 'FT' : 'LIVE' // 4시간 경과면 종료로 간주, 아니면 라이브
+  const elapsedH = t ? (Date.now() - t) / 3_600_000 : 0
+
+  // 종료/연기/취소/몰수 등 확정 상태는 그대로
+  if (['FT', 'PST', 'CANC', 'ABD', 'SUSP', 'AWD', 'POST'].includes(status)) return status
+
+  const isScheduled = ['NS', 'SCHEDULED', 'TBD'].includes(status)
+
+  // 🩹 라이브(IN%/LIVE 등)인데 시작 후 6시간 넘으면 종료로 간주
+  //   (api-sports/결과 크론이 FT로 못 바꿔 스코어 갱신이 멈춘 경기 대비)
+  if (!isScheduled) {
+    return elapsedH >= 6 ? 'FT' : status
+  }
+
+  // 예정(NS 등): 이닝 데이터 있으면 4h+ 종료 / 아니면 라이브,
+  //   이닝 데이터가 없어도 6h+ 지났으면 종료로 간주(데이터 누락 대비)
+  if (hasInningData(innings)) {
+    return elapsedH >= 4 ? 'FT' : 'LIVE'
+  }
+  return elapsedH >= 6 ? 'FT' : status
 }
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!

@@ -74,7 +74,7 @@ export function extractInningNumber(status?: string | null): string | null {
  * - 일시 중단(INTR): API가 재개를 알려줄 수도, 영구 중단을 알려줄 수도 있어서 계속 폴링 필요
  */
 export const REQUERY_STATUSES: string[] = [
-  'NS',
+  'NS', 'SCHEDULED', 'TBD',
   'LIVE', 'BT', 'HT', 'INTR',
   ...Array.from(LIVE_INNING_STATUSES),
   ...Array.from(HALF_INNING_STATUSES),

@@ -184,6 +184,19 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // 🔒 최종 안전장치: 시작 후 8시간+ 지났는데 아직 라이브/미시작이면 무조건 종료(FT)
+        //   (초반 이닝 정체 등 기존 타임아웃 사각지대 방지 — MLB는 아무리 길어도 8h면 종료)
+        //   INTR(우천 서스펜드 → 익일 재개 가능)은 제외, 안전장치 2가 처리
+        {
+          const startMs2 = match.match_timestamp ? new Date(match.match_timestamp).getTime() : 0
+          const startedAgoH = startMs2 ? (Date.now() - startMs2) / 3_600_000 : 0
+          const stillOpen = isLiveBaseballStatus(newStatus) || ['NS', 'SCHEDULED', 'TBD'].includes(newStatus)
+          if (stillOpen && startedAgoH >= 8) {
+            console.log(`  🔒 최종 강제 종료: 시작 ${startedAgoH.toFixed(1)}h 경과, status=${newStatus} → FT`)
+            newStatus = 'FT'
+          }
+        }
+
         console.log(`  📊 API 응답: status=${newStatus}, score=${homeScore}-${awayScore}, innings=${game.scores.home.innings ? 'O' : 'X'}`)
         
         // 이닝별 스코어 파싱
