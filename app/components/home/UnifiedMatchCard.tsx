@@ -57,7 +57,7 @@ export default function UnifiedMatchCard({ match }: Props) {
   const isBaseball = match.sport === 'baseball'
   const [modalOpen, setModalOpen] = useState(false)
 
-  const cardClass = 'group h-full flex flex-col overflow-hidden rounded-xl border border-transparent transition-all hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10 cursor-pointer'
+  const cardClass = 'ts-card ts-card-hover group h-full flex flex-col overflow-hidden cursor-pointer'
   const cardStyle = { backgroundColor: '#252829' }
 
   const content = (

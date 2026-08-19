@@ -45,7 +45,7 @@ export default function MagazineRow({ locale = 'ko', count = 3 }: { locale?: str
   const title = (p: BlogPost) => (!isKo && p.title ? p.title : p.title_kr || p.title)
 
   return (
-    <section className="rounded-2xl border border-gray-800 bg-gray-900/40 p-4">
+    <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 text-sm font-bold text-white">
           {isKo ? '매치 리포트' : 'Match Reports'}
@@ -67,7 +67,7 @@ export default function MagazineRow({ locale = 'ko', count = 3 }: { locale?: str
             <a
               key={p.id}
               href={`/${locale}/blog/${p.slug}`}
-              className="group overflow-hidden rounded-xl border border-gray-800 bg-gray-900 transition-colors hover:border-gray-700"
+              className="ts-card ts-card-hover group overflow-hidden"
             >
               <div className="aspect-video overflow-hidden bg-gray-800">
                 {p.cover_image && (

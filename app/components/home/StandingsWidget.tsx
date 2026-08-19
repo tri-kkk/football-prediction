@@ -45,7 +45,7 @@ export default function StandingsWidget({ locale = 'ko' }: { locale?: string }) 
   }, [league])
 
   return (
-    <section className="rounded-2xl border border-gray-800 bg-gray-900/40 p-4">
+    <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-bold text-white">{isKo ? '순위표' : 'Standings'}</h3>
         <a href={`/${locale}/football`} className="text-[11px] text-emerald-400 hover:text-emerald-300">

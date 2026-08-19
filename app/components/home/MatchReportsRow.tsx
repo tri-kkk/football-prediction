@@ -81,7 +81,7 @@ export default function MatchReportsRow() {
             <Link
               key={post.id}
               href={`/blog/${post.slug}`}
-              className="group block rounded-xl bg-gray-900/60 border border-gray-800 hover:border-gray-700 overflow-hidden transition-all"
+              className="ts-card ts-card-hover group block overflow-hidden"
             >
               {post.cover_image ? (
                 <div className="relative aspect-[16/9] bg-gray-950 overflow-hidden">

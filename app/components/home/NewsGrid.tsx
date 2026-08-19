@@ -39,7 +39,7 @@ export default function NewsGrid({ locale = 'ko', count = 8 }: { locale?: string
   }, [isKo, count])
 
   return (
-    <section className="rounded-2xl border border-gray-800 bg-gray-900/40 p-4">
+    <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-bold text-white">{isKo ? '종합 뉴스' : 'Sports news'}</h3>
         <a href={`/${locale}/news`} className="text-[11px] text-emerald-400 hover:text-emerald-300">
@@ -65,7 +65,7 @@ export default function NewsGrid({ locale = 'ko', count = 8 }: { locale?: string
               href={a.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col overflow-hidden rounded-xl border border-gray-800 bg-gray-900 transition-colors hover:border-gray-700"
+              className="ts-card ts-card-hover group flex flex-col overflow-hidden"
             >
               <div className="aspect-video overflow-hidden bg-gray-800">
                 {a.imageUrl && (
