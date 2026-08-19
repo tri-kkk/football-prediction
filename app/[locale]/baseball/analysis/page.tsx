@@ -505,13 +505,27 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
         ) : isLocked ? (
           <div className="relative rounded-xl overflow-hidden mt-1"
             style={{ border: '1px solid rgba(245,196,81,0.28)', boxShadow: '0 10px 30px -14px rgba(224,169,59,0.28)' }}>
-            {/* 블러 배경 콘텐츠 */}
-            <div className="blur-md pointer-events-none select-none px-3 py-3" aria-hidden="true">
-              <ConfidenceBar homeProb={50} awayProb={50} language={language} />
-              <div className="flex items-center gap-2 mt-3" style={{ background: 'rgba(6,78,59,0.12)', padding: '8px 12px', borderRadius: '8px' }}>
-                <span className="text-emerald-400 font-bold text-sm">██████</span>
-                <span className="text-[10px] text-gray-500">{language === 'ko' ? '승' : 'Win'}</span>
-                <span className="text-emerald-300 font-black text-sm tabular-nums">●●%</span>
+            {/* 블러 배경 콘텐츠 — 실제 분석처럼 보이는 티저 */}
+            <div className="blur-md pointer-events-none select-none px-3 py-3 space-y-2.5" aria-hidden="true">
+              <ConfidenceBar homeProb={58} awayProb={42} language={language} />
+              <div className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.15)' }}>
+                <span className="text-[11px] text-gray-300">{language === 'ko' ? '추천 픽' : 'AI Pick'}</span>
+                <span className="text-emerald-400 font-bold text-[12px]">{language === 'ko' ? '홈 승 · 언더 8.5' : 'Home · Under 8.5'}</span>
+                <span className="text-emerald-300 font-black text-[13px] tabular-nums">63%</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-lg px-2 py-1.5 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="text-[13px] font-black text-white tabular-nums">4.72</div>
+                  <div className="text-[9px] text-gray-500">{language === 'ko' ? '평균 득점' : 'Avg Runs'}</div>
+                </div>
+                <div className="rounded-lg px-2 py-1.5 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="text-[13px] font-black text-white tabular-nums">3.18</div>
+                  <div className="text-[9px] text-gray-500">{language === 'ko' ? '선발 ERA' : 'SP ERA'}</div>
+                </div>
+                <div className="rounded-lg px-2 py-1.5 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="text-[13px] font-black text-emerald-400">W W L</div>
+                  <div className="text-[9px] text-gray-500">{language === 'ko' ? '최근 폼' : 'Form'}</div>
+                </div>
               </div>
             </div>
             {/* 잠금 오버레이 — 프리미엄 골드 */}
