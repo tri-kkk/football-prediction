@@ -250,14 +250,14 @@ export default function TodayPickRow({
     return (
       <div
         key={view.key}
-        className="flex flex-col gap-2.5 rounded-2xl border border-gray-800 bg-gray-900 p-3"
+        className="ts-card ts-card-gold ts-card-hover flex flex-col gap-2.5 p-3"
       >
         <div className="flex items-center justify-between">
           <span className="rounded-md bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
             {sportLabel}
           </span>
           {view.grade && (
-            <span className="rounded-md bg-[#A3FF4C]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#A3FF4C]">
+            <span className="rounded-md bg-[#F5C451]/15 border border-[#F5C451]/30 px-1.5 py-0.5 text-[10px] font-extrabold text-[#F5C451]">
               {view.grade}
             </span>
           )}
@@ -279,7 +279,7 @@ export default function TodayPickRow({
         </div>
 
         {/* 추천 + 신뢰도 */}
-        <div className="rounded-xl border border-gray-800 bg-gray-950/40 p-2">
+        <div className="rounded-xl border border-white/[0.06] bg-black/20 p-2">
           <div className="flex items-baseline justify-between">
             <span className="text-[10px] text-gray-500">{isKo ? '추천' : 'Pick'}</span>
             {view.oddsText && <span className="text-[11px] text-gray-400">{view.oddsText}</span>}
