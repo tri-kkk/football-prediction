@@ -216,8 +216,8 @@ export default function LeagueChips({ activeLeague, matches }: Props) {
       className={[
         'shrink-0 inline-flex items-center gap-1.5 pl-1 pr-3 py-1 rounded-full text-xs font-bold transition-colors border',
         !activeLeague
-          ? 'bg-gray-800 text-white border-emerald-500/50'
-          : 'bg-gray-900/60 text-gray-400 hover:bg-gray-800 border-gray-800 hover:text-gray-200',
+          ? 'bg-white/10 text-white border-white/[0.16]'
+          : 'bg-white/[0.03] text-gray-400 hover:bg-white/[0.06] border-white/[0.08] hover:text-gray-200',
       ].join(' ')}
     >
       <span className="w-5 h-5 rounded-md bg-gray-700 flex items-center justify-center shrink-0 text-[11px]">
@@ -237,8 +237,8 @@ export default function LeagueChips({ activeLeague, matches }: Props) {
         className={[
           'shrink-0 inline-flex items-center gap-1.5 pl-1 pr-3 py-1 rounded-full text-xs font-medium transition-colors border',
           active
-            ? 'bg-gray-800 text-white border-emerald-500/50'
-            : 'bg-gray-900/60 text-gray-400 hover:bg-gray-800 border-gray-800 hover:text-gray-200',
+            ? 'bg-white/10 text-white border-white/[0.16]'
+            : 'bg-white/[0.03] text-gray-400 hover:bg-white/[0.06] border-white/[0.08] hover:text-gray-200',
         ].join(' ')}
       >
         {l.logo ? (

@@ -21,7 +21,7 @@ export default function DateTabs({ value, onChange, counts }: Props) {
   const locale = useLocale()
   const isEn = locale === 'en'
   return (
-    <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-gray-900/60 rounded-xl border border-gray-800 backdrop-blur-sm w-full sm:w-fit">
+    <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-white/[0.03] rounded-xl border border-white/[0.08] backdrop-blur-sm w-full sm:w-fit">
       {TABS.map((t) => {
         const active = value === t.key
         const c = counts?.[t.key]
@@ -34,7 +34,7 @@ export default function DateTabs({ value, onChange, counts }: Props) {
               'relative px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center flex-1 sm:flex-none',
               active
                 ? 'bg-white/10 text-white'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50',
+                : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.06]',
             ].join(' ')}
           >
             <span className="flex items-center gap-1.5">
@@ -43,7 +43,7 @@ export default function DateTabs({ value, onChange, counts }: Props) {
                 <span
                   className={[
                     'text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-bold',
-                    active ? 'bg-white/20 text-white' : 'bg-gray-800 text-gray-400',
+                    active ? 'bg-white/20 text-white' : 'bg-white/[0.08] text-gray-400',
                   ].join(' ')}
                 >
                   {c}

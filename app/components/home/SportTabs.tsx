@@ -46,7 +46,7 @@ export default function SportTabs({ value, onChange, counts }: SportTabsProps) {
   ]
 
   return (
-    <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-gray-900/60 rounded-xl backdrop-blur-sm border border-gray-800 w-full sm:w-fit">
+    <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-white/[0.03] rounded-xl backdrop-blur-sm border border-white/[0.08] w-full sm:w-fit">
       {tabs.map((t) => {
         const active = value === t.key
         const count = counts?.[t.key]
@@ -59,7 +59,7 @@ export default function SportTabs({ value, onChange, counts }: SportTabsProps) {
               'relative px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap flex items-center justify-center flex-1 sm:flex-none',
               active
                 ? 'bg-white/10 text-white'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50',
+                : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.06]',
             ].join(' ')}
           >
             <span className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
@@ -69,7 +69,7 @@ export default function SportTabs({ value, onChange, counts }: SportTabsProps) {
                 <span
                   className={[
                     'ml-1 px-1.5 py-0.5 text-[10px] rounded-full font-bold tabular-nums',
-                    active ? 'bg-white/20 text-white' : 'bg-gray-800 text-gray-400',
+                    active ? 'bg-white/20 text-white' : 'bg-white/[0.08] text-gray-400',
                   ].join(' ')}
                 >
                   {count}
