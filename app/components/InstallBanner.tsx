@@ -20,49 +20,43 @@ export default function InstallBanner() {
 
   const texts = {
     ko: {
-      titleAndroid: '트렌드사커 앱 출시! 🎉',
-      subtitleAndroid: '더 빠르고 편리하게 앱으로 이용하세요',
-      titlePwa: '앱으로 더 빠르게! ⚡',
-      subtitlePwa: '홈 화면에서 바로 경기 분석 확인',
+      titleAndroid: '트렌드사커 앱',
+      subtitleAndroid: '더 빠르고 편하게, 앱으로 만나보세요',
+      titlePwa: '앱처럼 빠르게',
+      subtitlePwa: '홈 화면에서 바로 경기 분석',
       tag1: '즉시 접속',
       tag2: '알림 지원',
-      tag3: '용량 0MB',
-      tagPlayStore: '⭐ 구글 플레이',
-      buttonAndroid: '구글 플레이에서 다운로드',
+      tag3: '가벼운 용량',
+      buttonAndroid: 'Google Play에서 다운로드',
       buttonIOS: '설치 방법 보기',
-      buttonPwaAndroid: '홈 화면에 추가'
+      buttonPwaAndroid: '홈 화면에 추가',
     },
     en: {
-      titleAndroid: 'TrendSoccer App Released! 🎉',
-      subtitleAndroid: 'Faster and easier with our official app',
-      titlePwa: 'Faster with App! ⚡',
-      subtitlePwa: 'Check match analysis from home screen',
-      tag1: 'Instant Access',
+      titleAndroid: 'TrendSoccer App',
+      subtitleAndroid: 'Faster and smoother with our official app',
+      titlePwa: 'Fast like an app',
+      subtitlePwa: 'Match analysis right from your home screen',
+      tag1: 'Instant access',
       tag2: 'Notifications',
-      tag3: '0MB Storage',
-      tagPlayStore: '⭐ Google Play',
-      buttonAndroid: 'Download on Google Play',
-      buttonIOS: 'See How to Install',
-      buttonPwaAndroid: 'Add to Home Screen'
-    }
+      tag3: 'Lightweight',
+      buttonAndroid: 'Get it on Google Play',
+      buttonIOS: 'How to install',
+      buttonPwaAndroid: 'Add to Home Screen',
+    },
   }
 
   const t = texts[language] || texts.ko
 
   useEffect(() => {
     if (isInstalled) return
-    // 🆕 Android는 canInstall과 무관하게 Play Store 유도 배너 표시 (구글 플레이 앱 출시)
-    // iOS/기타는 기존 PWA canInstall 기반
     if (!isAndroid && !canInstall) return
 
-    // 이전에 닫았는지 체크 (7일 동안)
     const dismissedTime = localStorage.getItem('installBannerDismissed')
     if (dismissedTime) {
       const elapsed = Date.now() - parseInt(dismissedTime)
       if (elapsed < 7 * 24 * 60 * 60 * 1000) return
     }
 
-    // 3초 후 배너 표시
     const timer = setTimeout(() => setShowBanner(true), 3000)
     return () => clearTimeout(timer)
   }, [canInstall, isInstalled, isAndroid])
@@ -76,123 +70,147 @@ export default function InstallBanner() {
   }
 
   const handleInstall = async () => {
-    // 🆕 Android면 Play Store로 이동 (앱 출시 후)
     if (isAndroid) {
       window.open('https://play.google.com/store/apps/details?id=com.trendsoccer.app', '_blank')
       handleClose()
       return
     }
-    // iOS / 기타는 기존 PWA install
     const result = await triggerInstall()
     if (result || isIOS) handleClose()
   }
 
   if (!showBanner || isInstalled) return null
 
+  // 라인 아이콘 (이모지 대신)
+  const chipIcons: Record<string, React.ReactNode> = {
+    bolt: <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />,
+    bell: <><path d="M6 9a6 6 0 1 1 12 0c0 5 2.5 6 2.5 6h-17S6 14 6 9Z" /><path d="M10.5 21a2 2 0 0 0 3 0" /></>,
+    feather: <><path d="M20 4 9 15" /><path d="M15 4h5v5" /><path d="M4 20c3-6 7-9 11-11" /></>,
+  }
+  const chips = [
+    { key: 'bolt', text: t.tag1 },
+    { key: 'bell', text: t.tag2 },
+    { key: 'feather', text: t.tag3 },
+  ]
+
   return (
     <>
       {/* 배경 오버레이 */}
-      <div 
-        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] md:hidden transition-opacity duration-300 ${
+      <div
+        className={`fixed inset-0 bg-black/50 backdrop-blur-[3px] z-[60] md:hidden transition-opacity duration-300 ${
           isClosing ? 'opacity-0' : 'opacity-100'
         }`}
         onClick={handleClose}
       />
-      
+
       {/* 배너 */}
-      <div 
+      <div
         className={`fixed bottom-[72px] left-0 right-0 z-[70] md:hidden px-4 transition-all duration-300 ${
           isClosing ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'
         }`}
-        style={{ 
-          animation: !isClosing ? 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)' : undefined,
-        }}
+        style={{ animation: !isClosing ? 'ibSlideUp 0.42s cubic-bezier(0.16, 1, 0.3, 1)' : undefined }}
       >
         <style jsx>{`
-          @keyframes slideUp {
-            from {
-              transform: translateY(100%);
-              opacity: 0;
-            }
-            to {
-              transform: translateY(0);
-              opacity: 1;
-            }
+          @keyframes ibSlideUp {
+            from { transform: translateY(110%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
           }
         `}</style>
-        
-        <div className="relative bg-gradient-to-b from-[#1e293b] to-[#0f172a] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-          
-          {/* 상단 글로우 라인 */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-px bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent" />
-          
-          {/* 배경 장식 */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          
-          {/* 닫기 버튼 */}
+
+        <div
+          className="relative rounded-[22px] border border-white/10 overflow-hidden"
+          style={{
+            background: 'radial-gradient(120% 90% at 82% 0%, #16233a 0%, #10151f 55%, #0c0f16 100%)',
+            boxShadow: '0 20px 50px rgba(0,0,0,.55)',
+          }}
+        >
+          {/* 상단 브랜드 하이라이트 라인 */}
+          <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-[#62F4FF]/60 to-transparent" />
+          {/* 코너 글로우 */}
+          <div className="absolute -top-16 -right-10 w-44 h-44 rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(120,230,140,.26), transparent 68%)', filter: 'blur(6px)' }} />
+
+          {/* 닫기 */}
           <button
             onClick={handleClose}
-            className="absolute top-3 right-3 p-2 text-slate-500 hover:text-slate-300 hover:bg-white/5 rounded-xl transition-all z-10"
+            aria-label="닫기"
+            className="absolute top-3 right-3 p-1.5 text-slate-500 hover:text-slate-200 hover:bg-white/5 rounded-lg transition-all z-10"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg className="w-4.5 h-4.5" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>
 
           <div className="relative p-5">
             {/* 헤더 */}
-            <div className="flex items-start gap-4 mb-4">
-              {/* 아이콘 */}
-              <div className="relative flex-shrink-0">
-                <div className="absolute inset-0 bg-emerald-500/30 rounded-xl blur-lg" />
-                <div className="relative w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
+            <div className="flex items-center gap-3.5 mb-4 pr-6">
+              {/* 앱 아이콘 타일 */}
+              <div
+                className="relative flex-shrink-0 w-12 h-12 rounded-[14px] grid place-items-center"
+                style={{ background: 'linear-gradient(160deg, #16281f, #101a15)', border: '1px solid rgba(120,230,140,.3)', boxShadow: '0 6px 16px rgba(0,0,0,.4)' }}
+              >
+                <img src="/logo.svg" alt="TrendSoccer" className="h-6 w-auto" />
               </div>
-              
+
               {/* 텍스트 */}
-              <div className="flex-1 pr-8">
-                <h3 className="font-bold text-white text-[17px] leading-tight mb-1">
-                  {isAndroid ? t.titleAndroid : t.titlePwa}
-                </h3>
-                <p className="text-slate-400 text-sm leading-snug">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-white text-[16px] leading-tight tracking-tight truncate">
+                    {isAndroid ? t.titleAndroid : t.titlePwa}
+                  </h3>
+                  <span className="flex-shrink-0 text-[9px] font-extrabold tracking-wide px-1.5 py-0.5 rounded-full text-[#7de38a] bg-[#34d399]/[0.14] border border-[#34d399]/40">
+                    NEW
+                  </span>
+                </div>
+                <p className="text-slate-400 text-[12.5px] leading-snug mt-1 truncate">
                   {isAndroid ? t.subtitleAndroid : t.subtitlePwa}
                 </p>
               </div>
             </div>
 
-            {/* 혜택 태그 */}
+            {/* 혜택 칩 (라인 아이콘) */}
             <div className="flex flex-wrap gap-2 mb-4">
-              {[
-                { icon: '⚡', text: t.tag1 },
-                { icon: '📱', text: t.tag2 },
-                { icon: '💾', text: t.tag3 },
-              ].map((tag, i) => (
-                <span 
-                  key={i}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.05] border border-white/[0.08] rounded-lg text-xs text-slate-300"
+              {chips.map((c) => (
+                <span
+                  key={c.key}
+                  className="inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold text-slate-300 bg-white/[0.04] border border-white/[0.08]"
                 >
-                  <span>{tag.icon}</span>
-                  <span>{tag.text}</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7de38a" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+                    {chipIcons[c.key]}
+                  </svg>
+                  {c.text}
                 </span>
               ))}
             </div>
 
-            {/* 설치 버튼 */}
-            <button
-              onClick={handleInstall}
-              className="relative w-full py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold rounded-xl transition-all duration-300 active:scale-[0.98] shadow-lg shadow-emerald-500/20 overflow-hidden group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-              <span className="relative flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            {/* CTA */}
+            {isAndroid ? (
+              <button
+                onClick={handleInstall}
+                className="relative w-full py-3.5 rounded-[14px] font-extrabold text-[14.5px] text-[#082018] transition-all duration-200 active:scale-[0.985] overflow-hidden group flex items-center justify-center gap-2.5"
+                style={{ background: 'linear-gradient(120deg,#7DE38A,#3EC5E8)', boxShadow: '0 10px 24px rgba(62,197,232,.28)' }}
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 -translate-x-full group-active:translate-x-full transition-transform duration-700" />
+                {/* Google Play 삼각형 */}
+                <svg width="17" height="18" viewBox="0 0 24 26" className="relative">
+                  <path d="M2 2.2 13.4 13 2 23.8c-.6-.3-1-.9-1-1.7V3.9c0-.8.4-1.4 1-1.7Z" fill="#082018" fillOpacity=".92" />
+                  <path d="m16.5 9.9 3.9 2.2c1 .6 1 1.9 0 2.5l-3.9 2.2L13.7 13l2.8-3.1Z" fill="#082018" fillOpacity=".62" />
+                  <path d="M2 2.2c.2-.1.5-.2.8-.2.3 0 .6.1.9.3L16.5 9.9 13.7 13 2 2.2Z" fill="#082018" />
+                  <path d="M13.7 13l2.8 3.1L4.6 23.7c-.6.4-1.3.4-1.8.1L13.7 13Z" fill="#082018" fillOpacity=".8" />
                 </svg>
-                {isAndroid ? t.buttonAndroid : isIOS ? t.buttonIOS : t.buttonPwaAndroid}
-              </span>
-            </button>
+                <span className="relative">{t.buttonAndroid}</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleInstall}
+                className="relative w-full py-3.5 rounded-[14px] font-extrabold text-[14.5px] text-[#082018] transition-all duration-200 active:scale-[0.985] flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(120deg,#7DE38A,#3EC5E8)', boxShadow: '0 10px 24px rgba(62,197,232,.28)' }}
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" />
+                </svg>
+                {isIOS ? t.buttonIOS : t.buttonPwaAndroid}
+              </button>
+            )}
           </div>
         </div>
       </div>
