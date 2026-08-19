@@ -260,21 +260,38 @@ export default function TodayPickCard({
         </div>
       </div>
 
-      {/* 비프리미엄 CTA 오버레이 */}
+      {/* 비프리미엄 CTA 오버레이 — 프리미엄 골드 연출 (고급화) */}
       {!isPremium && (
         <a
           href={`/${locale}/${isLoggedIn ? 'premium/pricing' : 'signup'}`}
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl bg-black/60 text-center backdrop-blur-[1px]"
+          className="ts-press absolute inset-0 z-10 flex flex-col items-center justify-center gap-2.5 overflow-hidden rounded-2xl px-5 text-center"
+          style={{ background: 'radial-gradient(120% 90% at 50% 12%, rgba(30,24,10,.5), rgba(0,0,0,.82) 70%)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-200" aria-hidden="true">
-            <rect x="3" y="11" width="18" height="11" rx="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          <span className="px-4 text-sm font-semibold text-white">
-            {isLoggedIn ? (isKo ? '프리미엄으로 추천 경기 확인' : 'Unlock with Premium') : (isKo ? '회원가입하고 추천 경기 확인' : 'Sign up to see the PICK')}
+          {/* 골드 헤어라인 */}
+          <span className="absolute left-6 right-6 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(245,196,81,.7),transparent)' }} />
+          {/* 크라운 타일 */}
+          <span className="grid place-items-center" style={{ width: 46, height: 46, borderRadius: 13, background: 'linear-gradient(150deg,#3a2c0f,#241905)', border: '1px solid rgba(245,196,81,.4)', boxShadow: '0 8px 22px rgba(245,196,81,.18)' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5C451" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 8l4 3 5-6 5 6 4-3-1.5 11H4.5z" /><path d="M4.5 20h15" />
+            </svg>
           </span>
-          <span className="rounded-full bg-[#A3FF4C] px-4 py-1.5 text-xs font-bold text-black">
-            {isLoggedIn ? (isKo ? '구독하기' : 'Subscribe') : (isKo ? '무료 가입' : 'Sign up')}
+          <span className="text-[15px] font-extrabold text-white">
+            {isKo ? '프리미엄 ' : 'Unlock Premium '}
+            <span style={{ background: 'linear-gradient(100deg,#F7D774,#E0A93B)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>PICK</span>
+            {isKo ? ' 잠금 해제' : ''}
+          </span>
+          <span className="text-[11.5px]" style={{ color: '#c9b789' }}>
+            {conf != null && (<>{isKo ? '신뢰도 ' : 'Confidence '}<b style={{ color: '#F5C451' }}>{conf}%</b>{' · '}</>)}
+            {isKo ? <>프리미엄 <b style={{ color: '#F5C451' }}>24시간 선공개</b></> : <>Premium sees it <b style={{ color: '#F5C451' }}>24h early</b></>}
+          </span>
+          <span className="relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl px-5 py-2.5 text-[13px] font-extrabold" style={{ color: '#241905', background: 'linear-gradient(135deg,#F7D774,#E0A93B)', boxShadow: '0 12px 28px rgba(224,169,59,.34)' }}>
+            <span className="ts-shine" />
+            <span className="relative">{isLoggedIn ? (isKo ? '프리미엄으로 확인' : 'Get Premium') : (isKo ? '무료 가입하고 확인' : 'Sign up free')} →</span>
+          </span>
+          <span className="text-[10.5px]" style={{ color: '#8f8676' }}>
+            {accuracy != null
+              ? (<>{isKo ? '최근 적중률 ' : 'Recent hit rate '}<b style={{ color: '#e9d9a8' }}>{accuracy}%</b></>)
+              : (isKo ? '프리미엄 전용 예측' : 'Premium-only pick')}
           </span>
         </a>
       )}

@@ -276,3 +276,8 @@ button, a, [role="button"] { touch-action: manipulation; }
   .tc-sheet-anim { animation: tsSheetUp .28s cubic-bezier(.22,1,.36,1); }
 }
 @media (prefers-reduced-motion: reduce) { .tc-sheet-anim { animation: none !important; } }
+
+/* 프리미엄 샤인 (고급화) — CTA 위 하이라이트 스윕 */
+@keyframes tsShine { 0% { transform: translateX(-120%); } 60%, 100% { transform: translateX(120%); } }
+.ts-shine { position:absolute; inset:0; background:linear-gradient(110deg,transparent,rgba(255,255,255,.5),transparent); transform:translateX(-120%); animation: tsShine 2.6s infinite; pointer-events:none; }
+@media (prefers-reduced-motion: reduce) { .ts-shine { animation: none !important; } }

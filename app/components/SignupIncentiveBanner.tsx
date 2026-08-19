@@ -57,13 +57,13 @@ export default function SignupIncentiveBanner() {
 
   return (
     <div
-      className="hidden md:block relative overflow-hidden border-b border-green-500/20"
-      style={{ background: 'linear-gradient(90deg, #0d1f15 0%, #11301f 50%, #0d1f15 100%)' }}
+      className="block relative overflow-hidden border-b"
+      style={{ background: 'linear-gradient(90deg, #171206 0%, #241b09 50%, #171206 100%)', borderColor: 'rgba(245,196,81,.22)' }}
     >
-      {/* 좌측 강조 라인 */}
+      {/* 좌측 강조 라인 (골드) */}
       <div
         className="absolute left-0 top-0 bottom-0 w-[2px] md:w-[3px]"
-        style={{ background: 'linear-gradient(180deg, #6dff5c 0%, #36e07a 100%)' }}
+        style={{ background: 'linear-gradient(180deg, #F7D774 0%, #E0A93B 100%)' }}
       />
       <div className="max-w-7xl mx-auto pl-3 pr-2 md:px-6 py-2 md:py-3 flex items-center justify-between gap-1.5 md:gap-3">
         {/* 메시지 영역 */}
@@ -78,7 +78,7 @@ export default function SignupIncentiveBanner() {
               {messageDesktop}
             </span>
             {/* 데스크톱 전용 부가 설명 */}
-            <span className="hidden md:inline text-xs text-green-300/80 whitespace-nowrap">
+            <span className="hidden md:inline text-xs whitespace-nowrap" style={{ color: 'rgba(230,208,150,.85)' }}>
               {language === 'ko'
                 ? '심층 리포트 · 광고 감소 · 30초 가입'
                 : 'In-depth reports · fewer ads · 30s signup'}
@@ -89,13 +89,17 @@ export default function SignupIncentiveBanner() {
         {/* 가입 버튼 */}
         <Link
           href="/signup"
-          className="flex-shrink-0 inline-flex items-center justify-center h-7 md:h-8 px-3.5 md:px-5 text-xs md:text-sm font-bold text-black rounded-md whitespace-nowrap transition-all active:scale-95 hover:brightness-110"
+          className="ts-press relative overflow-hidden flex-shrink-0 inline-flex items-center justify-center gap-1.5 h-7 md:h-8 px-3.5 md:px-5 text-xs md:text-sm font-extrabold rounded-lg whitespace-nowrap transition-all"
           style={{
-            background: 'linear-gradient(90deg, #6dff5c 0%, #36e07a 100%)',
+            color: '#241905',
+            background: 'linear-gradient(135deg, #F7D774 0%, #E0A93B 100%)',
+            boxShadow: '0 6px 16px rgba(224,169,59,.32)',
           }}
         >
-          <span className="md:hidden">{ctaMobile}</span>
-          <span className="hidden md:inline">{ctaDesktop}</span>
+          <span className="ts-shine" />
+          <span className="relative w-2.5 h-2.5 rotate-45 rounded-[2px]" style={{ background: 'linear-gradient(135deg,#fff2cf,#E0A93B)' }} />
+          <span className="relative md:hidden">{ctaMobile}</span>
+          <span className="relative hidden md:inline">{ctaDesktop}</span>
         </Link>
 
         {/* 닫기 버튼 (터치 영역 32x32 보장) */}

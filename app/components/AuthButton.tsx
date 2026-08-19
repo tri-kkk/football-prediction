@@ -77,13 +77,16 @@ export default function AuthButton() {
           {!isPremium && (
             <Link
               href="/premium/pricing"
-              className="hidden md:flex items-center gap-1 px-3.5 py-2 rounded-lg font-bold text-xs transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+              className="ts-press relative overflow-hidden hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-extrabold text-xs transition-all whitespace-nowrap"
               style={{
-                background: 'linear-gradient(90deg, #6dff5c 0%, #36e07a 100%)',
-                color: '#0a0a0a',
+                background: 'linear-gradient(135deg, #F7D774 0%, #E0A93B 100%)',
+                color: '#241905',
+                boxShadow: '0 6px 16px rgba(224,169,59,.3)',
               }}
             >
-              {language === 'ko' ? '프리미엄 구독' : 'Go Premium'}
+              <span className="ts-shine" />
+              <span className="relative w-2.5 h-2.5 rotate-45 rounded-[2px]" style={{ background: 'linear-gradient(135deg,#fff2cf,#E0A93B)' }} />
+              <span className="relative">{language === 'ko' ? '프리미엄 구독' : 'Go Premium'}</span>
             </Link>
           )}
 
