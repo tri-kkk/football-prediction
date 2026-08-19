@@ -215,10 +215,10 @@ export default function NavMenu() {
   return (
     <>
       <header className="md:hidden sticky top-0 z-50 backdrop-blur-md border-b border-gray-800" style={{ backgroundColor: 'rgba(10, 10, 10, 0.92)' }}>
-        <div className="flex items-center justify-between px-4 h-12">
+        <div className="flex items-center justify-between px-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 15px)', paddingBottom: 12 }}>
           <div className="flex items-center gap-0.5">
             <Link href="/" className="flex items-center" aria-label="TrendSoccer">
-              <img src="/logo.svg" alt="TrendSoccer" className="h-7 w-auto" />
+              <img src="/logo.svg" alt="TrendSoccer" className="h-8 w-auto" />
             </Link>
             <BrandSwitch current="soccer" />
           </div>
