@@ -114,7 +114,7 @@ function HomeInner() {
   const isEn = locale === 'en'
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
 
   const urlSport = searchParams?.get('sport') as SportFilter | null
@@ -251,10 +251,10 @@ function HomeInner() {
   return (
     <main className="home-container mx-auto px-3 sm:px-5 pt-3 pb-24 sm:pb-8 space-y-4">
       {/* 최상단 웹 홈 배너 — 관리자 광고 관리(slot=web_home_top)에서 관리 */}
-      <HomeTopBanner isPremium={isPremium} isEn={isEn} />
+      {status !== 'loading' && <HomeTopBanner isPremium={isPremium} isEn={isEn} />}
 
       {/* 🏁 해외축구 개막 CTA 히어로 — 비프리미엄에게만 (가입→48h 체험 깔때기, 단계 자동 전환) */}
-      {!isPremium && <SeasonKickoffHero locale={locale} />}
+      {status !== 'loading' && !isPremium && <SeasonKickoffHero locale={locale} />}
 
       {/* ①  오늘의 추천 경기 — 3분할 카드 행 */}
       <TodayPickRow locale={locale} isPremium={isPremium} />

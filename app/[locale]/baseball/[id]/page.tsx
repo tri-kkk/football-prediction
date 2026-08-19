@@ -1265,11 +1265,10 @@ export default function BaseballDetailPage() {
 
             {/* Claude AI 투수 매치업 분석 */}
             {(pitcherAnalysisLoading || pitcherAnalysis) && (
-              <div className="mx-4 mb-4 rounded-2xl overflow-hidden"
-                style={{ background: 'linear-gradient(145deg, #0f172a, #131c2e)', border: '1px solid #334155' }}>
+              <div className="mx-4 mb-4 ts-card overflow-hidden">
                 {/* 헤더 */}
                 <div className="px-4 py-2.5 flex items-center justify-between"
-                  style={{ background: 'linear-gradient(90deg, #1e3a5f, #1a2744)', borderBottom: '1px solid #334155' }}>
+                  style={{ background: 'rgba(255,255,255,.03)', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
                       style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
@@ -1461,10 +1460,9 @@ export default function BaseballDetailPage() {
 
               {/* Claude AI 투수 매치업 분석 */}
               {(pitcherAnalysisLoading || pitcherAnalysis) && (
-                <div className="mx-4 mb-4 rounded-2xl overflow-hidden"
-                  style={{ background: 'linear-gradient(145deg, #0f172a, #131c2e)', border: '1px solid #334155' }}>
+                <div className="mx-4 mb-4 ts-card overflow-hidden">
                   <div className="px-4 py-2.5 flex items-center justify-between"
-                    style={{ background: 'linear-gradient(90deg, #1e3a5f, #1a2744)', borderBottom: '1px solid #334155' }}>
+                    style={{ background: 'rgba(255,255,255,.03)', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
                         style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>✦</div>
@@ -1528,7 +1526,7 @@ export default function BaseballDetailPage() {
                 <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, #2563eb, #7c3aed, #10b981)' }} />
 
                 {/* 헤더 */}
-                <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: '1px solid #18233a' }}>
+                <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,.04)' }}>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
                       style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
@@ -1869,7 +1867,7 @@ export default function BaseballDetailPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-2xl p-4 text-center" style={{
                   background: isFinished && match.away.score !== null && match.home.score !== null
-                    ? match.away.score > match.home.score ? '#ef444415' : '#0f172a'
+                    ? match.away.score > match.home.score ? '#ef444415' : 'rgba(255,255,255,.03)'
                     : '#ef444410',
                   border: `1px solid ${isFinished && match.away.score !== null && match.home.score !== null
                     ? match.away.score > match.home.score ? '#ef444450' : 'rgba(255,255,255,.08)'
@@ -1880,18 +1878,18 @@ export default function BaseballDetailPage() {
                     {isFinished && match.away.score !== null && match.home.score !== null && (
                       match.away.score > match.home.score
                         ? <span className="text-emerald-400 text-xs">✓</span>
-                        : <span style={{ color: '#334155' }}>✗</span>
+                        : <span style={{ color: 'rgba(255,255,255,.08)' }}>✗</span>
                     )}
                   </p>
                   <p className="text-3xl font-black tabular-nums" style={{
                     color: isFinished && match.away.score !== null && match.home.score !== null
-                      ? match.away.score > match.home.score ? '#f87171' : '#334155'
+                      ? match.away.score > match.home.score ? '#f87171' : 'rgba(255,255,255,.08)'
                       : '#f87171'
                   }}>{match.odds.awayWinOdds}</p>
                 </div>
                 <div className="rounded-2xl p-4 text-center" style={{
                   background: isFinished && match.away.score !== null && match.home.score !== null
-                    ? match.home.score > match.away.score ? '#3b82f615' : '#0f172a'
+                    ? match.home.score > match.away.score ? '#3b82f615' : 'rgba(255,255,255,.03)'
                     : '#3b82f610',
                   border: `1px solid ${isFinished && match.away.score !== null && match.home.score !== null
                     ? match.home.score > match.away.score ? '#3b82f650' : 'rgba(255,255,255,.08)'
@@ -1902,12 +1900,12 @@ export default function BaseballDetailPage() {
                     {isFinished && match.away.score !== null && match.home.score !== null && (
                       match.home.score > match.away.score
                         ? <span className="text-emerald-400 text-xs">✓</span>
-                        : <span style={{ color: '#334155' }}>✗</span>
+                        : <span style={{ color: 'rgba(255,255,255,.08)' }}>✗</span>
                     )}
                   </p>
                   <p className="text-3xl font-black tabular-nums" style={{
                     color: isFinished && match.away.score !== null && match.home.score !== null
-                      ? match.home.score > match.away.score ? '#60a5fa' : '#334155'
+                      ? match.home.score > match.away.score ? '#60a5fa' : 'rgba(255,255,255,.08)'
                       : '#60a5fa'
                   }}>{match.odds.homeWinOdds}</p>
                 </div>
@@ -1985,7 +1983,7 @@ export default function BaseballDetailPage() {
                               <div className="text-center">
                                 <span
                                   className="text-sm font-black tabular-nums"
-                                  style={{ color: overHit ? '#34d399' : isFinished ? '#334155' : '#f87171' }}
+                                  style={{ color: overHit ? '#34d399' : isFinished ? 'rgba(255,255,255,.08)' : '#f87171' }}
                                 >
                                   {l.over}
                                 </span>
@@ -1998,7 +1996,7 @@ export default function BaseballDetailPage() {
                               <div className="text-right">
                                 <span
                                   className="text-sm font-black tabular-nums"
-                                  style={{ color: underHit ? '#34d399' : isFinished ? '#334155' : '#60a5fa' }}
+                                  style={{ color: underHit ? '#34d399' : isFinished ? 'rgba(255,255,255,.08)' : '#60a5fa' }}
                                 >
                                   {l.under}
                                 </span>

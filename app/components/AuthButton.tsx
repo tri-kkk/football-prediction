@@ -15,15 +15,18 @@ export default function AuthButton() {
   const [showModal, setShowModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [coach, setCoach] = useState<{ active: boolean; expiresAt: string | null } | null>(null)
+  const [coachLoaded, setCoachLoaded] = useState(false) // 코치 조회 완료 여부(배지 플래시 방지)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // 코치 플랜 보유 여부(두 등급 배지·모달용). 코치 앱과 동일한 /api/coach/me 사용.
   useEffect(() => {
-    if (status !== 'authenticated') { setCoach(null); return }
+    if (status === 'loading') return
+    if (status !== 'authenticated') { setCoach(null); setCoachLoaded(true); return }
     fetch('/api/coach/me')
       .then((r) => r.json())
       .then((d) => setCoach(d?.coach ?? null))
       .catch(() => setCoach(null))
+      .finally(() => setCoachLoaded(true))
   }, [status])
 
   // 외부 클릭 시 드롭다운 닫기
@@ -54,8 +57,8 @@ export default function AuthButton() {
     await signOut({ callbackUrl: '/' })
   }
 
-  // 로딩 중
-  if (status === 'loading') {
+  // 로딩 중 — 코치 조회 완료 전까지 스켈레톤 유지(프리미엄→프리미엄+코치 플래시 방지)
+  if (status === 'loading' || (status === 'authenticated' && !coachLoaded)) {
     return (
       <div className="w-16 md:w-20 h-7 md:h-8 bg-gray-700 rounded-lg animate-pulse" />
     )
