@@ -105,14 +105,14 @@ export default function LoginPage() {
 
   if (status === 'loading') {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#08080a]">
+        <span className="ts-spinner" />
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#0a0b0d] flex items-start justify-center px-4 py-8 sm:py-12">
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#08080a] flex items-start justify-center px-4 py-8 sm:py-12">
       {/* 브랜드 톤 그라디언트 글로우 */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" />
@@ -197,7 +197,7 @@ export default function LoginPage() {
         )}
 
         {/* 인증 카드 */}
-        <div className="rounded-3xl border border-gray-800 bg-[#15181a] p-6 shadow-2xl sm:p-7">
+        <div className="rounded-3xl p-6 sm:p-7 overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(30,30,33,.98), rgba(18,18,20,.98))', border: '1px solid rgba(255,255,255,.1)', boxShadow: '0 28px 64px -16px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06)' }}>
           <h2 className="text-center text-lg font-bold text-white">{isKo ? '로그인' : 'Sign In'}</h2>
           <p className="mb-6 mt-1 text-center text-sm text-gray-500">
             {isKo ? '가입했던 소셜 계정을 선택하세요' : 'Choose the account you signed up with'}
@@ -243,9 +243,9 @@ export default function LoginPage() {
           </div>
 
           {/* 신뢰 요소 — 적중률 / 커버리지 / 광고제거 */}
-          <div className="mt-5 border-t border-gray-800 pt-4">
+          <div className="mt-5 border-t border-white/[0.08] pt-4">
             <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl border border-gray-800 bg-[#101315] px-2 py-2.5 text-center">
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 py-2.5 text-center">
                 <div className="text-[15px] font-black leading-none text-emerald-400">
                   {accuracy != null ? `${accuracy}%` : 'AI'}
                 </div>
@@ -253,11 +253,11 @@ export default function LoginPage() {
                   {accuracy != null ? (isKo ? '최근 적중률' : 'Hit rate') : isKo ? '예측 분석' : 'Analysis'}
                 </div>
               </div>
-              <div className="rounded-xl border border-gray-800 bg-[#101315] px-2 py-2.5 text-center">
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 py-2.5 text-center">
                 <div className="text-[15px] font-black leading-none text-emerald-400">10</div>
                 <div className="mt-1 text-[9.5px] text-gray-500">{isKo ? '리그 커버' : 'Leagues'}</div>
               </div>
-              <div className="rounded-xl border border-gray-800 bg-[#101315] px-2 py-2.5 text-center">
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 py-2.5 text-center">
                 <div className="text-[15px] font-black leading-none text-emerald-400">{isKo ? '광고X' : 'Ad-free'}</div>
                 <div className="mt-1 text-[9.5px] text-gray-500">{isKo ? '프리미엄' : 'Premium'}</div>
               </div>
