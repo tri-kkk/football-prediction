@@ -18,8 +18,6 @@ export default function LoginPage() {
   const [refCode, setRefCode] = useState<string | null>(null)
   // 🚫 재가입 쿨다운
   const [cooldownDays, setCooldownDays] = useState<number | null>(null)
-  // 📊 AI 적중률 (신뢰 요소) — best-effort
-  const [accuracy, setAccuracy] = useState<number | null>(null)
 
   const NAVER_ENABLED = true
 
@@ -45,27 +43,6 @@ export default function LoginPage() {
         const storedRef = sessionStorage.getItem('referral_code')
         if (storedRef) setRefCode(storedRef)
       } catch {}
-    }
-  }, [])
-
-  // 적중률 — 비차단 + 5초 타임아웃
-  useEffect(() => {
-    let cancel = false
-    ;(async () => {
-      try {
-        const c = new AbortController()
-        const id = setTimeout(() => c.abort(), 5000)
-        const res = await fetch('/api/accuracy-stats', { signal: c.signal }).then((r) => r.json())
-        clearTimeout(id)
-        const acc =
-          res?.accuracy ?? res?.overall?.accuracy ?? res?.pickAccuracy ?? res?.stats?.accuracy ?? null
-        if (!cancel && typeof acc === 'number') setAccuracy(Math.round(acc))
-      } catch {
-        /* noop */
-      }
-    })()
-    return () => {
-      cancel = true
     }
   }, [])
 
@@ -244,27 +221,6 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* 신뢰 요소 — 적중률 / 커버리지 / 광고제거 */}
-          <div className="mt-5 border-t border-white/[0.08] pt-4">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 py-2.5 text-center">
-                <div className="text-[15px] font-black leading-none text-emerald-400">
-                  {accuracy != null ? `${accuracy}%` : 'AI'}
-                </div>
-                <div className="mt-1 text-[9.5px] text-gray-500">
-                  {accuracy != null ? (isKo ? '최근 적중률' : 'Hit rate') : isKo ? '예측 분석' : 'Analysis'}
-                </div>
-              </div>
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 py-2.5 text-center">
-                <div className="text-[15px] font-black leading-none text-emerald-400">10</div>
-                <div className="mt-1 text-[9.5px] text-gray-500">{isKo ? '리그 커버' : 'Leagues'}</div>
-              </div>
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 py-2.5 text-center">
-                <div className="text-[15px] font-black leading-none text-emerald-400">{isKo ? '광고X' : 'Ad-free'}</div>
-                <div className="mt-1 text-[9.5px] text-gray-500">{isKo ? '프리미엄' : 'Premium'}</div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* 회원가입 안내 */}
