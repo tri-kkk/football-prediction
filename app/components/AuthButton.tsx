@@ -141,63 +141,84 @@ export default function AuthButton() {
             {/* 드롭다운 메뉴 (centered modal on all viewports) */}
             {showDropdown && (
               <>
-                <div className="absolute right-0 top-full mt-2 w-64 z-[100] rounded-xl shadow-xl bg-[#1a1a1a] border border-gray-700 overflow-hidden">
-              {/* 유저 정보 */}
-              <div className="px-3 md:px-4 py-2.5 md:py-3 border-b border-gray-700">
-                <div className="text-white text-xs md:text-sm font-medium truncate">{userName}</div>
-                <div className="text-gray-500 text-[10px] md:text-xs truncate">{userEmail}</div>
-              </div>
-              
-              {/* 메뉴 항목 */}
-              <div className="py-1">
-                {(isPremium || hasCoach) && (
-                  <button
-                    onClick={() => {
-                      setShowDropdown(false)
-                      setShowModal(true)
-                    }}
-                    className="w-full px-3 md:px-4 py-2 text-left text-xs md:text-sm text-gray-300 hover:bg-gray-800 flex items-center gap-2"
-                  >
-                    <span className="text-yellow-400">💎</span>
-                    {language === 'ko' ? '구독 관리' : 'Manage Subscription'}
-                  </button>
-                )}
-
-                {/* 프리미엄 전용: 텔레그램 데일리 리포트 연동 */}
-                {isPremium && <TelegramMenuItem language={language} />}
-
-                {!isPremium && (
-                  <Link
-                    href="/premium/pricing"
-                    onClick={() => setShowDropdown(false)}
-                    className="block px-3 md:px-4 py-2 text-xs md:text-sm text-yellow-400 hover:bg-gray-800"
-                  >
-                    {language === 'ko' ? '프리미엄 구독하기' : 'Subscribe to Premium'}
-                  </Link>
-                )}
-                
-                <button
-                  onClick={handleSignOut}
-                  disabled={isLoading}
-                  className="w-full px-3 md:px-4 py-2 text-left text-xs md:text-sm text-gray-400 hover:bg-gray-800 hover:text-red-400"
-                >
-                  {isLoading 
-                    ? (language === 'ko' ? '로그아웃 중...' : 'Signing out...') 
-                    : (language === 'ko' ? '로그아웃' : 'Sign out')}
-                </button>
-                
-                <div className="border-t border-gray-700 my-1"></div>
-                
-                <button
-                  onClick={() => {
-                    setShowDropdown(false)
-                    setShowDeleteModal(true)
+                <div
+                  className="absolute right-0 top-full mt-2 w-56 z-[100] overflow-hidden"
+                  style={{
+                    borderRadius: 16,
+                    background: 'linear-gradient(180deg, rgba(30,30,33,.98), rgba(18,18,20,.98))',
+                    border: '1px solid rgba(255,255,255,.1)',
+                    boxShadow: '0 20px 48px -14px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06)',
+                    backdropFilter: 'blur(14px)',
+                    WebkitBackdropFilter: 'blur(14px)',
                   }}
-                  className="w-full px-3 md:px-4 py-2 text-left text-[10px] md:text-xs text-gray-500 hover:bg-gray-800 hover:text-red-400"
                 >
-                  {language === 'ko' ? '회원 탈퇴' : 'Delete Account'}
-                </button>
-              </div>
+                  {/* 유저 정보 */}
+                  <div className="flex items-center gap-2.5 px-3 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #2e7d32, #6dff5c)', color: '#0b1f0b' }}>
+                      {userName?.charAt(0) || 'U'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-white text-[13px] font-semibold truncate leading-tight">{userName}</div>
+                      <div className="text-gray-500 text-[11px] truncate leading-tight mt-0.5">{userEmail}</div>
+                    </div>
+                  </div>
+
+                  {/* 메뉴 항목 */}
+                  <div className="p-1.5 space-y-0.5">
+                    {(isPremium || hasCoach) && (
+                      <button
+                        onClick={() => { setShowDropdown(false); setShowModal(true) }}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-gray-200 hover:bg-white/[0.06] transition-colors"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F5C451" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                          <path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/>
+                        </svg>
+                        {language === 'ko' ? '구독 관리' : 'Manage Subscription'}
+                      </button>
+                    )}
+
+                    {isPremium && <TelegramMenuItem language={language} />}
+
+                    {!isPremium && (
+                      <Link
+                        href="/premium/pricing"
+                        onClick={() => setShowDropdown(false)}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-semibold hover:bg-white/[0.06] transition-colors"
+                        style={{ color: '#F5C451' }}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F5C451" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                          <path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/>
+                        </svg>
+                        {language === 'ko' ? '프리미엄 구독하기' : 'Subscribe to Premium'}
+                      </Link>
+                    )}
+
+                    <button
+                      onClick={handleSignOut}
+                      disabled={isLoading}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-gray-400 hover:bg-white/[0.06] hover:text-gray-200 transition-colors disabled:opacity-60"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>
+                      </svg>
+                      {isLoading
+                        ? (language === 'ko' ? '로그아웃 중…' : 'Signing out…')
+                        : (language === 'ko' ? '로그아웃' : 'Sign out')}
+                    </button>
+
+                    <div className="my-1 mx-1" style={{ borderTop: '1px solid rgba(255,255,255,.06)' }} />
+
+                    <button
+                      onClick={() => { setShowDropdown(false); setShowDeleteModal(true) }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[11px] text-gray-600 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                        <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      </svg>
+                      {language === 'ko' ? '회원 탈퇴' : 'Delete Account'}
+                    </button>
+                  </div>
                 </div>
               </>
             )}
