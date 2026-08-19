@@ -60,7 +60,7 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
             <div 
               key={i}
-              className={`rounded-lg overflow-hidden animate-pulse flex-shrink-0 w-[140px] lg:w-[calc((100%-72px)/10)] ${
+              className={`rounded-xl overflow-hidden animate-pulse flex-shrink-0 w-[140px] lg:w-[calc((100%-72px)/10)] ${
                 darkMode ? 'bg-slate-800' : 'bg-gray-200'
               }`}
             >
@@ -112,8 +112,8 @@ export default function TopHighlights({ darkMode = true }: TopHighlightsProps) {
               console.log('🎬 클릭:', youtubeUrl)
               window.open(youtubeUrl, '_blank')
             }}
-            className={`group cursor-pointer rounded-lg overflow-hidden transition-all hover:scale-105 hover:shadow-lg flex-shrink-0 w-[140px] lg:flex-1 lg:min-w-[120px] lg:max-w-[180px] ${
-              darkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white hover:bg-gray-50 shadow-sm'
+            className={`group cursor-pointer rounded-xl overflow-hidden transition-all hover:scale-105 hover:shadow-lg flex-shrink-0 w-[140px] lg:flex-1 lg:min-w-[120px] lg:max-w-[180px] ${
+              darkMode ? 'bg-white/[0.04] hover:bg-white/[0.07]' : 'bg-white hover:bg-gray-50 shadow-sm'
             }`}
           >
             {/* 썸네일 */}

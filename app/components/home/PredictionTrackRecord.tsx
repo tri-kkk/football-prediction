@@ -120,9 +120,9 @@ export default function PredictionTrackRecord({ locale = 'ko' }: { locale?: stri
   const tabList = [{ league: 'ALL' } as any, ...tabs]
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/40">
+    <section className="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
       {/* 헤더 + 적중률 */}
-      <div className="flex items-center justify-between gap-3 border-b border-gray-800 p-4">
+      <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] p-4">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#A3FF4C]" />
@@ -146,7 +146,7 @@ export default function PredictionTrackRecord({ locale = 'ko' }: { locale?: stri
       </div>
 
       {/* 리그 탭 */}
-      <div className="flex items-center gap-1.5 overflow-x-auto border-b border-gray-800 px-3 py-2.5">
+      <div className="flex items-center gap-1.5 overflow-x-auto border-b border-white/[0.08] px-3 py-2.5">
         {tabList.map((t) => {
           const active = league === t.league
           return (
@@ -202,7 +202,7 @@ export default function PredictionTrackRecord({ locale = 'ko' }: { locale?: stri
       {!isPremium && (
         <a
           href={`/${locale}/${isLoggedIn ? 'premium/pricing' : 'signup'}`}
-          className="flex items-center justify-between gap-3 border-t border-gray-800 bg-gray-900/60 p-3.5 transition-colors hover:bg-gray-900"
+          className="flex items-center justify-between gap-3 border-t border-white/[0.08] bg-white/[0.02] p-3.5 transition-colors hover:bg-white/[0.05]"
         >
           <span className="text-[12px] text-gray-300">
             {isLoggedIn
