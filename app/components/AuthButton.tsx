@@ -445,7 +445,7 @@ function SubscriptionModal({
       />
 
       {/* 모달 */}
-      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:max-w-sm sm:w-full z-[201] rounded-2xl shadow-2xl bg-[#1a1a1a] border border-gray-700 overflow-hidden max-h-[85vh] overflow-y-auto p-6">
+      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:max-w-sm sm:w-full z-[201] overflow-hidden max-h-[85vh] overflow-y-auto p-5" style={{ borderRadius: 18, background: 'linear-gradient(180deg, rgba(28,28,31,.99), rgba(17,17,19,.99))', border: '1px solid rgba(255,255,255,.1)', boxShadow: '0 28px 64px -16px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06)' }}>
         {loadingData ? (
           // 로딩 상태
           <div className="flex items-center justify-center py-8">
@@ -454,9 +454,11 @@ function SubscriptionModal({
         ) : (
           <>
             {/* 헤더 */}
-            <div className="text-center mb-6">
-              <div className="text-3xl mb-2">💎</div>
-              <h2 className="text-white font-bold text-xl">
+            <div className="text-center mb-4">
+              <div className="flex justify-center mb-2.5">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F5C451" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg>
+              </div>
+              <h2 className="text-white font-bold text-lg">
                 {language === 'ko' ? '내 구독' : 'My Subscriptions'}
               </h2>
               {promoCode && (
@@ -475,8 +477,8 @@ function SubscriptionModal({
             
             {/* 남은 기간 강조 */}
             {daysRemaining !== null && daysRemaining > 0 && (
-              <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-xl p-4 mb-4 text-center">
-                <div className="text-yellow-400 text-sm mb-1">
+              <div className="rounded-xl p-3.5 mb-3 text-center" style={{ background: 'linear-gradient(135deg, rgba(245,196,81,.16), rgba(224,169,59,.07))', border: '1px solid rgba(245,196,81,.3)' }}>
+                <div className="text-sm mb-1" style={{ color: '#F5C451' }}>
                   {language === 'ko' ? '남은 기간' : 'Days Remaining'}
                 </div>
                 <div className="text-white text-3xl font-bold">
@@ -508,7 +510,7 @@ function SubscriptionModal({
             )}
             
             {/* 구독 정보 */}
-            <div className="bg-black/30 rounded-xl p-4 mb-6 space-y-3">
+            <div className="rounded-xl p-3.5 mb-3 space-y-2" style={{ background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)' }}>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">{language === 'ko' ? '이용권' : 'Plan'}</span>
                 <span className="text-white">{getPlanDisplay()}</span>
@@ -529,7 +531,7 @@ function SubscriptionModal({
 
             {/* 코치 플랜 (블루) — 보유 시 카드 탭으로 코치 앱 점프, 미보유 시 시작하기 */}
             {hasCoach ? (
-              <a href="/coach" onClick={onClose} className="block bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6 hover:border-blue-400/50 transition-colors">
+              <a href="/coach" onClick={onClose} className="block bg-blue-500/10 border border-blue-500/30 rounded-xl p-3.5 mb-3 hover:border-blue-400/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rotate-45 rounded-[2px]" style={{ background: 'linear-gradient(135deg,#8fc0ff,#3d82e6)' }} />
@@ -550,7 +552,7 @@ function SubscriptionModal({
               <a
                 href="/coach/pricing"
                 onClick={onClose}
-                className="block bg-white/5 border border-dashed border-white/20 rounded-xl p-4 mb-6 hover:border-blue-400/40 transition-colors"
+                className="block bg-white/5 border border-dashed border-white/20 rounded-xl p-3.5 mb-3 hover:border-blue-400/40 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -567,12 +569,12 @@ function SubscriptionModal({
             )}
 
             {/* 버튼 */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               {daysRemaining !== null && daysRemaining <= 7 && daysRemaining > 0 && (
                 <Link
                   href="/premium/pricing"
                   onClick={onClose}
-                  className="block w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-xl text-sm font-bold text-center transition-all"
+                  className="block w-full py-2.5 rounded-xl text-sm font-bold text-center transition-all" style={{ background: 'linear-gradient(135deg, #F7D774, #E0A93B)', color: '#241905' }}
                 >
                   {language === 'ko' ? '이용권 연장하기' : 'Extend Pass'}
                 </Link>
@@ -581,14 +583,14 @@ function SubscriptionModal({
                 <Link
                   href="/premium/pricing"
                   onClick={onClose}
-                  className="block w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-xl text-sm font-bold text-center transition-all"
+                  className="block w-full py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-xl text-sm font-bold text-center transition-all"
                 >
                   {language === 'ko' ? '이용권 구매하기' : 'Buy Pass'}
                 </Link>
               )}
               <button
                 onClick={onClose}
-                className="w-full py-3 text-gray-400 hover:text-white rounded-xl text-sm transition-colors"
+                className="w-full py-2.5 text-gray-400 hover:text-white rounded-xl text-sm transition-colors"
               >
                 {language === 'ko' ? '닫기' : 'Close'}
               </button>
