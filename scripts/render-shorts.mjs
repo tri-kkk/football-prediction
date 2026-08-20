@@ -44,7 +44,19 @@ const GROUP = arg('group', 'euro')          // daily + football 전용: euro | k
 const COUNT = Number(arg('count', '3'))     // daily 전용: 픽 개수
 const LEAGUE = arg('league', 'KBO')
 const LIMIT = Number(arg('limit', '1'))
-const BGM = arg('bgm', '')
+// 포맷별 기본 배경음 (public/sounds/).
+// 성적표는 결과를 담담하게 보여주는 톤이라 시네마틱,
+// 오늘의 픽·TOP5 는 기대감을 주는 톤이라 에너제틱을 기본으로 둔다.
+const DEFAULT_BGM = {
+  daily: 'sport-energetic.mp3',
+  result: 'rockot-cinematic.mp3',
+  top5: 'sports-rock.mp3',
+  match: 'sport-energetic.mp3',
+}
+
+// --bgm=none 이면 무음
+const bgmArg = arg('bgm', '')
+const BGM = bgmArg === 'none' ? '' : (bgmArg || DEFAULT_BGM[FORMAT] || '')
 const OUT_DIR = path.resolve(ROOT, arg('out', './out'))
 const SHOW_LOGOS = arg('logos', 'false') === 'true'
 const BASE_URL = process.env.SHORTS_BASE_URL || 'http://localhost:3000'

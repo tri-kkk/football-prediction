@@ -56,6 +56,26 @@ const MAX_COUNT = 5
 
 const ko = (name: string) => TEAM_NAME_KR[name] || name
 
+/**
+ * 최근에 끝난 경기 범위.
+ *
+ * ⚠ "어제 달력 하루" 로 자르면 안 된다.
+ * 유럽 축구는 한국시간 새벽에 열리므로, 오늘 새벽에 끝난 가장 최신 경기가
+ * "어제" 에 안 잡혀 하루 늦게 성적표에 나온다.
+ * 지금 기준 지난 N시간으로 보면 새벽 경기가 그날 아침 성적표에 바로 들어간다.
+ */
+function recentRange(hours = 36) {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 3600_000)
+  // 라벨은 경기가 몰려 있는 쪽(어제)을 기준으로 잡는다
+  const label = new Date(now.getTime() - 12 * 3600_000 + 9 * 3600_000)
+  return {
+    start: new Date(now.getTime() - hours * 3600_000).toISOString(),
+    end: now.toISOString(),
+    dateLabel: `${label.getUTCFullYear()}-${String(label.getUTCMonth() + 1).padStart(2, '0')}-${String(label.getUTCDate()).padStart(2, '0')}`,
+  }
+}
+
 function dayRangeKST(offsetDays: number) {
   const now = new Date()
   const kst = new Date(now.getTime() + 9 * 3600_000)
@@ -127,11 +147,11 @@ async function cumulativeAccuracy(codes: string[]) {
 }
 
 // ── 축구 ─────────────────────────────────────────────────
-async function football(groupKey: string, origin: string) {
+async function football(groupKey: string) {
   const group = LEAGUE_GROUPS[groupKey]
   if (!group) throw new Error(`알 수 없는 리그 그룹: ${groupKey}`)
 
-  const { start, end, dateLabel } = dayRangeKST(-1)
+  const { start, end, dateLabel } = recentRange(36)
 
   const { data, error } = await supabase
     .from('pick_recommendations')
@@ -213,40 +233,118 @@ async function football(groupKey: string, origin: string) {
   }
 }
 
-// ── 야구 ─────────────────────────────────────────────────
-// 야구는 pick_recommendations 를 쓰지 않는다.
-// baseball_matches + baseball_odds_latest 를 대조하는 전용 API 가 이미 있다.
-async function baseball(league: string, origin: string) {
-  const { dateLabel } = dayRangeKST(-1)
 
-  const r = await fetch(
-    `${origin}/api/baseball/prediction-results?league=${encodeURIComponent(league)}&days=2&limit=20`,
-    { cache: 'no-store' }
-  )
-  if (!r.ok) throw new Error(`baseball prediction-results ${r.status}`)
-  const j = await r.json()
+// ── 야구: 사이트와 같은 소스를 쓴다 ──────────────────────
+//
+// ⚠ 야구 예측은 두 곳에 있다.
+//   baseball_combo_picks        생성 시점에 고정된 스냅샷  ← 사이트 multi-match 가 쓰는 값
+//   baseball_odds_latest.ai_*   상세 페이지를 열 때마다 갱신
+//
+// 후자는 배당이 움직일 때마다 다시 계산되므로, 어제 예측을 오늘 조회하면 값이 달라진다.
+// 50% 근처 경기는 픽 방향까지 뒤집힌다. 영상과 사이트가 다른 팀을 추천하면 신뢰가 무너지므로
+// 반드시 스냅샷(baseball_combo_picks)을 쓴다.
+//
+// 저장된 확률 = 배당확률 × 0.6 + 모델 × 0.4 + 투수보정
+// (app/api/baseball/cron/generate-combo-picks/route.ts)
 
-  const recent: any[] = Array.isArray(j?.recent) ? j.recent : []
-  const yesterday = recent.filter((g) => g.date === dateLabel)
-  const pool = yesterday.length ? yesterday : recent.slice(0, MAX_COUNT)
+interface ComboPick {
+  matchId: number
+  apiMatchId: number
+  homeTeamKo: string
+  awayTeamKo: string
+  homeLogo: string
+  awayLogo: string
+  matchTime: string
+  pick: 'home' | 'away'
+  pickTeamKo: string
+  winProb: number
+  odds: number
+  reason: string
+  homeScore?: number | null
+  awayScore?: number | null
+  isCorrect?: boolean
+  matchStatus?: string
+}
 
-  const results = pool.slice(0, MAX_COUNT).map((g) => ({
-    matchId: g.matchId,
-    league: g.league,
-    leagueLabel: LEAGUE_LABEL[g.league] || g.league,
-    leagueLogo: '',
-    home: { name: g.homeTeam, logo: g.homeTeamLogo || '' },
-    away: { name: g.awayTeam, logo: g.awayTeamLogo || '' },
-    homeScore: g.homeScore,
-    awayScore: g.awayScore,
-    pickSide: (g.predicted === 'home' ? 'HOME' : 'AWAY') as 'HOME' | 'AWAY',
-    pickTeam: g.pickedTeam,
-    probability: g.confidence ?? 0,
-    isCorrect: !!g.correct,
-    isDraw: false, // 야구는 무승부 없음 (동점 경기는 API 단계에서 제외됨)
-  }))
+/**
+ * 해당 날짜의 조합 픽을 펼쳐서 경기 단위로 되돌린다.
+ * 같은 경기가 여러 조합에 들어가므로 matchId 로 중복을 제거한다.
+ */
+async function readComboPicks(league: string, dateLabel: string): Promise<ComboPick[]> {
+  const { data, error } = await supabase
+    .from('baseball_combo_picks')
+    .select('picks, pick_date, league')
+    .eq('league', league)
+    .eq('pick_date', dateLabel)
+
+  if (error) throw error
+
+  const byMatch = new Map<number, ComboPick>()
+  for (const combo of data || []) {
+    for (const p of (combo.picks as any[]) || []) {
+      if (p?.matchId == null) continue
+      // 정산된 픽(스코어 있음)을 우선 보관
+      const existing = byMatch.get(p.matchId)
+      if (!existing || (p.homeScore != null && existing.homeScore == null)) {
+        byMatch.set(p.matchId, p as ComboPick)
+      }
+    }
+  }
+
+  return Array.from(byMatch.values())
+}
+
+async function baseball(league: string) {
+  const { dateLabel } = recentRange(36)
+
+  // KBO 는 저녁 경기라 달력 하루로 잘라도 문제가 없지만,
+  // 날짜 경계 직후에 돌릴 때를 대비해 어제·오늘 두 날을 함께 본다.
+  const { dateLabel: todayLabel } = dayRangeKST(0)
+  const picksRaw = [
+    ...(await readComboPicks(league, dateLabel)),
+    ...(dateLabel !== todayLabel ? await readComboPicks(league, todayLabel) : []),
+  ]
+  const settled = picksRaw.filter((p) => p.homeScore != null && p.awayScore != null)
+
+  const results = settled
+    .sort((a, b) => b.winProb - a.winProb)
+    .slice(0, MAX_COUNT)
+    .map((p) => ({
+      matchId: p.matchId,
+      league,
+      leagueLabel: LEAGUE_LABEL[league] || league,
+      leagueLogo: '',
+      home: { name: p.homeTeamKo, logo: p.homeLogo || '' },
+      away: { name: p.awayTeamKo, logo: p.awayLogo || '' },
+      homeScore: p.homeScore ?? null,
+      awayScore: p.awayScore ?? null,
+      pickSide: (p.pick === 'home' ? 'HOME' : 'AWAY') as 'HOME' | 'AWAY',
+      pickTeam: p.pickTeamKo,
+      probability: Math.round(p.winProb),
+      isCorrect: p.isCorrect === true,
+      isDraw: false, // 야구는 무승부 없음
+    }))
 
   const correct = results.filter((x) => x.isCorrect).length
+
+  // 누적은 기존 야구 전용 API 를 그대로 쓴다 (동점 제외 2-way 로 이미 계산됨)
+  let cumulative = null
+  try {
+    const r = await fetch(
+      `${BASE_ORIGIN}/api/baseball/prediction-results?league=${encodeURIComponent(league)}&days=60&limit=1`,
+      { cache: 'no-store' }
+    )
+    if (r.ok) {
+      const j = await r.json()
+      cumulative = {
+        decisive: j?.total ?? 0,
+        correct: j?.correct ?? 0,
+        accuracy: j?.accuracy ?? 0,
+        drawCount: 0,
+        drawRate: 0,
+      }
+    }
+  } catch {}
 
   return {
     date: dateLabel,
@@ -259,26 +357,23 @@ async function baseball(league: string, origin: string) {
       draws: 0,
       accuracy: results.length ? Math.round((correct / results.length) * 100) : 0,
     },
-    cumulative: {
-      decisive: j?.total ?? 0,
-      correct: j?.correct ?? 0,
-      accuracy: j?.accuracy ?? 0,
-      drawCount: 0,
-      drawRate: 0,
-    },
+    cumulative,
   }
 }
 
 // ── 핸들러 ───────────────────────────────────────────────
+let BASE_ORIGIN = ''
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const sport = (searchParams.get('sport') || 'football').toLowerCase()
+  BASE_ORIGIN = request.nextUrl.origin
 
   try {
     const payload =
       sport === 'baseball'
-        ? await baseball((searchParams.get('league') || 'KBO').toUpperCase(), request.nextUrl.origin)
-        : await football((searchParams.get('group') || 'euro').toLowerCase(), request.nextUrl.origin)
+        ? await baseball((searchParams.get('league') || 'KBO').toUpperCase())
+        : await football((searchParams.get('group') || 'euro').toLowerCase())
 
     return NextResponse.json({ success: true, ...payload })
   } catch (e: any) {

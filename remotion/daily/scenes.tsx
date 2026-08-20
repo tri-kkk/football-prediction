@@ -61,7 +61,7 @@ export const SceneOpener: React.FC<{ data: DailyProps }> = ({ data }) => {
       </div>
 
       <div style={{ ...fadeUp(frame, 8), fontSize: 33, color: '#64748b', fontWeight: 800, letterSpacing: 5 }}>
-        {data.groupLabel} · {showFilter ? '오늘 분석한 경기' : '오늘 경기'}
+        {data.groupLabel} · {data.windowLabel ?? '오늘'} {showFilter ? '분석' : '경기'}
       </div>
 
       <div style={{ ...pop(frame, 12), ...gradText(240), filter: `drop-shadow(0 0 60px ${BRAND_C1}55)` }}>

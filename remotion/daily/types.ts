@@ -32,6 +32,8 @@ export interface DailyProps {
   date: string
   sport: 'football' | 'baseball'
   groupLabel: string
+  /** "오늘" / "오늘 밤 ~ 내일 새벽" 등 — 픽이 실제로 언제 열리는지 */
+  windowLabel?: string
   /** 오늘 분석한 전체 경기 수 — "N경기 중 3경기 통과" 서사의 분모 */
   totalMatches: number
   picks: DailyPick[]

@@ -44,6 +44,7 @@ const DAILY_SAMPLE: DailyProps = {
   date: '2026-08-20',
   sport: 'football',
   groupLabel: '유럽 축구',
+  windowLabel: '오늘 밤 ~ 내일 새벽',
   totalMatches: 18,
   bgm: '',
   backgrounds: { opener: null, pick: null, summary: null, cta: null },

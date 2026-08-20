@@ -2,10 +2,11 @@
 // 포맷 A — 데일리 픽 리포트
 
 import React from 'react'
-import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame } from 'remotion'
+import { AbsoluteFill, Sequence, useCurrentFrame } from 'remotion'
 import { ensureFont, FONT_STACK } from '../font'
 import { XFADE } from '../theme'
 import { sceneFade } from '../anim'
+import { Bgm } from '../components/Bgm'
 import { Background } from '../components/Background'
 import { Chrome } from '../components/Chrome'
 import { INTRO_FRAMES, SceneIntro } from '../components/Intro'
@@ -52,7 +53,7 @@ export const DailyPicks: React.FC<DailyProps> = (props) => {
 
   return (
     <AbsoluteFill style={{ fontFamily: FONT_STACK, backgroundColor: '#080c12' }}>
-      {bgm ? <Audio src={staticFile(`sounds/${bgm}`)} volume={0.35} /> : null}
+      <Bgm file={bgm} total={total} />
 
       {/* 브랜드 스팅 — Chrome(상단 워드마크)과 겹치지 않도록 이 구간엔 Chrome 을 띄우지 않는다 */}
       <Sequence from={0} durationInFrames={DAILY_FRAMES.intro}>

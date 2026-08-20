@@ -1,10 +1,11 @@
 // remotion/ShortsVideo.tsx
 import React from 'react'
-import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame } from 'remotion'
+import { AbsoluteFill, Sequence, useCurrentFrame } from 'remotion'
 import { ensureFont, FONT_STACK } from './font'
 import { XFADE } from './theme'
 import { buildTimeline } from './timeline'
 import { sceneFade } from './anim'
+import { Bgm } from './components/Bgm'
 import { Background } from './components/Background'
 import { Chrome } from './components/Chrome'
 import { INTRO_FRAMES, SceneIntro } from './components/Intro'
@@ -62,10 +63,11 @@ export const ShortsVideo: React.FC<ShortsProps> = ({ game, showLogos, bgm, backg
   const hc = game.home.c1
   const ac = game.away.c1
   const timeline = buildTimeline(game)
+  const total = INTRO_FRAMES + timeline.total
 
   return (
     <AbsoluteFill style={{ fontFamily, backgroundColor: '#080c12' }}>
-      {bgm ? <Audio src={staticFile(`sounds/${bgm}`)} volume={0.35} /> : null}
+      <Bgm file={bgm} total={total} />
 
       <Sequence from={0} durationInFrames={INTRO_FRAMES}>
         <SceneIntro />

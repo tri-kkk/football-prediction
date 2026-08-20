@@ -2,10 +2,11 @@
 // 포맷 B — 어제 성적표
 
 import React from 'react'
-import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame } from 'remotion'
+import { AbsoluteFill, Sequence, useCurrentFrame } from 'remotion'
 import { ensureFont, FONT_STACK } from '../font'
 import { XFADE } from '../theme'
 import { sceneFade } from '../anim'
+import { Bgm } from '../components/Bgm'
 import { Background } from '../components/Background'
 import { Chrome } from '../components/Chrome'
 import { INTRO_FRAMES, SceneIntro } from '../components/Intro'
@@ -56,7 +57,7 @@ export const DailyResults: React.FC<ResultProps> = (props) => {
 
   return (
     <AbsoluteFill style={{ fontFamily: FONT_STACK, backgroundColor: '#080c12' }}>
-      {bgm ? <Audio src={staticFile(`sounds/${bgm}`)} volume={0.35} /> : null}
+      <Bgm file={bgm} total={total} />
 
       <Sequence from={0} durationInFrames={RESULT_FRAMES.intro}>
         <SceneIntro />

@@ -5,10 +5,11 @@
 // 5위부터 1위까지 역순으로 공개한다.
 
 import React from 'react'
-import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame } from 'remotion'
+import { AbsoluteFill, Sequence, useCurrentFrame } from 'remotion'
 import { ensureFont, FONT_STACK } from '../font'
 import { XFADE } from '../theme'
 import { sceneFade } from '../anim'
+import { Bgm } from '../components/Bgm'
 import { Background } from '../components/Background'
 import { Chrome } from '../components/Chrome'
 import { INTRO_FRAMES, SceneIntro } from '../components/Intro'
@@ -61,7 +62,7 @@ export const WeekendTop5: React.FC<DailyProps> = (props) => {
 
   return (
     <AbsoluteFill style={{ fontFamily: FONT_STACK, backgroundColor: '#080c12' }}>
-      {bgm ? <Audio src={staticFile(`sounds/${bgm}`)} volume={0.35} /> : null}
+      <Bgm file={bgm} total={total} />
 
       <Sequence from={0} durationInFrames={TOP5_FRAMES.intro}>
         <SceneIntro tagline="주말 AI 예측 · TOP 5" />

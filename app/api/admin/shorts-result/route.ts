@@ -56,6 +56,26 @@ const MAX_COUNT = 5
 
 const ko = (name: string) => TEAM_NAME_KR[name] || name
 
+/**
+ * 최근에 끝난 경기 범위.
+ *
+ * ⚠ "어제 달력 하루" 로 자르면 안 된다.
+ * 유럽 축구는 한국시간 새벽에 열리므로, 오늘 새벽에 끝난 가장 최신 경기가
+ * "어제" 에 안 잡혀 하루 늦게 성적표에 나온다.
+ * 지금 기준 지난 N시간으로 보면 새벽 경기가 그날 아침 성적표에 바로 들어간다.
+ */
+function recentRange(hours = 36) {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 3600_000)
+  // 라벨은 경기가 몰려 있는 쪽(어제)을 기준으로 잡는다
+  const label = new Date(now.getTime() - 12 * 3600_000 + 9 * 3600_000)
+  return {
+    start: new Date(now.getTime() - hours * 3600_000).toISOString(),
+    end: now.toISOString(),
+    dateLabel: `${label.getUTCFullYear()}-${String(label.getUTCMonth() + 1).padStart(2, '0')}-${String(label.getUTCDate()).padStart(2, '0')}`,
+  }
+}
+
 function dayRangeKST(offsetDays: number) {
   const now = new Date()
   const kst = new Date(now.getTime() + 9 * 3600_000)
@@ -131,7 +151,7 @@ async function football(groupKey: string) {
   const group = LEAGUE_GROUPS[groupKey]
   if (!group) throw new Error(`알 수 없는 리그 그룹: ${groupKey}`)
 
-  const { start, end, dateLabel } = dayRangeKST(-1)
+  const { start, end, dateLabel } = recentRange(36)
 
   const { data, error } = await supabase
     .from('pick_recommendations')
@@ -275,9 +295,15 @@ async function readComboPicks(league: string, dateLabel: string): Promise<ComboP
 }
 
 async function baseball(league: string) {
-  const { dateLabel } = dayRangeKST(-1)
+  const { dateLabel } = recentRange(36)
 
-  const picksRaw = await readComboPicks(league, dateLabel)
+  // KBO 는 저녁 경기라 달력 하루로 잘라도 문제가 없지만,
+  // 날짜 경계 직후에 돌릴 때를 대비해 어제·오늘 두 날을 함께 본다.
+  const { dateLabel: todayLabel } = dayRangeKST(0)
+  const picksRaw = [
+    ...(await readComboPicks(league, dateLabel)),
+    ...(dateLabel !== todayLabel ? await readComboPicks(league, todayLabel) : []),
+  ]
   const settled = picksRaw.filter((p) => p.homeScore != null && p.awayScore != null)
 
   const results = settled

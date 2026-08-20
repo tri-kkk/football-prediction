@@ -198,10 +198,49 @@ async function fetchStandings(leagueCodes: string[], origin: string): Promise<St
 }
 
 /**
+ * 오늘의 픽 범위 — **지금 이후에 시작하는 경기만**.
+ *
+ * ⚠ KST 달력 하루(00:00~23:59)로 자르면 안 된다.
+ * 유럽 축구는 한국시간 새벽에 열리므로, 아침에 렌더하면
+ * "오늘" 안에 이미 끝난 새벽 경기가 포함된다.
+ * 끝난 경기를 예측으로 내보내게 되므로 반드시 now 이후만 본다.
+ *
+ * 위쪽 경계는 30시간. 오늘 밤 경기와 내일 새벽 경기까지 들어온다.
+ * (유럽 리그 기준 "오늘 밤 ~ 내일 새벽" 이 한 묶음이다)
+ */
+function upcomingRange(hours = 30) {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 3600_000)
+  return {
+    start: now.toISOString(),
+    end: new Date(now.getTime() + hours * 3600_000).toISOString(),
+    dateLabel: `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`,
+  }
+}
+
+/** KST 기준 날짜 문자열 (YYYY-MM-DD) */
+function kstDate(iso: string): string {
+  const d = new Date(new Date(iso).getTime() + 9 * 3600_000)
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+}
+
+/**
+ * 픽들이 실제로 언제 열리는지 보고 화면에 쓸 문구를 정한다.
+ * 전부 오늘이면 "오늘", 오늘/내일에 걸치면 "오늘 밤 ~ 내일 새벽".
+ */
+function windowLabelFor(times: string[], todayLabel: string): string {
+  if (times.length === 0) return '오늘'
+  const days = new Set(times.map(kstDate))
+  if (days.size === 1) return days.has(todayLabel) ? '오늘' : '내일'
+  return days.has(todayLabel) ? '오늘 밤 ~ 내일 새벽' : '내일'
+}
+
+/**
  * 이번(또는 다가오는) 주말 범위 — 토 00:00 ~ 일 23:59 KST.
  * 금요일에 만드는 주말 프리뷰용. 일요일에 돌리면 진행 중인 주말을 잡는다.
  */
 function weekendRangeKST() {
+  const nowIso = new Date().toISOString()
   const kst = new Date(Date.now() + 9 * 3600_000)
   const dow = kst.getUTCDay() // 0=일 … 6=토
   const toSat = dow === 0 ? -1 : 6 - dow
@@ -212,8 +251,11 @@ function weekendRangeKST() {
   const m = sat.getUTCMonth()
   const d = sat.getUTCDate()
 
+  const satStart = new Date(Date.UTC(y, m, d, 0, 0, 0) - 9 * 3600_000).toISOString()
+
   return {
-    start: new Date(Date.UTC(y, m, d, 0, 0, 0) - 9 * 3600_000).toISOString(),
+    // 주말이 이미 시작됐으면 지금 이후 경기만 본다 (끝난 경기를 픽으로 내보내지 않는다)
+    start: satStart > nowIso ? satStart : nowIso,
     // 일요일 23:59 까지
     end: new Date(Date.UTC(y, m, d + 1, 23, 59, 59) - 9 * 3600_000).toISOString(),
     dateLabel: `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
@@ -271,7 +313,8 @@ async function football(
   const group = LEAGUE_GROUPS[groupKey]
   if (!group) throw new Error(`알 수 없는 리그 그룹: ${groupKey}`)
 
-  const { start, end, dateLabel } = range === 'weekend' ? weekendRangeKST() : dayRangeKST(0)
+  const { start, end, dateLabel } =
+    range === 'weekend' ? weekendRangeKST() : upcomingRange(30)
 
   // 오늘 열리는 경기 목록.
   //  - 필터링 서사의 분모(= 실제 경기 수)를 여기서 센다.
@@ -394,6 +437,7 @@ async function football(
   return {
     date: dateLabel,
     range,
+    windowLabel: range === 'weekend' ? '이번 주말' : windowLabelFor(picks.map((p) => p.matchTime), dateLabel),
     sport: 'football' as const,
     groupLabel: group.label,
     totalMatches: Math.max(scheduled?.length ?? 0, base.length, picks.length),
@@ -488,7 +532,15 @@ async function baseball(league: string, count: number | 'auto') {
     .gte('match_timestamp', start)
     .lte('match_timestamp', end)
 
-  const rows = picksRaw.map((p) => ({
+  // 이미 시작한 경기는 픽에서 뺀다
+  const nowMs = Date.now()
+  const rows = picksRaw
+    .filter((p) => {
+      if (!p.matchTime) return true
+      const t = new Date(p.matchTime).getTime()
+      return Number.isNaN(t) ? true : t > nowMs
+    })
+    .map((p) => ({
     matchId: p.matchId,
     league,
     leagueLabel: LEAGUE_LABEL[league] || league,
@@ -516,6 +568,7 @@ async function baseball(league: string, count: number | 'auto') {
 
   return {
     date: dateLabel,
+    windowLabel: windowLabelFor(picks.map((p) => p.matchTime), dateLabel),
     sport: 'baseball' as const,
     groupLabel: LEAGUE_LABEL[league] || league,
     totalMatches: Math.max(scheduled ?? 0, rows.length, picks.length),
