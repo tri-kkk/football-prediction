@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "shorts:studio": "remotion studio",
+    "shorts:render": "node scripts/render-shorts.mjs",
+    "shorts:font": "node scripts/prepare-font.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
@@ -14,6 +17,9 @@
     "@google-analytics/data": "^5.2.1",
     "@google/generative-ai": "^0.24.1",
     "@portone/browser-sdk": "^0.1.2",
+    "@remotion/bundler": "^4.0.513",
+    "@remotion/cli": "^4.0.513",
+    "@remotion/renderer": "^4.0.513",
     "@supabase/supabase-js": "^2.39.0",
     "axios": "^1.6.7",
     "cheerio": "^1.1.2",
@@ -29,6 +35,7 @@
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "remotion": "^4.0.513",
     "swr": "^2.2.5",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
@@ -41,6 +48,7 @@
     "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.33",
+    "pretendard": "^1.3.9",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   },

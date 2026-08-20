@@ -55,7 +55,21 @@ function pickWinRate(m: any): { home: number; away: number } | null {
 }
 
 function teamMeta(ko: string) {
-  return TEAM_META[ko] ?? { ab: ko.slice(0, 2).toUpperCase(), c1: '#1f2937', c2: '#ffffff' }
+  if (!ko) return { ab: '??', c1: '#1f2937', c2: '#ffffff' }
+
+  // 정확히 일치하면 그대로
+  if (TEAM_META[ko]) return TEAM_META[ko]
+
+  // 실제 팀명은 '한화 이글스', 'KIA 타이거즈' 처럼 풀네임으로 내려오는데
+  // TEAM_META 키는 '한화', 'KIA' 라 그냥 조회하면 전부 매칭 실패한다.
+  // (그래서 팀 컬러가 전부 회색으로 나오고 약칭도 'KI' 처럼 잘렸다)
+  const norm = ko.replace(/\s+/g, '')
+  for (const key of Object.keys(TEAM_META)) {
+    const k = key.replace(/\s+/g, '')
+    if (norm === k || norm.startsWith(k) || norm.includes(k)) return TEAM_META[key]
+  }
+
+  return { ab: ko.slice(0, 2).toUpperCase(), c1: '#1f2937', c2: '#ffffff' }
 }
 
 // MLB statsapi.mlb.com에서 투수 시즌 스탯 조회

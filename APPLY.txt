@@ -1,0 +1,39 @@
+포맷 E 검수 후 수정 3건
+
+1) API 덮어쓰기
+   shorts-daily-route.ts → app/api/admin/shorts-daily/route.ts
+2) Remotion 덮어쓰기
+   remotion/  scripts/
+3) npm run dev 재시작
+
+teamLogos.ts 는 이미 적용됨 (파르마·베네치아·코모 추가, 원본은 teamLogos.ts.bak)
+
+
+== 무엇을 고쳤나 ==
+
+[1] 3-way 라벨이 오독을 유발했다  ← 가장 심각
+
+  이전:  승 15 · 무 23 · 패 62     ← "패 62" 에 하이라이트
+  이후:  홈 15 · 무 23 · 원정 62   ← "원정 62" 에 하이라이트
+
+  원정팀을 픽했을 때 '패' 에 하이라이트가 걸려
+  "62% 확률로 진다" 로 읽히고 있었습니다.
+  라벨을 홈/원정 기준으로 바꿔 해소했습니다.
+
+[2] 시즌 초 순위·승점 숨김
+
+  8월 개막 직후의 "13위 · 0점" 은 정보가 아니라 노이즈입니다.
+  4경기 미만인 팀은 순위·승점 줄을 표시하지 않습니다.
+  기준값: shorts-daily-route.ts 의 MIN_PLAYED_FOR_RANK (기본 4)
+
+  최근 폼(W/D/L)도 데이터가 쌓이면 자동으로 나타납니다.
+
+[3] 한글 팀명 매핑 누락
+
+  Parma 가 영문 그대로 나오고 있었습니다. 승격팀이라 매핑에 없었습니다.
+  teamLogos.ts 의 TEAM_NAME_KR 에 파르마·베네치아·코모를 추가했습니다.
+
+  앞으로 스스로 발견할 수 있도록 렌더 로그에 경고를 넣었습니다:
+    ⚠ 한글 팀명 없음: Parma, Venezia — teamLogos.ts 의 TEAM_NAME_KR 에 추가하세요
+
+  API 응답에도 missingKoNames 배열로 나옵니다.

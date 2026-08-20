@@ -24,7 +24,9 @@
     "target": "ES2017",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
@@ -35,6 +37,10 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "remotion",
+    "remotion.config.ts",
+    "scripts/render-shorts.mjs",
+    "scripts/prepare-font.mjs"
   ]
 }

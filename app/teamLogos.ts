@@ -4,6 +4,14 @@
 
 // 영문 → 한글 팀명 매핑 (The Odds API 영문 팀명 → 한글 키 매칭용)
 export const TEAM_NAME_KR: Record<string, string> = {
+
+  // 승격팀 보완 (2026-08 추가)
+  'Parma': '파르마',
+  'Parma Calcio 1913': '파르마',
+  'Venezia': '베네치아',
+  'Venezia FC': '베네치아',
+  'Como': '코모',
+  'Como 1907': '코모',
   // 프리미어리그 (PL)
   'Manchester United': '맨체스터 유나이티드',
   'Manchester City': '맨체스터 시티',
