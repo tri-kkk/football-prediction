@@ -1346,8 +1346,8 @@ export default function BaseballDetailPage() {
               <div className="grid grid-cols-2 divide-x divide-gray-800/60">
                 {[
                   // 🌐 영문 환경에서는 match.awayPitcher(영문) 우선, 없으면 한글 fallback
-                  { name: language === 'en' ? (match.awayPitcher ?? kboNpbAwayPitcher) : (kboNpbAwayPitcher ?? match.awayPitcher), stats: kboAwayPitcherStats, prevStats: kboAwayPitcherPrevStats, label: t('원정', 'Away'), accentColor: 'text-red-400', image: match.awayPitcherImage },
-                  { name: language === 'en' ? (match.homePitcher ?? kboNpbHomePitcher) : (kboNpbHomePitcher ?? match.homePitcher), stats: kboHomePitcherStats, prevStats: kboHomePitcherPrevStats, label: t('홈', 'Home'),   accentColor: 'text-blue-400', image: match.homePitcherImage },
+                  { name: language === 'en' ? (match.awayPitcher ?? kboNpbAwayPitcher) : (kboNpbAwayPitcher ?? match.awayPitcher), stats: kboAwayPitcherStats, prevStats: kboAwayPitcherPrevStats, label: t('원정', 'Away'), accentColor: 'text-red-400', image: match.awayPitcherImage ?? (kboAwayPitcherStats as any)?.image_url ?? null },
+                  { name: language === 'en' ? (match.homePitcher ?? kboNpbHomePitcher) : (kboNpbHomePitcher ?? match.homePitcher), stats: kboHomePitcherStats, prevStats: kboHomePitcherPrevStats, label: t('홈', 'Home'),   accentColor: 'text-blue-400', image: match.homePitcherImage ?? (kboHomePitcherStats as any)?.image_url ?? null },
                 ].map(({ name, stats, prevStats, label, accentColor, image }, idx) => (
                   <div key={idx} className="px-4 py-4">
                     {/* 프로필 */}

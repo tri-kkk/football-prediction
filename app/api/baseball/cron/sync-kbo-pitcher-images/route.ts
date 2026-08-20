@@ -7,7 +7,7 @@
 //
 // 사용:
 //   GET ?dryRun=1          → 저장 안 하고 추출 결과만 (검증용)
-//   GET ?date=YYYY-MM-DD   → 특정 날짘(KST)
+//   GET ?date=YYYY-MM-DD   → 특정 날짜(KST)
 //   GET ?days=3            → 오늘부터 3일치 (선발 발표된 다가오는 경기 미리 채움)
 //   GET                    → 오늘(KST) KBO 예정 경기
 
@@ -83,6 +83,20 @@ async function storeImage(pCode: string): Promise<string | null> {
   }
 }
 
+// 투수 스탯 테이블에 player_code + image_url 캐시 (이름+시즌 매칭, 있을 때만 UPDATE)
+async function cacheToStats(name: string | null, pCode: string | null, imageUrl: string | null, season: string) {
+  if (!name || !pCode || !imageUrl) return
+  try {
+    await supabase
+      .from('kbo_pitcher_stats')
+      .update({ player_code: pCode, image_url: imageUrl })
+      .ilike('name', name.trim())
+      .eq('season', season)
+  } catch {
+    /* noop */
+  }
+}
+
 async function naverJson(url: string): Promise<any | null> {
   try {
     const res = await fetch(url, { headers: NAVER_HEADERS, signal: AbortSignal.timeout(10000) })
@@ -149,10 +163,17 @@ async function processDate(targetDate: string, dryRun: boolean) {
       validCode(pv?.result?.previewData?.awayStarter?.playerInfo?.pCode) ||
       validCode(pv?.result?.previewData?.awayTeamLineUp?.fullLineUp?.[0]?.playerCode)
 
+    // 선발 이름 (스탯 테이블 캐시용)
+    const hName = pv?.result?.previewData?.homeStarter?.playerInfo?.name || null
+    const aName = pv?.result?.previewData?.awayStarter?.playerInfo?.name || null
+
     // 네이버 홈이 우리 홈과 같으면 그대로, 아니면 스왑
     const sameOrientation = naverHomeCode === ourHome
     const ourHomePCode = sameOrientation ? hP : aP
     const ourAwayPCode = sameOrientation ? aP : hP
+    const ourHomeName = sameOrientation ? hName : aName
+    const ourAwayName = sameOrientation ? aName : hName
+    const season = targetDate.slice(0, 4)
 
     let homeStored: string | null = null
     let awayStored: string | null = null
@@ -166,6 +187,9 @@ async function processDate(targetDate: string, dryRun: boolean) {
         await supabase.from('baseball_matches').update(patch).eq('api_match_id', g.api_match_id)
         updated += 1
       }
+      // 투수 스탯 테이블에도 캐시 (이름으로 재사용)
+      await cacheToStats(ourHomeName, ourHomePCode, homeStored, season)
+      await cacheToStats(ourAwayName, ourAwayPCode, awayStored, season)
     }
 
     results.push({
