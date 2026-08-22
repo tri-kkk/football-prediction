@@ -86,7 +86,7 @@ export const WeekendTop5: React.FC<DailyProps> = (props) => {
           return (
             <Sequence key={rank} from={from} durationInFrames={frames}>
               <SceneBox frames={frames} video={isTop ? backgrounds.summary : backgrounds.pick}>
-                <SceneRank pick={pick} rank={rank} isTop={isTop} />
+                <SceneRank pick={pick} rank={rank} isTop={isTop} todayDate={props.date} />
               </SceneBox>
             </Sequence>
           )

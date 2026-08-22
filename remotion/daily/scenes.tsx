@@ -6,6 +6,7 @@ import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion'
 import { BRAND_C1, BRAND_C2, SAFE } from '../theme'
 import { fadeUp, fill, glow, pop } from '../anim'
 import { LeagueEmblem, PickCard, MiniPickCard } from '../components/PickCard'
+import { displayTeam, fitFont } from '../components/teamName'
 import type { DailyPick, DailyProps } from './types'
 
 const center: React.CSSProperties = {
@@ -131,11 +132,12 @@ export const SceneOpener: React.FC<{ data: DailyProps }> = ({ data }) => {
 }
 
 // ── 2~4. PICK ───────────────────────────────────────────
-export const ScenePick: React.FC<{ pick: DailyPick; index: number; previous: DailyPick[] }> = ({
-  pick,
-  index,
-  previous,
-}) => {
+export const ScenePick: React.FC<{
+  pick: DailyPick
+  index: number
+  previous: DailyPick[]
+  todayDate?: string
+}> = ({ pick, index, previous, todayDate }) => {
   const frame = useCurrentFrame()
 
   return (
@@ -149,7 +151,7 @@ export const ScenePick: React.FC<{ pick: DailyPick; index: number; previous: Dai
         </div>
       ) : null}
 
-      <PickCard pick={pick} index={index} />
+      <PickCard pick={pick} index={index} todayDate={todayDate} />
     </AbsoluteFill>
   )
 }
@@ -205,14 +207,14 @@ export const SceneSummary: React.FC<{ data: DailyProps }> = ({ data }) => {
               </div>
               <div
                 style={{
-                  fontSize: 36,
+                  fontSize: fitFont(displayTeam(p.pickTeam), 36, 27, 7),
                   fontWeight: 900,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                 }}
               >
-                {p.pickTeam}
+                {displayTeam(p.pickTeam)}
               </div>
             </div>
             <div style={{ fontSize: 51, fontWeight: 900, color: BRAND_C1, flexShrink: 0 }}>
@@ -251,7 +253,7 @@ export const SceneDailyCTA: React.FC<{ data: DailyProps }> = ({ data }) => {
           >
             나머지 경기 분석과
             <br />
-            실시간 배당 흐름은
+            실시간 시장 흐름은
           </div>
         </>
       ) : (

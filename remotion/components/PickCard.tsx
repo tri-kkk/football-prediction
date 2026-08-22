@@ -6,6 +6,7 @@ import { Img, useCurrentFrame } from 'remotion'
 import { BRAND_C1, BRAND_C2 } from '../theme'
 import { fadeUp, fill, pop, slideIn } from '../anim'
 import { Stars } from './Bits'
+import { NO_MID_BREAK, displayTeam, fitFont } from './teamName'
 import type { DailyPick } from '../daily/types'
 
 // 로드에 실패한 URL 을 모듈 레벨에 기억한다.
@@ -102,14 +103,42 @@ const FormRow: React.FC<{ form: string[]; size?: number }> = ({ form, size = 27 
   )
 }
 
-const timeLabel = (iso: string): string => {
+/**
+ * 경기 시각. 오늘이 아니면 날짜를 같이 붙인다.
+ *
+ * 유럽 대항전은 현지 21:00 동시 킥오프라 한국시간으로 전부 오전 4시다.
+ * 시각만 쓰면 카드 세 장에 "오전 4:00" 이 똑같이 찍혀 버그처럼 보인다.
+ * "내일 오전 4:00" 처럼 날짜를 붙이면 오해가 없다.
+ */
+const timeLabel = (iso: string, todayDate?: string): string => {
   try {
-    const kst = new Date(new Date(iso).getTime() + 9 * 3600_000)
+    // 파싱 불가한 값이면 아무것도 그리지 않는다.
+    // (예전에 "18:30" 같은 시각 문자열이 들어와 "NaN/NaN(undefined) 오후 NaN:NaN" 이 찍혔다)
+    const base = new Date(iso)
+    if (!iso || Number.isNaN(base.getTime())) return ''
+
+    const kst = new Date(base.getTime() + 9 * 3600_000)
     const h = kst.getUTCHours()
     const m = kst.getUTCMinutes()
     const ampm = h < 12 ? '오전' : '오후'
     const hh = h % 12 === 0 ? 12 : h % 12
-    return `${ampm} ${hh}:${String(m).padStart(2, '0')}`
+    const time = `${ampm} ${hh}:${String(m).padStart(2, '0')}`
+
+    if (!todayDate) return time
+
+    const matchDate = `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`
+    if (matchDate === todayDate) return time
+
+    // 하루 차이면 "내일", 그 이상이면 요일
+    const [ty, tm, td] = todayDate.split('-').map(Number)
+    const diffDays = Math.round(
+      (Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) - Date.UTC(ty, tm - 1, td)) / 86400000
+    )
+    if (diffDays === 1) return `내일 ${time}`
+    if (diffDays === -1) return `어제 ${time}`
+
+    const wd = ['일', '월', '화', '수', '목', '금', '토'][kst.getUTCDay()]
+    return `${kst.getUTCMonth() + 1}/${kst.getUTCDate()}(${wd}) ${time}`
   } catch {
     return ''
   }
@@ -131,20 +160,22 @@ export const MiniPickCard: React.FC<{ pick: DailyPick; index: number }> = ({ pic
   >
     <span style={{ fontSize: 27, fontWeight: 900, color: '#94a3b8' }}>{'①②③④⑤'[index]}</span>
     <LeagueEmblem src={pick.leagueLogo} size={30} />
-    <SafeLogo src={pick.home.logo} name={pick.home.name} size={42} />
+    <SafeLogo src={pick.home.logo} name={displayTeam(pick.home.name)} size={42} />
     <span style={{ fontSize: 24, color: '#64748b', fontWeight: 800 }}>vs</span>
-    <SafeLogo src={pick.away.logo} name={pick.away.name} size={42} />
+    <SafeLogo src={pick.away.logo} name={displayTeam(pick.away.name)} size={42} />
     <span style={{ fontSize: 30, fontWeight: 900, color: BRAND_C1, marginLeft: 6 }}>
       {pick.probability}%
     </span>
   </div>
 )
 
-export const PickCard: React.FC<{ pick: DailyPick; index: number; barDelay?: number }> = ({
-  pick,
-  index,
-  barDelay = 30,
-}) => {
+export const PickCard: React.FC<{
+  pick: DailyPick
+  index: number
+  barDelay?: number
+  /** 영상 기준일 (YYYY-MM-DD, KST). 경기 날짜가 다르면 "내일" 등을 붙인다. */
+  todayDate?: string
+}> = ({ pick, index, barDelay = 30, todayDate }) => {
   const frame = useCurrentFrame()
   const shownPct = fill(frame, barDelay, pick.probability, 42)
 
@@ -152,28 +183,34 @@ export const PickCard: React.FC<{ pick: DailyPick; index: number; barDelay?: num
     t,
     from,
     isPick,
-  }) => (
+  }) => {
+    // NPB·MLB 팀명은 한글로 옮기면 길어서 두 줄로 넘치고 어절 중간에서 끊긴다.
+    // 축약형을 쓰고, 그래도 길면 글자 크기를 줄인다.
+    const name = displayTeam(t.name)
+    return (
     <div
       style={{
         ...slideIn(frame, 10, from, 70),
         flex: 1,
+        minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: 18,
       }}
     >
-      <SafeLogo src={t.logo} name={t.name} size={180} />
+      <SafeLogo src={t.logo} name={name} size={180} />
       <div
         style={{
-          fontSize: 42,
+          fontSize: fitFont(name, 42, 30, 6),
           fontWeight: 900,
           textAlign: 'center',
           lineHeight: 1.2,
           color: isPick ? BRAND_C1 : '#e2e8f0',
+          ...NO_MID_BREAK,
         }}
       >
-        {t.name}
+        {name}
       </div>
 
       {/* 순위 · 승점 — standings 조회 실패 시 줄 자체가 빠진다 */}
@@ -187,7 +224,8 @@ export const PickCard: React.FC<{ pick: DailyPick; index: number; barDelay?: num
         <FormRow form={t.form} />
       </div>
     </div>
-  )
+    )
+  }
 
   return (
     <div
@@ -250,11 +288,11 @@ export const PickCard: React.FC<{ pick: DailyPick; index: number; barDelay?: num
 
       {/* 픽 + 승률 바 */}
       <div style={{ ...fadeUp(frame, barDelay - 8, 30), display: 'flex', flexDirection: 'column', gap: 15 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color: '#94a3b8' }}>
-            AI 픽 <span style={{ color: '#fff', fontWeight: 900 }}>{pick.pickTeam}</span>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 18 }}>
+          <div style={{ fontSize: 36, fontWeight: 800, color: '#94a3b8', minWidth: 0, ...NO_MID_BREAK }}>
+            AI 픽 <span style={{ color: '#fff', fontWeight: 900 }}>{displayTeam(pick.pickTeam)}</span>
           </div>
-          <div style={{ fontSize: 63, fontWeight: 900, color: BRAND_C1 }}>
+          <div style={{ fontSize: 63, fontWeight: 900, color: BRAND_C1, flexShrink: 0 }}>
             {Math.round(shownPct)}%
           </div>
         </div>
@@ -306,7 +344,7 @@ export const PickCard: React.FC<{ pick: DailyPick; index: number; barDelay?: num
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
           <Stars n={pick.stars} size={45} delay={barDelay + 24} />
           <div style={{ fontSize: 27, color: '#64748b', fontWeight: 700 }}>
-            {timeLabel(pick.matchTime)}
+            {timeLabel(pick.matchTime, todayDate)}
           </div>
         </div>
       </div>

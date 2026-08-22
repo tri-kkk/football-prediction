@@ -29,6 +29,7 @@ import { renderMedia, selectComposition } from '@remotion/renderer'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { writeUpload } from './upload-text.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -197,9 +198,46 @@ async function fetchResult() {
   const j = await r.json()
   if (!j.success) throw new Error(j.error || 'shorts-result 실패')
   if (!Array.isArray(j.results) || j.results.length === 0) {
-    throw new Error('어제 정산된 픽이 없습니다 (영상 생성 스킵)')
+    // 그냥 "데이터 없음" 이라고만 하면 원인을 알 수 없어 매번 DB 를 뒤져야 한다.
+    // 어느 날짜를 봤고 픽이 몇 개였고 그중 정산된 게 몇 개인지까지 찍어 준다.
+    //   picks 0            → 그날 픽 자체가 생성되지 않았다 (픽 생성 크론 확인)
+    //   picks N / settled 0 → 픽은 있는데 아직 경기 결과가 안 들어왔다 (정산 크론 확인)
+    const detail = (j.diag?.checked || [])
+      .map((c) => `${c.date}: 픽 ${c.picks}개 / 정산 ${c.settled}개`)
+      .join(' · ')
+    throw new Error(
+      detail
+        ? `정산된 픽이 없습니다 — ${detail}`
+        : '정산된 픽이 없습니다 (영상 생성 스킵)'
+    )
   }
   return j
+}
+
+/**
+ * 누적 적중률만 따로 얻어온다.
+ *
+ * 오늘의 픽(shorts-daily) 응답에는 누적 성적이 없는데, 업로드 설명란에는
+ * "누적 596경기 기준 73%" 같은 근거 한 줄이 있어야 신뢰가 붙는다.
+ * shorts-result 가 이미 계산해 두므로 거기서 빌려 쓴다.
+ * 실패해도 영상은 나와야 하므로 조용히 null 을 돌려준다.
+ */
+async function fetchCumulative() {
+  try {
+    const qs =
+      SPORT === 'baseball'
+        ? `sport=baseball&league=${encodeURIComponent(LEAGUE)}`
+        : `sport=football&group=${encodeURIComponent(GROUP)}`
+    const r = await fetch(`${BASE_URL}/api/admin/shorts-result?${qs}`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!r.ok) return null
+    const j = await r.json()
+    return j?.cumulative ?? null
+  } catch {
+    return null
+  }
 }
 
 /** 성적표 카드의 로고도 data URI 로 인라인 */
@@ -258,13 +296,15 @@ async function main() {
     if (data.missingStandings) console.log(`  ⚠ 순위 미확인 ${data.missingStandings}개 (시즌 초에는 정상)`)
     if (data.missingKoNames?.length)
       console.log(`  ⚠ 한글 팀명 없음: ${data.missingKoNames.join(', ')} — teamLogos.ts 의 TEAM_NAME_KR 에 추가하세요`)
-    data.picks = await inlineLogos(data.picks)
+    // 업로드 문구는 로고를 data URI 로 바꾸기 전에 만든다.
+    // 인라인 후에는 픽 객체가 수 MB 짜리 base64 를 물고 있어 다루기 번거롭다.
+    const cumulative = await fetchCumulative()
     const tag = SPORT === 'baseball' ? LEAGUE : GROUP
-    await render(
-      'DailyPicks',
-      { ...data, bgm: BGM, backgrounds },
-      `daily_${tag}_${data.date}.mp4`
-    )
+    const name = `daily_${tag}_${data.date}.mp4`
+    await writeUpload(OUT_DIR, name, 'daily', { ...data, cumulative }, tag)
+
+    data.picks = await inlineLogos(data.picks)
+    await render('DailyPicks', { ...data, bgm: BGM, backgrounds }, name)
   } else if (FORMAT === 'top5') {
     // 주말 TOP 5 — 항상 5개를 채운다
     const data = await fetchDaily('weekend', 5)
@@ -272,22 +312,22 @@ async function main() {
     if (data.missingStandings) console.log(`  ⚠ 순위 미확인 ${data.missingStandings}개 (시즌 초에는 정상)`)
     if (data.missingKoNames?.length)
       console.log(`  ⚠ 한글 팀명 없음: ${data.missingKoNames.join(', ')} — teamLogos.ts 의 TEAM_NAME_KR 에 추가하세요`)
+    const cumulative = await fetchCumulative()
+    const name = `top5_${GROUP}_${data.date}.mp4`
+    await writeUpload(OUT_DIR, name, 'top5', { ...data, cumulative }, GROUP)
+
     data.picks = await inlineLogos(data.picks)
-    await render(
-      'WeekendTop5',
-      { ...data, bgm: BGM, backgrounds },
-      `top5_${GROUP}_${data.date}.mp4`
-    )
+    await render('WeekendTop5', { ...data, bgm: BGM, backgrounds }, name)
   } else if (FORMAT === 'result') {
     const data = await fetchResult()
     console.log(`▶ ${data.groupLabel} · 어제 ${data.summary.total}경기 · ${data.summary.correct} 적중`)
-    data.results = await inlineResultLogos(data.results)
+
     const tag = SPORT === 'baseball' ? LEAGUE : GROUP
-    await render(
-      'DailyResults',
-      { ...data, bgm: BGM, backgrounds },
-      `result_${tag}_${data.date}.mp4`
-    )
+    const name = `result_${tag}_${data.date}.mp4`
+    await writeUpload(OUT_DIR, name, 'result', data, tag)
+
+    data.results = await inlineResultLogos(data.results)
+    await render('DailyResults', { ...data, bgm: BGM, backgrounds }, name)
   } else {
     const games = await fetchGames()
     const picked = games.slice(0, LIMIT)

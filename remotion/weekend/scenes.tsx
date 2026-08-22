@@ -82,11 +82,12 @@ export const SceneWeekendOpener: React.FC<{ data: DailyProps }> = ({ data }) => 
 }
 
 // ── RANK ────────────────────────────────────────────────
-export const SceneRank: React.FC<{ pick: DailyPick; rank: number; isTop: boolean }> = ({
-  pick,
-  rank,
-  isTop,
-}) => {
+export const SceneRank: React.FC<{
+  pick: DailyPick
+  rank: number
+  isTop: boolean
+  todayDate?: string
+}> = ({ pick, rank, isTop, todayDate }) => {
   const frame = useCurrentFrame()
 
   // 배경 워터마크 순위 숫자
@@ -169,7 +170,7 @@ export const SceneRank: React.FC<{ pick: DailyPick; rank: number; isTop: boolean
             background: 'rgba(8,12,18,0.93)',
           }}
         >
-          <PickCard pick={pick} index={rank - 1} barDelay={24} />
+          <PickCard pick={pick} index={rank - 1} barDelay={24} todayDate={todayDate} />
         </div>
 
         {isTop ? (

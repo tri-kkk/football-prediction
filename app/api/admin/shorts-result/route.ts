@@ -218,8 +218,23 @@ async function football(groupKey: string) {
   const correct = results.filter((r) => r.isCorrect).length
   const draws = results.filter((r) => r.isDraw).length
 
+  // 축구는 36시간 창으로 뽑으므로 조회 자체는 시각에 안 흔들린다.
+  // 다만 화면에 찍히는 날짜는 실제 보여줄 경기 기준이어야 한다.
+  // (오후 2시에 돌리면 recentRange 라벨이 '오늘' 로 나오는데,
+  //  정작 경기는 어젯밤에 열린 것이라 하루가 어긋난다)
+  const shownDates = (data || [])
+    .filter((r) => results.some((x) => String(x.matchId) === String(r.match_id)))
+    .map((r) => {
+      const k = new Date(new Date(r.commence_time).getTime() + 9 * 3600_000)
+      return `${k.getUTCFullYear()}-${String(k.getUTCMonth() + 1).padStart(2, '0')}-${String(k.getUTCDate()).padStart(2, '0')}`
+    })
+  const tally = new Map<string, number>()
+  for (const d of shownDates) tally.set(d, (tally.get(d) || 0) + 1)
+  const shownDate =
+    [...tally.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1))[0]?.[0] || dateLabel
+
   return {
-    date: dateLabel,
+    date: shownDate,
     sport: 'football' as const,
     groupLabel: group.label,
     results,
@@ -295,16 +310,43 @@ async function readComboPicks(league: string, dateLabel: string): Promise<ComboP
 }
 
 async function baseball(league: string) {
-  const { dateLabel } = recentRange(36)
+  // ⚠ 여기서 recentRange() 의 dateLabel 을 쓰면 안 된다.
+  //
+  // recentRange 는 "지금 -12시간" 을 라벨로 삼는다. 오전 7시에 돌릴 땐
+  // 그게 어제 저녁이라 맞았지만, 렌더 시각을 **오후 2시로 옮기면서**
+  // -12시간이 같은 날 새벽 2시가 되어 라벨이 '오늘' 로 바뀌었다.
+  // 그래서 오늘 저녁에 열릴, 아직 끝나지도 않은 경기를 조회하고
+  // 정산된 게 하나도 없어 전부 건너뛰었다.
+  //
+  // 시각에 기대는 대신 어제·오늘을 다 조회하고,
+  // **정산된 경기가 더 많은 날**을 보여준다.
+  //   KBO·NPB : 저녁 경기 → 오후 2시엔 어제가 이긴다
+  //   MLB     : 한국시간 새벽~오전 경기 → 오후 2시엔 오늘이 이긴다
+  // 리그마다 규칙을 따로 두지 않아도 알아서 맞는다.
+  const yLabel = dayRangeKST(-1).dateLabel
+  const tLabel = dayRangeKST(0).dateLabel
 
-  // KBO 는 저녁 경기라 달력 하루로 잘라도 문제가 없지만,
-  // 날짜 경계 직후에 돌릴 때를 대비해 어제·오늘 두 날을 함께 본다.
-  const { dateLabel: todayLabel } = dayRangeKST(0)
-  const picksRaw = [
-    ...(await readComboPicks(league, dateLabel)),
-    ...(dateLabel !== todayLabel ? await readComboPicks(league, todayLabel) : []),
-  ]
-  const settled = picksRaw.filter((p) => p.homeScore != null && p.awayScore != null)
+  const isSettled = (p: ComboPick) => p.homeScore != null && p.awayScore != null
+
+  const yAll = await readComboPicks(league, yLabel)
+  const tAll = await readComboPicks(league, tLabel)
+  const ySettled = yAll.filter(isSettled)
+  const tSettled = tAll.filter(isSettled)
+
+  // 동점이면 오늘 쪽을 쓴다 (더 최신이므로)
+  const useToday = tSettled.length >= ySettled.length && tSettled.length > 0
+  const settled = useToday ? tSettled : ySettled
+  const dateLabel = useToday ? tLabel : yLabel
+
+  // 왜 비었는지 렌더 로그에서 바로 알 수 있게 남긴다.
+  // "픽 자체가 없다" 와 "픽은 있는데 아직 정산 전이다" 는 원인이 완전히 다르다.
+  const diag = {
+    checked: [
+      { date: yLabel, picks: yAll.length, settled: ySettled.length },
+      { date: tLabel, picks: tAll.length, settled: tSettled.length },
+    ],
+    used: dateLabel,
+  }
 
   const results = settled
     .sort((a, b) => b.winProb - a.winProb)
@@ -357,6 +399,7 @@ async function baseball(league: string) {
       draws: 0,
       accuracy: results.length ? Math.round((correct / results.length) * 100) : 0,
     },
+    diag,
     cumulative,
   }
 }

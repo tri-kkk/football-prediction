@@ -524,6 +524,31 @@ async function baseball(league: string, count: number | 'auto') {
 
   const picksRaw = await readComboPicks(league, dateLabel)
 
+  // ⚠ baseball_combo_picks 의 matchTime 은 baseball_matches.match_time 을 그대로 담고 있는데,
+  //   이 컬럼은 "18:30" 같은 시각 문자열이라 new Date() 로 파싱되지 않는다 (NaN).
+  //   실제 날짜+시각은 match_timestamp 에 있으므로 여기서 다시 붙인다.
+  const matchIds = picksRaw.map((p) => p.matchId).filter((v) => v != null)
+  const timeById = new Map<number, string>()
+  if (matchIds.length) {
+    const { data: mrows } = await supabase
+      .from('baseball_matches')
+      .select('id, match_timestamp, match_date, match_time')
+      .in('id', matchIds)
+    for (const m of mrows || []) {
+      const ts =
+        m.match_timestamp ||
+        (m.match_date && m.match_time ? `${m.match_date}T${m.match_time}` : m.match_date) ||
+        ''
+      if (ts) timeById.set(m.id, ts)
+    }
+  }
+  const resolveTime = (p: ComboPick): string => {
+    const fromDb = timeById.get(p.matchId)
+    if (fromDb) return fromDb
+    // 폴백: 그래도 없으면 파싱 가능한 값일 때만 쓴다
+    return p.matchTime && !Number.isNaN(new Date(p.matchTime).getTime()) ? p.matchTime : ''
+  }
+
   // 필터링 서사의 분모 — 오늘 그 리그의 전체 경기 수
   const { count: scheduled } = await supabase
     .from('baseball_matches')
@@ -536,8 +561,9 @@ async function baseball(league: string, count: number | 'auto') {
   const nowMs = Date.now()
   const rows = picksRaw
     .filter((p) => {
-      if (!p.matchTime) return true
-      const t = new Date(p.matchTime).getTime()
+      const iso = resolveTime(p)
+      if (!iso) return true
+      const t = new Date(iso).getTime()
       return Number.isNaN(t) ? true : t > nowMs
     })
     .map((p) => ({
@@ -557,7 +583,7 @@ async function baseball(league: string, count: number | 'auto') {
       away: p.pick === 'away' ? Math.round(p.winProb) : 100 - Math.round(p.winProb),
     },
     stars: starsFromProbability(Math.round(p.winProb)),
-    matchTime: p.matchTime,
+    matchTime: resolveTime(p),
   }))
 
   const wanted = count === 'auto'

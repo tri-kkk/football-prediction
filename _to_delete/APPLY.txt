@@ -1,0 +1,50 @@
+야구 경기 시각 NaN 수정
+
+1) API 덮어쓰기
+   shorts-daily-route.ts → app/api/admin/shorts-daily/route.ts
+2) Remotion 덮어쓰기
+   remotion/
+3) npm run dev 재시작 → 배포
+
+
+== 증상 ==
+
+  NaN/NaN(undefined) 오후 NaN:NaN
+
+MLB 뿐 아니라 KBO·NPB 도 같은 문제였습니다.
+(KBO 는 그동안 픽이 건너뛰어져서 눈에 안 띄었을 뿐입니다)
+
+
+== 원인 ==
+
+baseball_combo_picks 의 picks[].matchTime 에는
+baseball_matches.match_time 이 그대로 담겨 있습니다.
+
+그런데 이 컬럼은 "18:30" 같은 시각 문자열입니다.
+날짜가 없어서 new Date("18:30") → Invalid Date → 전부 NaN.
+
+실제 날짜+시각은 별도 컬럼인 match_timestamp 에 있습니다.
+(사이트의 baseball/matches 라우트도 match_timestamp 를 씁니다)
+
+
+== 수정 ==
+
+[1] API — 콤보 픽의 matchId 로 baseball_matches 를 다시 조회해
+    match_timestamp 를 붙입니다.
+    없으면 match_date + match_time 을 합치고,
+    그것도 안 되면 빈 값으로 둡니다.
+
+[2] Remotion — timeLabel 이 파싱 불가한 값을 받으면
+    NaN 을 찍는 대신 아무것도 표시하지 않습니다.
+    앞으로 비슷한 데이터가 들어와도 화면이 깨지지 않습니다.
+
+
+== 확인 ==
+
+렌더 후 야구 픽 카드 우측 하단을 보세요.
+
+  KBO / NPB  →  오후 6:30
+  MLB        →  내일 오전 8:05
+
+MLB 는 미국 현지 저녁 경기라 한국시간 오전입니다.
+오후 2시에 렌더하면 내일 아침 경기가 잡히므로 "내일" 이 붙는 게 정상입니다.

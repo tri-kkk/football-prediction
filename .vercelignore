@@ -1,0 +1,6 @@
+# 숏폼 렌더 전용 에셋 — 사이트에서는 쓰지 않으므로 배포에서 제외한다
+public/videos/
+out/
+remotion/
+shorts_sample*.mp4
+trendsoccer-*.zip

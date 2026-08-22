@@ -72,7 +72,7 @@ export const DailyPicks: React.FC<DailyProps> = (props) => {
         return (
           <Sequence key={i} from={from} durationInFrames={DAILY_FRAMES.pick}>
             <SceneBox frames={DAILY_FRAMES.pick} video={backgrounds.pick}>
-              <ScenePick pick={pick} index={i} previous={picks.slice(0, i)} />
+              <ScenePick pick={pick} index={i} previous={picks.slice(0, i)} todayDate={props.date} />
             </SceneBox>
           </Sequence>
         )

@@ -6,6 +6,7 @@ import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion'
 import { BRAND_C1, BRAND_C2, SAFE } from '../theme'
 import { fadeUp, fill, glow, pop } from '../anim'
 import { LeagueEmblem, SafeLogo } from '../components/PickCard'
+import { NO_MID_BREAK, displayTeam, fitFont } from '../components/teamName'
 import type { MatchResult, ResultProps } from './types'
 
 const center: React.CSSProperties = {
@@ -93,6 +94,54 @@ export const SceneResultHook: React.FC<{ data: ResultProps }> = ({ data }) => {
 }
 
 // ── 2. RESULTS — 순차 오픈 ───────────────────────────────
+
+/**
+ * 스코어 한쪽 팀 블록.
+ *
+ * 홈은 오른쪽 정렬(스코어 쪽으로 붙고), 원정은 왼쪽 정렬이다.
+ * 양쪽이 flex:1 로 같은 너비를 가져가므로 한 팀 이름이 길어도
+ * 반대편을 밀어내지 않는다.
+ */
+const TeamSide: React.FC<{ r: MatchResult; side: 'home' | 'away'; scale: number }> = ({
+  r,
+  side,
+  scale,
+}) => {
+  const t = side === 'home' ? r.home : r.away
+  const name = displayTeam(t.name)
+  // 5자까지는 36px, 그 이상은 비례 축소 (최소 24px)
+  const fs = fitFont(name, 36 * scale, 24 * scale, 5)
+  const logo = <SafeLogo src={t.logo} name={name} size={45 * scale} />
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: side === 'home' ? 'flex-end' : 'flex-start',
+        gap: 12 * scale,
+      }}
+    >
+      {side === 'home' ? logo : null}
+      <span
+        style={{
+          fontSize: fs,
+          fontWeight: 800,
+          color: '#e2e8f0',
+          lineHeight: 1.15,
+          textAlign: side === 'home' ? 'right' : 'left',
+          ...NO_MID_BREAK,
+        }}
+      >
+        {name}
+      </span>
+      {side === 'away' ? logo : null}
+    </div>
+  )
+}
+
 const ResultCard: React.FC<{ r: MatchResult; index: number; delay: number; compact?: boolean }> = ({
   r,
   index,
@@ -148,19 +197,30 @@ const ResultCard: React.FC<{ r: MatchResult; index: number; delay: number; compa
         <LeagueEmblem src={r.leagueLogo} size={51 * scale} />
       </div>
 
-      {/* 경기 */}
+      {/* 경기
+          한 줄에 [홈][스코어][원정] 을 그냥 늘어놓으면 NPB·MLB 처럼 팀명이 길 때
+          어절 중간에서 잘린다("요미우리 자이 / 언츠").
+          스코어를 가운데 고정 폭으로 두고 양옆을 같은 너비로 나눠 준 뒤,
+          이름은 축약 + 길이에 따른 자동 축소로 처리한다. */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 9 * scale }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 * scale }}>
-          <SafeLogo src={r.home.logo} name={r.home.name} size={45 * scale} />
-          <span style={{ fontSize: 36 * scale, fontWeight: 800, color: '#e2e8f0' }}>{r.home.name}</span>
-          <span style={{ fontSize: 45 * scale, fontWeight: 900, color: '#fff', margin: `0 ${12 * scale}px` }}>
+          <TeamSide r={r} side="home" scale={scale} />
+          <span
+            style={{
+              fontSize: 45 * scale,
+              fontWeight: 900,
+              color: '#fff',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              padding: `0 ${6 * scale}px`,
+            }}
+          >
             {r.homeScore ?? '-'} : {r.awayScore ?? '-'}
           </span>
-          <span style={{ fontSize: 36 * scale, fontWeight: 800, color: '#e2e8f0' }}>{r.away.name}</span>
-          <SafeLogo src={r.away.logo} name={r.away.name} size={45 * scale} />
+          <TeamSide r={r} side="away" scale={scale} />
         </div>
-        <div style={{ fontSize: 28 * scale, color: '#94a3b8', fontWeight: 700 }}>
-          AI 예측 <span style={{ color: accent, fontWeight: 900 }}>{r.pickTeam} 승</span>
+        <div style={{ fontSize: 28 * scale, color: '#94a3b8', fontWeight: 700, ...NO_MID_BREAK }}>
+          AI 예측 <span style={{ color: accent, fontWeight: 900 }}>{displayTeam(r.pickTeam)} 승</span>
           <span style={{ color: '#475569' }}> · {r.probability}%</span>
         </div>
       </div>
