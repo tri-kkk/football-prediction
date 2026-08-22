@@ -364,10 +364,16 @@ async function baseball(league: string) {
       pickTeam: p.pickTeamKo,
       probability: Math.round(p.winProb),
       isCorrect: p.isCorrect === true,
-      isDraw: false, // 야구는 무승부 없음
+      // ⚠ "야구는 무승부 없음" 이 아니다.
+      //   NPB·KBO 는 연장 12회까지 승부가 안 나면 무승부로 끝난다.
+      //   여기를 false 로 박아두면 무승부 경기가 성적표에서 ✕(오답)으로 찍히고,
+      //   적중률 분모에도 그대로 들어가 숫자가 왜곡된다.
+      isDraw: p.homeScore != null && p.awayScore != null && p.homeScore === p.awayScore,
     }))
 
   const correct = results.filter((x) => x.isCorrect).length
+  const draws = results.filter((x) => x.isDraw).length
+  const decisive = results.length - draws
 
   // 누적은 기존 야구 전용 API 를 그대로 쓴다 (동점 제외 2-way 로 이미 계산됨)
   let cumulative = null
@@ -396,8 +402,11 @@ async function baseball(league: string) {
     summary: {
       total: results.length,
       correct,
-      draws: 0,
-      accuracy: results.length ? Math.round((correct / results.length) * 100) : 0,
+      draws,
+      // 적중률 분모는 **승부가 갈린 경기**다.
+      // 무승부를 분모에 넣으면 모델이 맞힐 수 없는 경기까지 실패로 세게 된다.
+      // (축구에서 무승부를 빼고 계산하는 것과 같은 기준)
+      accuracy: decisive ? Math.round((correct / decisive) * 100) : 0,
     },
     diag,
     cumulative,

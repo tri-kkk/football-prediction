@@ -72,17 +72,40 @@ export async function GET(request: NextRequest) {
       totalDecided++
 
       // 승리팀 판정
-      const homeWon = match.home_score > match.away_score
-      const pickCorrect = (pick.pick === 'home' && homeWon) || (pick.pick === 'away' && !homeWon)
+      //
+      // 🔥 2026-08 버그 수정
+      //   기존: const pickCorrect = (pick.pick === 'home' && homeWon) || (pick.pick === 'away' && !homeWon)
+      //
+      //   !homeWon 은 "홈이 안 이겼다" 라서 **동점도 포함**한다.
+      //   그래서 3:3 으로 끝난(혹은 연장 중 3:3 에서 얼어붙은) 경기에서
+      //   원정 픽이 전부 '적중' 으로 기록됐다.
+      //   NPB·KBO 는 무승부가 실제로 존재하고, 연장 경기가 정규이닝 스코어로
+      //   멈춰 있는 경우도 있어 이 버그가 누적 적중률을 그대로 부풀렸다.
+      //
+      //   이제 홈승/원정승을 각각 판정하고, 동점은 어느 쪽도 적중이 아니다.
+      const hs = match.home_score
+      const as = match.away_score
+      const homeWon = hs != null && as != null && hs > as
+      const awayWon = hs != null && as != null && as > hs
+      const isTie = hs != null && as != null && hs === as
+
+      const pickCorrect = (pick.pick === 'home' && homeWon) || (pick.pick === 'away' && awayWon)
 
       if (pickCorrect) correctCount++
+
+      if (isTie) {
+        console.log(`  ⚖️ 동점 경기 (${match.home_team} ${hs}:${as} ${match.away_team}) — 적중/미적중 어느 쪽도 아님`)
+      }
 
       // 개별 경기 결과를 picks에 기록
       updatedPicks[idx] = {
         ...pick,
-        homeScore: match.home_score,
-        awayScore: match.away_score,
+        homeScore: hs,
+        awayScore: as,
         isCorrect: pickCorrect,
+        // 무승부는 예측 대상 자체가 아니었다.
+        // 적중률 계산에서 빼려면 '틀림' 과 구분할 표시가 필요하다.
+        isTie,
         matchStatus: 'FT',
       }
     }

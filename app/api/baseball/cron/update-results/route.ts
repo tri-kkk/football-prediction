@@ -51,13 +51,48 @@ export async function GET(request: NextRequest) {
     if (leagueFilter) {
       query = query.in('league', leagueFilter)
     }
-    const { data: matches, error: fetchError } = await query.limit(100)
-    
+    const { data: baseMatches, error: fetchError } = await query.limit(100)
+
     if (fetchError) {
       console.error('❌ DB 조회 오류:', fetchError)
       return NextResponse.json({ success: false, error: fetchError.message })
     }
-    
+
+    // 🔥 2026-08 패치: **동점으로 FT 처리된 경기는 다시 조회한다.**
+    //
+    //   연장 경기가 정규이닝 동점 상태에서 얼어붙는 케이스가 있다.
+    //   api-sports 가 연장 중 갱신을 멈추면 아래 타임아웃 안전장치들이
+    //   그 경기를 3:3 인 채로 FT 로 확정해 버리고, 한 번 FT + 이닝데이터가
+    //   생기면 위 쿼리 조건(FT AND inning IS NULL)에 안 걸려 **영원히 3:3 로 남는다.**
+    //   실제로 NPB 지바롯데-닛폰햄 연장 경기가 3:3 으로 굳어 있었다.
+    //
+    //   진짜 무승부(NPB·KBO 연장 12회 종료)도 동점이라 같이 재조회되지만,
+    //   조회 창이 4일이고 API 응답이 같으면 DB 값이 그대로라 실질 부담은 없다.
+    //   놓친 연장 결과를 스스로 복구하는 값이 훨씬 크다.
+    let tiedFT: any[] = []
+    {
+      let tq = supabase
+        .from('baseball_matches')
+        .select('api_match_id, home_team, away_team, match_date, match_timestamp, status, inning, home_score, away_score, updated_at, league')
+        .gte('match_date', yesterdayStr)
+        .lte('match_date', todayStr)
+        .eq('status', 'FT')
+        .not('home_score', 'is', null)
+        .not('away_score', 'is', null)
+      if (leagueFilter) tq = tq.in('league', leagueFilter)
+
+      const { data: ftRows } = await tq.limit(300)
+      // PostgREST 로는 컬럼끼리 비교(home_score = away_score)를 못 하므로 여기서 거른다
+      tiedFT = (ftRows || []).filter((m) => m.home_score === m.away_score)
+      if (tiedFT.length) {
+        console.log(`  ⚖️ 동점 FT 재확인 대상: ${tiedFT.length}개 (연장 중 정체 복구용)`)
+      }
+    }
+
+    // 중복 제거하며 합친다
+    const seenIds = new Set((baseMatches || []).map((m) => m.api_match_id))
+    const matches = [...(baseMatches || []), ...tiedFT.filter((m) => !seenIds.has(m.api_match_id))]
+
     if (!matches || matches.length === 0) {
       console.log('✅ 업데이트할 경기 없음')
       return NextResponse.json({ 
@@ -121,12 +156,20 @@ export async function GET(request: NextRequest) {
           console.log(`  ⚠️ 비종료성 결과 유지: ${newStatus} (${match.home_team} vs ${match.away_team})`)
         }
 
+        // 🔥 2026-08: 지금 동점인가?
+        //   동점 + 후반 이닝 = 연장으로 갈(또는 이미 간) 경기다.
+        //   이 상태에서 성급히 FT 로 확정하면 승부가 안 난 스코어가 결과로 굳는다.
+        const tiedNow = homeScore != null && awayScore != null && homeScore === awayScore
+
         // 타임아웃 안전장치 1: 후반 이닝(IN7~IN15)에서 3시간 이상 업데이트 없으면 자동 FT
+        //   단, 동점이면 연장 진행 중일 수 있으므로 6시간까지 기다린다.
+        //   (NPB 는 12회, KBO 는 12회에서 무승부로 끝나므로 6시간이면 충분하다)
         const lateInnings = ['IN7', 'IN8', 'IN9', 'IN10', 'IN11', 'IN12', 'IN13', 'IN14', 'IN15']
         if (lateInnings.includes(match.status) && match.updated_at) {
           const lastUpdate = new Date(match.updated_at).getTime()
           const hoursElapsed = (Date.now() - lastUpdate) / (1000 * 60 * 60)
-          if (hoursElapsed >= 3 && !FINISHED_STATUSES.includes(newStatus) && newStatus !== 'FT') {
+          const limitH = tiedNow ? 6 : 3
+          if (hoursElapsed >= limitH && !FINISHED_STATUSES.includes(newStatus) && newStatus !== 'FT') {
             console.log(`  ⏰ 타임아웃: ${match.status} 상태에서 ${hoursElapsed.toFixed(1)}시간 경과 → FT 자동 전환`)
             newStatus = 'FT'
           }
