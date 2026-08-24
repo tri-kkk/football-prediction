@@ -15,6 +15,7 @@ import {
 import type { SportFilter, UnifiedMatch } from '../components/home/types'
 import type { DateFilter } from '../components/home/DateTabs'
 import TodayPickRow from '../components/home/TodayPickRow'
+import CoachPromoBanner from '../components/home/CoachPromoBanner'
 import SeasonKickoffHero from '../components/home/SeasonKickoffHero'
 import NewsGrid from '../components/home/NewsGrid'
 import PredictionTrackRecord from '../components/home/PredictionTrackRecord'
@@ -258,6 +259,9 @@ function HomeInner() {
 
       {/* ①  오늘의 추천 경기 — 3분할 카드 행 */}
       <TodayPickRow locale={locale} isPremium={isPremium} />
+
+      {/* ②  TrendCoach 홍보 배너 (베팅 관리 서브 브랜드 인지/유입) */}
+      <CoachPromoBanner isEn={isEn} />
 
       {/* ③  통합 경기 피드 (홈은 3줄로 축소, 라이브 경기는 상단 정렬) */}
       <UnifiedFeed
