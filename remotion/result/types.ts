@@ -27,6 +27,8 @@ export interface ResultProps {
   date: string
   sport: 'football' | 'baseball'
   groupLabel: string
+  /** "어제" / "오늘 새벽" — 유럽 축구는 한국시간 새벽에 끝나 "어제" 가 안 맞는다 */
+  windowLabel?: string
   results: MatchResult[]
   summary: {
     total: number

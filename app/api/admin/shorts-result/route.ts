@@ -76,6 +76,21 @@ function recentRange(hours = 36) {
   }
 }
 
+/**
+ * 화면에 쓸 시점 라벨.
+ *
+ * "어제 결과" 로 고정해두면 유럽 축구에서 어긋난다.
+ * 현지 밤 경기가 한국시간으로는 **오늘 새벽**이라,
+ * 날짜는 8월 24일인데 제목은 "어제 결과" 인 모순이 생긴다.
+ */
+function windowLabelFor(shownDate: string): string {
+  const today = dayRangeKST(0).dateLabel
+  const yesterday = dayRangeKST(-1).dateLabel
+  if (shownDate === today) return '오늘 새벽'
+  if (shownDate === yesterday) return '어제'
+  return shownDate.slice(5).replace('-', '/')
+}
+
 function dayRangeKST(offsetDays: number) {
   const now = new Date()
   const kst = new Date(now.getTime() + 9 * 3600_000)
@@ -235,6 +250,7 @@ async function football(groupKey: string) {
 
   return {
     date: shownDate,
+    windowLabel: windowLabelFor(shownDate),
     sport: 'football' as const,
     groupLabel: group.label,
     results,
@@ -396,6 +412,7 @@ async function baseball(league: string) {
 
   return {
     date: dateLabel,
+    windowLabel: windowLabelFor(dateLabel),
     sport: 'baseball' as const,
     groupLabel: LEAGUE_LABEL[league] || league,
     results,

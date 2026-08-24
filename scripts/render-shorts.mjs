@@ -46,18 +46,46 @@ const COUNT = Number(arg('count', '3'))     // daily 전용: 픽 개수
 const LEAGUE = arg('league', 'KBO')
 const LIMIT = Number(arg('limit', '1'))
 // 포맷별 기본 배경음 (public/sounds/).
-// 성적표는 결과를 담담하게 보여주는 톤이라 시네마틱,
-// 오늘의 픽·TOP5 는 기대감을 주는 톤이라 에너제틱을 기본으로 둔다.
+//
+// 전부 유튜브 스튜디오 오디오 보관함에서 받은 음원이다.
+// 유튜브가 직접 제공하는 것이라 Content ID 소유권 주장이 걸리지 않는다.
+// (2026-08 에 무료 사이트 음원 하나가 주장을 먹고 전량 교체했다)
+//
+// 성적표에 승리 팡파레 계열을 쓰지 않는 건 의도적이다.
+// 이 포맷은 성적이 나쁜 날에도 올린다. 5경기 중 1개 맞힌 날에
+// 승리 음악이 깔리면 우스워지므로, 결과 어느 쪽으로도 안 기우는 톤을 쓴다.
 const DEFAULT_BGM = {
-  daily: 'sport-energetic.mp3',
-  result: 'rockot-cinematic.mp3',
-  top5: 'sports-rock.mp3',
-  match: 'sport-energetic.mp3',
+  daily: 'soundlings-sigma-slide.mp3',   // 밝고 일정한 그루브
+  result: 'density-standoff.mp3',        // 긴장감 있되 승패 중립
+  top5: 'neffex-catch-me-if-i-fall.mp3', // 카운트다운용 하이프
+  match: 'soundlings-sigma-slide.mp3',
 }
+
+// 예비 음원 — 위 곡이 물리면 --bgm= 으로 바꿔 끼운다
+//   soundlings-delulu-dancer.mp3   / soundlings-best-besties.mp3   (밝은 계열)
+//   rodkim-duty-calls.mp3          / soundlings-keys-to-unravel.mp3 (성적표 계열)
+
+// Content ID 소유권 주장이 실제로 걸린 음원.
+// 다시 쓰면 그 영상 광고 수익이 주장한 쪽으로 넘어가므로 자동으로 차단한다.
+// (경고가 아니라 수익 문제라 조용히 넘어가면 나중에 한꺼번에 손해다)
+const CLAIMED_BGM = new Set([
+  'rockot-cinematic.mp3', // 2026-08 "Experimental Cinematic Hip-..." / Rockot 주장 확인
+])
+
+// 위와 같은 출처로 보이는 음원들 (파일명이 아티스트명 형식).
+// 아직 주장이 안 걸렸을 뿐 안전이 확인된 건 아니다.
+const UNVERIFIED_BGM = new Set([
+  'bombin-chill.mp3',
+  'kontraa-uk-drill.mp3',
+  'leberch-hiphop.mp3',
+  'delo-energetic.mp3',
+  'sport-energetic.mp3',
+  'sports-rock.mp3',
+])
 
 // --bgm=none 이면 무음
 const bgmArg = arg('bgm', '')
-const BGM = bgmArg === 'none' ? '' : (bgmArg || DEFAULT_BGM[FORMAT] || '')
+const BGM_REQUESTED = bgmArg === 'none' ? '' : (bgmArg || DEFAULT_BGM[FORMAT] || '')
 const OUT_DIR = path.resolve(ROOT, arg('out', './out'))
 const SHOW_LOGOS = arg('logos', 'false') === 'true'
 const BASE_URL = process.env.SHORTS_BASE_URL || 'http://localhost:3000'
@@ -99,6 +127,37 @@ const BACKGROUNDS =
   FORMAT === 'daily' || FORMAT === 'top5' ? BACKGROUNDS_DAILY
   : FORMAT === 'result' ? BACKGROUNDS_RESULT
   : BACKGROUNDS_MATCH
+
+/**
+ * 배경음 확정.
+ *
+ * 세 가지를 막는다.
+ *   1. Content ID 주장이 걸린 음원 → 무음으로 대체하고 크게 알린다
+ *   2. 출처가 같아 위험한 음원 → 쓰긴 하되 경고를 남긴다
+ *   3. 파일이 아예 없는 경우 → 무음 (렌더는 계속돼야 한다)
+ */
+async function resolveBgm(file) {
+  if (!file) return ''
+
+  if (CLAIMED_BGM.has(file)) {
+    console.log(`  ⛔ ${file} 은 Content ID 주장이 걸린 음원입니다 — 무음으로 렌더합니다`)
+    console.log(`     유튜브 스튜디오 → 오디오 보관함에서 받은 음원으로 교체하세요`)
+    console.log(`     (--bgm=파일명 으로 직접 지정할 수 있습니다)`)
+    return ''
+  }
+
+  try {
+    await fs.access(path.join(ROOT, 'public', 'sounds', file))
+  } catch {
+    console.log(`  ⚠ public/sounds/${file} 이 없습니다 — 무음으로 렌더합니다`)
+    return ''
+  }
+
+  if (UNVERIFIED_BGM.has(file)) {
+    console.log(`  ⚠ ${file} 은 저작권 확인이 안 된 음원입니다 (같은 출처에서 이미 주장 발생)`)
+  }
+  return file
+}
 
 /** public/videos 에 실제로 존재하는 것만 남긴다 */
 async function resolveBackgrounds() {
@@ -261,6 +320,7 @@ async function main() {
   console.log('\n▶ 번들 완료')
 
   const backgrounds = await resolveBackgrounds()
+  const BGM = await resolveBgm(BGM_REQUESTED)
 
   const render = async (compositionId, inputProps, name) => {
     const composition = await selectComposition({

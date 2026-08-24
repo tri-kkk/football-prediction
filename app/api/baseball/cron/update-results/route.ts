@@ -7,6 +7,11 @@ import {
   FINISHED_STATUSES_ARRAY,
 } from '../../../../../lib/baseballStatus'
 
+// 경기당 API 호출 + 100ms 대기라 건수가 많으면 오래 걸린다.
+// 명시하지 않으면 기본 타임아웃에 걸려 중간에 잘리고,
+// 그러면 뒤쪽 경기가 영영 갱신되지 않는다.
+export const maxDuration = 60
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const API_KEY = process.env.API_FOOTBALL_KEY!
@@ -81,7 +86,11 @@ export async function GET(request: NextRequest) {
         .not('away_score', 'is', null)
       if (leagueFilter) tq = tq.in('league', leagueFilter)
 
-      const { data: ftRows } = await tq.limit(300)
+      // limit 은 작게 잡는다.
+      // 조회 창이 4일이라 그 안의 동점 FT 경기는 리그당 0~3건 수준이다.
+      // 아래 루프가 경기당 API 호출 + 100ms 대기라, 여기를 크게 잡으면
+      // 기존 100건과 합쳐져 Vercel 함수 타임아웃에 걸린다.
+      const { data: ftRows } = await tq.limit(50)
       // PostgREST 로는 컬럼끼리 비교(home_score = away_score)를 못 하므로 여기서 거른다
       tiedFT = (ftRows || []).filter((m) => m.home_score === m.away_score)
       if (tiedFT.length) {

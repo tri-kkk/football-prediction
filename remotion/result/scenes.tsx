@@ -260,7 +260,7 @@ export const SceneResults: React.FC<{ data: ResultProps; perCard: number }> = ({
   return (
     <AbsoluteFill style={{ ...center, gap: 18 }}>
       <div style={{ ...fadeUp(frame, 0), fontSize: 36, fontWeight: 900, letterSpacing: 7, color: '#94a3b8', marginBottom: 12 }}>
-        어제 결과
+        {data.windowLabel ?? '어제'} 결과
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
