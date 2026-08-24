@@ -8,11 +8,14 @@
 //   A. status='active' 인데 expires_at 이 과거인 행 → 'expired' 로 정리 (누적 중복/유실 만료)
 //   B. 아직 유효한 Play IAP 활성 구독 → verifySubscriptionV2 로 실제 상태 대조
 //      · expires_at / auto_renew / cancelled_at / status 동기화
-//   C. 영향받은 유저의 tier / premium_expires_at 재계산 (활성 구독 최대 만료일 기준)
+//   C. 영향받은 유저의 tier / premium_expires_at 재계산
+//      · 활성(미래만료) 유료 구독 있으면 → premium (만료일 = 구독 vs 기존 중 더 늦은 쪽)
+//      · 활성 구독 없음 + 프로모(promo_code+미래) 아님 → free 강등
+//        (touchedUsers 는 구독 이력이 있는 유저뿐 → 순수 트라이얼/프로모 유저는 애초에 미포함=보호)
 //
 // 🔒 CRON_SECRET Bearer 인증. 권장 주기: 매시간 또는 6시간.
-// 호출: pg_cron → Authorization: Bearer <CRON_SECRET>
-// 응답: { success, checkedActive, expiredCleaned, apiSynced, usersUpdated, errors }
+// ?dryRun=true → 아무것도 쓰지 않고 "무엇을 할지"만 반환 (특히 강등 대상 미리보기).
+// 응답: { success, dryRun, checkedActive, expiredCleaned, apiSynced, usersUpdated, downgraded[], errorCount }
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/mobile-auth'
@@ -28,6 +31,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const dryRun = request.nextUrl.searchParams.get('dryRun') === 'true'
   const supabase = getServerSupabase()
   const nowIso = new Date().toISOString()
   const now = Date.now()
@@ -37,6 +41,7 @@ export async function GET(request: NextRequest) {
   let apiSynced = 0
   let usersUpdated = 0
   const errors: string[] = []
+  const downgraded: Array<{ userId: string; email: string | null }> = []
   const touchedUsers = new Set<string>()
 
   try {
@@ -53,12 +58,14 @@ export async function GET(request: NextRequest) {
 
       // A) 이미 만료된 활성 행 → expired 로 정리 (API 없이)
       if (sub.expires_at && new Date(sub.expires_at).getTime() <= now) {
-        const { error } = await supabase
-          .from('subscriptions')
-          .update({ status: 'expired', auto_renew: false })
-          .eq('id', sub.id)
-        if (!error) expiredCleaned++
-        else errors.push(`expire ${sub.id}: ${error.message}`)
+        if (!dryRun) {
+          const { error } = await supabase
+            .from('subscriptions')
+            .update({ status: 'expired', auto_renew: false })
+            .eq('id', sub.id)
+          if (error) { errors.push(`expire ${sub.id}: ${error.message}`); continue }
+        }
+        expiredCleaned++
         continue
       }
 
@@ -80,17 +87,19 @@ export async function GET(request: NextRequest) {
         if (!autoRenew && !cancelledAt) cancelledAt = nowIso
         if (autoRenew) cancelledAt = null
 
-        const { error } = await supabase
-          .from('subscriptions')
-          .update({
-            expires_at: expiryIso,
-            auto_renew: autoRenew,
-            cancelled_at: cancelledAt,
-            status: expired ? 'expired' : 'active',
-          })
-          .eq('id', sub.id)
-        if (!error) apiSynced++
-        else errors.push(`sync ${sub.id}: ${error.message}`)
+        if (!dryRun) {
+          const { error } = await supabase
+            .from('subscriptions')
+            .update({
+              expires_at: expiryIso,
+              auto_renew: autoRenew,
+              cancelled_at: cancelledAt,
+              status: expired ? 'expired' : 'active',
+            })
+            .eq('id', sub.id)
+          if (error) { errors.push(`sync ${sub.id}: ${error.message}`); continue }
+        }
+        apiSynced++
       } catch (e: any) {
         // 토큰이 이미 대체/만료된 경우 등 — 만료로 간주하지 않고 로그만 (다음 주기 재시도)
         errors.push(`verify ${sub.id}: ${String(e?.message || e).slice(0, 120)}`)
@@ -98,6 +107,7 @@ export async function GET(request: NextRequest) {
     }
 
     // C) 영향받은 유저 tier / premium_expires_at 재계산
+    //    ⚠️ touchedUsers = "구독 이력이 있는" 유저뿐 → 순수 트라이얼/프로모 유저는 미포함(보호)
     for (const userId of touchedUsers) {
       const { data: stillActive } = await supabase
         .from('subscriptions')
@@ -109,46 +119,58 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .maybeSingle()
 
+      const { data: u } = await supabase
+        .from('users')
+        .select('email, tier, premium_expires_at, promo_code')
+        .eq('id', userId)
+        .single()
+      if (!u) continue
+
       if (stillActive?.expires_at) {
-        // 유료 구독이 살아있으면 premium 유지 (트라이얼 premium_expires_at 은 더 늦은 쪽 유지)
-        const { data: u } = await supabase
-          .from('users')
-          .select('premium_expires_at')
-          .eq('id', userId)
-          .single()
-        const cur = u?.premium_expires_at ? new Date(u.premium_expires_at).getTime() : 0
+        // 활성 유료 구독 있음 → premium (트라이얼/프로모가 더 늦으면 그쪽 유지)
+        const cur = u.premium_expires_at ? new Date(u.premium_expires_at).getTime() : 0
         const subExp = new Date(stillActive.expires_at).getTime()
-        const finalExp = subExp > cur ? stillActive.expires_at : u!.premium_expires_at
-        const { error } = await supabase
-          .from('users')
-          .update({ tier: 'premium', premium_expires_at: finalExp })
-          .eq('id', userId)
-        if (!error) usersUpdated++
+        const finalExp = subExp > cur ? stillActive.expires_at : u.premium_expires_at
+        if (u.tier !== 'premium' || u.premium_expires_at !== finalExp) {
+          if (!dryRun) {
+            const { error } = await supabase
+              .from('users')
+              .update({ tier: 'premium', premium_expires_at: finalExp })
+              .eq('id', userId)
+            if (!error) usersUpdated++
+          } else usersUpdated++
+        }
       } else {
-        // 활성 유료 구독 없음 — 단, 트라이얼/프로모(premium_expires_at 미래)면 premium 유지
-        const { data: u } = await supabase
-          .from('users')
-          .select('tier, premium_expires_at')
-          .eq('id', userId)
-          .single()
-        const trialActive =
-          !!u?.premium_expires_at && new Date(u.premium_expires_at).getTime() > now
-        if (!trialActive && u?.tier === 'premium') {
-          const { error } = await supabase
-            .from('users')
-            .update({ tier: 'free', premium_expires_at: null })
-            .eq('id', userId)
-          if (!error) usersUpdated++
+        // 활성 유료 구독 없음
+        const promoActive =
+          !!u.promo_code && !!u.premium_expires_at && new Date(u.premium_expires_at).getTime() > now
+        if (promoActive) {
+          // 프로모로 프리미엄 유지 (구독과 무관) → 손대지 않음
+          continue
+        }
+        if (u.tier === 'premium') {
+          // 유료 구독 이력자 + 활성 구독 없음 + 프로모 아님 → free 강등
+          downgraded.push({ userId, email: u.email ?? null })
+          if (!dryRun) {
+            const { error } = await supabase
+              .from('users')
+              .update({ tier: 'free', premium_expires_at: null })
+              .eq('id', userId)
+            if (!error) usersUpdated++
+          } else usersUpdated++
         }
       }
     }
 
     return NextResponse.json({
       success: true,
+      dryRun,
       checkedActive: activeSubs?.length ?? 0,
       expiredCleaned,
       apiSynced,
       usersUpdated,
+      downgraded,
+      downgradedCount: downgraded.length,
       errors: errors.slice(0, 20),
       errorCount: errors.length,
       elapsedMs: Date.now() - startedAt,
