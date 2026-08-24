@@ -106,9 +106,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // C) 영향받은 유저 tier / premium_expires_at 재계산
-    //    ⚠️ touchedUsers = "구독 이력이 있는" 유저뿐 → 순수 트라이얼/프로모 유저는 미포함(보호)
-    for (const userId of touchedUsers) {
+    // C) tier / premium_expires_at 재계산
+    //    평가 대상 = "구독 이력이 있는 모든 유저" (활성뿐 아니라 이미 만료된 유저도 포함).
+    //    이렇게 해야 이전 실행에서 구독이 expired 처리됐지만 tier=premium 로 남은 유저(예: dacapo)도 잡힌다.
+    //    순수 트라이얼/프로모 유저는 구독 행이 없어 여기 미포함 = 보호됨.
+    const { data: subOwners } = await supabase.from('subscriptions').select('user_id')
+    const evalUsers = new Set<string>((subOwners ?? []).map((r: any) => r.user_id).filter(Boolean))
+    void touchedUsers // (A/B 단계 집계용 — C는 evalUsers 사용)
+    for (const userId of evalUsers) {
       const { data: stillActive } = await supabase
         .from('subscriptions')
         .select('expires_at')
