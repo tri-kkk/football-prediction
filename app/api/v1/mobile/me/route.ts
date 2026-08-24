@@ -60,7 +60,8 @@ export async function GET(request: NextRequest) {
           )
           .eq('user_id', user.id)
           .eq('status', 'active')
-          .order('created_at', { ascending: false })
+          .gt('expires_at', new Date().toISOString())   // 누적 중복 행 중 아직 유효한 것만
+          .order('expires_at', { ascending: false })     // 만료일이 가장 먼(현재) 구독 선택
           .limit(1)
           .maybeSingle()
 
