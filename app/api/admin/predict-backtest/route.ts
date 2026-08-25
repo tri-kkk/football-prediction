@@ -28,7 +28,7 @@ const brier = (p: { home: number; draw: number; away: number }, o: Out) => {
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
-  const days = Math.max(3, Math.min(120, parseInt(url.searchParams.get('days') || '30', 10) || 30))
+  const days = Math.max(3, Math.min(400, parseInt(url.searchParams.get('days') || '30', 10) || 30))
   const one = url.searchParams.get('league')
   const leagues = one ? [one] : Object.keys(LEAGUES)
   const season = currentSeason()
@@ -43,8 +43,12 @@ export async function GET(request: NextRequest) {
     const cfg = LEAGUES[lc]
     if (!cfg) continue
     const stats = await buildTeamStats(cfg.id).catch(() => ({} as Record<number, any>))
-    const fx = await af(`/fixtures?league=${cfg.id}&season=${season}`).catch(() => ({ response: [] }))
-    const finished = (fx.response || []).filter((f: any) => {
+    const [fxA, fxB] = await Promise.all([
+      af(`/fixtures?league=${cfg.id}&season=${season}`).catch(() => ({ response: [] })),
+      af(`/fixtures?league=${cfg.id}&season=${season - 1}`).catch(() => ({ response: [] })),
+    ])
+    const allFx = [...(fxA.response || []), ...(fxB.response || [])]
+    const finished = allFx.filter((f: any) => {
       const s = f.fixture?.status?.short
       return FINISHED.has(s) && new Date(f.fixture.date).getTime() >= cutoff &&
         f.goals?.home != null && f.goals?.away != null
