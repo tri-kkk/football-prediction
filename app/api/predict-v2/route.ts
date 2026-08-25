@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { predict as ksmPredict } from '@/lib/ksmModel'  // 🔗 정본 승률 모델 (코치와 공유)
+import { predict as ksmPredict, buildTeamStats as ksmBuildTeamStats } from '@/lib/ksmModel'  // 🔗 정본 승률 모델 + 통계집계 (코치와 공유)
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -612,7 +612,22 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   //    (등급·파워점수는 아래에서 이 확률 기준으로 산출)
   // ============================================
   {
-    const km = ksmPredict(safeHomeStats, safeAwayStats)
+    // 코치와 동일 입력(buildTeamStats: 해당 리그 2023~2026, 승격팀 2부환산)으로 통일.
+    // 팀 데이터 누락 시에만 기존 집계(safeStats)로 fallback → 픽 수 손실 방지.
+    let kmHome: any = safeHomeStats
+    let kmAway: any = safeAwayStats
+    try {
+      if (input.leagueId && homeTeamId && awayTeamId) {
+        const ts = await ksmBuildTeamStats(input.leagueId)
+        if (ts && ts[homeTeamId] && ts[awayTeamId]) {
+          kmHome = ts[homeTeamId]
+          kmAway = ts[awayTeamId]
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ buildTeamStats fallback:', (e as any)?.message)
+    }
+    const km = ksmPredict(kmHome, kmAway)
     if (km && Number.isFinite(km.home) && Number.isFinite(km.draw) && Number.isFinite(km.away)) {
       finalWin = km.home
       finalDraw = km.draw

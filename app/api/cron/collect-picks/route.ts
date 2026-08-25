@@ -5,7 +5,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { predict as ksmPredict } from '@/lib/ksmModel'  // 🔗 정본 승률 모델 (코치와 공유)
+import { predict as ksmPredict, buildTeamStats as ksmBuildTeamStats } from '@/lib/ksmModel'  // 🔗 정본 승률 모델 + 통계집계 (코치와 공유)
+
+// 리그코드 → API-Football leagueId (buildTeamStats 조회용)
+const LEAGUE_ID_BY_CODE: Record<string, number> = {
+  PL: 39, PD: 140, BL1: 78, SA: 135, FL1: 61, CL: 2, EL: 3, WC: 1, PPL: 94, DED: 88,
+  KL1: 292, K1: 292, KL2: 293, K2: 293, J1: 98, J2: 99, MLS: 253,
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -248,7 +254,22 @@ async function analyzeMatch(match: any, leagueCode: string): Promise<any | null>
     // 🔗 정본 모델 통일(단일 진실원): 최종 승률 = ksmModel(코치와 동일 공식).
     //   위 method/pattern 블렌딩은 pattern 판정(등급 필터)용으로만 유지.
     {
-      const km = ksmPredict(homeStats, awayStats)
+      // 코치와 동일 입력(buildTeamStats)으로 통일. 팀 데이터 누락 시에만 기존 집계로 fallback.
+      let kmHome: any = homeStats
+      let kmAway: any = awayStats
+      try {
+        const lid = LEAGUE_ID_BY_CODE[leagueCode]
+        if (lid && match.home_team_id && match.away_team_id) {
+          const ts = await ksmBuildTeamStats(lid)
+          if (ts && ts[match.home_team_id] && ts[match.away_team_id]) {
+            kmHome = ts[match.home_team_id]
+            kmAway = ts[match.away_team_id]
+          }
+        }
+      } catch (e: any) {
+        console.warn('⚠️ buildTeamStats fallback:', e?.message)
+      }
+      const km = ksmPredict(kmHome, kmAway)
       if (km && Number.isFinite(km.home) && Number.isFinite(km.draw) && Number.isFinite(km.away)) {
         finalWin = km.home
         finalDraw = km.draw
