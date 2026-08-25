@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { predict as ksmPredict } from '@/lib/ksmModel'  // 🔗 정본 승률 모델 (코치와 공유)
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -574,6 +575,21 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
     finalLose /= finalTotal
   }
   
+  // ============================================
+  // 🔗 정본 모델 통일: 최종 승률은 ksmModel(코치와 동일 공식)로 산출.
+  //    위 method/pattern 계산은 patternStats 표시·로깅용으로만 유지하고,
+  //    표시·저장되는 확률은 ksmModel로 덮어써 메인=코치 일치.
+  //    컵대회 배당 블렌딩(아래 8단계)·등급·파워점수는 그대로 유지.
+  // ============================================
+  {
+    const km = ksmPredict(safeHomeStats, safeAwayStats)
+    if (km && Number.isFinite(km.home) && Number.isFinite(km.draw) && Number.isFinite(km.away)) {
+      finalWin = km.home
+      finalDraw = km.draw
+      finalLose = km.away
+    }
+  }
+
   // ============================================
   // 8단계: 컵대회 배당 가중치 보정
   // ============================================
