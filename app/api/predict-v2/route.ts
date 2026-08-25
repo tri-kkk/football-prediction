@@ -576,21 +576,6 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
   }
   
   // ============================================
-  // 🔗 정본 모델 통일: 최종 승률은 ksmModel(코치와 동일 공식)로 산출.
-  //    위 method/pattern 계산은 patternStats 표시·로깅용으로만 유지하고,
-  //    표시·저장되는 확률은 ksmModel로 덮어써 메인=코치 일치.
-  //    컵대회 배당 블렌딩(아래 8단계)·등급·파워점수는 그대로 유지.
-  // ============================================
-  {
-    const km = ksmPredict(safeHomeStats, safeAwayStats)
-    if (km && Number.isFinite(km.home) && Number.isFinite(km.draw) && Number.isFinite(km.away)) {
-      finalWin = km.home
-      finalDraw = km.draw
-      finalLose = km.away
-    }
-  }
-
-  // ============================================
   // 8단계: 컵대회 배당 가중치 보정
   // ============================================
   const CUP_LEAGUES = ['CL', 'EL', 'UECL', 'FAC', 'DFB', 'CDR', 'CDF']
@@ -620,6 +605,21 @@ async function predict(input: PredictionInput): Promise<PredictionResult> {
     console.log(`🏆 Cup odds weight applied (${input.leagueCode}): ${Math.round(oddsHome*100)}/${Math.round(oddsDraw*100)}/${Math.round(oddsAway*100)} -> final: ${Math.round(finalWin*100)}/${Math.round(finalDraw*100)}/${Math.round(finalLose*100)}`)
   }
   
+  // ============================================
+  // 🔗 정본 모델 통일 (단일 진실원): 최종 승률 = ksmModel(코치와 동일 공식).
+  //    method/pattern/컵배당 블렌딩은 patternStats·신뢰도·로깅용으로만 계산하고,
+  //    표시·저장되는 finalProb 는 ksmModel 로 최종 확정 → 메인(/premium) = 코치 일치.
+  //    (등급·파워점수는 아래에서 이 확률 기준으로 산출)
+  // ============================================
+  {
+    const km = ksmPredict(safeHomeStats, safeAwayStats)
+    if (km && Number.isFinite(km.home) && Number.isFinite(km.draw) && Number.isFinite(km.away)) {
+      finalWin = km.home
+      finalDraw = km.draw
+      finalLose = km.away
+    }
+  }
+
   // ============================================
   // 9단계: 파워 점수 계산
   // ============================================

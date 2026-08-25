@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { predict as ksmPredict } from '@/lib/ksmModel'  // 🔗 정본 승률 모델 (코치와 공유)
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -244,6 +245,17 @@ async function analyzeMatch(match: any, leagueCode: string): Promise<any | null>
       finalLose /= finalTotal
     }
     
+    // 🔗 정본 모델 통일(단일 진실원): 최종 승률 = ksmModel(코치와 동일 공식).
+    //   위 method/pattern 블렌딩은 pattern 판정(등급 필터)용으로만 유지.
+    {
+      const km = ksmPredict(homeStats, awayStats)
+      if (km && Number.isFinite(km.home) && Number.isFinite(km.draw) && Number.isFinite(km.away)) {
+        finalWin = km.home
+        finalDraw = km.draw
+        finalLose = km.away
+      }
+    }
+
     // 파워 점수
     const homeFormScore = (homeStats.form_home_5 ?? 1.5) * 10
     const awayFormScore = (awayStats.form_away_5 ?? 1.5) * 10
@@ -333,6 +345,19 @@ export async function GET(request: NextRequest) {
   
   try {
     console.log('🔍 Starting automatic PICK collection...')
+
+    // 🔄 force=1: 미래 경기(결과 미확정) 픽을 삭제 후 정본 모델로 재생성.
+    //    과거/정산된 픽은 적중률 통계 표본이므로 건드리지 않음.
+    const { searchParams } = new URL(request.url)
+    const force = searchParams.get('force') === '1'
+    if (force) {
+      const nowIso = new Date().toISOString()
+      const { error: delErr, count } = await supabase
+        .from('pick_recommendations')
+        .delete({ count: 'exact' })
+        .gte('commence_time', nowIso)
+      console.log(`🔄 force 재생성: 미래 픽 ${count ?? '?'}건 삭제`, delErr ? `(err: ${delErr.message})` : '')
+    }
     
     // 오늘 ~ 7일 후 경기 조회
     const today = new Date()
