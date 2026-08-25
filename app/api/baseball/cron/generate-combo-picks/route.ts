@@ -11,6 +11,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// ⏱️ 3개 리그(MLB→KBO→NPB) 순차 처리 ~36s → Vercel 기본 타임아웃(짧음)에 마지막 NPB가 잘려
+//    조합이 누락되던 문제 방지. 60s 로 확장(Hobby/Pro 공통 허용).
+export const maxDuration = 60
+export const dynamic = 'force-dynamic'
+
 const RAILWAY_URL = 'https://web-production-efc2e.up.railway.app'
 const WINDOW = 10
 const PITCHER_DEFAULTS = { era: 4.20, whip: 1.30, k: 150 }
