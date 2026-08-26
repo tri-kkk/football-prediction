@@ -1399,6 +1399,42 @@ export default function BaseballDetailPage() {
                           ))}
                         </div>
 
+                        {/* 🆕 강화 지표 — 기존 npb_pitcher_stats / kbo_pitcher_stats 데이터 활용 (추가 수집 불필요) */}
+                        {stats.games > 0 && (
+                          <>
+                            <div className="flex items-center justify-center gap-2.5 text-[11px] text-gray-300 pt-0.5">
+                              <span><b className="text-emerald-400">{stats.wins ?? 0}</b>{t('승', 'W')} <b className="text-red-300">{stats.losses ?? 0}</b>{t('패', 'L')}</span>
+                              <span className="text-gray-600">·</span>
+                              <span>{stats.games}{t('경기', 'G')}</span>
+                              {stats.innings_pitched != null && (
+                                <>
+                                  <span className="text-gray-600">·</span>
+                                  <span>{stats.innings_pitched}{t('이닝', 'IP')}</span>
+                                </>
+                              )}
+                              {(stats.saves > 0 || stats.holds > 0) && (
+                                <>
+                                  <span className="text-gray-600">·</span>
+                                  <span>{stats.saves > 0 ? `${stats.saves}S` : ''}{stats.saves > 0 && stats.holds > 0 ? ' ' : ''}{stats.holds > 0 ? `${stats.holds}H` : ''}</span>
+                                </>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {[
+                                { label: 'K/9', value: stats.k_per_9 != null ? Number(stats.k_per_9).toFixed(2) : '-' },
+                                { label: 'K/BB', value: (stats.walks && stats.walks > 0) ? (stats.strikeouts / stats.walks).toFixed(2) : '-' },
+                                { label: t('피안타', 'H'), value: stats.hits_allowed ?? '-' },
+                                { label: t('피홈런', 'HR'), value: stats.home_runs_allowed ?? '-' },
+                              ].map(({ label, value }) => (
+                                <div key={label} className="bg-white/[0.025] rounded-lg py-1.5 text-center">
+                                  <p className="text-[10px] text-gray-500 mb-0.5">{label}</p>
+                                  <p className="text-xs font-bold text-gray-200">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+
                         {/* 강점/약점 태그 */}
                         {(stats.strengths?.length > 0 || stats.weakness?.length > 0) && (() => {
                           const badgeMap: Record<string, string> = {
