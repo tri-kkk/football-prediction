@@ -788,6 +788,7 @@ export async function GET(request: NextRequest) {
           saves: record.saves,
           holds: record.holds,
           wpct: record.wpct,
+          innings_pitched: record.innings_pitched,
           hits: record.hits,
           home_runs: record.home_runs,
           walks: record.walks,

@@ -183,12 +183,18 @@ function normalizeStats(row: any): any {
   if (!row) return row
   const hitsAllowed = row.hits_allowed ?? row.hits ?? null
   const hrAllowed = row.home_runs_allowed ?? row.home_runs ?? null
-  let k9 = row.k_per_9 ?? null
-  if (k9 == null && row.strikeouts != null) {
-    const ipDec = ipToDecimal(row.innings_pitched)
-    if (ipDec > 0) k9 = Math.round((row.strikeouts * 9 / ipDec) * 100) / 100
+  // 이닝(IP): 실측값 우선, 없으면 자책·ERA로 역산 (ERA = ER*9/IP → IP = ER*9/ERA).
+  let ipStr = row.innings_pitched
+  let ipDec = ipToDecimal(ipStr)
+  if (ipDec <= 0 && row.era > 0 && row.earned_runs != null) {
+    ipDec = (row.earned_runs * 9) / row.era
+    if (ipDec > 0 && (ipStr == null || ipStr === '')) ipStr = String(Math.round(ipDec * 10) / 10)
   }
-  return { ...row, hits_allowed: hitsAllowed, home_runs_allowed: hrAllowed, k_per_9: k9 }
+  let k9 = row.k_per_9 ?? null
+  if (k9 == null && row.strikeouts != null && ipDec > 0) {
+    k9 = Math.round((row.strikeouts * 9 / ipDec) * 100) / 100
+  }
+  return { ...row, hits_allowed: hitsAllowed, home_runs_allowed: hrAllowed, k_per_9: k9, innings_pitched: ipStr }
 }
 
 async function fetchKboPitcherStat(
