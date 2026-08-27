@@ -17,6 +17,7 @@ import type { DateFilter } from '../components/home/DateTabs'
 import TodayPickRow from '../components/home/TodayPickRow'
 import CoachPromoBanner from '../components/home/CoachPromoBanner'
 import SeasonKickoffHero from '../components/home/SeasonKickoffHero'
+import PredictionAccuracyStrip from '../components/home/PredictionAccuracyStrip'
 import NewsGrid from '../components/home/NewsGrid'
 import PredictionTrackRecord from '../components/home/PredictionTrackRecord'
 import TopHighlights from '../components/TopHighlights'
@@ -256,6 +257,9 @@ function HomeInner() {
 
       {/* 🏁 해외축구 개막 CTA 히어로 — 비프리미엄에게만 (가입→48h 체험 깔때기, 단계 자동 전환) */}
       {status !== 'loading' && !isPremium && <SeasonKickoffHero locale={locale} />}
+
+      {/* ⚡ AI 축구 예측 성적 어필 스트립 (실시간 적중률, 강점 리그 리드) */}
+      {status !== 'loading' && <PredictionAccuracyStrip locale={locale} />}
 
       {/* ①  오늘의 추천 경기 — 3분할 카드 행 */}
       <TodayPickRow locale={locale} isPremium={isPremium} />
