@@ -166,6 +166,31 @@ function buildAnalysis(
   return { strengths, weakness, summary }
 }
 
+// KBO/NPB 필드 정규화: 카드가 읽는 공통 필드로 맞춤.
+//   - KBO는 피안타/피홈런을 hits/home_runs 로 저장 → hits_allowed/home_runs_allowed 로 별칭.
+//   - K/9(k_per_9) 없으면 SO·IP 로 계산 (야구 IP 표기 .1=1/3, .2=2/3 처리).
+function ipToDecimal(ip: string | number | null | undefined): number {
+  if (ip == null) return 0
+  const str = String(ip).trim()
+  if (!str) return 0
+  const [wholeRaw, fracRaw] = str.split('.')
+  const whole = parseInt(wholeRaw, 10) || 0
+  const frac = fracRaw === '1' ? 1 / 3 : fracRaw === '2' ? 2 / 3 : 0
+  return whole + frac
+}
+
+function normalizeStats(row: any): any {
+  if (!row) return row
+  const hitsAllowed = row.hits_allowed ?? row.hits ?? null
+  const hrAllowed = row.home_runs_allowed ?? row.home_runs ?? null
+  let k9 = row.k_per_9 ?? null
+  if (k9 == null && row.strikeouts != null) {
+    const ipDec = ipToDecimal(row.innings_pitched)
+    if (ipDec > 0) k9 = Math.round((row.strikeouts * 9 / ipDec) * 100) / 100
+  }
+  return { ...row, hits_allowed: hitsAllowed, home_runs_allowed: hrAllowed, k_per_9: k9 }
+}
+
 async function fetchKboPitcherStat(
   name: string,
   season: string,
@@ -202,12 +227,14 @@ async function fetchKboPitcherStat(
 
     if (!fallback) return null
 
-    const { strengths, weakness, summary } = buildAnalysis(fallback, language)
-    return { ...fallback, strengths, weakness, summary }
+    const nf = normalizeStats(fallback)
+    const { strengths, weakness, summary } = buildAnalysis(nf, language)
+    return { ...nf, strengths, weakness, summary }
   }
 
-  const { strengths, weakness, summary } = buildAnalysis(data, language)
-  return { ...data, strengths, weakness, summary }
+  const nd = normalizeStats(data)
+  const { strengths, weakness, summary } = buildAnalysis(nd, language)
+  return { ...nd, strengths, weakness, summary }
 }
 
 export async function GET(request: NextRequest) {
