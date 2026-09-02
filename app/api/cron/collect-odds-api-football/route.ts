@@ -398,6 +398,21 @@ export async function POST(request: Request) {
             const drawOdds = totalDrawOdds / validOddsCount
             const awayOdds = totalAwayOdds / validOddsCount
 
+            // 🆕 1xBet(id 11) 단일 배당 추출 — 전체 북메이커에서 검색(상위10 밖일 수 있음)
+            let oneXHome: number | null = null
+            let oneXDraw: number | null = null
+            let oneXAway: number | null = null
+            const oneXBook = oddsResponse.bookmakers.find((b: any) => b.id === 11)
+            if (oneXBook) {
+              const oneXBet = oneXBook.bets.find((bet: any) => bet.id === 1 || bet.name === 'Match Winner')
+              if (oneXBet) {
+                const h1x = parseFloat(oneXBet.values.find((v: any) => v.value === 'Home')?.odd || '0')
+                const d1x = parseFloat(oneXBet.values.find((v: any) => v.value === 'Draw')?.odd || '0')
+                const a1x = parseFloat(oneXBet.values.find((v: any) => v.value === 'Away')?.odd || '0')
+                if (h1x > 0 && d1x > 0 && a1x > 0) { oneXHome = h1x; oneXDraw = d1x; oneXAway = a1x }
+              }
+            }
+
             // 확률 계산
             const homePercent = oddsToPercentage(homeOdds)
             const drawPercent = oddsToPercentage(drawOdds)
@@ -464,6 +479,9 @@ export async function POST(request: Request) {
               predicted_score_away: predictedScore.away,
               predicted_winner: predictedWinner,
               odds_source: `Averaged from ${validOddsCount} bookmakers`,
+              home_odds_1xbet: oneXHome,
+              draw_odds_1xbet: oneXDraw,
+              away_odds_1xbet: oneXAway,
               status: matchStatus,  // 🆕 경기 상태 추가!
             }
 
@@ -500,6 +518,9 @@ export async function POST(request: Request) {
                 predicted_score_away: predictedScore.away,
                 predicted_winner: predictedWinner,
                 odds_source: `Averaged from ${validOddsCount} bookmakers`,
+                home_odds_1xbet: oneXHome,
+                draw_odds_1xbet: oneXDraw,
+                away_odds_1xbet: oneXAway,
                 status: matchStatus,  // 🆕 경기 상태 추가!
                 updated_at: new Date().toISOString(),
               }, {
