@@ -94,6 +94,20 @@ interface TeamSecretStats {
   }[]
 }
 
+// =============================================================================
+// findTeamLeague 캐시 (팀의 '현재' 리그/시즌 판정에 매 요청 API를 태우지 않기 위함)
+// =============================================================================
+const TEAM_LEAGUE_TTL_MS = 6 * 60 * 60 * 1000
+const teamLeagueCache = new Map<number, { at: number; val: any }>()
+
+async function findTeamLeagueCached(teamId: number): Promise<any> {
+  const hit = teamLeagueCache.get(teamId)
+  if (hit && Date.now() - hit.at < TEAM_LEAGUE_TTL_MS) return hit.val
+  const val = await findTeamLeague(teamId)
+  teamLeagueCache.set(teamId, { at: Date.now(), val })
+  return val
+}
+
 // API-Football에서 팀 통계 직접 가져오기 (fg_team_stats에 없는 팀용)
 async function fetchStatsFromAPIFootball(teamId: number, leagueId: number, season: number) {
   const apiKey = process.env.API_FOOTBALL_KEY || '87fdad3a68c6386ce1921080461e91e6'
@@ -278,12 +292,29 @@ export async function GET(request: NextRequest) {
       statsData = allSeasonStats.find((s: any) => (s.total_played || 0) >= 1)
         || allSeasonStats[0]
     }
+
+    // ⚠️ 시즌 뒤처짐 가드
+    // fg_team_stats 가 현재 시즌을 못 따라가면(수집 누락, 리그 시즌 달력 변경 등)
+    // 지난 시즌 수치가 '이번 시즌 성적'으로 나간다.
+    // 실측 2026-09-03 — Gamba Osaka(293): J1 은 2027 시즌 진행 중인데
+    //   fg_team_stats 최신 행이 2025 → 원정 5-5-9(승률 26%)를 그대로 노출.
+    //   실제 2027 시즌 원정 성적과 1년 반 차이가 난다.
+    // 현재 시즌보다 오래된 행이면 버리고 아래 API-Football 실시간 경로로 넘긴다.
+    if (statsData && teamId) {
+      const _lg = await findTeamLeagueCached(parseInt(teamId))
+      const _cur = Number(_lg?.season)
+      const _db = Number(statsData.season)
+      if (Number.isFinite(_cur) && Number.isFinite(_db) && _db < _cur) {
+        console.log(`⚠️ fg_team_stats 시즌 뒤처짐 (db=${_db} < current=${_cur}) → API-Football 폴백: teamId=${teamId}`)
+        statsData = null
+      }
+    }
     
     // 1-2. fg_team_stats에 없으면 API-Football에서 직접 가져오기
     let apiFootballSource = false
     if (!statsData && teamId) {
       console.log(`🔍 No DB stats for teamId=${teamId}, trying API-Football fallback...`)
-      const league = await findTeamLeague(parseInt(teamId))
+      const league = await findTeamLeagueCached(parseInt(teamId))
       console.log(`🔍 findTeamLeague result:`, league)
       if (league) {
         let apifbStats = await fetchStatsFromAPIFootball(parseInt(teamId), league.leagueId, league.season)

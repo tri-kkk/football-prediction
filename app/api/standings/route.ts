@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { resolveCurrentSeason } from '@/lib/currentSeason'
 
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY || ''
 const BASE_URL = 'https://v3.football.api-sports.io'
@@ -241,6 +242,19 @@ const LEAGUE_LOGOS: { [key: string]: string } = {
 }
 
 // 🔥 리그별 시즌 계산 (아시아/남미는 단일 연도)
+// =============================================================================
+// 현재 시즌 해석
+//
+// getCurrentSeason() 은 리그별 시작월을 하드코딩해 연도를 추정한다.
+// 리그가 시즌 달력을 바꾸면 조용히 틀린다.
+// 실측 2026-09-03 — J1(league 98):
+//   season 2026 = 2026-02-06 ~ 2026-06-06 (전환기, 이미 종료)
+//   season 2027 = 2026-08-07 ~ 2027-06-06 (current=true)  ← 추춘제 전환
+//   → getCurrentSeason('J1') 은 2026 을 반환해 '끝난 시즌 순위표'를 보여주고 있었다.
+//
+// 그래서 API-Football 의 seasons[].current 를 진실로 삼고,
+// 조회 실패 시에만 getCurrentSeason() 으로 떨어진다.
+// =============================================================================
 function getCurrentSeason(leagueCode: string): number {
   const now = new Date()
   const year = now.getFullYear()
@@ -291,7 +305,11 @@ export async function GET(request: Request) {
     const league = searchParams.get('league') || 'PL'
     const debug = searchParams.get('debug')
     
-    const season = getCurrentSeason(league)
+    // ?season= 로 명시 지정 가능, 없으면 API-Football 의 current 시즌
+    const seasonParam = Number(searchParams.get('season'))
+    const season = Number.isFinite(seasonParam) && seasonParam > 2000
+      ? seasonParam
+      : await resolveCurrentSeason(LEAGUES[league], getCurrentSeason(league))
     
     // 디버그 모드
     if (debug === '1') {
@@ -374,16 +392,20 @@ export async function GET(request: Request) {
     let standingsData
     let groupedStandings = null
     
-    if (isGroupStage && leagueData.standings.length > 1) {
-      // 그룹 스테이지: 여러 그룹을 하나로 합치거나 첫 번째 그룹만
-      console.log('🔍 그룹 스테이지 감지:', leagueData.standings.length, '개 그룹')
-      
-      // CL, EL, UECL은 그룹별로 분리
+    // ⚠️ isGroupStage 는 유럽 컵대회 코드로 하드코딩돼 있어서,
+    //    J1 2026(10팀×2스테이지)처럼 리그가 쪼개져 내려오면 standings[0] 만 남아
+    //    나머지 절반이 통째로 사라진다. 그래서 groups 는 isGroupStage 와 무관하게
+    //    "응답에 배열이 2개 이상이면" 항상 채운다. (기존 소비자는 groups 를 안 보므로 무해)
+    if (leagueData.standings.length > 1) {
+      console.log('🔍 다중 그룹/스테이지 감지:', leagueData.standings.length, '개')
+
       groupedStandings = leagueData.standings.map((group: any[], index: number) => ({
-        groupName: `Group ${String.fromCharCode(65 + index)}`, // A, B, C...
+        groupName: isGroupStage
+          ? `Group ${String.fromCharCode(65 + index)}`
+          : `Stage ${index + 1}`,
         standings: group
       }))
-      standingsData = leagueData.standings[0] // 일단 첫 그룹을 기본으로
+      standingsData = leagueData.standings[0] // 기본 표시는 첫 그룹 유지 (기존 동작 그대로)
     } else {
       // 일반 리그: standings[0]에 전체 순위표
       standingsData = leagueData.standings[0]

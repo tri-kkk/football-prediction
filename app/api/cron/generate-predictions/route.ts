@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { resolveCurrentSeason } from '@/lib/currentSeason'
 
 // Supabase 설정
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -298,7 +299,8 @@ async function getUpcomingFixturesWithOdds(leagueCode: string, leagueId: number,
   if (!apiKey) throw new Error('API_FOOTBALL_KEY not set')
 
   const fixtures: any[] = []
-  const season = getCurrentSeason(leagueCode)
+  // 하드코딩 계산은 폴백으로만 쓰고, 실제 시즌은 API-Football 에 물어본다
+  const season = await resolveCurrentSeason(leagueId, getCurrentSeason(leagueCode))
 
   console.log(`  📅 시즌: ${season}`)
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCurrentSeason } from '@/lib/currentSeason'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -560,7 +561,7 @@ export async function GET(request: NextRequest) {
 
     // 각 리그별 종료된 경기 가져오기
     for (const league of LEAGUES) {
-      const season = getCurrentSeason(league.code)
+      const season = await resolveCurrentSeason(league.apiId, getCurrentSeason(league.code))
       console.log(`\n🏆 ${league.name} (${league.code}) 처리 중... (시즌: ${season})`)
       
       try {

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCurrentSeason } from '@/lib/currentSeason'
 
 // Vercel function timeout (Pro 800초까지) — K1/K2 다시즌 백필용
 export const maxDuration = 800
@@ -720,7 +721,7 @@ export async function POST(request: NextRequest) {
         console.log(`\n📊 Recent matches: ${league.name}`)
         
         // 현재 시즌 결정 — 지역별 자동 계산 (하드코딩 제거)
-        const currentSeason = getCurrentSeasonForRegion(league.region)
+        const currentSeason = await resolveCurrentSeason(league.id, getCurrentSeasonForRegion(league.region))
         
         const fixturesData = await fetchFromApiFootball(
           `/fixtures?league=${league.id}&season=${currentSeason}&from=${fromDate}&to=${toDate}&status=FT`
