@@ -134,30 +134,10 @@ function calculatePrediction(match: Match): PredictionResult['analysis'] {
     }
   }
 
-  // ✅ 1순위: DB에 저장된 AI pick
-  if (match.aiPick && (match.aiPick === 'PICK' || match.aiPick === 'GOOD' || match.aiPick === 'PASS')) {
-    const grade = match.aiPick as 'PICK' | 'GOOD' | 'PASS'
-    // ⚠️ odds.homeWinProb(배당 내재확률)로 AI 등급을 설명하면 상세 페이지와 숫자가 어긋난다.
-    //    ai_home_win_prob이 아직 없으면 확률은 표시하지 않는다(50/50 = 미산출).
-    const homeProb = 50
-    const awayProb = 50
-    const recommendedBet: 'HOME' | 'AWAY' | 'NONE' = grade !== 'PASS'
-      ? (homeProb >= awayProb ? 'HOME' : 'AWAY')
-      : 'NONE'
-    const reason = grade === 'PICK'
-      ? (homeProb >= awayProb ? '홈팀 압도적 우세' : '원정팀 압도적 우세')
-      : grade === 'GOOD'
-      ? (homeProb >= awayProb ? '홈팀 우세 예상' : '원정팀 우세 예상')
-      : '접전 예상 - 신중한 접근 필요'
-    const reasonEn = grade === 'PICK'
-      ? (homeProb >= awayProb ? 'Home team dominant' : 'Away team dominant')
-      : grade === 'GOOD'
-      ? (homeProb >= awayProb ? 'Home team favored' : 'Away team favored')
-      : 'Close match - proceed with caution'
-    return { homeWinProb: homeProb, awayWinProb: awayProb, recommendedBet, confidence: Math.max(homeProb, awayProb), grade, reason, reasonEn, isML: true }
-  }
+  // ⚠️ 예전 1순위였던 match.aiPick(레거시 ai_pick 컬럼) 분기는 제거했다.
+  //    등급만 있고 확률이 없어서 배당값을 끌어다 쓰거나 50/50을 표시했고,
+  //    상세 페이지와 숫자가 어긋나는 원인이었다. 등급은 aiPrediction.grade가 담당한다.
 
-  // ✅ 2순위: ML 분석값
   // ✅ 2순위: Railway ML 원시값. 배당 내재확률(odds.homeWinProb)은 예측이 아니므로 fallback 금지.
   const ml = match.mlPrediction
   const source = ml ?? null

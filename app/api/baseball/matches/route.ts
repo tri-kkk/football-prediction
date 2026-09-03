@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { impliedFromOdds } from '@/lib/baseballOdds'
+
+// ⚠️ Railway 모델은 KBO/NPB에서 방향이 반대다 (2026-09-03 검증, predict/route.ts 주석 참조).
+//    - 반전된 mlPrediction을 프론트로 내보내지 않는다
+//    - 목록을 열 때마다 Railway를 때려 baseball_odds_latest.home_win_prob 가
+//      모델 원시값으로 덮이는 것도 함께 막는다
+//    승률은 aiPrediction(ai_home_win_prob) 하나만 쓴다.
+const MODEL_BROKEN_LEAGUES = new Set(['KBO', 'NPB'])
+const canUseMLModel = (league?: string | null) => !MODEL_BROKEN_LEAGUES.has(String(league || ''))
 import { createClient } from '@supabase/supabase-js'
 
 // =====================================================
@@ -341,7 +349,7 @@ export async function GET(request: NextRequest) {
           ? matches.map(() => null)
           : await Promise.all(
           matches.map(m =>
-            ['NS', 'SCHEDULED', 'TBD'].includes(m.status)
+            ['NS', 'SCHEDULED', 'TBD'].includes(m.status) && canUseMLModel(m.league)
               ? fetchMLPrediction(supabase, m.home_team, m.away_team, m.match_date, {
                   home_pitcher_era: m.home_pitcher_era ?? null,
                   home_pitcher_whip: m.home_pitcher_whip ?? null,
@@ -481,7 +489,7 @@ export async function GET(request: NextRequest) {
       ? (matches || []).map(() => null)
       : await Promise.all(
       (matches || []).map(m =>
-        ['NS', 'SCHEDULED', 'TBD'].includes(m.status)
+        ['NS', 'SCHEDULED', 'TBD'].includes(m.status) && canUseMLModel(m.league)
           ? fetchMLPrediction(supabase, m.home_team, m.away_team, m.match_date, {
               home_pitcher_era: m.home_pitcher_era ?? null,
               home_pitcher_whip: m.home_pitcher_whip ?? null,
