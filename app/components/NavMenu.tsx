@@ -42,8 +42,73 @@ const EN_LABELS: Record<string, string> = {
   '리포트': 'Reports',
   '뉴스': 'News',
   '메뉴': 'Menu',
+  '더보기': 'More',
+  '매거진': 'Magazine',
+  '소개': 'About',
+  '광고 문의': 'Advertise',
+  '문의하기': 'Contact',
+  '야구 조합': 'Multi-Match',
+  '로그인해주세요': 'Sign in',
+  '분석': 'Analysis',
+  '콘텐츠': 'Content',
+  '기타': 'More',
   '닫기 ✕': 'Close ✕',
   '주 메뉴': 'Main menu',
+}
+
+// ── 모바일 '더보기' 그리드 (실존 라우트만) ──────────────────────────────
+type GridItem = { ko: string; href: string; icon: string }
+const MORE_SECTIONS: { title: string; items: GridItem[] }[] = [
+  {
+    title: '분석',
+    items: [
+      { ko: '축구 프리미엄', href: '/premium', icon: 'premium' },
+      { ko: '야구 분석', href: '/baseball/analysis', icon: 'baseball' },
+      { ko: '야구 조합', href: '/baseball/multi-match', icon: 'combo' },
+      { ko: '야구 승1패', href: '/baseball/toto', icon: 'toto' },
+    ],
+  },
+  {
+    title: '콘텐츠',
+    items: [
+      { ko: '하이라이트', href: '/highlights', icon: 'highlight' },
+      { ko: '리포트', href: '/blog', icon: 'report' },
+      { ko: '뉴스', href: '/news', icon: 'news' },
+      { ko: '매거진', href: '/magazine', icon: 'magazine' },
+    ],
+  },
+  {
+    title: '경기 결과',
+    items: [
+      { ko: '축구 결과', href: '/results', icon: 'resultF' },
+      { ko: '야구 결과', href: '/baseball/results', icon: 'resultB' },
+    ],
+  },
+  {
+    title: '기타',
+    items: [
+      { ko: '소개', href: '/about', icon: 'info' },
+      { ko: '광고 문의', href: '/advertise', icon: 'ad' },
+      { ko: '문의하기', href: '/contact', icon: 'mail' },
+    ],
+  },
+]
+
+// 아이콘 (line style, viewBox 24). BottomNavigation과 톤 통일.
+const GRID_ICON: Record<string, React.ReactNode> = {
+  premium: <><path d="M4 8l4 3 4-6 4 6 4-3-1.6 10H5.6z" /><path d="M5 20h14" /></>,
+  baseball: <><circle cx="12" cy="12" r="9" /><path d="M5.6 5.6c3 2 4.8 5.4 4.8 9.4M18.4 5.6c-3 2-4.8 5.4-4.8 9.4" /></>,
+  combo: <><rect x="3" y="4" width="8" height="7" rx="1.5" /><rect x="13" y="4" width="8" height="7" rx="1.5" /><rect x="3" y="14" width="8" height="6" rx="1.5" /><rect x="13" y="14" width="8" height="6" rx="1.5" /></>,
+  toto: <><path d="M4 7h16M4 12h16M4 17h16" /><path d="M8 4v16" /></>,
+  highlight: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M10 9l5 3-5 3z" /></>,
+  report: <><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4" /><path d="M9 12h6M9 16h6" /></>,
+  news: <><path d="M4 5h13v14H4z" /><path d="M17 8h3v9a2 2 0 0 1-2 2h-1" /><path d="M7 8h7M7 12h7M7 16h4" /></>,
+  magazine: <><path d="M3 5h8v14H3zM13 5h8v14h-8z" /><path d="M6 9h2M6 12h2M16 9h2M16 12h2" /></>,
+  resultF: <><circle cx="12" cy="12" r="9" /><path d="M12 8.2l2.7 1.95-1.03 3.2h-3.34L9.3 10.15z" /></>,
+  resultB: <><path d="M4 6h16v12H4z" /><path d="M8 6v12M16 6v12" /><path d="M4 12h16" /></>,
+  info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
+  ad: <><path d="M3 10v4h4l5 4V6l-5 4z" /><path d="M16 9a4 4 0 0 1 0 6" /></>,
+  mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
 }
 
 function L(ko: string, locale: string): string {
@@ -209,8 +274,7 @@ export default function NavMenu() {
     setOpenKey((cur) => (cur === key ? null : key))
   }
 
-  const flat = MENU.filter((m) => !m.children)
-  const groups = MENU.filter((m) => m.children)
+  const leagueGroup = MENU.find((m) => m.ko === '경기 일정')
 
   return (
     <>
@@ -254,48 +318,78 @@ export default function NavMenu() {
       {mobileOpen && (
         <>
           <div className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-[2px] z-[65]" onClick={() => setMobileOpen(false)} aria-hidden="true" />
-          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#141414] border-t border-white/10 rounded-t-2xl z-[70] max-h-[82vh] overflow-y-auto tc-sheet-anim" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-            <div className="sticky top-0 bg-[#141414]/95 backdrop-blur px-4 pt-2.5 pb-3 border-b border-white/10">
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0e0e0e] border-t border-white/10 rounded-t-2xl z-[70] max-h-[94vh] overflow-y-auto tc-sheet-anim" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
+            {/* 헤더 */}
+            <div className="sticky top-0 bg-[#0e0e0e]/95 backdrop-blur px-4 pt-2.5 pb-3 border-b border-white/10 z-10">
               <div className="w-9 h-1 rounded-full bg-white/25 mx-auto mb-2.5" />
-              <span className="text-sm font-extrabold text-white">{L('메뉴', locale)}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-base font-extrabold text-white">{L('더보기', locale)}</span>
+                <button type="button" onClick={() => setMobileOpen(false)} aria-label={L('닫기 ✕', locale)} className="ts-press w-8 h-8 grid place-items-center rounded-full bg-white/[0.06] text-gray-300">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </div>
             </div>
-            <div className="px-4 py-3 space-y-3">
-              {flat.length > 0 && (
-                <div className="space-y-1">
-                  {flat.map((it) => {
-                    const a = isActive(pathname, it)
-                    return (
-                      <Link key={it.ko} href={it.href || '#'} onClick={() => setMobileOpen(false)} className={['ts-press block px-3 py-3 rounded-xl text-sm font-bold border', a ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'text-white bg-white/[0.03] hover:bg-gray-800/60 border-white/[0.06]'].join(' ')}>{L(it.ko, locale)}</Link>
-                    )
-                  })}
+
+            <div className="px-3.5 py-3 space-y-3">
+              {/* 프로필/로그인 + 홈 (한 줄) */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-2 min-w-0">
+                  <span className="w-8 h-8 rounded-full bg-white/[0.06] grid place-items-center shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6" /></svg>
+                  </span>
+                  <div className="flex-1 min-w-0"><AuthButton /></div>
+                </div>
+                <Link href="/" onClick={() => setMobileOpen(false)} aria-label={L('홈', locale)} className={['ts-press shrink-0 flex flex-col items-center justify-center gap-0.5 rounded-xl border w-16 py-2', pathname === '/' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'text-white bg-white/[0.03] border-white/[0.06]'].join(' ')}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="m3 9.5 9-6.5 9 6.5V20a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 20z" /><path d="M9.3 21.5V13h5.4v8.5" /></svg>
+                  <span className="text-[10px] font-bold">{L('홈', locale)}</span>
+                </Link>
+              </div>
+
+              {/* 경기 일정 (리그 칩) */}
+              {leagueGroup?.children && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="inline-block w-1 h-3.5 rounded-full bg-emerald-500" />
+                    <span className="text-[13px] font-bold text-white">{L('경기 일정', locale)}</span>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+                    {leagueGroup.children.filter((s) => s.logo).map((sub) => {
+                      const a = isSubActive(pathname, search, sub.href)
+                      return (
+                        <Link key={sub.href} href={sub.href} onClick={() => setMobileOpen(false)} className="ts-press flex flex-col items-center gap-1 shrink-0 w-[52px]">
+                          <span className={['w-10 h-10 rounded-full bg-white grid place-items-center p-1 border-2', a ? 'border-emerald-500' : 'border-transparent'].join(' ')}>
+                            <img src={sub.logo} alt="" className="max-w-full max-h-full object-contain" loading="lazy" />
+                          </span>
+                          <span className={['text-[10px] font-medium text-center leading-tight line-clamp-1', a ? 'text-emerald-300' : 'text-gray-300'].join(' ')}>{L(sub.ko, locale)}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
-              {groups.map((g) => {
-                const a = isActive(pathname, g)
-                return (
-                  <div key={g.ko}>
-                    <div className={['flex items-center gap-2 px-1 mb-2 pb-1.5 border-b', a ? 'border-emerald-500/30' : 'border-gray-800'].join(' ')}>
-                      <span className={['inline-block w-1 h-4 rounded-full', a ? 'bg-emerald-500' : 'bg-gray-600'].join(' ')} />
-                      <span className={['text-sm font-bold tracking-wide', a ? 'text-emerald-300' : 'text-white'].join(' ')}>{L(g.ko, locale)}</span>
-                    </div>
-                    <div className="space-y-0.5">
-                      {g.children!.map((sub) => {
-                        const subActive = isSubActive(pathname, search, sub.href)
-                        return (
-                          <Link key={sub.href} href={sub.href} onClick={() => setMobileOpen(false)} className={['ts-press flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm', subActive ? 'bg-emerald-500/10 text-emerald-300' : 'text-gray-300 hover:bg-gray-800/60'].join(' ')}>
-                            {sub.logo ? (
-                              <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center shrink-0 p-0.5">
-                                <img src={sub.logo} alt="" className="max-w-full max-h-full object-contain" loading="lazy" />
-                              </span>
-                            ) : <span className="w-6" />}
-                            <span>{L(sub.ko, locale)}</span>
-                          </Link>
-                        )
-                      })}
-                    </div>
+
+              {/* 기능 그리드 */}
+              {MORE_SECTIONS.map((sec) => (
+                <div key={sec.title}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="inline-block w-1 h-3.5 rounded-full bg-gray-600" />
+                    <span className="text-[13px] font-bold text-white">{L(sec.title, locale)}</span>
                   </div>
-                )
-              })}
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {sec.items.map((it) => {
+                      const a = pathname === it.href || pathname.startsWith(it.href + '/')
+                      return (
+                        <Link key={it.href} href={it.href} onClick={() => setMobileOpen(false)} className="ts-press flex flex-col items-center gap-1 rounded-xl bg-white/[0.03] border border-white/[0.06] py-2 px-1 active:bg-white/[0.07]">
+                          <span className={['w-9 h-9 rounded-full grid place-items-center', a ? 'bg-emerald-500/15' : 'bg-white/[0.05]'].join(' ')}>
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={a ? '#6dff5c' : '#cbd5e1'} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">{GRID_ICON[it.icon]}</svg>
+                          </span>
+                          <span className={['text-[10.5px] font-medium text-center leading-tight', a ? 'text-emerald-300' : 'text-gray-200'].join(' ')}>{L(it.ko, locale)}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </>
