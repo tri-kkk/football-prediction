@@ -401,15 +401,33 @@ async function getUpcomingFixturesWithOdds(leagueCode: string, leagueId: number,
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
 
-  // ?league=J1 또는 ?league=J1,KL1 로 대상 축소 (미지정 시 전체)
-  const leagueFilter = (request.nextUrl.searchParams.get('league') || '')
-    .split(',').map(s => s.trim()).filter(Boolean)
+  const sp = request.nextUrl.searchParams
 
-  const targetLeagues = Object.entries(LEAGUE_IDS)
+  // ?league=J1 또는 ?league=J1,KL1 로 대상 축소 (미지정 시 전체)
+  const leagueFilter = (sp.get('league') || '').split(',').map(s => s.trim()).filter(Boolean)
+
+  // ?group=1&of=4 → 54개 리그를 4등분해 그중 1번 묶음만 처리.
+  //   리그 하나당 약 10초라 전체(54개)는 한 번에 절대 못 끝낸다.
+  //   인덱스 나머지로 나누므로 무거운 리그(PL/PD/BL1/SA/FL1)가 묶음마다 분산되고,
+  //   나중에 리그가 추가돼도 크론 SQL을 고칠 필요가 없다.
+  const group = Number(sp.get('group') || 0)
+  const of = Number(sp.get('of') || 0)
+  const useGroup = Number.isInteger(of) && of >= 2 && Number.isInteger(group) && group >= 1 && group <= of
+
+  let targetLeagues = Object.entries(LEAGUE_IDS)
     .filter(([code]) => leagueFilter.length === 0 || leagueFilter.includes(code))
 
+  if (useGroup) {
+    targetLeagues = targetLeagues.filter((_, i) => i % of === group - 1)
+  }
+
+  const scope = leagueFilter.length
+    ? `필터: ${leagueFilter.join(',')}`
+    : useGroup ? `묶음 ${group}/${of}` : '전체'
+
   console.log('🎯 분석 생성 Cron 시작:', new Date().toISOString())
-  console.log(`📊 ${targetLeagues.length}개 리그 처리 예정` + (leagueFilter.length ? ` (필터: ${leagueFilter.join(',')})` : ''))
+  console.log(`📊 ${targetLeagues.length}개 리그 처리 예정 (${scope})`)
+  console.log(`   대상: ${targetLeagues.map(([c]) => c).join(', ')}`)
 
   const apiKey = process.env.API_FOOTBALL_KEY
   if (!apiKey) {
@@ -509,8 +527,10 @@ export async function GET(request: NextRequest) {
       success: true,
       message: '분석 생성 완료',
       timedOut,
+      scope,
       stats: {
         leaguesProcessed: targetLeagues.length,
+        leagues: targetLeagues.map(([c]) => c),
         elapsed: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
         generated: generatedCount,
         errors: errorCount,
