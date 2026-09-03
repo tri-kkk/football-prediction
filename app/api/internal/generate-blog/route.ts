@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sanitizeOddsRow } from '@/lib/baseballOdds'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -175,11 +176,13 @@ async function collectBaseballData(matchId: string) {
   if (!match) return null
 
   // 2) 배당
-  const { data: odds } = await supabase
+  //    ⚠️ home_win_prob 컬럼은 Railway ML이 덮어쓰므로 배당에서 재계산해 사용 (lib/baseballOdds)
+  const { data: rawOdds } = await supabase
     .from('baseball_odds_latest')
     .select('*')
     .eq('api_match_id', match.api_match_id || match.id)
     .single()
+  const odds = sanitizeOddsRow(rawOdds)
 
   // 3) 시즌 팀 스탯
   const season = String(new Date(match.match_date).getFullYear())

@@ -44,3 +44,7 @@ trendsoccer-*.zip
 
 # 음원 정규화 전 원본 (되돌리기용, 저장소에 넣을 이유 없음)
 sounds-original/
+
+*.bak-*
+*.bak2
+* - ���纻.*

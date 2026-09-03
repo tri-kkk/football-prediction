@@ -73,18 +73,21 @@ export default function TodayPickCard({
     }
 
     const buildBaseball = (list: any[]): PickView | null => {
+      // 🔒 야구 승률 단일 소스 = aiPrediction (baseball_odds_latest.ai_home_win_prob)
+      //    상세 페이지 /api/baseball/predict 최종값과 동일. mlPrediction(Railway 원시값)이나
+      //    odds.homeWinProb(배당 내재확률)을 섞으면 화면마다 숫자가 달라진다.
       const eligible = (list || [])
-        .filter((m) => m?.mlPrediction && !isFinished(m.status) && !isExcludedLeague(m))
+        .filter((m) => typeof m?.aiPrediction?.homeWinProb === 'number' && !isFinished(m.status) && !isExcludedLeague(m))
         .sort((a, b) => {
-          const gr = gradeRank(b.mlPrediction.grade) - gradeRank(a.mlPrediction.grade)
+          const gr = gradeRank(b.aiPrediction.grade) - gradeRank(a.aiPrediction.grade)
           if (gr !== 0) return gr
-          const cb = Math.max(b.mlPrediction.homeWinProb || 0, b.mlPrediction.awayWinProb || 0)
-          const ca = Math.max(a.mlPrediction.homeWinProb || 0, a.mlPrediction.awayWinProb || 0)
+          const cb = Math.max(b.aiPrediction.homeWinProb || 0, b.aiPrediction.awayWinProb || 0)
+          const ca = Math.max(a.aiPrediction.homeWinProb || 0, a.aiPrediction.awayWinProb || 0)
           return cb - ca
         })
       const m = eligible[0]
       if (!m) return null
-      const ml = m.mlPrediction
+      const ml = m.aiPrediction
       const homeWin = (ml.homeWinProb || 0) >= (ml.awayWinProb || 0)
       const conf = Math.round(Math.max(ml.homeWinProb || 0, ml.awayWinProb || 0))
       return {

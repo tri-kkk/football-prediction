@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sanitizeOddsRow } from '@/lib/baseballOdds'
 import Anthropic from '@anthropic-ai/sdk'
 
 const supabase = createClient(
@@ -282,7 +283,8 @@ async function collectResultData(matchId: string) {
   const season = String(new Date(match.match_date).getFullYear())
 
   const [odds, homeSeason, awaySeason, h2h] = await Promise.all([
-    supabase.from('baseball_odds_latest').select('*').eq('api_match_id', match.api_match_id || match.id).single().then(r => r.data),
+    // ⚠️ home_win_prob 컬럼은 Railway ML이 덮어쓰므로 배당에서 재계산 (lib/baseballOdds)
+    supabase.from('baseball_odds_latest').select('*').eq('api_match_id', match.api_match_id || match.id).single().then(r => sanitizeOddsRow(r.data)),
     supabase.from('baseball_team_season_stats').select('*').eq('team_name', match.home_team).eq('league', match.league).eq('season', season).single().then(r => r.data),
     supabase.from('baseball_team_season_stats').select('*').eq('team_name', match.away_team).eq('league', match.league).eq('season', season).single().then(r => r.data),
     supabase.from('baseball_matches').select('home_team, away_team, home_team_ko, away_team_ko, home_score, away_score, match_date').or(`and(home_team.eq.${match.home_team},away_team.eq.${match.away_team}),and(home_team.eq.${match.away_team},away_team.eq.${match.home_team})`).eq('status', 'FT').lt('match_date', match.match_date).order('match_date', { ascending: false }).limit(5).then(r => r.data),

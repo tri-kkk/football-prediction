@@ -74,6 +74,36 @@ function buildReportFields(
     confidence: Math.max(0, top - second),
   }
 }
+
+// =============================================================================
+// 모듈과 중복되는 본문 섹션 제거
+//
+// 상세 페이지가 match_id 로 04 폼 / 06 스탯 / 07 H2H 모듈을 렌더하는데,
+// 본문에도 같은 내용이 마크다운 표로 들어가 한 페이지에 두 번 나온다.
+// 실측 2026-09-03: 본문 7개 섹션 중 3개가 모듈과 중복.
+//
+// ENABLE_BLOG_REPORT_FIELDS=1 일 때만 잘라낸다 —
+// 그때만 match_id 가 채워져 모듈이 실제로 렌더되기 때문이다.
+//
+// '시즌 성적'은 남긴다. 홈/원정 승무패 스플릿은 어느 모듈에도 없다.
+// =============================================================================
+const MODULE_DUPLICATE_HEADINGS = [
+  '양팀 최근 폼', '핵심 스탯 비교', '상대 전적',
+  'Recent Form', 'Key Stats', 'Head-to-Head',
+]
+
+function stripModuleSections(md: string): string {
+  if (process.env.ENABLE_BLOG_REPORT_FIELDS !== '1') return md
+  if (!md) return md
+
+  return md
+    .split(/\n(?=##\s)/)
+    .filter((section) => {
+      const heading = (section.split('\n')[0] || '').replace(/^##\s*/, '').trim()
+      return !MODULE_DUPLICATE_HEADINGS.includes(heading)
+    })
+    .join('\n')
+}
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || ''
 
 // ============================================
@@ -1741,8 +1771,8 @@ export async function GET(request: NextRequest) {
         }
         
         // 5. 콘텐츠 생성 — 한국어는 h2h(ko), 영문은 h2hEnData(en) 사용
-        const contentKo = generateContentKo(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai)
-        const contentEn = generateContentEn(match, prediction, homeStats, awayStats, h2hEnData ?? h2h, leagueInfo, ai)
+        const contentKo = stripModuleSections(generateContentKo(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai))
+        const contentEn = stripModuleSections(generateContentEn(match, prediction, homeStats, awayStats, h2hEnData ?? h2h, leagueInfo, ai))
         
         // 5. 썸네일 URL
         const thumbnailUrl = generateThumbnailUrl(match, prediction, leagueInfo)
@@ -1897,8 +1927,8 @@ export async function POST(request: NextRequest) {
     try { ai = await generateAISections(match, prediction, homeStats, awayStats, h2h, leagueInfo, homeKo, awayKo) } catch (e) {}
 
     const seasonCtx = detectSeasonContext(match.league_code, homeStats, awayStats)
-    const contentKo = generateContentKo(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai)
-    const contentEn = generateContentEn(match, prediction, homeStats, awayStats, h2hEnData ?? h2h, leagueInfo, ai)
+    const contentKo = stripModuleSections(generateContentKo(match, prediction, homeStats, awayStats, h2h, leagueInfo, ai))
+    const contentEn = stripModuleSections(generateContentEn(match, prediction, homeStats, awayStats, h2hEnData ?? h2h, leagueInfo, ai))
     const thumbnailUrl = generateThumbnailUrl(match, prediction, leagueInfo)
     const tags = generateTags(match, leagueInfo)
     

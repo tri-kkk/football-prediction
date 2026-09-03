@@ -351,13 +351,26 @@ export async function POST(request: NextRequest) {
     }
 
     // 배당 implied probability + Railway 모델 블렌딩
-    // 배당 데이터가 있으면: 배당 60% + 모델 40% (배당이 시장 평가라 더 신뢰)
-    // 배당 데이터가 없으면: 모델 100%
-    const ODDS_WEIGHT = 0.6
-    const MODEL_WEIGHT = 0.4
+    //
+    // ⚠️ 2026-09-03 모델 검증 결과 — KBO/NPB 모델은 방향이 반대다.
+    //    앱을 우회해 Railway /predict에 직접 넣어 승률 강도를 0.1→0.9로 스윕한 결과:
+    //      home_win_pct  MLB    KBO    NPB
+    //         0.10      0.587  0.684  0.630
+    //         0.50      0.549  0.748  0.705
+    //         0.90      0.785  0.086  0.199   ← 압도적 홈 우세인데 8.6% / 19.9%
+    //    같은 두 팀 홈/원정만 바꿔 호출해도 P(home) 합이 1.094 (대칭 아님).
+    //    → KBO/NPB는 모델 가중치 0, 배당 100%. MLB는 방향이 맞으므로 기존 유지.
+    //    Railway 모델을 재학습해서 검증되면 MODEL_BROKEN_LEAGUES에서 빼면 된다.
+    const MODEL_BROKEN_LEAGUES = new Set(['KBO', 'NPB'])
+    const modelTrusted = !MODEL_BROKEN_LEAGUES.has(match.league)
+
+    const ODDS_WEIGHT = modelTrusted ? 0.6 : 1.0
+    const MODEL_WEIGHT = modelTrusted ? 0.4 : 0
 
     let blendedHome: number
     let blendedAway: number
+    // 배당도 없고 모델도 못 믿으면 예측 자체를 내지 않는다
+    let predictionUnavailable = false
 
     if (hasOdds) {
       blendedHome = oddsImpliedHome * ODDS_WEIGHT + aiResult.home_win_prob * MODEL_WEIGHT
@@ -366,9 +379,13 @@ export async function POST(request: NextRequest) {
       const blendTotal = blendedHome + blendedAway
       blendedHome = blendedHome / blendTotal
       blendedAway = blendedAway / blendTotal
-    } else {
+    } else if (modelTrusted) {
       blendedHome = aiResult.home_win_prob
       blendedAway = aiResult.away_win_prob
+    } else {
+      predictionUnavailable = true
+      blendedHome = 0.5
+      blendedAway = 0.5
     }
 
     // KBO/NPB 투수 매치업 휴리스틱 보정
@@ -376,7 +393,7 @@ export async function POST(request: NextRequest) {
     // 양팀 모두 실제 ERA 데이터가 있을 때만 후보정 적용. cap ±8%p
     const isMlb = match.league === 'MLB'
     let pitcherAdjustment = 0
-    if (!isMlb && hasPitcherData) {
+    if (!isMlb && hasPitcherData && !predictionUnavailable) {
       const eraDiff = awayPitcherEra - homePitcherEra // (+) → 홈 우세
       // ERA 1.0 차 ≈ 4%p, cap ±8%p
       const eraAdj = Math.max(-0.08, Math.min(0.08, eraDiff * 0.04))
@@ -404,6 +421,17 @@ export async function POST(request: NextRequest) {
 
     const homeWinProb = Math.round(blendedHome * 100)
     const awayWinProb = Math.round(blendedAway * 100)
+
+    // 🔒 등급/신뢰도는 "최종 블렌딩 확률"에서 재산정한다.
+    //    aiResult.grade는 블렌딩 전 모델 원시값 기준이라 화면 확률과 어긋난다.
+    //    (analysis 목록의 폴백 규칙 diff>=20 PICK / >=10 GOOD 과 동일 기준)
+    const probMargin = Math.abs(homeWinProb - awayWinProb)
+    const finalGrade: 'PICK' | 'GOOD' | 'PASS' = predictionUnavailable
+      ? 'PASS'
+      : probMargin >= 20 ? 'PICK' : probMargin >= 10 ? 'GOOD' : 'PASS'
+    const finalConfidence: 'HIGH' | 'MEDIUM' | 'LOW' = predictionUnavailable
+      ? 'LOW'
+      : probMargin >= 20 ? 'HIGH' : probMargin >= 10 ? 'MEDIUM' : 'LOW'
 
     // Over/Under: 팀 득실점 + 투수 ERA 기반 보정
     let overRaw = aiResult.over_prob
@@ -524,7 +552,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const summary = dataReliable
+    const summary = predictionUnavailable
+      ? (isEn
+        ? 'Odds are not available yet for this match, so no win probability is published.'
+        : '아직 배당이 수집되지 않아 승률을 산출하지 않습니다.')
+      : dataReliable
       ? (isEn
         ? `${favoredTeam} favored at ${favoredProb}%.${pitcherLine || ' Recent run differential and hits production are the key factors.'}`
         : `${favoredTeam} 측 ${favoredProb}% 확률로 우세.${pitcherLine || ' 최근 득실점 흐름과 안타 생산력이 주요 분석 근거.'}`)
@@ -543,10 +575,11 @@ export async function POST(request: NextRequest) {
             {
               api_match_id: match.api_match_id,
               league: match.league,
-              ai_home_win_prob: homeWinProb,
-              ai_away_win_prob: awayWinProb,
-              ai_grade: aiResult.grade ?? null,
-              ai_pick_confidence: aiResult.confidence ?? null,
+              // 예측 불가면 과거 값이 남지 않도록 null로 덮는다
+              ai_home_win_prob: predictionUnavailable ? null : homeWinProb,
+              ai_away_win_prob: predictionUnavailable ? null : awayWinProb,
+              ai_grade: predictionUnavailable ? null : finalGrade,
+              ai_pick_confidence: predictionUnavailable ? null : finalConfidence,
               ai_updated_at: new Date().toISOString(),
             },
             { onConflict: 'api_match_id' }
@@ -560,12 +593,13 @@ export async function POST(request: NextRequest) {
       success: true,
       quick: quickMode,
       prediction: {
-        homeWinProb,
-        awayWinProb,
+        homeWinProb: predictionUnavailable ? null : homeWinProb,
+        awayWinProb: predictionUnavailable ? null : awayWinProb,
         overProb,
         underProb,
-        confidence: aiResult.confidence,
-        grade: aiResult.grade,
+        confidence: finalConfidence,
+        grade: finalGrade,
+        unavailable: predictionUnavailable,
       },
       insights: {
         keyFactors,

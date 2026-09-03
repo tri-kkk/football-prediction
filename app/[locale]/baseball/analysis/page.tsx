@@ -137,8 +137,10 @@ function calculatePrediction(match: Match): PredictionResult['analysis'] {
   // ✅ 1순위: DB에 저장된 AI pick
   if (match.aiPick && (match.aiPick === 'PICK' || match.aiPick === 'GOOD' || match.aiPick === 'PASS')) {
     const grade = match.aiPick as 'PICK' | 'GOOD' | 'PASS'
-    const homeProb = match.odds?.homeWinProb ?? 50
-    const awayProb = match.odds?.awayWinProb ?? 50
+    // ⚠️ odds.homeWinProb(배당 내재확률)로 AI 등급을 설명하면 상세 페이지와 숫자가 어긋난다.
+    //    ai_home_win_prob이 아직 없으면 확률은 표시하지 않는다(50/50 = 미산출).
+    const homeProb = 50
+    const awayProb = 50
     const recommendedBet: 'HOME' | 'AWAY' | 'NONE' = grade !== 'PASS'
       ? (homeProb >= awayProb ? 'HOME' : 'AWAY')
       : 'NONE'
@@ -156,9 +158,9 @@ function calculatePrediction(match: Match): PredictionResult['analysis'] {
   }
 
   // ✅ 2순위: ML 분석값
+  // ✅ 2순위: Railway ML 원시값. 배당 내재확률(odds.homeWinProb)은 예측이 아니므로 fallback 금지.
   const ml = match.mlPrediction
-  const odds = match.odds
-  const source = ml ?? (odds ? { homeWinProb: odds.homeWinProb, awayWinProb: odds.awayWinProb } : null)
+  const source = ml ?? null
   const isML = !!ml
 
   if (!source) {

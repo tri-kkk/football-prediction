@@ -485,9 +485,12 @@ export async function GET(request: NextRequest) {
       const normHome = homeBookProb / bookTotal
       const normAway = awayBookProb / bookTotal
 
-      // ✅ 블렌딩: predict API와 동일하게 배당 60% + Railway 40% (실수 연산 후 정규화)
-      const ODDS_WEIGHT = 0.6
-      const MODEL_WEIGHT = 0.4
+      // ✅ 블렌딩: predict API와 동일 규칙
+      //    ⚠️ KBO/NPB Railway 모델은 방향이 반대라(2026-09-03 검증) 가중치 0 → 배당 100%
+      const MODEL_BROKEN_LEAGUES = new Set(['KBO', 'NPB'])
+      const modelTrusted = !MODEL_BROKEN_LEAGUES.has(league)
+      const ODDS_WEIGHT = modelTrusted ? 0.6 : 1.0
+      const MODEL_WEIGHT = modelTrusted ? 0.4 : 0
       let blendedHome = normHome * ODDS_WEIGHT + (prediction.homeWinProb / 100) * MODEL_WEIGHT
       let blendedAway = normAway * ODDS_WEIGHT + (prediction.awayWinProb / 100) * MODEL_WEIGHT
       const blendTotal = blendedHome + blendedAway

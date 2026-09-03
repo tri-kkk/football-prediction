@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { impliedFromOdds } from '@/lib/baseballOdds'
 
 // =====================================================
 // Baseball Match Detail API - 프론트엔드용
@@ -159,8 +160,9 @@ export async function GET(
 
       // 오즈 정보
       odds: latestOdds ? {
-        homeWinProb: latestOdds.home_win_prob,
-        awayWinProb: latestOdds.away_win_prob,
+        // ⚠️ home_win_prob 컬럼은 Railway ML이 덮어쓰므로 신뢰 불가 → 배당에서 즉석 계산
+        homeWinProb: impliedFromOdds(latestOdds.home_win_odds, latestOdds.away_win_odds)?.home ?? null,
+        awayWinProb: impliedFromOdds(latestOdds.home_win_odds, latestOdds.away_win_odds)?.away ?? null,
         homeWinOdds: latestOdds.home_win_odds,
         awayWinOdds: latestOdds.away_win_odds,
         overUnderLine: latestOdds.over_under_line,
@@ -178,11 +180,15 @@ export async function GET(
       } : null,
       
       // 오즈 트렌드 (차트용)
-      oddsTrend: oddsHistory?.map(h => ({
-        time: h.collected_at,
-        homeProb: h.home_win_prob,
-        awayProb: h.away_win_prob,
-      })) || [],
+      // baseball_odds_history는 collect-odds만 기록하므로 오염 없음. 그래도 배당이 있으면 재계산.
+      oddsTrend: oddsHistory?.map(h => {
+        const im = impliedFromOdds(h.home_win_odds, h.away_win_odds)
+        return {
+          time: h.collected_at,
+          homeProb: im?.home ?? h.home_win_prob,
+          awayProb: im?.away ?? h.away_win_prob,
+        }
+      }) || [],
       
       // 관련 경기
       relatedMatches: relatedMatches?.map(m => ({

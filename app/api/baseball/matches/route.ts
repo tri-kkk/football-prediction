@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { impliedFromOdds } from '@/lib/baseballOdds'
 import { createClient } from '@supabase/supabase-js'
 
 // =====================================================
@@ -368,7 +369,9 @@ export async function GET(request: NextRequest) {
             awayTeamId: match.away_team_id, awayLogo: match.away_team_logo, awayScore: match.away_score,
             status: correctBaseballStatus(match.status, match.match_timestamp || match.match_date, match.inning), innings: match.inning,
             odds: matchOdds ? {
-              homeWinProb: matchOdds.home_win_prob, awayWinProb: matchOdds.away_win_prob,
+              // ⚠️ home_win_prob 컬럼은 Railway ML이 덮어쓰므로 신뢰 불가 → 배당에서 즉석 계산
+              homeWinProb: impliedFromOdds(matchOdds.home_win_odds, matchOdds.away_win_odds)?.home ?? null,
+              awayWinProb: impliedFromOdds(matchOdds.home_win_odds, matchOdds.away_win_odds)?.away ?? null,
               homeWinOdds: matchOdds.home_win_odds, awayWinOdds: matchOdds.away_win_odds,
               overUnderLine: matchOdds.over_under_line, overOdds: matchOdds.over_odds, underOdds: matchOdds.under_odds,
               ouLines: matchOdds.ou_lines ?? null,
@@ -523,8 +526,9 @@ export async function GET(request: NextRequest) {
         innings: match.inning,
 
         odds: matchOdds ? {
-          homeWinProb: matchOdds.home_win_prob,
-          awayWinProb: matchOdds.away_win_prob,
+          // ⚠️ home_win_prob 컬럼은 Railway ML이 덮어쓰므로 신뢰 불가 → 배당에서 즉석 계산
+          homeWinProb: impliedFromOdds(matchOdds.home_win_odds, matchOdds.away_win_odds)?.home ?? null,
+          awayWinProb: impliedFromOdds(matchOdds.home_win_odds, matchOdds.away_win_odds)?.away ?? null,
           homeWinOdds: matchOdds.home_win_odds,
           awayWinOdds: matchOdds.away_win_odds,
           overUnderLine: matchOdds.over_under_line,
