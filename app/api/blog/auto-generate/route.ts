@@ -1810,6 +1810,20 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    // 🩹 force upsert 는 published_at 을 payload 에 넣지 않는다(기존 글 발행일 유지 목적).
+    //    그래서 force 로 '새로' 만들어진 글은 published_at 이 null 로 남아
+    //    목록에 날짜 없이 뜨고 상세 페이지의 날짜 포맷이 Invalid Date 가 된다.
+    //    이번 실행에서 만든 slug 중 null 인 것만 현재 시각으로 채운다 (기존 글은 건드리지 않음).
+    if (force && results.length > 0) {
+      const touched = results.map(r => r.slug).filter(Boolean)
+      const { error: paError } = await supabase
+        .from('blog_posts')
+        .update({ published_at: new Date().toISOString() })
+        .in('slug', touched)
+        .is('published_at', null)
+      if (paError) console.error('published_at backfill error:', paError)
+    }
+
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
     
     return NextResponse.json({

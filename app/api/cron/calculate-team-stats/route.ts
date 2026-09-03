@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { toKoreanTeamName } from '@/lib/teamNameKo'
 
 // Vercel function timeout: 기본 60s → 5분으로 확장
 // mode=all 시 13개 리그 × 4-5 시즌 처리에 60s 초과 → 부분 처리 방지
@@ -15,6 +16,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// ⚠️ 시즌 달력이 바뀐 리그에서는 틀린다.
+//    실측 2026-09-03 — J1 은 추춘제 전환으로 현재 시즌이 2027 인데 이 함수는 2026 을 준다.
+//    따라서 mode:"season" + season 미지정 경로는 J1 을 갱신하지 못한다.
+//    당분간 mode:"league"(leagueId 지정) 또는 mode:"all" 을 사용할 것.
+//    근본 해결은 lib/currentSeason.ts 의 resolveCurrentSeason(leagueId) 을 쓰는 것이나,
+//    이 경로는 리그를 특정하지 않으므로 리그별 순회 구조로 바꿔야 한다.
 // 현재 시즌 자동 계산 — season 미지정 시 사용 (매년 하드코딩 갱신 방지)
 // 유럽 크로스 시즌 기준: 8월 이후면 당해 연도(예: 2026-08 → "2026"), 그 전이면 전년도.
 // 8월부터는 아시아/아메리카(단일 연도 시즌)도 동일 연도라 전 리그가 일치함.
@@ -182,8 +189,17 @@ const TEAM_NAME_KO: Record<string, string> = {
 }
 
 // 팀명 한글 변환 함수
+/**
+ * 로컬 TEAM_NAME_KO 를 먼저 보고, 없으면 공용 맵(lib/teamNameKo)으로 넘어간다.
+ *
+ * 로컬 맵에 J리그 일부 팀이 빠져 있어 fg_team_stats.team_name_ko 에 영문이 저장됐다.
+ * 실측 2026-09-03 — J1 20팀 중 2팀 미매핑: V-varen Nagasaki(285), Shimizu S-pulse(283).
+ * 공용 맵은 대소문자·공백을 무시하므로 'V-varen' / 'V-Varen' 표기 차이도 흡수한다.
+ */
 function getTeamNameKo(englishName: string): string {
-  return TEAM_NAME_KO[englishName] || englishName
+  const local = TEAM_NAME_KO[englishName]
+  if (local) return local
+  return toKoreanTeamName(englishName) || englishName
 }
 
 interface MatchData {

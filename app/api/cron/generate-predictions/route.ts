@@ -8,6 +8,20 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 // ============================================================
 // 🔥 리그 코드 매핑 (50개 - 아프리카 추가!)
 // ============================================================
+// =============================================================================
+// 실행 시간 / 조기 종료
+//
+// 이 라우트는 리그 수 × 8일 × 경기별 배당 조회를 순차로 돈다.
+// maxDuration 이 없어 기본 제한에 걸려 죽었고, 리스트 뒤쪽 리그(일본·한국·아메리카)는
+// 만성적으로 예측이 생성되지 않았다.
+// 실측 2026-09-03: 한 번 실행에 14건만 생성, 전부 앞쪽 리그(CL/EGY/RSA/ELC/EFL/PPL).
+//   J1(37번째)은 도달조차 못 함 → J1 최신 예측이 2026-05-30 에 멈춰 있었다.
+//
+// auto-generate 와 동일하게 가드를 두고, ?league= 로 특정 리그만 돌릴 수 있게 한다.
+// =============================================================================
+export const maxDuration = 600
+const TIME_GUARD_MS = 540 * 1000
+
 const LEAGUE_IDS: { [key: string]: number } = {
   // ===== 🏆 국제 대회 =====
   'WC': 1,      // World Cup 2026
@@ -385,8 +399,17 @@ async function getUpcomingFixturesWithOdds(leagueCode: string, leagueId: number,
 
 // 메인 핸들러
 export async function GET(request: NextRequest) {
+  const startTime = Date.now()
+
+  // ?league=J1 또는 ?league=J1,KL1 로 대상 축소 (미지정 시 전체)
+  const leagueFilter = (request.nextUrl.searchParams.get('league') || '')
+    .split(',').map(s => s.trim()).filter(Boolean)
+
+  const targetLeagues = Object.entries(LEAGUE_IDS)
+    .filter(([code]) => leagueFilter.length === 0 || leagueFilter.includes(code))
+
   console.log('🎯 분석 생성 Cron 시작:', new Date().toISOString())
-  console.log(`📊 총 ${Object.keys(LEAGUE_IDS).length}개 리그 처리 예정`)
+  console.log(`📊 ${targetLeagues.length}개 리그 처리 예정` + (leagueFilter.length ? ` (필터: ${leagueFilter.join(',')})` : ''))
 
   const apiKey = process.env.API_FOOTBALL_KEY
   if (!apiKey) {
@@ -401,8 +424,18 @@ export async function GET(request: NextRequest) {
     let errorCount = 0
     const leagueStats: { league: string; count: number }[] = []
 
+    let timedOut = false
+
     // 각 리그별로 처리
-    for (const [leagueCode, leagueId] of Object.entries(LEAGUE_IDS)) {
+    for (const [leagueCode, leagueId] of targetLeagues) {
+      // 제한 시간 임박 시 조기 종료 — 남은 리그는 다음 실행에서 처리
+      if (Date.now() - startTime > TIME_GUARD_MS) {
+        timedOut = true
+        const done = targetLeagues.findIndex(([c]) => c === leagueCode)
+        console.log(`⏱️ Time guard: ${done}/${targetLeagues.length} 리그 처리 후 중단`)
+        break
+      }
+
       console.log(`\n📋 ${leagueCode} (ID: ${leagueId}) 처리 중...`)
 
       try {
@@ -475,8 +508,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: '분석 생성 완료',
+      timedOut,
       stats: {
-        leaguesProcessed: Object.keys(LEAGUE_IDS).length,
+        leaguesProcessed: targetLeagues.length,
+        elapsed: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
         generated: generatedCount,
         errors: errorCount,
         byLeague: leagueStats.filter(s => s.count > 0)
