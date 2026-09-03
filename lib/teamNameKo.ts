@@ -16,6 +16,42 @@ import { TEAM_NAME_KR } from '../app/teamLogos'
 
 /** auto-generate 로컬 맵에서 옮겨온 보충분 (J리그 / K리그 등) */
 const SUPPLEMENT: Record<string, string> = {
+  // --- 2026-09-03 추가: fg_team_stats 최근 시즌 팀 중 어느 맵에도 없던 30개 ---
+  // 독일
+  '1899 Hoffenheim': '호펜하임',
+  'SC Paderborn 07': '파더보른',
+  'SV Elversberg': '엘버스베르크',
+  // 네덜란드
+  'ADO Den Haag': 'ADO 덴하흐',
+  'Telstar': '텔스타르',
+  // 잉글랜드 챔피언십
+  'Bolton': '볼턴',
+  'Lincoln': '링컨 시티',
+  'QPR': '퀸즈 파크 레인저스',
+  'Sheffield Utd': '셰필드 유나이티드',
+  // 프랑스
+  'Estac Troyes': '트루아',
+  'Le Mans': '르망',
+  'Paris FC': '파리 FC',
+  // 스페인
+  'Deportivo La Coruna': '데포르티보 라코루냐',
+  'Malaga': '말라가',
+  'Racing Santander': '라싱 산탄데르',
+  // MLS
+  'St. Louis City': '세인트루이스 시티',
+  // J리그
+  'Shimizu S-pulse': '시미즈 S펄스',
+  'Kataller Toyama': '카탈레 도야마',
+  'Tegevajaro Miyazaki': '테게바자로 미야자키',
+  'Tochigi City': '도치기 시티',
+  'Vanraure Hachinohe': '반라우레 하치노헤',
+  // K리그2
+  'Cheonan City': '천안 시티',
+  'Gimhae City': '김해 FC',
+  'Hwaseong': '화성 FC',
+  'Paju Citizen': '파주 시민축구단',
+  'Yongin City': '용인 FC',
+
   'Manchester City': '맨시티',
   'Manchester United': '맨유',
   'Liverpool': '리버풀',
