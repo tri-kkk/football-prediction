@@ -1,6 +1,6 @@
 'use client';
 // app/coach/ui.tsx — 코치 앱 공통 UI (시그널 링·경기 카드·기록 추가 시트). 홈/경기 화면 공유.
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { coachApi, type MatchSignal } from '@/lib/coachApi';
@@ -310,6 +310,16 @@ export function BetSheet({ m, onClose, onSaved }: { m: MatchSignal; onClose: () 
   const [pick, setPick] = useState<string>(rec);
   const [odds, setOdds] = useState<string>(String(oddsOf(rec)));
   const [stake, setStake] = useState<string>('15000');
+  // 설정(뱅크롤)에서 저장한 단위 베팅을 반영 — 칩·기본 스테이크가 최신 단위로 계산됨
+  const [unit, setUnit] = useState<number>(15000);
+  useEffect(() => {
+    try {
+      const u = parseInt((localStorage.getItem('coach_unit') || '15000').replace(/[^0-9]/g, '')) || 0;
+      const v = u > 0 ? u : 15000;
+      setUnit(v);
+      setStake(String(v));
+    } catch { /* localStorage 불가 시 기본값 유지 */ }
+  }, []);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const { dragHandlers, sheetStyle } = useDragToClose(onClose);
@@ -361,7 +371,7 @@ export function BetSheet({ m, onClose, onSaved }: { m: MatchSignal; onClose: () 
         <input value={odds} onChange={(e) => setOdds(e.target.value)} inputMode="decimal" style={{ width: '100%', background: '#232320', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, padding: '13px 14px', color: '#fff', fontSize: 16, fontWeight: 700, marginBottom: 16 }} />
         <div style={{ fontSize: 12, fontWeight: 700, color: '#c3c2b7', marginBottom: 9 }}>스테이크 (원)</div>
         <input value={Number(st).toLocaleString()} onChange={(e) => setStake(e.target.value)} inputMode="numeric" style={{ width: '100%', background: '#232320', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, padding: '13px 14px', color: '#fff', fontSize: 16, fontWeight: 700 }} />
-        <div style={{ display: 'flex', gap: 7, marginTop: 9, marginBottom: 16 }}>{chip(15000, '1단위 15,000')}{chip(30000, '2단위 30,000')}{chip(45000, '3단위 45,000')}</div>
+        <div style={{ display: 'flex', gap: 7, marginTop: 9, marginBottom: 16 }}>{chip(unit, `1단위 ${unit.toLocaleString()}`)}{chip(unit * 2, `2단위 ${(unit * 2).toLocaleString()}`)}{chip(unit * 3, `3단위 ${(unit * 3).toLocaleString()}`)}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', background: '#232320', borderRadius: 12, padding: '13px 14px', marginBottom: 16 }}>
           <div><div style={{ fontSize: 11, color: '#898781' }}>예상 순수익</div><div style={{ fontSize: 17, fontWeight: 800, color: '#3ecb3e', marginTop: 4 }}>{profit >= 0 ? '+' : ''}{profit.toLocaleString()}</div></div>
           <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: '#898781' }}>적중 시 총 회수</div><div style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>{total.toLocaleString()}</div></div>
