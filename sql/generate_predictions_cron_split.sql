@@ -15,21 +15,22 @@
 -- ============================================================
 
 -- ------------------------------------------------------------
--- 0) 기존 잡 확인 — 단일 잡이 이미 있으면 먼저 해제할 것
+-- 0) 기존 단일 잡 해제 (반드시 먼저!)
+--    실측 2026-09-03: jobid 33 'generate-predictions-2hourly' ('0 */2 * * *')
+--    이 잡이 남아 있으면 5개가 동시에 돌아 API 쿼터를 낭비한다.
 -- ------------------------------------------------------------
--- SELECT jobid, jobname, schedule, active
--- FROM cron.job
--- WHERE command ILIKE '%generate-predictions%';
---
--- SELECT cron.unschedule('<위에서 찾은 jobname>');
+SELECT cron.unschedule('generate-predictions-2hourly');
+
+-- 다른 이름으로 등록돼 있다면 먼저 확인:
+-- SELECT jobid, jobname, schedule FROM cron.job WHERE command ILIKE '%generate-predictions%';
 
 -- ------------------------------------------------------------
--- 1) 4개 묶음 등록 (6시간 주기, 10분씩 시차)
---    한 묶음 ≈ 13~14개 리그 ≈ 150초 → 600초 제한에 여유
+-- 1) 4개 묶음 등록 (2시간 주기 — 기존 잡과 동일 리듬, 15분씩 시차)
+--    한 묶음 ≈ 13~14개 리그 ≈ 150초 → 서로 겹치지 않고 600초 제한에도 여유
 -- ------------------------------------------------------------
 SELECT cron.schedule(
   'generate-predictions-1of4',
-  '0 */6 * * *',
+  '0 */2 * * *',
   $$
   SELECT net.http_get(
     url := 'https://www.trendsoccer.com/api/cron/generate-predictions?group=1&of=4'
@@ -39,7 +40,7 @@ SELECT cron.schedule(
 
 SELECT cron.schedule(
   'generate-predictions-2of4',
-  '10 */6 * * *',
+  '15 */2 * * *',
   $$
   SELECT net.http_get(
     url := 'https://www.trendsoccer.com/api/cron/generate-predictions?group=2&of=4'
@@ -49,7 +50,7 @@ SELECT cron.schedule(
 
 SELECT cron.schedule(
   'generate-predictions-3of4',
-  '20 */6 * * *',
+  '30 */2 * * *',
   $$
   SELECT net.http_get(
     url := 'https://www.trendsoccer.com/api/cron/generate-predictions?group=3&of=4'
@@ -59,7 +60,7 @@ SELECT cron.schedule(
 
 SELECT cron.schedule(
   'generate-predictions-4of4',
-  '30 */6 * * *',
+  '45 */2 * * *',
   $$
   SELECT net.http_get(
     url := 'https://www.trendsoccer.com/api/cron/generate-predictions?group=4&of=4'
