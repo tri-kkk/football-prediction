@@ -14,6 +14,66 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 const API_BASE = process.env.NEXT_PUBLIC_SITE_URL || 'https://trendsoccer.com'
+
+// 내부 API 호출용 base.
+// NEXT_PUBLIC_SITE_URL 이 없으면 API_BASE 가 프로덕션을 가리켜, 로컬 개발 중에도
+// 프로덕션 코드를 호출해 버린다(실측 2026-09-03: team-stats 수정분이 반영 안 됨).
+// 요청 origin 을 우선 사용해 '자기 자신'을 부르게 한다.
+// 배포 환경에서도 trendsoccer.com → www 리다이렉트 시 x-internal-secret 이
+// 유실될 위험을 함께 없앤다.
+let RUNTIME_BASE = API_BASE
+function setRuntimeBase(request: NextRequest) {
+  try {
+    RUNTIME_BASE = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin || API_BASE
+  } catch {
+    RUNTIME_BASE = API_BASE
+  }
+}
+
+// =============================================================================
+// BLOG_REPORT_LAYOUT_SPEC_v1 · Phase 1/2 — blog_posts 예측 컬럼 채우기
+//
+// ⚠️ sql/blog_report_001_verdict_columns.sql 를 먼저 실행한 뒤
+//    환경변수 ENABLE_BLOG_REPORT_FIELDS=1 을 켜야 동작한다.
+//    (컬럼이 없는 상태에서 값을 보내면 insert 전체가 실패하므로 기본은 OFF)
+// =============================================================================
+function buildReportFields(
+  match: any,
+  prediction: any,
+  leagueInfo: any,
+  homeKo: string,
+  awayKo: string
+): Record<string, any> {
+  if (process.env.ENABLE_BLOG_REPORT_FIELDS !== '1') return {}
+  const p = prediction?.finalProb
+  if (!p) return {}
+
+  const home = Math.round((p.home ?? 0) * 100)
+  const draw = Math.round((p.draw ?? 0) * 100)
+  const away = Math.round((p.away ?? 0) * 100)
+  const top = Math.max(home, draw, away)
+  // confidence = 1위와 2위 확률의 격차(%p). 최댓값 자체를 쓰면 27/27/46 같은 접전에서
+  // '신뢰도 46'처럼 오해를 부른다. 격차가 곧 예측의 결정력이다.
+  const second = [home, draw, away].sort((x, y) => y - x)[1]
+  const pick = top === home ? `${homeKo} 승` : top === away ? `${awayKo} 승` : '무승부'
+
+  const sh = match?.predicted_score_home
+  const sa = match?.predicted_score_away
+
+  return {
+    match_id: match?.match_id ?? null,
+    home_team: homeKo || match?.home_team || null,
+    away_team: awayKo || match?.away_team || null,
+    league_name: leagueInfo?.name ?? null,
+    kickoff_at: match?.commence_time ?? null,
+    home_prob: home,
+    draw_prob: draw,
+    away_prob: away,
+    pred_score: sh != null && sa != null ? `${sh}-${sa}` : null,
+    pick,
+    confidence: Math.max(0, top - second),
+  }
+}
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || ''
 
 // ============================================
@@ -423,7 +483,6 @@ const TEAM_NAME_KO: Record<string, string> = {
   'Iwaki': '이와키', 'Iwaki FC': '이와키',
   'Fujieda MYFC': '후지에다 MYFC',
   'Sagamihara': '사가미하라', 'SC Sagamihara': '사가미하라',
-  'Montedio Yamagata': '몬테디오 야마가타',
   'Kanazawa': '카나자와', 'Zweigen Kanazawa': '카나자와',
   'Kamatamare Sanuki': '카마타마레 사누키',
   // MLS
@@ -1018,7 +1077,7 @@ function generateThumbnailUrl(match: any, prediction: any, leagueInfo: any): str
 async function fetchPrediction(match: any): Promise<any> {
   try {
     const leagueId = LEAGUE_INFO[match.league_code]?.apiLeagueId || 39
-    const response = await fetch(`${API_BASE}/api/predict-v2`, {
+    const response = await fetch(`${RUNTIME_BASE}/api/predict-v2`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1045,16 +1104,28 @@ async function fetchPrediction(match: any): Promise<any> {
   }
 }
 
-async function fetchTeamStats(teamName: string, leagueCode: string): Promise<any> {
+/**
+ * ⚠️ 반드시 teamId 로 조회할 것.
+ * 이름(`team=`)으로 조회하면 fg_team_stats 를 `team_name.ilike.%..%` 로 훑은 뒤
+ * "최적 시즌"을 고르는데, 현재 시즌 행이 없으면 지난 시즌(심지어 다른 리그)로 떨어진다.
+ * 실측 2026-09-02 — V-varen Nagasaki:
+ *    team=  → 2025-11 J2 경기 기준 "최근 10경기 5승 4무 1패, 17골 6실점"
+ *    teamId → 2026-08 J1 경기 기준 "4승 6패, 12골 18실점"  ← 정확
+ * 이름 조회로 생성된 프리뷰 본문에 지난 시즌 수치가 실려 나갔다.
+ */
+async function fetchTeamStats(teamName: string, leagueCode: string, teamId?: number | string | null): Promise<any> {
   try {
     // CL/EL 팀들은 자국 리그 소속 — 리그코드 없이 조회해야 데이터 있음
     // 🛡️ KL1/KL2/K2도 league 파라미터 제외 — fg_team_stats는 K1 데이터만 있어서 KL2 매치 조회 시 mismatch 발생
     //    (수원 삼성 KL2 매치인데 fg_team_stats에는 K1 시즌 데이터로 저장됨)
     const isCup = ['CL', 'EL'].includes(leagueCode)
     const isKLeague = ['KL1', 'KL2', 'K1', 'K2'].includes(leagueCode)
-    const url = (isCup || isKLeague)
-      ? `${API_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}`
-      : `${API_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}&league=${leagueCode}`
+    // premium/page.tsx 와 같은 패턴: 이름과 teamId 를 함께 넘긴다.
+    // /api/team-stats 는 teamId 가 있으면 그걸 우선 쓰고, 이름은 표시·폴백용으로 남는다.
+    const idParam = teamId ? `&teamId=${encodeURIComponent(String(teamId))}` : ''
+    const base = `${RUNTIME_BASE}/api/team-stats?team=${encodeURIComponent(teamName)}${idParam}`
+
+    const url = (isCup || isKLeague) ? base : `${base}&league=${leagueCode}`
 
     const response = await fetch(url, { headers: { 'x-internal-secret': process.env.CRON_SECRET || '' } })
     if (!response.ok) return null
@@ -1075,7 +1146,7 @@ async function fetchH2H(match: any, lang: 'ko' | 'en' = 'ko'): Promise<any> {
     })
     if (match.home_team_id) params.append('homeTeamId', String(match.home_team_id))
     if (match.away_team_id) params.append('awayTeamId', String(match.away_team_id))
-    const response = await fetch(`${API_BASE}/api/h2h-analysis?${params.toString()}`, { headers: { 'x-internal-secret': process.env.CRON_SECRET || '' } })
+    const response = await fetch(`${RUNTIME_BASE}/api/h2h-analysis?${params.toString()}`, { headers: { 'x-internal-secret': process.env.CRON_SECRET || '' } })
     if (!response.ok) return null
     const data = await response.json()
     return data.success ? data.data : null
@@ -1556,6 +1627,7 @@ function generateTags(match: any, leagueInfo: any): string[] {
 // 메인 핸들러: GET (Cron 자동 실행)
 // ============================================
 export async function GET(request: NextRequest) {
+  setRuntimeBase(request)
   const startTime = Date.now()
   
   try {
@@ -1636,8 +1708,8 @@ export async function GET(request: NextRequest) {
         
         // 2. 팀 스탯 + H2H (ko + en 둘 다 — 각 언어 콘텐츠에 맞게 인사이트 사용)
         const [homeStats, awayStats, h2h, h2hEnData] = await Promise.all([
-          fetchTeamStats(match.home_team, match.league_code),
-          fetchTeamStats(match.away_team, match.league_code),
+          fetchTeamStats(match.home_team, match.league_code, match.home_team_id),
+          fetchTeamStats(match.away_team, match.league_code, match.away_team_id),
           fetchH2H(match, 'ko'),
           fetchH2H(match, 'en'),
         ])
@@ -1702,6 +1774,7 @@ export async function GET(request: NextRequest) {
           cover_image: thumbnailUrl,
           published: true,
           published_en: true,
+          ...buildReportFields(match, prediction, leagueInfo, homeKo, awayKo),
         }
 
         // 재생성(force): 기존 글을 slug 기준으로 덮어쓰되 발행일(published_at)은 유지 → 목록 순서 안 흔들림.
@@ -1762,6 +1835,7 @@ export async function GET(request: NextRequest) {
 // POST: 특정 경기 수동 생성
 // ============================================
 export async function POST(request: NextRequest) {
+  setRuntimeBase(request)
   try {
     const body = await request.json()
     const { matchId } = body
@@ -1787,8 +1861,8 @@ export async function POST(request: NextRequest) {
     }
     
     const [homeStats, awayStats, h2h, h2hEnData] = await Promise.all([
-      fetchTeamStats(match.home_team, match.league_code),
-      fetchTeamStats(match.away_team, match.league_code),
+      fetchTeamStats(match.home_team, match.league_code, match.home_team_id),
+      fetchTeamStats(match.away_team, match.league_code, match.away_team_id),
       fetchH2H(match, 'ko'),
       fetchH2H(match, 'en'),
     ])
@@ -1836,6 +1910,7 @@ export async function POST(request: NextRequest) {
         published: true,
         published_en: true,
         published_at: new Date().toISOString(),
+        ...buildReportFields(match, prediction, leagueInfo, homeKo, awayKo),
       }, { onConflict: 'slug' })
     
     if (upsertError) return NextResponse.json({ error: 'Insert failed', details: upsertError }, { status: 500 })

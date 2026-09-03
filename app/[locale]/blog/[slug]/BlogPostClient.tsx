@@ -7,6 +7,8 @@ import remarkGfm from 'remark-gfm'
 import { useLanguage } from '../../../contexts/LanguageContext'
 import { useSession } from 'next-auth/react'
 import AdSenseAd from '../../../components/AdSenseAd'
+import MatchVerdict from '../../../components/MatchVerdict'
+import MatchReportModules, { type Tier } from '../../../components/MatchReportModules'
 
 interface BlogPost {
   id: number
@@ -25,6 +27,19 @@ interface BlogPost {
   views: number
   tags: string[]
   author: string
+  // --- 리포트 모듈 01 / 12 (blog_report_001_verdict_columns.sql) ---
+  match_id?: string | null
+  home_team?: string | null
+  away_team?: string | null
+  league_name?: string | null
+  kickoff_at?: string | null
+  home_prob?: number | null
+  draw_prob?: number | null
+  away_prob?: number | null
+  pred_score?: string | null
+  pick?: string | null
+  pick_sub?: string | null
+  confidence?: number | null
 }
 
 // =============================================================================
@@ -108,6 +123,7 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
   const { language: currentLanguage } = useLanguage()
   const { data: session } = useSession()
   const isPremium = (session?.user as any)?.tier === 'premium'
+  const tier: Tier = !session ? 'guest' : isPremium ? 'premium' : 'free'
 
   const [post] = useState<BlogPost | null>(initialPost)
 
@@ -186,7 +202,7 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
       )}
 
       {/* 포스트 내용 */}
-      <article className="max-w-4xl mx-auto px-4 py-6">
+      <article className="max-w-3xl mx-auto px-4 py-6">
         {/* 메타 정보 헤더 */}
         <div className="mb-6">
           {/* 카테고리 + 메타 */}
@@ -236,6 +252,14 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
           </div>
         </div>
 
+        {/* 모듈 01 — 버딕트 히어로 (비회원에게도 공개) */}
+        <MatchVerdict
+          data={post}
+          variant="hero"
+          lang={currentLanguage === 'en' ? 'en' : 'ko'}
+          className="mb-8"
+        />
+
         {/* 영문 버전 없음 안내 */}
         {currentLanguage === 'en' && !post.content_en && (
           <div className="mb-8 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
@@ -247,34 +271,6 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
         )}
 
         {/* 본문 */}
-        {!session ? (
-          /* 🔒 비회원: 본문 원천 차단 (제목·구조만 노출 + 로그인 CTA) */
-          <div className="rounded-2xl p-8 md:p-10 text-center bg-gradient-to-b from-[#f5c451]/[0.06] to-white/[0.02] border border-[#f5c451]/25 my-4">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#f5c451]/[0.12] border border-[#f5c451]/30 flex items-center justify-center">
-              <svg className="w-6 h-6 text-[#f5c451]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <rect x="5" y="11" width="14" height="10" rx="2" />
-                <path d="M8 11V7a4 4 0 018 0v4" />
-              </svg>
-            </div>
-            <p className="text-white font-bold text-xl mb-2">
-              {currentLanguage === 'ko' ? '회원 전용 콘텐츠' : 'Members-only Content'}
-            </p>
-            <p className="text-gray-400 text-sm mb-6">
-              {currentLanguage === 'ko'
-                ? '로그인하면 전체 분석 콘텐츠를 무료로 볼 수 있어요'
-                : 'Log in to read the full analysis — free'}
-            </p>
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all text-sm no-underline shadow-lg shadow-emerald-500/20"
-            >
-              {currentLanguage === 'ko' ? '무료로 시작하기' : 'Get Started Free'}
-            </Link>
-            <p className="text-gray-600 text-xs mt-3">
-              {currentLanguage === 'ko' ? '30초 가입 · 결제 정보 필요 없음' : 'Sign up in 30s · No payment'}
-            </p>
-          </div>
-        ) : (
         <div className="prose prose-invert prose-lg max-w-none">
           {(() => {
             const content = getContent()
@@ -303,7 +299,7 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
               if (firstLine.includes('분석') || firstLine.includes('Analysis')) return { color: 'from-emerald-500 to-emerald-600', icon: '📈' }
               if (firstLine.includes('상대 전적') || firstLine.includes('Head')) return { color: 'from-orange-500 to-orange-600', icon: '⚔️' }
               if (firstLine.includes('Tags') || firstLine.includes('태그')) return { color: 'from-gray-500 to-gray-600', icon: '🏷️' }
-              return null
+              return { color: 'from-slate-500 to-slate-600', icon: '' }
             }
 
             // 마크다운 컴포넌트
@@ -320,7 +316,7 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
                 <h3 className="text-xl font-bold mt-6 mb-3 text-white">{children}</h3>
               ),
               p: ({ children }: any) => (
-                <p className="text-gray-300 leading-relaxed mb-4">{children}</p>
+                <p className="text-[15px] md:text-base text-gray-300 leading-[1.8] mb-5">{children}</p>
               ),
               strong: ({ children }: any) => (
                 <strong className="text-white font-bold">{children}</strong>
@@ -361,7 +357,7 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
                     </div>
                   )
                 }
-                return <code className="bg-[#141824] text-emerald-400 px-2 py-1 rounded-lg text-sm border border-[#1e293b]">{children}</code>
+                return <code className="bg-[#141824] text-emerald-400 px-2 py-1 rounded-lg text-sm border border-[#1e293b] tabular-nums">{children}</code>
               },
               pre: ({ children }: any) => {
                 const codeChild = (children as any)?.props?.children
@@ -464,10 +460,14 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
                 <div key={`${keyPrefix}-${idx}`}>
                   {meta && heading ? (
                     <>
-                      <div className="mt-10 mb-4 flex items-center gap-2.5">
-                        <div className={`w-1 h-7 rounded-full bg-gradient-to-b ${meta.color}`} />
-                        <span className="text-sm text-gray-500">{meta.icon}</span>
-                        <h2 className="text-2xl font-bold text-white">{heading}</h2>
+                      <div className="mt-12 mb-5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-[3px] h-5 rounded-full bg-gradient-to-b ${meta.color}`} />
+                          <h2 className="text-[21px] md:text-[23px] font-bold text-white tracking-tight leading-tight">
+                            {heading}
+                          </h2>
+                        </div>
+                        <div className="mt-3 h-px bg-[#1e293b]" />
                       </div>
                       {body && (
                         <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
@@ -573,6 +573,55 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
             )
           })()}
         </div>
+
+        {/* 🔒 비회원 게이트 — 인트로·첫 섹션까지 보여준 뒤 차단 */}
+        {!session && (
+          <div className="relative mt-4">
+            <div className="absolute -top-28 inset-x-0 h-28 bg-gradient-to-t from-[#0a0a0f] to-transparent pointer-events-none" />
+            <div className="rounded-2xl p-8 md:p-10 text-center bg-gradient-to-b from-[#f5c451]/[0.06] to-white/[0.02] border border-[#f5c451]/25 my-4">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#f5c451]/[0.12] border border-[#f5c451]/30 flex items-center justify-center">
+                <svg className="w-6 h-6 text-[#f5c451]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <rect x="5" y="11" width="14" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 018 0v4" />
+                </svg>
+              </div>
+              <p className="text-white font-bold text-xl mb-2">
+                {currentLanguage === 'ko' ? '이어지는 분석은 회원 전용' : 'Read the Full Analysis'}
+              </p>
+              <p className="text-gray-400 text-sm mb-6">
+                {currentLanguage === 'ko'
+                  ? '로그인하면 전체 분석 콘텐츠를 무료로 볼 수 있어요'
+                  : 'Log in to read the full analysis — free'}
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all text-sm no-underline shadow-lg shadow-emerald-500/20"
+              >
+                {currentLanguage === 'ko' ? '무료로 시작하기' : 'Get Started Free'}
+              </Link>
+              <p className="text-gray-600 text-xs mt-3">
+                {currentLanguage === 'ko' ? '30초 가입 · 결제 정보 필요 없음' : 'Sign up in 30s · No payment'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 모듈 04~08 — 폼 · 순위 · 스탯 · H2H · 트렌드 (match_id 연결 시에만) */}
+        {post.match_id && tier !== 'guest' && (
+          <MatchReportModules
+            matchId={post.match_id}
+            tier={tier}
+            lang={currentLanguage === 'en' ? 'en' : 'ko'}
+          />
+        )}
+
+        {/* 모듈 12 — 최종 예측 카드 (회원 전용) */}
+        {session && (
+          <MatchVerdict
+            data={post}
+            variant="summary"
+            lang={currentLanguage === 'en' ? 'en' : 'ko'}
+          />
         )}
 
         {/* 광고 - 본문 하단 (프리미엄 제외) */}

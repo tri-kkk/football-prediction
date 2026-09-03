@@ -35,6 +35,17 @@ async function getPost(slug: string) {
   return post
 }
 
+// 비회원에게 노출할 섹션 수 (0번 = 제목+인트로, 1번 = 첫 '##' 섹션)
+const GUEST_VISIBLE_SECTIONS = 2
+
+/** 마크다운을 '##' 기준으로 잘라 앞 N개 섹션만 남긴다. */
+function truncateForGuest(md?: string | null, keep = GUEST_VISIBLE_SECTIONS): string {
+  if (!md) return ''
+  const sections = md.split(/\n(?=##\s)/)
+  if (sections.length <= keep) return md
+  return sections.slice(0, keep).join('\n')
+}
+
 // ============================================
 // generateMetadata - 글마다 고유한 SEO 메타태그
 // ============================================
@@ -130,10 +141,19 @@ export default async function BlogPostPage(
     notFound()
   }
 
-  // 🔒 비회원(비로그인)에겐 본문을 서버에서 제거 — HTML 소스에도 본문이 실리지 않음
+  // 🔒 비회원에겐 인트로 + 첫 섹션까지만 내려보낸다.
+  //    나머지 본문은 HTML 소스에도 실리지 않으므로 원천 차단은 그대로 유지되고,
+  //    "벽부터 보이는" 문제만 해결된다 (BLOG_REPORT_LAYOUT_SPEC_v1 · 모듈 03/04 공개).
   const _session = await getServerSession()
   const _isMember = !!(_session as any)?.user?.email
-  const clientPost = _isMember ? post : { ...post, content: '', content_en: null }
+  const clientPost = _isMember
+    ? post
+    : {
+        ...post,
+        content: truncateForGuest(post.content),
+        content_en: post.content_en ? truncateForGuest(post.content_en) : null,
+        is_truncated: true,
+      }
 
   // JSON-LD 구조화 데이터 (BlogPosting)
   const jsonLd = {
