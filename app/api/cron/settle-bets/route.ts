@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
   // 1) 미정산(open) 기록
   const { data: open, error: e1 } = await supabase
-    .from('user_bets').select('id, match_id, pick, stake, bet_odds').eq('status', 'open');
+    .from('user_bets').select('id, user_id, match_id, pick, stake, bet_odds').eq('status', 'open');
   if (e1) return NextResponse.json({ error: e1.message }, { status: 500 });
 
   const openBets = open ?? [];
@@ -112,6 +112,14 @@ export async function POST(req: NextRequest) {
   for (const o of ocs || []) ocMap[String(o.match_id)] = o;
 
   let settled = 0, voided = 0, scoredCLV = 0, skipped = 0;
+  // 정산 알림용: 유저별 결과 집계
+  const notifyMap: Record<string, { won: number; lost: number; count: number }> = {};
+  const bump = (uid: string | null | undefined, st: string) => {
+    if (!uid) return;
+    const n = notifyMap[uid] || (notifyMap[uid] = { won: 0, lost: 0, count: 0 });
+    n.count++;
+    if (st === 'won') n.won++; else if (st === 'lost') n.lost++;
+  };
   for (const b of openBets) {
     const res = finMap[String(b.match_id)];
     if (!res) { skipped++; continue; } // 아직 결과 없음
@@ -127,13 +135,14 @@ export async function POST(req: NextRequest) {
       .eq('id', b.id).eq('status', 'open');
     if (upErr) { skipped++; continue; }
     settled++;
+    bump(b.user_id, status);
     if (status === 'void') voided++;
     if (clv != null) scoredCLV++;
   }
 
   // ── 조합(슬립) 정산 ──
   const { data: slips } = await supabase
-    .from('user_slips').select('id, stake, legs:user_slip_legs(*)').eq('status', 'open');
+    .from('user_slips').select('id, user_id, stake, legs:user_slip_legs(*)').eq('status', 'open');
   let slipsSettled = 0;
   if (slips?.length) {
     // 슬립 레그의 결과·마감배당 조회 (위 finMap/ocMap 재사용 위해 필요한 match_id 추가 로드)
@@ -171,9 +180,29 @@ export async function POST(req: NextRequest) {
       const { error: sErr } = await supabase.from('user_slips').update({
         status: result.status, payout: result.payout, clv: result.clv, settled_at: new Date().toISOString(),
       }).eq('id', slip.id).eq('status', 'open');
-      if (!sErr) slipsSettled++;
+      if (!sErr) { slipsSettled++; bump(slip.user_id, result.status); }
     }
   }
 
-  return NextResponse.json({ ok: true, settled, voided, scoredCLV, skipped, openTotal: openBets.length, slipsSettled });
+  // ── 정산 알림 푸시 (구독한 유저에게만) ──
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.trendsoccer.com';
+  const pushSecret = process.env.PUSH_SEND_SECRET;
+  let pushed = 0;
+  if (pushSecret) {
+    await Promise.all(Object.entries(notifyMap).map(async ([userId, n]) => {
+      const parts: string[] = [`베팅 ${n.count}건 정산`];
+      if (n.won) parts.push(`적중 ${n.won}`);
+      if (n.lost) parts.push(`실패 ${n.lost}`);
+      try {
+        const r = await fetch(`${baseUrl}/api/coach/push/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secret: pushSecret, userId, title: 'TrendCoach 정산 완료', body: parts.join(' · '), url: '/coach/bets' }),
+        });
+        if (r.ok) pushed++;
+      } catch (_) { /* 발송 실패는 정산 성공에 영향 없음 */ }
+    }));
+  }
+
+  return NextResponse.json({ ok: true, settled, voided, scoredCLV, skipped, openTotal: openBets.length, slipsSettled, pushed });
 }
