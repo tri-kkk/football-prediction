@@ -87,3 +87,109 @@ export const REQUERY_STATUSES: string[] = [
 export const REQUERY_STATUSES_IN_CLAUSE = `status.in.(${REQUERY_STATUSES.join(',')})`
 
 export const FINISHED_STATUSES_ARRAY = Array.from(FINISHED_STATUSES)
+
+// =====================================================================
+// 화면 표시용 상태 보정 — 제공사 피드가 멈춘 경기를 걸러낸다 (2026-09-03 추가)
+// =====================================================================
+//
+// ⚠️ 배경
+// MLB 180103 (LAD vs STL, 09-03 02:10 UTC 시작)이 시작 4.5시간 뒤에도
+// 화면에 "● LIVE IN9 5:5"로 남아 있었다. 원인은 우리 크론이 아니라 제공사다.
+//   GET v1.baseball.api-sports.io/games?id=180103
+//   → status {"long":"Inning 9","short":"IN9"}, 양팀 1~9회 모두 기록, extra: null, 5:5
+// 크론은 매 회차 정상 기록(updated_at 06:40:02)했지만 원본이 IN9에 멈춰 있었다.
+//
+// 기존 보정(matches/route.ts 로컬 함수)은 "6시간 지나면 FT"뿐이라
+//  (a) 4~6시간 구간이 뚫려 있었고
+//  (b) MLB 무승부(5:5)를 최종 결과처럼 보여주는 더 나쁜 문제가 있었다.
+// → 경과 시간 + 정규이닝 완주 + 리그별 무승부 가능 여부를 같이 본다.
+
+/** 화면에서 "결과 확인중"으로 표시할 의사 상태. 제공사 데이터가 멈춘 경기. */
+export const STALE_STATUS = 'STALE'
+
+/** 더 이상 바뀌지 않는 확정 상태 */
+const SETTLED_FOR_DISPLAY = new Set([...FINISHED_STATUSES, 'PST', 'SUSP', 'POSTPONED'])
+const SCHEDULED_FOR_DISPLAY = new Set(['NS', 'SCHEDULED', 'TBD'])
+
+/** 무승부가 없는 리그 — 동점 상태로는 끝날 수 없다 */
+const NO_TIE_LEAGUES = new Set(['MLB'])
+
+/** 이닝 스코어가 하나라도 있는지 */
+export function hasInningData(innings: any): boolean {
+  if (!innings || typeof innings !== 'object') return false
+  for (const side of ['home', 'away'] as const) {
+    const o = innings[side]
+    if (o && typeof o === 'object') {
+      for (const k of Object.keys(o)) {
+        if (o[k] !== null && o[k] !== undefined) return true
+      }
+    }
+  }
+  return false
+}
+
+/** 정규이닝(기본 9회)까지 양팀 모두 기록이 찼는지 */
+function regulationComplete(innings: any, regulation = 9): boolean {
+  if (!innings || typeof innings !== 'object') return false
+  for (const side of ['home', 'away'] as const) {
+    const o = innings[side]
+    if (!o || typeof o !== 'object') return false
+    for (let i = 1; i <= regulation; i++) {
+      if (o[String(i)] === null || o[String(i)] === undefined) {
+        // 홈팀이 앞서면 9회말을 치지 않으므로 홈의 마지막 회 누락은 허용
+        if (side === 'home' && i === regulation) continue
+        return false
+      }
+    }
+  }
+  return true
+}
+
+export type CorrectStatusArgs = {
+  status?: string | null
+  timestamp?: any
+  innings?: any
+  league?: string | null
+  homeScore?: number | null
+  awayScore?: number | null
+}
+
+/**
+ * 제공사 상태를 화면용 상태로 보정한다.
+ * 반환값은 원본 상태 / 'FT' / 'LIVE' / STALE_STATUS 중 하나.
+ */
+export function correctBaseballStatus(args: CorrectStatusArgs): string {
+  const status = args.status || 'NS'
+  const t = args.timestamp ? new Date(args.timestamp).getTime() : 0
+  const elapsedH = t ? (Date.now() - t) / 3_600_000 : 0
+
+  // 확정 상태는 손대지 않는다
+  if (SETTLED_FOR_DISPLAY.has(status)) return status
+
+  const isScheduled = SCHEDULED_FOR_DISPLAY.has(status)
+  const noTie = NO_TIE_LEAGUES.has(String(args.league || ''))
+  const hs = args.homeScore
+  const as = args.awayScore
+  const tied = typeof hs === 'number' && typeof as === 'number' && hs === as
+
+  // 동점인데 무승부가 없는 리그면 그 점수는 최종이 될 수 없다 → FT로 못 바꾼다
+  const settleAs = () => (tied && noTie ? STALE_STATUS : 'FT')
+
+  if (!isScheduled) {
+    // 라이브(IN9 등)로 표시 중
+    //  - 4h+ 이고 정규이닝 완주 → 사실상 끝난 경기
+    //  - 단, status가 IN10 이상이면 실제로 연장 진행 중일 수 있으므로 6h까지 기다린다
+    //    (긴 연장 경기를 조기에 '종료'로 확정해버리는 것을 방지)
+    const inning = Number(extractInningNumber(status) ?? 0)
+    const inExtras = inning >= 10
+    if (!inExtras && elapsedH >= 4 && regulationComplete(args.innings)) return settleAs()
+    if (elapsedH >= 6) return settleAs()
+    return status
+  }
+
+  // 예정(NS)인데 이닝 기록이 들어온 경우 = 시작은 했는데 상태가 안 넘어옴
+  if (hasInningData(args.innings)) {
+    return elapsedH >= 4 ? settleAs() : 'LIVE'
+  }
+  return elapsedH >= 6 ? STALE_STATUS : status
+}

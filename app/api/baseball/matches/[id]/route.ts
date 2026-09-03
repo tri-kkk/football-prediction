@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { impliedFromOdds } from '@/lib/baseballOdds'
+import { correctBaseballStatus } from '@/lib/baseballStatus'
 
 // =====================================================
 // Baseball Match Detail API - 프론트엔드용
@@ -136,7 +137,16 @@ export async function GET(
         errors: match.away_errors,
       },
       
-      status: match.status,
+      // 제공사 피드가 멈춘 경기를 라이브로 두지 않는다 (lib/baseballStatus)
+      status: correctBaseballStatus({
+        status: match.status,
+        timestamp: match.match_timestamp || match.match_date,
+        innings: match.innings_score,
+        league: match.league,
+        homeScore: match.home_score,
+        awayScore: match.away_score,
+      }),
+      rawStatus: match.status,
       innings: match.innings_score,
 
       // 선발 투수

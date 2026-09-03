@@ -38,6 +38,15 @@ export function isPostponedStatus(status: string | null | undefined): boolean {
   return POSTPONED_TOKENS.has(String(status).toUpperCase())
 }
 
+/**
+ * 제공사 데이터가 멈춰 결과를 확정할 수 없는 상태 (lib/baseballStatus.STALE_STATUS).
+ * 라이브도 종료도 아니다 — 점수를 최종처럼 보여주면 안 된다.
+ */
+export function isStaleStatus(status: string | null | undefined): boolean {
+  if (!status) return false
+  return String(status).toUpperCase() === 'STALE'
+}
+
 export function normalizeFootballMatch(m: any): UnifiedMatch {
   const homeProb = (m.home_probability ?? 0) / 100
   const drawProb = (m.draw_probability ?? 0) / 100

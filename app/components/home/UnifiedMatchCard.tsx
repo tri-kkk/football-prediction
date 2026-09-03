@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Link } from '@/i18n/navigation'
 import { useLocale } from 'next-intl'
 import type { UnifiedMatch } from './types'
-import { isFinishedStatus, isLiveStatus, isPostponedStatus } from './normalizers'
+import { isFinishedStatus, isLiveStatus, isPostponedStatus, isStaleStatus } from './normalizers'
 import { SHORT_NAME_EN } from './LeagueChips'
 import FootballMatchModal from './FootballMatchModal'
 import FootballResultModal from './FootballResultModal'
@@ -52,7 +52,9 @@ export default function UnifiedMatchCard({ match }: Props) {
   const live = isLiveStatus(match.status)
   const finished = isFinishedStatus(match.status)
   const postponed = isPostponedStatus(match.status)
-  const showScore = live || finished
+  // 제공사 피드가 멈춰 결과가 확정되지 않은 경기 — 라이브 뱃지를 달지 않는다
+  const stale = isStaleStatus(match.status)
+  const showScore = live || finished || stale
   const time = formatTime(match.timestamp, match.time)
   const isBaseball = match.sport === 'baseball'
   const [modalOpen, setModalOpen] = useState(false)
@@ -80,11 +82,19 @@ export default function UnifiedMatchCard({ match }: Props) {
             {!finished && time && (<><span className="text-gray-600 mx-1">·</span>{time}</>)}
           </span>
         </div>
-        {(live || finished || postponed) && (
+        {(live || finished || postponed || stale) && (
           <div className="mt-1.5 flex justify-center">
             {live && <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold animate-pulse">● LIVE {match.status}</span>}
             {finished && <span className="px-2 py-0.5 rounded-full bg-gray-700 text-gray-300 text-[10px] font-bold">{isEn ? 'FT' : '종료'}</span>}
             {postponed && <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold">{isEn ? 'Postponed' : '연기'}</span>}
+            {stale && (
+              <span
+                className="px-2 py-0.5 rounded-full bg-gray-700/60 text-gray-400 text-[10px] font-bold"
+                title={isEn ? 'The data provider has not published a final result yet.' : '제공사에서 최종 결과가 아직 확정되지 않았습니다.'}
+              >
+                {isEn ? 'Result pending' : '결과 확인중'}
+              </span>
+            )}
           </div>
         )}
       </div>

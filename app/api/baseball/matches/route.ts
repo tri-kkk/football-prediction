@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { impliedFromOdds } from '@/lib/baseballOdds'
+import { correctBaseballStatus } from '@/lib/baseballStatus'
 
 // ⚠️ Railway 모델은 KBO/NPB에서 방향이 반대다 (2026-09-03 검증, predict/route.ts 주석 참조).
 //    - 반전된 mlPrediction을 프론트로 내보내지 않는다
@@ -35,42 +36,6 @@ const TEAM_NAME_KO: Record<string, string> = {
 // 🩹 status 보정: api-sports가 이미 진행/종료된 경기에 'NS'를 잘못 주면서
 //   스코어·이닝만 채워주는 케이스가 있음 → 이닝 데이터가 있는데 status가 NS면
 //   경과 시간으로 LIVE/FT를 추론해 홈/피드의 '시작 전' 오표시를 방지.
-function hasInningData(innings: any): boolean {
-  if (!innings || typeof innings !== 'object') return false
-  for (const side of ['home', 'away']) {
-    const o = innings[side]
-    if (o && typeof o === 'object') {
-      for (const k of Object.keys(o)) {
-        if (o[k] !== null && o[k] !== undefined) return true
-      }
-    }
-  }
-  return false
-}
-function correctBaseballStatus(rawStatus: string | null | undefined, timestamp: any, innings: any): string {
-  const status = rawStatus || 'NS'
-  const t = timestamp ? new Date(timestamp).getTime() : 0
-  const elapsedH = t ? (Date.now() - t) / 3_600_000 : 0
-
-  // 종료/연기/취소/몰수 등 확정 상태는 그대로
-  if (['FT', 'PST', 'CANC', 'ABD', 'SUSP', 'AWD', 'POST'].includes(status)) return status
-
-  const isScheduled = ['NS', 'SCHEDULED', 'TBD'].includes(status)
-
-  // 🩹 라이브(IN%/LIVE 등)인데 시작 후 6시간 넘으면 종료로 간주
-  //   (api-sports/결과 크론이 FT로 못 바꿔 스코어 갱신이 멈춘 경기 대비)
-  if (!isScheduled) {
-    return elapsedH >= 6 ? 'FT' : status
-  }
-
-  // 예정(NS 등): 이닝 데이터 있으면 4h+ 종료 / 아니면 라이브,
-  //   이닝 데이터가 없어도 6h+ 지났으면 종료로 간주(데이터 누락 대비)
-  if (hasInningData(innings)) {
-    return elapsedH >= 4 ? 'FT' : 'LIVE'
-  }
-  return elapsedH >= 6 ? 'FT' : status
-}
-
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
@@ -375,7 +340,7 @@ export async function GET(request: NextRequest) {
             awayTeam: match.away_team,
             awayTeamKo: match.away_team_ko || TEAM_NAME_KO[match.away_team] || match.away_team,
             awayTeamId: match.away_team_id, awayLogo: match.away_team_logo, awayScore: match.away_score,
-            status: correctBaseballStatus(match.status, match.match_timestamp || match.match_date, match.inning), innings: match.inning,
+            status: correctBaseballStatus({ status: match.status, timestamp: match.match_timestamp || match.match_date, innings: match.inning, league: match.league, homeScore: match.home_score, awayScore: match.away_score }), innings: match.inning,
             odds: matchOdds ? {
               // ⚠️ home_win_prob 컬럼은 Railway ML이 덮어쓰므로 신뢰 불가 → 배당에서 즉석 계산
               homeWinProb: impliedFromOdds(matchOdds.home_win_odds, matchOdds.away_win_odds)?.home ?? null,
@@ -530,7 +495,14 @@ export async function GET(request: NextRequest) {
         awayLogo: match.away_team_logo,
         awayScore: match.away_score,
 
-        status: correctBaseballStatus(match.status, match.match_timestamp || match.match_date, match.inning),
+        status: correctBaseballStatus({
+          status: match.status,
+          timestamp: match.match_timestamp || match.match_date,
+          innings: match.inning,
+          league: match.league,
+          homeScore: match.home_score,
+          awayScore: match.away_score,
+        }),
         innings: match.inning,
 
         odds: matchOdds ? {
