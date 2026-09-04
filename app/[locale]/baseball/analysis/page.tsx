@@ -224,15 +224,15 @@ function TeamLogo({ src, team, size = 'md' }: { src?: string; team: string; size
   )
 }
 
-function GradeBadge({ grade, size = 'sm', analyzing = false, language = 'ko' }: { grade: 'PICK' | 'GOOD' | 'PASS'; size?: 'sm' | 'lg'; analyzing?: boolean; language?: 'ko' | 'en' }) {
-  if (analyzing) {
+function GradeBadge({ grade, size = 'sm', analyzing = false, pendingLabel, language = 'ko' }: { grade: 'PICK' | 'GOOD' | 'PASS'; size?: 'sm' | 'lg'; analyzing?: boolean; pendingLabel?: string; language?: 'ko' | 'en' }) {
+  if (analyzing || pendingLabel) {
     const sizeClass = size === 'lg' ? 'px-3 py-1 text-xs' : 'px-2 py-0.5 text-[10px]'
     return (
       <span
         className={`${sizeClass} rounded font-bold`}
         style={{ background: '#252829', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.14)', letterSpacing: '0.04em' }}
       >
-        {language === 'ko' ? '분석 중' : 'Analyzing'}
+        {pendingLabel ?? (language === 'ko' ? '분석 중' : 'Analyzing')}
       </span>
     )
   }
@@ -290,7 +290,7 @@ function ConfidenceBar({ homeProb, awayProb, language }: {
 }
 
 function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
-  stats: { total: number; pick: number; good: number; pass: number; analyzing: number }
+  stats: { total: number; pick: number; good: number; pass: number; analyzing: number; waiting?: number }
   dateStr: string
   language: 'ko' | 'en'
   onPrev?: () => void
@@ -329,7 +329,8 @@ function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
       </div>
 
       {/* 등급별 통계 카드 — 모바일: 전체폭 가로줄 / 데스크톱(sm+): 세로 카드 */}
-      <div className={`grid grid-cols-1 gap-2 sm:gap-3 ${stats.analyzing > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
+      {(() => { const extra = (stats.analyzing > 0 ? 1 : 0) + ((stats.waiting ?? 0) > 0 ? 1 : 0); return (
+      <div className={`grid grid-cols-1 gap-2 sm:gap-3 ${extra === 2 ? 'sm:grid-cols-5' : extra === 1 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
         <div className="rounded-xl p-3 flex items-center justify-between gap-2 sm:flex-col sm:justify-center sm:text-center" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.12)' }}>
           <span className="order-1"><GradeBadge grade="PICK" size="lg" /></span>
           <p className="text-2xl font-black text-white order-3 sm:order-2 sm:mt-2">{stats.pick}</p>
@@ -352,7 +353,15 @@ function SummaryDashboard({ stats, dateStr, language, onPrev, onNext }: {
             <p className="text-[10px] text-gray-500 order-2 sm:order-3 sm:mt-0.5">{language === 'ko' ? '투수 반영 대기' : 'Awaiting pitchers'}</p>
           </div>
         )}
+        {(stats.waiting ?? 0) > 0 && (
+          <div className="rounded-xl p-3 flex items-center justify-between gap-2 sm:flex-col sm:justify-center sm:text-center" style={{ background: 'rgba(148,163,184,0.04)', border: '1px dashed rgba(148,163,184,0.22)' }}>
+            <span className="order-1"><GradeBadge grade="PASS" size="lg" pendingLabel={language === 'ko' ? '배당 대기' : 'Awaiting odds'} language={language} /></span>
+            <p className="text-2xl font-black text-white order-3 sm:order-2 sm:mt-2">{stats.waiting}</p>
+            <p className="text-[10px] text-gray-500 order-2 sm:order-3 sm:mt-0.5">{language === 'ko' ? '배당 확정 대기' : 'Odds pending'}</p>
+          </div>
+        )}
       </div>
+      ); })()}
     </div>
   )
 }
@@ -372,6 +381,13 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
 
   // KBO/NPB만 투수 데이터 미반영 체크 (MLB, CPBL은 예외)
   const isAnalyzing = match.league !== 'MLB' && match.league !== 'CPBL' && match.hasPitcherData === false
+
+  // 등급 미산출: AI/ML 예측 소스가 없으면 픽 등급을 낼 수 없음(주로 배당 미확정). PASS로 오인 방지.
+  const notGraded = match.aiPrediction == null && match.mlPrediction == null
+  const noOdds = match.odds == null
+  const pendingLabel = language === 'ko'
+    ? (noOdds ? '배당 대기' : '분석 대기')
+    : (noOdds ? 'Awaiting odds' : 'Pending')
 
   const isLocked = !isPremium
   const leagueColor = LEAGUE_COLOR_HEX[match.league] || '#6b7280'
@@ -393,7 +409,9 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
             {formatDate(match.timestamp || match.date, language)} {formatTimeKST(match.timestamp)}
           </span>
         </div>
-        <GradeBadge grade={prediction.grade} analyzing={isAnalyzing} language={language} />
+        {notGraded
+          ? <GradeBadge grade="PASS" pendingLabel={pendingLabel} language={language} />
+          : <GradeBadge grade={prediction.grade} analyzing={isAnalyzing} language={language} />}
       </div>
 
       {/* 팀 매치업 */}
@@ -451,7 +469,7 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
         )}
 
         {/* 투수 데이터 분석 중 안내 (KBO/NPB) */}
-        {isAnalyzing && (
+        {isAnalyzing && !notGraded && (
           <div className="px-3 py-2.5 rounded-lg text-center mb-3"
             style={{ background: '#252829', border: '1px solid rgba(255,255,255,0.14)' }}>
             <p className="text-[12px] font-bold" style={{ color: '#e2e8f0' }}>
@@ -466,7 +484,19 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
         )}
 
         {/* 확률 바 + 분석 — TOP 잠금 시 통합 블러 */}
-        {isAnalyzing ? (
+        {notGraded ? (
+          <div className="rounded-xl overflow-hidden mt-1 px-3 py-4 text-center"
+            style={{ background: '#1f2224', border: '1px dashed rgba(255,255,255,0.16)' }}>
+            <p className="text-[12.5px] font-bold" style={{ color: '#cbd5e1' }}>
+              {noOdds
+                ? (language === 'ko' ? '배당 확정 대기 중' : 'Awaiting odds')
+                : (language === 'ko' ? 'AI 분석 준비 중' : 'Analysis pending')}
+            </p>
+            <p className="text-[10.5px] mt-1" style={{ color: '#64748b' }}>
+              {language === 'ko' ? '배당이 확정되면 승률·픽 등급이 산출됩니다' : 'Win rate & pick grade appear once odds are set'}
+            </p>
+          </div>
+        ) : isAnalyzing ? (
           <div className="relative rounded-xl overflow-hidden mt-1"
             style={{ border: '1px solid rgba(255,255,255,0.14)' }}>
             <div className="blur-md pointer-events-none select-none px-3 py-3" aria-hidden="true">
@@ -558,8 +588,8 @@ function PredictionCard({ match, prediction, language, isPremium, isLoggedIn }: 
         )}
       </div>
 
-      {/* 분석 영역 — 잠금/분석중이 아닌 경우만 */}
-      {!isLocked && !isAnalyzing && (
+      {/* 분석 영역 — 잠금/분석중/미산출이 아닌 경우만 */}
+      {!isLocked && !isAnalyzing && !notGraded && (
         prediction.recommendedBet !== 'NONE' ? (
           <div className="mx-4 mb-3 px-3 py-2.5 rounded-xl"
             style={{ background: 'rgba(6,78,59,0.12)', border: '1px solid rgba(16,185,129,0.08)' }}>
@@ -691,12 +721,16 @@ export default function BaseballPredictionsPage() {
     fetchMatches()
   }, [selectedLeague])
 
-  // 분석 중인 경기 (KBO/NPB 투수 미반영)
+  // 등급 산출 가능 여부: AI/ML 예측 소스가 있어야 픽 등급을 낼 수 있음(주로 배당 필요)
+  const isGraded = (m: Match) => m.aiPrediction != null || m.mlPrediction != null
+  // 배당/예측 대기(등급 미산출) 경기 — PASS로 오인되지 않게 별도 분리
+  const waitingPredictions = predictions.filter(p => !isGraded(p.match))
+  // 분석 중인 경기 (KBO/NPB 투수 미반영) — 등급 산출 가능한 경기 중에서만
   const analyzingCount = predictions.filter(p =>
-    p.match.league !== 'MLB' && p.match.league !== 'CPBL' && p.match.hasPitcherData === false
+    isGraded(p.match) && p.match.league !== 'MLB' && p.match.league !== 'CPBL' && p.match.hasPitcherData === false
   ).length
   const confirmedPredictions = predictions.filter(p =>
-    p.match.league === 'MLB' || p.match.league === 'CPBL' || p.match.hasPitcherData !== false
+    isGraded(p.match) && (p.match.league === 'MLB' || p.match.league === 'CPBL' || p.match.hasPitcherData !== false)
   )
   // 🔒 TOP은 실제 AI 예측값(ai_home_win_prob = aiPrediction)이 있는 경기만 노출.
   //    AI값이 없어 오즈로 폴백되는 경기는 상세 페이지 최종 승률과 어긋날 수 있어 TOP에서 제외.
@@ -709,6 +743,7 @@ export default function BaseballPredictionsPage() {
     good: confirmedPredictions.filter(p => p.prediction.grade === 'GOOD').length,
     pass: confirmedPredictions.filter(p => p.prediction.grade === 'PASS').length,
     analyzing: analyzingCount,
+    waiting: waitingPredictions.length,
   }
 
   return (
@@ -846,7 +881,26 @@ export default function BaseballPredictionsPage() {
                   <span className="text-sm font-normal text-gray-600">({stats.pass})</span>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {predictions.filter(p => p.prediction.grade === 'PASS').map(({ match, prediction }) => (
+                  {predictions.filter(p => p.prediction.grade === 'PASS' && isGraded(p.match)).map(({ match, prediction }) => (
+                    <PredictionCard key={match.id} match={match} prediction={prediction} language={language} isPremium={isPremium} isLoggedIn={isLoggedIn} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 배당/예측 대기 섹션 — 등급 미산출 */}
+            {stats.waiting > 0 && (
+              <div className="mb-8">
+                <h2 className="text-base font-bold text-gray-400 mb-3 flex items-center gap-2">
+                  <div className="w-1 h-5 rounded-full bg-gray-700" />
+                  {language === 'ko' ? '배당 대기' : 'Awaiting Odds'}
+                  <span className="text-sm font-normal text-gray-600">({stats.waiting})</span>
+                </h2>
+                <p className="text-[11px] text-gray-600 mb-3">
+                  {language === 'ko' ? '배당이 확정되면 승률·픽 등급이 산출됩니다.' : 'Win rate & pick grade will appear once odds are set.'}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {waitingPredictions.map(({ match, prediction }) => (
                     <PredictionCard key={match.id} match={match} prediction={prediction} language={language} isPremium={isPremium} isLoggedIn={isLoggedIn} />
                   ))}
                 </div>
