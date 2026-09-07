@@ -146,7 +146,14 @@ export default async function BlogPostPage(
   //    "벽부터 보이는" 문제만 해결된다 (BLOG_REPORT_LAYOUT_SPEC_v1 · 모듈 03/04 공개).
   const _session = await getServerSession()
   const _isMember = !!(_session as any)?.user?.email
-  const clientPost = _isMember
+
+  // 🔓 2026-09-07: 검색 유입용 프리뷰 글은 비회원·검색로봇에게도 전문 공개.
+  //    (잘린 본문 = 얇은 문서로 수집되어 네이버/구글 색인 품질이 떨어지던 문제)
+  //    유료 가치가 있는 리포트 카테고리만 계속 잠근다.
+  const FREE_FULL_CATEGORIES = new Set(['preview'])
+  const _isFreeFull = FREE_FULL_CATEGORIES.has(String(post.category || ''))
+
+  const clientPost = _isMember || _isFreeFull
     ? post
     : {
         ...post,
@@ -187,7 +194,8 @@ export default async function BlogPostPage(
     keywords: (post.tags || []).join(', '),
     articleSection: CATEGORY_NAMES[post.category]?.en || post.category,
     inLanguage: ['ko', 'en'],
-    isAccessibleForFree: true,
+    // 잠긴 글을 free 로 표기하면 구조화 데이터와 실제 노출이 불일치한다
+    isAccessibleForFree: _isFreeFull,
     // BreadcrumbList
     breadcrumb: {
       '@type': 'BreadcrumbList',

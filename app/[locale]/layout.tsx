@@ -83,6 +83,12 @@ export async function generateMetadata({
         'en-US': `${BASE_URL}/en`,
         'x-default': BASE_URL,
       },
+      // RSS 피드 선언 — 네이버 서치어드바이저 RSS 제출/재수집의 기준이 된다
+      types: {
+        'application/rss+xml': [
+          { url: `${BASE_URL}/rss.xml`, title: 'TrendSoccer - 축구·야구 분석 리포트' },
+        ],
+      },
     },
     manifest: '/manifest.json',
     appleWebApp: {

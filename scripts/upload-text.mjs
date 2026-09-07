@@ -86,16 +86,20 @@ function buildDaily(data, tagKey) {
   const top = [...picks].sort((a, b) => b.probability - a.probability)[0]
   const filtered = data.totalMatches > n
 
+  // ⚠ 제목에 **리그명 또는 팀명이 반드시** 들어가야 한다.
+  //   "15경기 중 AI가 고른 3경기" 는 사람에겐 읽히지만 유튜브에겐 주제가 없는 문장이다.
+  //   구독자가 없는 채널은 추천이 제목 키워드에서 출발하므로 이게 곧 노출 차이가 된다.
+  const g = data.groupLabel
   const titles = filtered
     ? [
-        `${data.totalMatches}경기 중 AI가 고른 ${n}경기`,
-        `${shortName(top.pickTeam)} ${top.probability}% | 오늘의 AI 픽 ${n}경기`,
-        `${dateKo(data.date)} AI 픽 ${n}경기 공개`,
+        `${g} ${data.totalMatches}경기 중 AI가 고른 ${n}경기`,
+        `${shortName(top.pickTeam)} ${top.probability}% | ${g} AI 픽 ${n}경기`,
+        `${dateKo(data.date)} ${g} AI 픽 ${n}경기 공개`,
       ]
     : [
-        `오늘의 AI 픽 ${n}경기`,
-        `${shortName(top.pickTeam)} ${top.probability}% | ${data.groupLabel} AI 분석`,
-        `${dateKo(data.date)} ${data.groupLabel} AI 픽`,
+        `${g} 오늘의 AI 픽 ${n}경기`,
+        `${shortName(top.pickTeam)} ${top.probability}% | ${g} AI 분석`,
+        `${dateKo(data.date)} ${g} AI 픽`,
       ]
 
   const lines = picks.map(
@@ -132,12 +136,14 @@ function buildResult(data, tagKey) {
 
   // 성적이 나쁜 날도 그대로 올린다.
   // 좋은 날만 올리면 누적 적중률과 앞뒤가 안 맞고, 그건 시청자가 먼저 알아챈다.
+  const w = data.windowLabel || '어제'
+  const g = data.groupLabel
   const titles = [
-    `어제 AI 픽 ${total}경기, ${correct}개 적중`,
+    `${w} ${g} AI 픽 ${total}경기, ${correct}개 적중`,
     correct >= decisive && decisive > 0
-      ? `어제 AI 예측 ${decisive}경기 전부 적중`
-      : `${total}경기 예측 결과 공개 | 적중률 ${accuracy}%`,
-    `${dateKo(data.date)} AI 예측 성적표`,
+      ? `${g} AI 예측 ${decisive}경기 전부 적중`
+      : `${g} ${total}경기 예측 결과 | 적중률 ${accuracy}%`,
+    `${dateKo(data.date)} ${g} AI 예측 성적표`,
   ]
 
   const lines = (data.results || []).map((r) => {
@@ -173,10 +179,11 @@ function buildTop5(data, tagKey) {
   const n = ranked.length
   const top = ranked[0]
 
+  const g = data.groupLabel
   const titles = [
-    `이번 주말 AI가 가장 확신한 ${n}경기`,
-    `주말 TOP ${n} | 1위는 ${top.probability}%`,
-    `${data.totalMatches}경기 중 주말 TOP ${n}`,
+    `이번 주말 ${g} AI가 가장 확신한 ${n}경기`,
+    `${g} 주말 TOP ${n} | 1위는 ${top.probability}%`,
+    `${g} ${data.totalMatches}경기 중 주말 TOP ${n}`,
   ]
 
   const lines = ranked.map(
@@ -224,16 +231,16 @@ export async function writeUpload(outDir, videoName, format, data, tagKey) {
   const txt =
     '﻿' +
     [
-      '━━━━━━━━━━━ 제목 (복사) ━━━━━━━━━━━',
+      '━━━━━━━━━━━ 제목 — 아래 한 줄만 복사 ━━━━━━━━━━━',
+      '',
+      '[1]',
       title,
       '',
-      '── 다른 제목 후보 ──',
-      ...alts.map((t) => `· ${t}`),
-      '',
-      '━━━━━━━━━━━ 설명 (복사) ━━━━━━━━━━━',
+      ...alts.flatMap((t, i) => [`[${i + 2}]`, t, '']),
+      '━━━━━━━━━━━ 설명 ━━━━━━━━━━━',
       built.description,
       '',
-      '━━━━━━━━━━━ 고정 댓글 (복사) ━━━━━━━━━━━',
+      '━━━━━━━━━━━ 고정 댓글 ━━━━━━━━━━━',
       // 쇼츠는 설명란이 거의 안 보인다. 링크는 고정 댓글이 훨씬 잘 먹는다.
       `오늘 경기 전체 분석은 여기서 확인하세요 👉 ${SITE}`,
       '',

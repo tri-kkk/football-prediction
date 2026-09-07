@@ -32,7 +32,7 @@ const ICON: Record<string, React.ReactNode> = {
   football: <><circle cx="12" cy="12" r="9" /><path d="M12 8.2l2.7 1.95-1.03 3.2h-3.34L9.3 10.15z" /><path d="M12 3.3V8.2M14.7 10.15l3.3-1.05M13.67 13.35l1.95 3.2M10.33 13.35l-1.95 3.2M9.3 10.15 6 9.1" /></>,
   baseball: <><circle cx="12" cy="12" r="9" /><path d="M5.6 5.6c3 2 4.8 5.4 4.8 9.4M18.4 5.6c-3 2-4.8 5.4-4.8 9.4" /></>,
   combo: <><rect x="3" y="4" width="8" height="7" rx="1.5" /><rect x="13" y="4" width="8" height="7" rx="1.5" /><rect x="3" y="14" width="8" height="6" rx="1.5" /><rect x="13" y="14" width="8" height="6" rx="1.5" /></>,
-  menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
+  menu: <><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none" /></>,
 }
 
 export default function BottomNavigation() {
@@ -47,7 +47,7 @@ export default function BottomNavigation() {
     { id: 'football', href: '/premium', label: isEn ? 'Football' : '축구 분석', matches: (p) => p.startsWith('/premium') || p.startsWith('/football') || p.startsWith('/results') },
     { id: 'baseball', href: '/baseball/analysis', label: isEn ? 'Baseball' : '야구 분석', matches: (p) => p.startsWith('/baseball/analysis') || p.startsWith('/baseball/results') },
     { id: 'combo', href: '/baseball/multi-match', label: isEn ? 'Multi' : '야구 조합', matches: (p) => p.startsWith('/baseball/multi-match') },
-    { id: 'menu', label: isEn ? 'Menu' : '메뉴', onClick: emitMenuOpen },
+    { id: 'menu', label: isEn ? 'More' : '더보기', onClick: emitMenuOpen },
   ]
 
   const tabInner = (it: NavItem, active: boolean) => (

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       .select('api_match_id, home_team, away_team, match_date, match_timestamp, status, inning, home_score, away_score, updated_at, league')
       .gte('match_date', yesterdayStr)
       .lte('match_date', todayStr)
-      .or(`${REQUERY_STATUSES_IN_CLAUSE},and(status.eq.FT,inning.is.null)`)
+      .or(`${REQUERY_STATUSES_IN_CLAUSE},and(status.eq.FT,inning.is.null),and(status.eq.POST,home_score.is.null)`)
       .order('match_timestamp', { ascending: true })
 
     if (leagueFilter) {
@@ -247,6 +247,17 @@ export async function GET(request: NextRequest) {
             console.log(`  🔒 최종 강제 종료: 시작 ${startedAgoH.toFixed(1)}h 경과, status=${newStatus} → FT`)
             newStatus = 'FT'
           }
+        }
+
+        // 🌧️ 최종 모순 가드: "종료(FT/AET)인데 점수 없음"은 진짜 끝난 경기가 아니다.
+        //   api-sports가 지연/연기 경기를 status=FT(Finished) + total:null 로 잘못 반환하는 케이스
+        //   (예: NPB 라쿠텐-오릭스 지연 경기 → API가 FT+null 응답).
+        //   종료로 확정하면 "결과 없는 종료"라는 모순이 앱에 그대로 노출되므로 POST(연기/지연)로 강등.
+        //   POST 는 PRESERVE_STATUSES + requery(null-score) 대상이라, 실제 재개·종료 시 점수가 들어오면
+        //   아래 FT+score 경로로 자연 복구된다.
+        if ((newStatus === 'FT' || newStatus === 'AET') && (homeScore == null || awayScore == null)) {
+          console.log(`  🌧️ 모순 감지(종료+점수없음) → POST 강등: ${match.home_team} vs ${match.away_team} (${match.api_match_id})`)
+          newStatus = 'POST'
         }
 
         console.log(`  📊 API 응답: status=${newStatus}, score=${homeScore}-${awayScore}, innings=${game.scores.home.innings ? 'O' : 'X'}`)

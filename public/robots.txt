@@ -1,8 +1,10 @@
-# TrendSoccer Robots.txt
+# TrendSoccer robots.txt
+# 정식 도메인: https://www.trendsoccer.com
+
 User-agent: *
 Allow: /
 
-# 색인 불필요 — Next.js 빌드 자산 + 내부 API
+# 색인 불필요 — Next.js 빌드 자산 + 내부 API + 회원 전용 영역
 Disallow: /_next/
 Disallow: /api/
 Disallow: /admin/
@@ -16,10 +18,7 @@ Disallow: /*?*sport=
 Disallow: /*?*league=
 Disallow: /*?*date=
 
-# Sitemap
-Sitemap: https://trendsoccer.com/sitemap.xml
-
-# 허용된 크롤러 (명시적 화이트리스트)
+# ── 구글 ──────────────────────────────────────────────
 User-agent: Googlebot
 Allow: /
 Disallow: /_next/
@@ -32,14 +31,56 @@ Disallow: /login
 Disallow: /signup-complete
 Disallow: /test-payment
 
+User-agent: Googlebot-News
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
 User-agent: Mediapartners-Google
 Allow: /
 
 User-agent: AdsBot-Google
 Allow: /
 
+User-agent: Bingbot
+Allow: /
+Disallow: /_next/
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /auth/
+
+# ── 네이버 (Yeti) ─────────────────────────────────────
+# 네이버 검색 수집 로봇. 파라미터 URL 차단 규칙을 적용하지 않아
+# 리그/날짜 필터 페이지까지 폭넓게 수집되도록 둔다.
 User-agent: Yeti
 Allow: /
 Disallow: /_next/
 Disallow: /api/
 Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /signup/
+Disallow: /login
+Disallow: /test-payment
+
+User-agent: Yeti-Mobile
+Allow: /
+Disallow: /_next/
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /auth/
+
+# ── 다음/카카오 ───────────────────────────────────────
+User-agent: Daumoa
+Allow: /
+Disallow: /_next/
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /auth/
+
+# ── 사이트맵 (정식 도메인 = www) ───────────────────────
+Sitemap: https://www.trendsoccer.com/sitemap.xml
