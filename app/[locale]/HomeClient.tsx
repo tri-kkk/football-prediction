@@ -22,6 +22,7 @@ import NewsGrid from '../components/home/NewsGrid'
 import PredictionTrackRecord from '../components/home/PredictionTrackRecord'
 import TopHighlights from '../components/TopHighlights'
 import MagazineRow from '../components/home/MagazineRow'
+import NoticeBanner from '../components/NoticeBanner'
 
 const LIVE_REFRESH_MS = 20000 // 라이브 스코어 자동 갱신 주기
 
@@ -252,6 +253,9 @@ function HomeInner() {
 
   return (
     <main className="home-container mx-auto px-3 sm:px-5 pt-3 pb-24 sm:pb-8 space-y-4">
+      {/* 📢 공지 배너 (관리자 공지 관리) — 헤더 아래 고정 노출 */}
+      <NoticeBanner lang={isEn ? 'en' : 'ko'} darkMode />
+
       {/* 최상단 웹 홈 배너 — 관리자 광고 관리(slot=web_home_top)에서 관리 */}
       {status !== 'loading' && <HomeTopBanner isPremium={isPremium} isEn={isEn} />}
 
