@@ -94,21 +94,26 @@ export async function POST(request: NextRequest) {
   }
 
   // 2. 이미 최근에 분석된 경기 skip
+  //    ⚠️ 단, 예측 결과가 비어있으면(ai_home_win_prob=null) 항상 재예측한다.
+  //    (배당 도착 전에 예측이 돌면 null로 저장되는데, 그 뒤 배당이 와도
+  //     ai_updated_at이 "최근"이라 스킵돼 null이 고정되던 버그 방지)
   const apiMatchIds = matches.map((m) => m.api_match_id)
   const { data: freshOdds } = await supabase
     .from('baseball_odds_latest')
-    .select('api_match_id, ai_updated_at')
+    .select('api_match_id, ai_updated_at, ai_home_win_prob, home_win_odds')
     .in('api_match_id', apiMatchIds)
 
   const freshCutoff = Date.now() - skipFreshHours * 3600 * 1000
-  const freshMap = new Map<number, string | null>(
-    (freshOdds || []).map((o: any) => [o.api_match_id, o.ai_updated_at])
+  const freshMap = new Map<number, any>(
+    (freshOdds || []).map((o: any) => [o.api_match_id, o])
   )
 
   const targets = matches.filter((m) => {
-    const updatedAt = freshMap.get(m.api_match_id)
-    if (!updatedAt) return true
-    return new Date(updatedAt).getTime() < freshCutoff
+    const o = freshMap.get(m.api_match_id)
+    if (!o || !o.ai_updated_at) return true
+    // 배당은 있는데 예측 결과가 비었으면(배당 도착 전 예측돼 null 고정) 재시도
+    if (o.ai_home_win_prob == null && o.home_win_odds != null) return true
+    return new Date(o.ai_updated_at).getTime() < freshCutoff
   })
 
   if (dryRun) {
