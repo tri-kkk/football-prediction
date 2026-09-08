@@ -2,7 +2,9 @@
 // 프리미엄 텔레그램 데일리 리포트 발송 (종목별)
 //
 // 스케줄 (Supabase Cron):
-//   야구: 매일 KST 12:10  →  GET /api/cron/telegram-daily?sport=baseball&secret=<CRON_SECRET>
+//   야구: 매일 KST 14:00~18:30 30분마다 (*/30 5-9 * * * UTC) → GET /api/cron/telegram-daily?sport=baseball&secret=<CRON_SECRET>
+//         (배당/픽은 오후에 순차로 들어옴. 반복 실행해도 last_baseball_on dedup으로 하루 1회만 발송.
+//          KST 17시 전엔 픽 2개 이상일 때만, 이후엔 1개라도 발송 — buildBaseball의 최소 픽 가드)
 //   축구: 매일 KST 18:10  →  GET /api/cron/telegram-daily?sport=football&secret=<CRON_SECRET>
 //
 // 대상: 연동(active)된 프리미엄 유저 전원 (종목 선택 없음). 발송 시점 tier 재확인.
@@ -45,6 +47,9 @@ const esc = (s: any) =>
 
 function kstTodayStr(): string {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0]
+}
+function kstHour(): number {
+  return new Date(Date.now() + 9 * 3600 * 1000).getUTCHours()
 }
 function kstDateLabel(): string {
   // 예: "8/16(토)"
@@ -158,7 +163,14 @@ async function buildBaseball(): Promise<string | null> {
     .sort((a, b) => b.conf - a.conf)
     .slice(0, 3)
 
-  if (picks.length === 0) return null
+  // 최소 픽 수 가드: 배당이 오후에 순차로 들어오므로 이른 시간엔 목록이 덜 참.
+  //  - KST 17시 전: 픽 2개 이상일 때만 발송(덜 찬 상태로 이른 발송 방지)
+  //  - KST 17시 이후: 1개라도 발송(늦게 뜬 날도 놓치지 않음)
+  const minPicks = kstHour() >= 17 ? 1 : 2
+  if (picks.length < minPicks) {
+    console.log(`[telegram-daily] baseball picks=${picks.length} < min=${minPicks} (KST ${kstHour()}시) → 발송 보류`)
+    return null
+  }
 
   const acc = accRes?.accuracy
   const lines: string[] = []
