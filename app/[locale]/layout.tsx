@@ -14,7 +14,6 @@ import SplashScreen from '../components/SplashScreen'
 import PullToRefresh from '../components/PullToRefresh'
 import { LanguageProvider } from '../contexts/LanguageContext'
 import { Providers } from '../providers'
-import SignupIncentiveBanner from '../components/SignupIncentiveBanner'
 import { PWAInstallProvider } from '../components/pwa/PWAInstallContext'
 import { IOSInstallGuide } from '../components/pwa/IOSInstallGuide'
 import InstallBanner from '../components/InstallBanner'
@@ -385,11 +384,6 @@ export default async function LocaleLayout({
                 <Suspense fallback={null}>
                   <SplashScreen />
                   <NavMenu />
-                </Suspense>
-
-                {/* 🎯 비회원 가입 유도 배너 (헤더 바로 아래) */}
-                <Suspense fallback={null}>
-                  <SignupIncentiveBanner />
                 </Suspense>
 
                 {/* ✅ TermsGuard로 감싸서 약관 미동의 시 리다이렉트 */}
