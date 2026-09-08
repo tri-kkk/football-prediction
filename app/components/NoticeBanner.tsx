@@ -16,6 +16,21 @@ interface NoticeBannerProps {
   darkMode?: boolean
 }
 
+const DISMISS_KEY = 'notice_dismissed_ids'
+function getDismissedIds(): number[] {
+  try {
+    const raw = localStorage.getItem(DISMISS_KEY)
+    const arr = raw ? JSON.parse(raw) : []
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'number') : []
+  } catch { return [] }
+}
+function addDismissedIds(ids: number[]) {
+  try {
+    const merged = Array.from(new Set([...getDismissedIds(), ...ids]))
+    localStorage.setItem(DISMISS_KEY, JSON.stringify(merged))
+  } catch { /* private mode 등 무시 */ }
+}
+
 export default function NoticeBanner({ lang = 'ko', darkMode = true }: NoticeBannerProps) {
   const [notices, setNotices] = useState<Notice[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -24,22 +39,17 @@ export default function NoticeBanner({ lang = 'ko', darkMode = true }: NoticeBan
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    // 이미 닫은 적 있으면 표시 안 함
-    const alreadySeen = sessionStorage.getItem('notice_dismissed')
-    if (alreadySeen) {
-      setDismissed(true)
-      return
-    }
-
     fetch('/api/admin/notices')
       .then(r => r.json())
       .then(data => {
         if (!Array.isArray(data)) return
         const now = new Date()
+        const dismissed = getDismissedIds() // 공지 ID별로 닫음 기록 → 새 공지는 다시 노출
         const filtered = data.filter(n => {
           if (!n.is_active) return false
           if (n.start_at && new Date(n.start_at) > now) return false
           if (n.end_at && new Date(n.end_at) < now) return false
+          if (dismissed.includes(n.id)) return false
           return true
         })
         setNotices(filtered)
@@ -71,7 +81,8 @@ export default function NoticeBanner({ lang = 'ko', darkMode = true }: NoticeBan
   }, [animState])
 
   const handleDismiss = () => {
-    sessionStorage.setItem('notice_dismissed', '1')
+    // 현재 노출 중인 공지들의 ID를 닫음 처리 → 이후 새 공지(새 ID)는 다시 노출됨
+    addDismissedIds(notices.map((n) => n.id))
     setVisible(false)
     setTimeout(() => setDismissed(true), 400)
   }
