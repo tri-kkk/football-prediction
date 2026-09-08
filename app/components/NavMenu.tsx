@@ -48,6 +48,7 @@ const EN_LABELS: Record<string, string> = {
   '광고 문의': 'Advertise',
   '문의하기': 'Contact',
   '야구 조합': 'Multi-Match',
+  '팀 지수': 'Team Index',
   '로그인해주세요': 'Sign in',
   '분석': 'Analysis',
   '콘텐츠': 'Content',
@@ -62,6 +63,7 @@ const MORE_SECTIONS: { title: string; items: GridItem[] }[] = [
   {
     title: '분석',
     items: [
+      { ko: '팀 지수', href: '/stocks', icon: 'index' },
       { ko: '축구 프리미엄', href: '/premium', icon: 'premium' },
       { ko: '야구 분석', href: '/baseball/analysis', icon: 'baseball' },
       { ko: '야구 조합', href: '/baseball/multi-match', icon: 'combo' },
@@ -109,6 +111,7 @@ const GRID_ICON: Record<string, React.ReactNode> = {
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
   ad: <><path d="M3 10v4h4l5 4V6l-5 4z" /><path d="M16 9a4 4 0 0 1 0 6" /></>,
   mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
+  index: <><path d="M4 19h16" /><path d="M4 15l4-4 3 3 5-6 4 4" /></>,
 }
 
 function L(ko: string, locale: string): string {
@@ -152,6 +155,7 @@ const MENU: MenuItem[] = [
       { ko: '야구 결과', href: '/baseball/results' },
     ],
   },
+  { ko: '팀 지수', href: '/stocks' },
   { ko: '하이라이트', href: '/highlights' },
   { ko: '리포트', href: '/blog' },
   { ko: '뉴스', href: '/news' },
