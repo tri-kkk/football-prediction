@@ -131,12 +131,14 @@ interface ProcessedArticle {
   url: string
   source: string
   publishedAt: string
+  sport?: 'soccer' | 'baseball' | null   // 앱 종목 필터용
+  league?: string | null                 // 리그 식별자(현재 축구/야구 모두 null, 추후 확장)
 }
 
 // TheNewsAPI에서 뉴스 가져오기
 async function fetchNews(
-  search: string, 
-  language: 'en' | 'ko' = 'en',
+  search: string,
+  language: string = 'en',   // en|ko|zh|id 등 TheNewsAPI 언어코드
   limit: number = 6
 ): Promise<ProcessedArticle[]> {
   try {
@@ -300,57 +302,83 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // 🔹 사이드바용: 단순 기사 목록
+    // 🔹 사이드바/앱 뉴스탭용: 축구+야구 혼합 목록
+    //    · 각 기사에 sport('soccer'|'baseball') 태깅 → 앱 종목 필터
+    //    · 요청 언어 결과가 비면 en 으로 폴백(langFallback 표기) → 인니(id) 등 빈 화면 방지
     if (lang) {
-      // 축구 + 야구 뉴스를 함께 가져와 섞음 (히어로/그리드 종목 확장)
-      const fbSearch = lang === 'ko' ? '축구 | 손흥민 | 프리미어리그 | K리그 | 챔피언스리그' : 'football | soccer | Premier League | Champions League'
-      const bbSearch = lang === 'ko' ? '야구 | KBO | 메이저리그 | 류현진 | 김하성 | 이정후' : 'baseball | MLB | KBO'
-      const enFb = 'football | soccer | Premier League | Champions League'
-      const enBb = 'baseball | MLB | KBO'
+      // 언어별 검색 키워드. 미정의 언어(zh 등)는 en 키워드 + 해당 language 코드로 폴백
+      //   (zh 는 이 경로로 대만·홍콩 매체가 정상 반환됨 — 기존 동작 유지)
+      const KEYWORDS: Record<string, { fb: string; bb: string }> = {
+        ko: { fb: '축구 | 손흥민 | 프리미어리그 | K리그 | 챔피언스리그', bb: '야구 | KBO | 메이저리그 | 류현진 | 김하성 | 이정후' },
+        en: { fb: 'football | soccer | Premier League | Champions League', bb: 'baseball | MLB | KBO' },
+        id: { fb: 'sepak bola | Liga Inggris | Liga Champions | Timnas | Persib', bb: 'baseball | MLB' },
+      }
+      const enFb = KEYWORDS.en.fb
+      const enBb = KEYWORDS.en.bb
       const withImage = (arr: ProcessedArticle[]) => arr.filter((a) => a.imageUrl)
       const dkey = (a: ProcessedArticle) => a.title.toLowerCase().slice(0, 40)
+      // 종목/리그 태깅 (league 는 현재 축구·야구 모두 null — 추후 확장)
+      const tag = (arr: ProcessedArticle[], sport: 'soccer' | 'baseball') =>
+        arr.map((a) => ({ ...a, sport, league: null as string | null }))
 
-      let [fb, bb] = await Promise.all([
-        fetchNews(fbSearch, lang, 10).then(filterArticles),
-        fetchNews(bbSearch, lang, 8).then(filterArticles),
-      ])
+      // 특정 언어로 목록 1벌 구성 (최대 14건)
+      const build = async (effLang: string): Promise<ProcessedArticle[]> => {
+        const kw = KEYWORDS[effLang] || KEYWORDS.en
+        let [fb, bb] = await Promise.all([
+          fetchNews(kw.fb, effLang, 10).then(filterArticles),
+          fetchNews(kw.bb, effLang, 8).then(filterArticles),
+        ])
+        fb = tag(fb, 'soccer')
+        bb = tag(bb, 'baseball')
 
-      if (lang === 'ko' && withImage(fb).length < 4) {
-        const more = filterArticles(await fetchNews(enFb, 'en', 10))
-        const seen = new Set(fb.map(dkey))
-        fb = [...fb, ...more.filter((a) => !seen.has(dkey(a)))]
-      }
-      if (lang === 'ko' && withImage(bb).length < 3) {
-        const more = filterArticles(await fetchNews(enBb, 'en', 8))
-        const seen = new Set(bb.map(dkey))
-        bb = [...bb, ...more.filter((a) => !seen.has(dkey(a)))]
-      }
+        // ko: 이미지 기사 부족 시 en 으로 보충(기존 동작). 그 외 언어는 보충 없이,
+        //     비면 아래 상위에서 en 전체 폴백으로 처리 → langFallback 신호가 깨끗하게 유지됨
+        if (effLang === 'ko' && withImage(fb).length < 4) {
+          const more = tag(filterArticles(await fetchNews(enFb, 'en', 10)), 'soccer')
+          const seen = new Set(fb.map(dkey))
+          fb = [...fb, ...more.filter((a) => !seen.has(dkey(a)))]
+        }
+        if (effLang === 'ko' && withImage(bb).length < 3) {
+          const more = tag(filterArticles(await fetchNews(enBb, 'en', 8)), 'baseball')
+          const seen = new Set(bb.map(dkey))
+          bb = [...bb, ...more.filter((a) => !seen.has(dkey(a)))]
+        }
 
-      const fbImg = withImage(fb)
-      const bbImg = withImage(bb)
-      const startBb =
-        bbImg.length > 0 &&
-        (fbImg.length === 0 ||
-          new Date(bbImg[0].publishedAt).getTime() > new Date(fbImg[0].publishedAt).getTime())
-      const firstArr = startBb ? bbImg : fbImg
-      const secondArr = startBb ? fbImg : bbImg
-      const interleaved: ProcessedArticle[] = []
-      const seenKey = new Set<string>()
-      for (let i = 0; i < Math.max(firstArr.length, secondArr.length); i++) {
-        for (const a of [firstArr[i], secondArr[i]]) {
-          if (a && !seenKey.has(dkey(a))) {
-            seenKey.add(dkey(a))
-            interleaved.push(a)
+        const fbImg = withImage(fb)
+        const bbImg = withImage(bb)
+        const startBb =
+          bbImg.length > 0 &&
+          (fbImg.length === 0 ||
+            new Date(bbImg[0].publishedAt).getTime() > new Date(fbImg[0].publishedAt).getTime())
+        const firstArr = startBb ? bbImg : fbImg
+        const secondArr = startBb ? fbImg : bbImg
+        const interleaved: ProcessedArticle[] = []
+        const seenKey = new Set<string>()
+        for (let i = 0; i < Math.max(firstArr.length, secondArr.length); i++) {
+          for (const a of [firstArr[i], secondArr[i]]) {
+            if (a && !seenKey.has(dkey(a))) {
+              seenKey.add(dkey(a))
+              interleaved.push(a)
+            }
           }
         }
+        const noImg = [...fb, ...bb].filter((a) => !a.imageUrl && !seenKey.has(dkey(a)))
+        return [...interleaved, ...noImg].slice(0, 14)
       }
-      const noImg = [...fb, ...bb].filter((a) => !a.imageUrl && !seenKey.has(dkey(a)))
-      const sorted = [...interleaved, ...noImg].slice(0, 14)
+
+      let articles = await build(lang)
+      let langFallback: string | null = null
+      // 요청 언어 결과가 비면 en 으로 폴백 (id 등 빈 화면 방지)
+      if (articles.length === 0 && lang !== 'en') {
+        articles = await build('en')
+        langFallback = 'en'
+      }
 
       return NextResponse.json({
         success: true,
-        articles: sorted,
+        articles,
         lang,
+        langFallback,   // null 이면 요청 언어 그대로, 'en' 이면 폴백된 결과
         updatedAt: new Date().toISOString(),
       })
     }
