@@ -21,6 +21,7 @@ const LEAGUES = [
   { code: 'BL1', id: 78 },
   { code: 'SA', id: 135 },
   { code: 'FL1', id: 61 },
+  { code: 'J1', id: 98 },
 ]
 
 const BASE = 1500, K = 20, HOME_ADV = 65, REGRESS = 0.75

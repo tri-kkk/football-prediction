@@ -19,7 +19,7 @@ type Detail = {
 type Article = { title: string; titleKo?: string; url: string; source: string; imageUrl: string; publishedAt: string }
 
 const logo = (id: number) => `https://media.api-sports.io/football/teams/${id}.png`
-const LEAGUE_ID: Record<string, number> = { PL: 39, PD: 140, BL1: 78, SA: 135, FL1: 61 }
+const LEAGUE_ID: Record<string, number> = { PL: 39, PD: 140, BL1: 78, SA: 135, FL1: 61, J1: 98 }
 const lgLogo = (code: string) => `https://media.api-sports.io/football/leagues/${LEAGUE_ID[code]}.png`
 const fmt = (v: number) => (v >= 0 ? '+' : '') + v.toFixed(1)
 const arrow = (v: number) => (v > 0 ? '▲' : v < 0 ? '▼' : '·')
@@ -29,7 +29,7 @@ const GOLD = '#f0c65a'
 const col = (v: number) => (v > 0 ? UP : v < 0 ? DOWN : FAINT)
 const mono = 'ui-monospace,SFMono-Regular,Menlo,monospace'
 const CARD: any = { background: '#12161d', border: '1px solid #2a3340', borderRadius: 14 }
-const LNAME: Record<string, string> = { PL: '프리미어리그', PD: '라리가', BL1: '분데스리가', SA: '세리에A', FL1: '리그1' }
+const LNAME: Record<string, string> = { PL: '프리미어리그', PD: '라리가', BL1: '분데스리가', SA: '세리에A', FL1: '리그1', J1: 'J리그' }
 const RES_KR: Record<string, string> = { W: '승', D: '무', L: '패' }
 const resCol = (r: string) => (r === 'W' ? UP : r === 'L' ? DOWN : FAINT)
 

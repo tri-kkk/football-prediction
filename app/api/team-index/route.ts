@@ -13,6 +13,7 @@ const supabase = createClient(
 
 const NAMES: Record<string, string> = {
   PL: 'Premier League', PD: 'La Liga', BL1: 'Bundesliga', SA: 'Serie A', FL1: 'Ligue 1',
+  J1: 'J1 League',
 }
 
 export async function GET(req: NextRequest) {

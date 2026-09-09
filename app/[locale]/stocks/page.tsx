@@ -18,9 +18,10 @@ const LEAGUES = [
   { code: 'BL1', name: '분데스리가' },
   { code: 'SA', name: '세리에A' },
   { code: 'FL1', name: '리그1' },
+  { code: 'J1', name: 'J리그' },
 ]
 const logo = (id: number) => `https://media.api-sports.io/football/teams/${id}.png`
-const LEAGUE_ID: Record<string, number> = { PL: 39, PD: 140, BL1: 78, SA: 135, FL1: 61 }
+const LEAGUE_ID: Record<string, number> = { PL: 39, PD: 140, BL1: 78, SA: 135, FL1: 61, J1: 98 }
 const lgLogo = (code: string) => `https://media.api-sports.io/football/leagues/${LEAGUE_ID[code]}.png`
 const fmt = (v: number) => (v >= 0 ? '+' : '') + v.toFixed(1)
 const arrow = (v: number) => (v > 0 ? '▲' : v < 0 ? '▼' : '·')
