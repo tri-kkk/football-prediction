@@ -37,6 +37,21 @@ function setRuntimeBase(request: NextRequest) {
 //    환경변수 ENABLE_BLOG_REPORT_FIELDS=1 을 켜야 동작한다.
 //    (컬럼이 없는 상태에서 값을 보내면 insert 전체가 실패하므로 기본은 OFF)
 // =============================================================================
+// 예상 스코어를 픽(finalProb)과 일관되게 파생. home/draw/away 는 0~100 정수.
+// 반환은 "홈-원정" 문자열.
+function scoreFromProb(home: number, draw: number, away: number): string {
+  const top = Math.max(home, draw, away)
+  if (top === draw) return home <= 22 && away <= 22 ? '0-0' : '1-1'
+  const sorted = [home, draw, away].sort((a, b) => b - a)
+  const gap = sorted[0] - sorted[1]
+  let hi: number, lo: number
+  if (gap >= 25) { hi = 2; lo = 0 }
+  else if (gap >= 12) { hi = 2; lo = 1 }
+  else { hi = 1; lo = 0 }
+  return top === home ? `${hi}-${lo}` : `${lo}-${hi}`
+}
+const dirOf = (h: number, a: number) => (h > a ? 'home' : a > h ? 'away' : 'draw')
+
 function buildReportFields(
   match: any,
   prediction: any,
@@ -57,8 +72,16 @@ function buildReportFields(
   const second = [home, draw, away].sort((x, y) => y - x)[1]
   const pick = top === home ? `${homeKo} 승` : top === away ? `${awayKo} 승` : '무승부'
 
+  // 예상 스코어: 픽과 같은 모델(finalProb)이 기준.
+  // 구 모델(match_odds_latest) 스코어는 '픽과 승자 방향이 일치할 때만' 사용(현실적 스코어 유지),
+  // 방향이 어긋나면(예: 픽=홈승, 저장스코어=원정승) finalProb 기반으로 파생 → 모순 제거.
+  const pickDir = top === home ? 'home' : top === away ? 'away' : 'draw'
   const sh = match?.predicted_score_home
   const sa = match?.predicted_score_away
+  const predScore =
+    sh != null && sa != null && dirOf(Number(sh), Number(sa)) === pickDir
+      ? `${sh}-${sa}`
+      : scoreFromProb(home, draw, away)
 
   return {
     match_id: match?.match_id ?? null,
@@ -69,7 +92,7 @@ function buildReportFields(
     home_prob: home,
     draw_prob: draw,
     away_prob: away,
-    pred_score: sh != null && sa != null ? `${sh}-${sa}` : null,
+    pred_score: predScore,
     pick,
     confidence: Math.max(0, top - second),
   }
