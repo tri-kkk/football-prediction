@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { PUSH_TEMPLATES } from '@/lib/pushTemplates'
+import { PUSH_TEMPLATES, TEMPLATE_CATEGORIES } from '@/lib/pushTemplates'
 
 type Topic = 'app_general' | 'match_events' | 'marketing'
 type Mode = 'now' | 'once' | 'daily' | 'weekly'
@@ -170,16 +170,23 @@ export default function PushSendPanel() {
           선택한 토픽을 구독한 모든 디바이스에 푸시 발송. 영문 입력 시 ko/en 토픽 둘 다 발송.
         </p>
 
-        {/* 템플릿 프리셋 */}
+        {/* 템플릿 프리셋 (카테고리별) */}
         <div className="mb-5">
-          <label className="block text-sm font-medium text-gray-300 mb-2">템플릿 <span className="text-gray-500 font-normal">· 클릭 시 자동 입력</span></label>
-          <div className="flex flex-wrap gap-2">
-            {PUSH_TEMPLATES.map((t) => (
-              <button key={t.id} type="button" onClick={() => applyTemplate(t.id)}
-                title={t.timing || ''}
-                className="px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-900/40 text-gray-300 text-xs hover:border-emerald-500 hover:text-white transition-colors">
-                {t.name}
-              </button>
+          <label className="block text-sm font-medium text-gray-300 mb-2">템플릿 <span className="text-gray-500 font-normal">· 클릭 시 자동 입력 · 마우스오버 시 추천 타이밍</span></label>
+          <div className="space-y-3">
+            {TEMPLATE_CATEGORIES.map((cat) => (
+              <div key={cat}>
+                <div className="text-[11px] font-semibold text-gray-500 mb-1.5">{cat}</div>
+                <div className="flex flex-wrap gap-2">
+                  {PUSH_TEMPLATES.filter((t) => t.category === cat).map((t) => (
+                    <button key={t.id} type="button" onClick={() => applyTemplate(t.id)}
+                      title={t.timing || ''}
+                      className="px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-900/40 text-gray-300 text-xs hover:border-emerald-500 hover:text-white transition-colors">
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
