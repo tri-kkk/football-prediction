@@ -11,6 +11,14 @@ const supabase = createClient(
 
 const PITCHER_ANALYSIS_TTL_HOURS = 24
 
+// 선발 투수가 바뀌면 캐시가 무효화되도록, 캐시 키에 투수 이름을 포함시킨다.
+// (matchId 단독으로 키를 잡으면, 잠정 선발로 생성된 분석이 실제 선발 확정 후에도
+//  24h 동안 그대로 노출되어 카드와 AI 코멘트가 어긋나는 버그가 생김)
+function buildCacheKey(matchId: any, homePitcher: any, awayPitcher: any): string {
+  const norm = (s: any) => (s ?? '').toString().trim().replace(/\s+/g, '').toLowerCase()
+  return `${String(matchId)}|h:${norm(homePitcher)}|a:${norm(awayPitcher)}`
+}
+
 function formatStat(value: any, decimals = 2) {
   const n = parseFloat(value)
   return isNaN(n) ? '-' : n.toFixed(decimals)
@@ -74,15 +82,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'homeTeam, awayTeam required' }, { status: 400 })
     }
 
-    // 1. 캐시 확인 (baseball_ai_cache, TTL 24h, 언어별 분리)
+    // 1. 캐시 확인 (baseball_ai_cache, TTL 24h, 언어별 분리, 선발 투수별 분리)
     const cacheLang = isEnglish ? 'en' : 'ko'
+    const cacheKey = buildCacheKey(matchId, homePitcher, awayPitcher)
     if (matchId) {
       try {
         const { data: cached } = await supabase
           .from('baseball_ai_cache')
           .select('payload, expires_at')
           .eq('kind', 'pitcher_analysis')
-          .eq('match_key', String(matchId))
+          .eq('match_key', cacheKey)
           .eq('language', cacheLang)
           .maybeSingle()
 
@@ -184,12 +193,12 @@ ${homeBlock}
         const expiresAt = new Date(Date.now() + PITCHER_ANALYSIS_TTL_HOURS * 60 * 60 * 1000).toISOString()
         await supabase.from('baseball_ai_cache').upsert({
           kind: 'pitcher_analysis',
-          match_key: String(matchId),
+          match_key: cacheKey,
           language: cacheLang,
           payload: { analysis },
           expires_at: expiresAt,
         })
-        console.log(`[pitcher-analysis] cached: ${matchId} (${cacheLang})`)
+        console.log(`[pitcher-analysis] cached: ${cacheKey} (${cacheLang})`)
       } catch (e) {
         console.warn('[pitcher-analysis] cache write failed:', e)
       }
