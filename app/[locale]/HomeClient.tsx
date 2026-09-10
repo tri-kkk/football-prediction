@@ -20,7 +20,7 @@ import SeasonKickoffHero from '../components/home/SeasonKickoffHero'
 import LiveHitTicker from '../components/home/LiveHitTicker'
 import NewsGrid from '../components/home/NewsGrid'
 import PredictionTrackRecord from '../components/home/PredictionTrackRecord'
-import TopHighlights from '../components/TopHighlights'
+// import TopHighlights from '../components/TopHighlights'  // 제거됨 - 홈 하단 하이라이트 섹션 비활성화
 import MagazineRow from '../components/home/MagazineRow'
 import NoticeBanner from '../components/NoticeBanner'
 
@@ -296,10 +296,7 @@ function HomeInner() {
       {/* ④  종합 뉴스 (전체 폭) */}
       <NewsGrid locale={locale} />
 
-      {/* ⑤  영상 하이라이트 */}
-      <TopHighlights darkMode />
-
-      {/* ⑥  매거진 / 매치 리포트 (컴팩트 카드) */}
+      {/* ⑤  매거진 / 매치 리포트 (컴팩트 카드) */}
       <MagazineRow locale={locale} />
     </main>
   )
