@@ -120,7 +120,8 @@ async function fetchLeagueVideos(code: string, info: typeof LEAGUE_MAP[string]) 
       title: video.title || 'No Title',
       thumbnail: video.thumbnail || '',
       embed: video.embed || video.videos?.[0]?.embed || '',
-      url: video.url || '',
+      // B13: ScoreBat v3 는 url 필드를 주지 않음 → matchviewUrl(경기 페이지 링크)로 채운다
+      url: video.matchviewUrl || video.url || '',
       match_date: video.date,
       league_code: code,
       league_name: info.name,

@@ -45,23 +45,34 @@ export async function GET(request: NextRequest) {
     let aTeamId = awayTeamId ? parseInt(awayTeamId) : null
     
     if (!hTeamId || !aTeamId) {
-      // fg_team_stats에서 팀 ID 조회
-      const { data: homeTeamData } = await supabase
-        .from('fg_team_stats')
-        .select('team_id, team_name')
-        .or(`team_name.ilike.%${homeTeam}%,team_name_ko.ilike.%${homeTeam}%`)
-        .limit(1)
-        .single()
-      
-      const { data: awayTeamData } = await supabase
-        .from('fg_team_stats')
-        .select('team_id, team_name')
-        .or(`team_name.ilike.%${awayTeam}%,team_name_ko.ilike.%${awayTeam}%`)
-        .limit(1)
-        .single()
-      
-      if (homeTeamData) hTeamId = homeTeamData.team_id
-      if (awayTeamData) aTeamId = awayTeamData.team_id
+      // fg_team_stats에서 이름으로 팀 ID 조회.
+      // ⚠️ B15 수정: 기존엔 ilike '%name%' + limit(1)이라 부분일치 첫 행을 집었고,
+      //   "Inter" 검색 시 "Inter Miami"(id 9568)가 "Inter"(id 505)보다 먼저 걸려 오답 → H2H null.
+      //   → 후보를 점수화(정확일치 > 접두 > 부분, 동점이면 팀명 짧은 쪽)해 정확한 팀을 고른다.
+      const resolveTeamId = async (name: string): Promise<number | null> => {
+        const { data } = await supabase
+          .from('fg_team_stats')
+          .select('team_id, team_name, team_name_ko')
+          .or(`team_name.ilike.%${name}%,team_name_ko.ilike.%${name}%`)
+        if (!data || data.length === 0) return null
+        const q = name.trim().toLowerCase()
+        const scored = data.map((r: any) => {
+          const names = [r.team_name, r.team_name_ko]
+            .filter(Boolean)
+            .map((n: string) => n.toLowerCase())
+          let score = 1 // 부분일치
+          if (names.some((n: string) => n === q)) score = 3 // 정확일치
+          else if (names.some((n: string) => n.startsWith(q))) score = 2 // 접두일치
+          const minLen = Math.min(...names.map((n: string) => n.length))
+          return { id: r.team_id, score, minLen }
+        })
+        // 정확일치 우선 → 동점이면 팀명이 짧은 쪽("Inter" < "Inter Miami")
+        scored.sort((a, b) => b.score - a.score || a.minLen - b.minLen)
+        return scored[0].id
+      }
+
+      if (!hTeamId) hTeamId = await resolveTeamId(homeTeam)
+      if (!aTeamId) aTeamId = await resolveTeamId(awayTeam)
     }
     
     // 2. API-Football H2H 직접 호출
