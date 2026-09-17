@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
       'referral_codes',
       'user_settings',
       'user_preferences',
+      'device_tokens', // B31: 탈퇴 시 FCM 디바이스 토큰 정리 (앱 호출 실패 대비 안전장치)
     ]
 
     for (const table of relatedTables) {

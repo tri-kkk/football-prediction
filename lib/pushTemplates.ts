@@ -1,9 +1,10 @@
 // lib/pushTemplates.ts
 // 리텐션 푸시 템플릿 — TrendSoccer 실제 기능/페이지 기반.
 // {변수}는 발송 전 관리자가 실제 값으로 치환 (예: {팀A}, {N}, {리그}).
-// topic: app_general(일반 공지) / match_events(경기 이벤트) / marketing(프로모, 동의자만)
+// topic: app_general(일반 공지) / match_events(경기 이벤트) / promo(광고성, v2 동의자만)
+// ⚠️ B29: 기존 'marketing' 토픽은 폐지되고 'promo' 로 교체됨 (marketing 은 발송 차단)
 
-export type PushTopic = 'app_general' | 'match_events' | 'marketing'
+export type PushTopic = 'app_general' | 'match_events' | 'promo'
 
 export interface PushTemplate {
   id: string
@@ -172,7 +173,7 @@ export const PUSH_TEMPLATES: PushTemplate[] = [
     id: 'premium_trial',
     name: '프리미엄 48h 무료',
     category: '마케팅·구독',
-    topic: 'marketing',
+    topic: 'promo',
     ko: { title: '⭐ 프리미엄 48시간 무료', body: '광고 없이, 예측 24시간 먼저. 지금 무료로 체험해보세요.' },
     en: { title: '⭐ 48h Premium free', body: 'Ad-free picks, 24h earlier. Start your free trial now.' },
     deeplink: '/premium',
@@ -182,7 +183,7 @@ export const PUSH_TEMPLATES: PushTemplate[] = [
     id: 'premium_annual',
     name: '연간 구독 할인',
     category: '마케팅·구독',
-    topic: 'marketing',
+    topic: 'promo',
     ko: { title: '💸 연간 구독 33% 할인', body: '월 9,900원 → 연 79,000원(4개월 무료). 지금 프리미엄으로 전환하세요.' },
     en: { title: '💸 Save 33% on yearly', body: 'Go Premium yearly — like 4 months free. Upgrade now.' },
     deeplink: '/premium',

@@ -31,8 +31,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { sendToTopic, toFCMData, type FCMSendOptions } from '@/lib/fcm'
+import { applyPromoPolicy, isNightKST } from '@/lib/promoPolicy'
 
-const ALLOWED_TOPICS = new Set(['app_general', 'match_events', 'marketing'])
+// B29: marketing 토픽 폐지 → promo 로 교체 (marketing 은 발송 차단)
+const ALLOWED_TOPICS = new Set(['app_general', 'match_events', 'promo'])
 
 function authorize(request: NextRequest): { ok: true } | { ok: false; reason: string } {
   const secret = process.env.ADMIN_PUSH_SECRET
@@ -95,9 +97,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // B30: 광고성 정책 — promo 토픽 고정 + 제목 (광고) 자동표기 + 본문 수신거부 자동첨부
+    const pol = applyPromoPolicy({ topic, ko, en })
+    const finalTopic = pol.topic
+    const finalKo = pol.ko!
+    const finalEn = pol.en
+    // B30: 광고성은 야간(21:00~08:00 KST) 발송 차단
+    if (pol.isPromo && isNightKST()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'NIGHT_BLOCKED',
+            message: '광고성 푸시는 야간(21:00~08:00)에 발송할 수 없습니다.',
+          },
+        },
+        { status: 403 }
+      )
+    }
+
     const data = toFCMData({
       type: 'topic',
-      topic,
+      topic: finalTopic,
       ...(extraData ?? {}),
     })
 
@@ -105,38 +126,38 @@ export async function POST(request: NextRequest) {
 
     // ko 발송
     const koOptions: FCMSendOptions = {
-      notification: { title: ko.title, body: ko.body },
+      notification: { title: finalKo.title, body: finalKo.body },
       data,
       android: {
         priority: 'high',
-        notification: { sound: 'default', channel_id: topic },
+        notification: { sound: 'default', channel_id: finalTopic },
       },
       apns: { payload: { aps: { sound: 'default' } } },
     }
-    const koResult = await sendToTopic(`${topic}_ko`, koOptions)
+    const koResult = await sendToTopic(`${finalTopic}_ko`, koOptions)
     results.push({
       locale: 'ko',
-      topic: `${topic}_ko`,
+      topic: `${finalTopic}_ko`,
       ok: koResult.ok,
       messageId: koResult.messageId,
       error: koResult.error,
     })
 
     // en 발송 (옵셔널)
-    if (en?.title && en?.body) {
+    if (finalEn?.title && finalEn?.body) {
       const enOptions: FCMSendOptions = {
-        notification: { title: en.title, body: en.body },
+        notification: { title: finalEn.title, body: finalEn.body },
         data,
         android: {
           priority: 'high',
-          notification: { sound: 'default', channel_id: topic },
+          notification: { sound: 'default', channel_id: finalTopic },
         },
         apns: { payload: { aps: { sound: 'default' } } },
       }
-      const enResult = await sendToTopic(`${topic}_en`, enOptions)
+      const enResult = await sendToTopic(`${finalTopic}_en`, enOptions)
       results.push({
         locale: 'en',
-        topic: `${topic}_en`,
+        topic: `${finalTopic}_en`,
         ok: enResult.ok,
         messageId: enResult.messageId,
         error: enResult.error,

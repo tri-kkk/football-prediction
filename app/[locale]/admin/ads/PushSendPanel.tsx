@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { PUSH_TEMPLATES, TEMPLATE_CATEGORIES } from '@/lib/pushTemplates'
 
-type Topic = 'app_general' | 'match_events' | 'marketing'
+type Topic = 'app_general' | 'match_events' | 'promo'
 type Mode = 'now' | 'once' | 'daily' | 'weekly'
 
 interface Result {
@@ -33,7 +33,7 @@ interface Scheduled {
 const TOPIC_OPTIONS: { value: Topic; label: string; desc: string }[] = [
   { value: 'app_general', label: '📢 app_general', desc: '전체 일반 공지' },
   { value: 'match_events', label: '⚽ match_events', desc: '경기 일반 이벤트' },
-  { value: 'marketing', label: '🎁 marketing', desc: '마케팅 · 프로모션 (별도 동의자만)' },
+  { value: 'promo', label: '🎁 promo', desc: '광고성 · 프로모션 (v2 동의자만 · (광고) 표기·수신거부·야간차단 자동)' },
 ]
 const MODE_OPTIONS: { value: Mode; label: string }[] = [
   { value: 'now', label: '즉시 발송' },

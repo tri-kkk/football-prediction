@@ -3,6 +3,7 @@
 // 발송은 크론(/api/cron/send-scheduled-push)이 처리.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { applyPromoPolicy, isNightHourKST } from '@/lib/promoPolicy'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-const TOPICS = new Set(['app_general', 'match_events', 'marketing'])
+// B29: marketing 토픽 폐지 → promo 로 교체
+const TOPICS = new Set(['app_general', 'match_events', 'promo'])
 
 export async function GET() {
   const { data, error } = await supabase
@@ -28,16 +30,26 @@ export async function POST(req: NextRequest) {
     const b = await req.json()
     const topic = b.topic
     const scheduleType = b.scheduleType || 'once'
+    if (topic === 'marketing')
+      return NextResponse.json({ error: 'marketing 토픽은 중단되었습니다. promo 를 사용하세요.' }, { status: 400 })
     if (!TOPICS.has(topic)) return NextResponse.json({ error: 'invalid topic' }, { status: 400 })
     if (!b.ko?.title?.trim() || !b.ko?.body?.trim())
       return NextResponse.json({ error: 'ko title/body required' }, { status: 400 })
 
+    // B30: 광고성 정책 — promo 고정 + (광고) 표기 + 수신거부 첨부 (저장 시 정규화)
+    const koIn = { title: b.ko.title.trim(), body: b.ko.body.trim() }
+    const enIn =
+      b.en?.title?.trim() && b.en?.body?.trim()
+        ? { title: b.en.title.trim(), body: b.en.body.trim() }
+        : undefined
+    const pol = applyPromoPolicy({ topic, ko: koIn, en: enIn })
+
     const row: any = {
-      topic,
-      ko_title: b.ko.title.trim(),
-      ko_body: b.ko.body.trim(),
-      en_title: b.en?.title?.trim() || null,
-      en_body: b.en?.body?.trim() || null,
+      topic: pol.topic,
+      ko_title: pol.ko!.title,
+      ko_body: pol.ko!.body,
+      en_title: pol.en?.title ?? null,
+      en_body: pol.en?.body ?? null,
       deeplink: b.deeplink?.trim() || null,
       schedule_type: scheduleType,
     }
@@ -48,11 +60,18 @@ export async function POST(req: NextRequest) {
       if (isNaN(at.getTime())) return NextResponse.json({ error: 'invalid scheduledAt' }, { status: 400 })
       if (at.getTime() < Date.now() - 60_000)
         return NextResponse.json({ error: '과거 시각은 예약할 수 없습니다' }, { status: 400 })
+      // B30: 광고성은 야간(21:00~08:00 KST) 예약 차단
+      const kstHour = new Date(at.getTime() + 9 * 3600 * 1000).getUTCHours()
+      if (pol.isPromo && isNightHourKST(kstHour))
+        return NextResponse.json({ error: '광고성 푸시는 야간(21:00~08:00)에 예약할 수 없습니다.' }, { status: 400 })
       row.scheduled_at = at.toISOString()
       row.status = 'pending'
     } else if (scheduleType === 'daily' || scheduleType === 'weekly') {
       const h = Number(b.runHour), m = Number(b.runMinute ?? 0)
       if (!Number.isInteger(h) || h < 0 || h > 23) return NextResponse.json({ error: 'invalid runHour' }, { status: 400 })
+      // B30: 광고성은 야간(21:00~08:00 KST) 반복 예약 차단
+      if (pol.isPromo && isNightHourKST(h))
+        return NextResponse.json({ error: '광고성 푸시는 야간(21:00~08:00)에 예약할 수 없습니다.' }, { status: 400 })
       row.run_hour = h
       row.run_minute = Number.isInteger(m) ? m : 0
       if (scheduleType === 'weekly') {
