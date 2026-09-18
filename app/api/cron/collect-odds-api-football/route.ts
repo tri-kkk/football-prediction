@@ -338,8 +338,17 @@ export async function POST(request: Request) {
             // 🆕 경기 상태 추출
             const matchStatus = fixture.fixture.status?.short || 'NS'
             
-            // 이미 종료된 경기는 건너뜀
-            if (['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'].includes(matchStatus)) {
+            // 종료 경기(FT/AET/PEN)는 결과 크론이 처리 → skip
+            if (['FT', 'AET', 'PEN'].includes(matchStatus)) {
+              continue
+            }
+            // 🆕 B33: 연기/취소/중단/서스펜디드는 배당이 사라져도 상태만 갱신한다.
+            //   (기존엔 이들도 skip 해서 status 가 NS 로 정체 → 앱이 지연 경기를 '예정'으로 오표시)
+            if (['PST', 'CANC', 'ABD', 'AWD', 'WO', 'SUSP', 'INT'].includes(matchStatus)) {
+              await supabase
+                .from('match_odds_latest')
+                .update({ status: matchStatus, updated_at: new Date().toISOString() })
+                .eq('match_id', fixture.fixture.id.toString())
               continue
             }
 

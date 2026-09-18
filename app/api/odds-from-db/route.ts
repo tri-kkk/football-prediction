@@ -481,8 +481,10 @@ export async function GET(request: Request) {
     const date = searchParams.get('date')
     const includeResults = searchParams.get('includeResults') !== 'false'
     // ⚡ 호출자가 명시적으로 더 긴 범위를 원할 때 사용 (예: 프리미엄 예정경기)
-    const daysAhead = Math.max(1, Math.min(14, parseInt(searchParams.get('daysAhead') || '1', 10) || 1))
-    const daysBack = Math.max(1, Math.min(14, parseInt(searchParams.get('daysBack') || '1', 10) || 1))
+    const rawDaysAhead = searchParams.get('daysAhead')
+    const rawDaysBack = searchParams.get('daysBack')
+    const daysAhead = Math.max(1, Math.min(14, parseInt(rawDaysAhead || '1', 10) || 1))
+    const daysBack = Math.max(1, Math.min(14, parseInt(rawDaysBack || '1', 10) || 1))
     const limit = Math.max(50, Math.min(1500, parseInt(searchParams.get('limit') || '500', 10) || 500))
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -507,10 +509,16 @@ export async function GET(request: Request) {
       const startOfDay = `${date}T00:00:00Z`
       const endOfDay = `${date}T23:59:59Z`
       upcomingUrl += `&commence_time=gte.${startOfDay}&commence_time=lte.${endOfDay}`
-    } else if (league === 'ALL') {
-      // ⚡ 기본 범위: 어제~내일 (DateTab 범위와 동일). 더 긴 범위는 daysAhead/daysBack 명시
-      const back = new Date(Date.now() - daysBack * 86400000)
-      const ahead = new Date(Date.now() + daysAhead * 86400000)
+    } else {
+      // 🐛 이전 버그: 날짜 창을 league==='ALL'에만 적용 → 단일 리그(예: MLS) 요청 시
+      //   match_odds_latest의 시즌 전체(이미 끝난 FT 경기 포함)를 통째로 덤프해서
+      //   예정 경기가 오래된 경기에 묻혀 "일정이 안 들어오는" 것처럼 보였음.
+      //   이제 리그 지정 여부와 무관하게 항상 날짜 창을 적용한다.
+      //   명시값(daysAhead/daysBack)은 존중하고, 단일 리그 기본값은 스케줄이 비지 않도록 넉넉히.
+      const aheadDays = rawDaysAhead !== null ? daysAhead : (league === 'ALL' ? daysAhead : 10)
+      const backDays = rawDaysBack !== null ? daysBack : (league === 'ALL' ? daysBack : 3)
+      const back = new Date(Date.now() - backDays * 86400000)
+      const ahead = new Date(Date.now() + aheadDays * 86400000)
       upcomingUrl += `&commence_time=gte.${back.toISOString()}&commence_time=lte.${ahead.toISOString()}`
     }
     upcomingUrl += `&order=commence_time.asc&limit=${limit}`
@@ -648,7 +656,13 @@ export async function GET(request: Request) {
         leagueNameEn: leagueInfo.nameEn,
         leaguePriority: leagueInfo.priority,
         leagueLogo: leagueInfo.logo,
-        matchStatus: dbStatus === 'FT' ? 'FT' : 'SCHEDULED',
+        // B33: 연기/취소/중단/서스펜디드는 그대로 전달(앱이 구분 표시). NS/TBD/미확정만 SCHEDULED.
+        matchStatus:
+          dbStatus === 'FT'
+            ? 'FT'
+            : ['PST', 'CANC', 'ABD', 'SUSP', 'INT', 'AWD', 'WO'].includes(dbStatus)
+              ? dbStatus
+              : 'SCHEDULED',
         finalScoreHome: null,
         finalScoreAway: null,
         isCorrect: null,
