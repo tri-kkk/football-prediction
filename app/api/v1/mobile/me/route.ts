@@ -35,16 +35,28 @@ export async function GET(request: NextRequest) {
     const supabase = getServerSupabase()
 
     // 1. users 테이블 조회 — 약관 동의 완료 사용자
-    const { data: user } = await supabase
+    const USER_COLS =
+      'id, email, name, avatar_url, tier, premium_expires_at, ' +
+      'trial_used, trial_started_at, promo_code, promo_applied_at, ' +
+      'terms_agreed_at, privacy_agreed_at, marketing_agreed, marketing_agreed_at, ' +
+      'created_at, last_login_at'
+
+    let { data: user } = await supabase
       .from('users')
-      .select(
-        'id, email, name, avatar_url, tier, premium_expires_at, ' +
-          'trial_used, trial_started_at, promo_code, promo_applied_at, ' +
-          'terms_agreed_at, privacy_agreed_at, marketing_agreed, marketing_agreed_at, ' +
-          'created_at, last_login_at'
-      )
+      .select(USER_COLS)
       .eq('id', session.userId)
-      .single()
+      .maybeSingle()
+
+    // 🆕 B36: 신규 가입 세션의 JWT sub 가 pending_users.id 라 users.id 로 못 찾는 경우,
+    //   JWT 의 email 로 폴백 조회해 실제 users 행을 잡는다(이미 어긋난 계정 복구용).
+    if (!user && session.email) {
+      const byEmail = await supabase
+        .from('users')
+        .select(USER_COLS)
+        .eq('email', session.email.toLowerCase())
+        .maybeSingle()
+      user = byEmail.data
+    }
 
     if (user) {
       // 효력 있는 tier 재계산

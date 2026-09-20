@@ -156,6 +156,11 @@ export async function POST(request: NextRequest) {
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
+        // 🆕 B36: users.id 를 pending_users.id 와 동일하게 맞춘다.
+        //   모바일 로그인 시 발급된 JWT 의 sub 는 pending_users.id 이므로,
+        //   users.id 를 새로 생성하면(JWT sub ≠ users.id) /me·consents 등 id 기반 조회가
+        //   실제 users 행을 못 찾아 동의값이 저장/조회되지 않는다. → 동일 id 로 생성해 일치시킴.
+        id: pendingUser.id,
         email: emailLower,
         name: pendingUser.name,
         avatar_url: pendingUser.avatar_url,
