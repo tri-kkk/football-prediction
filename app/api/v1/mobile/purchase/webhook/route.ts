@@ -146,6 +146,11 @@ async function selfHealGrant(purchaseToken: string, notificationType: number) {
     auto_renew: autoRenew,
   })
   if (subErr) {
+    // payment_id UNIQUE 충돌(23505) = 동시 verify/webhook이 이미 처리함 → 정상(멱등)
+    if ((subErr as any).code === '23505') {
+      console.log('[webhook][self-heal] payment_id 중복(경합) → already_granted')
+      return { handled: true, type: 'already_granted' }
+    }
     console.error('[webhook][self-heal] subscriptions insert error:', subErr.message)
     return { handled: false, reason: 'insert_failed', error: subErr.message }
   }

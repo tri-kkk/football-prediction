@@ -271,6 +271,29 @@ export async function POST(request: NextRequest) {
       auto_renew: true, // Play 구독은 기본 자동갱신 ON, 취소 시 webhook이 false로 전환
     })
     if (subError) {
+      // 🆕 B39: payment_id UNIQUE 인덱스 충돌(23505) = webhook self-heal 또는 동시 verify가 이미 처리함.
+      //   에러가 아니라 "이미 처리됨(멱등)"으로 응답한다(앱이 결제 실패로 처리하지 않도록).
+      if ((subError as any).code === '23505') {
+        console.log('[purchase/verify] payment_id 중복(경합) → alreadyProcessed 로 응답')
+        const { data: existingSub } = await supabase
+          .from('subscriptions')
+          .select('plan, started_at, expires_at')
+          .eq('payment_id', purchaseToken)
+          .maybeSingle()
+        const { data: u2 } = await supabase
+          .from('users')
+          .select('tier, premium_expires_at')
+          .eq('id', userId)
+          .single()
+        return successResponse({
+          tier: u2?.tier ?? 'premium',
+          plan: existingSub?.plan ?? product.plan,
+          expiresAt: u2?.premium_expires_at ?? existingSub?.expires_at ?? expiresAt.toISOString(),
+          startedAt: existingSub?.started_at ?? startTime.toISOString(),
+          autoRenewing: true,
+          alreadyProcessed: true,
+        })
+      }
       console.error('[purchase/verify] subscriptions insert error:', subError.message)
       return errorResponse(
         500,
