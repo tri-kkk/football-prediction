@@ -29,7 +29,11 @@ import {
   parseRTDNMessage,
   verifyWebhookToken,
   verifySubscriptionV2,
+  acknowledgeSubscriptionV2,
   extractExpiryTime,
+  extractBasePlanId,
+  getProductInfoByBasePlan,
+  isSubscriptionPayable,
   SubscriptionNotificationType,
 } from '@/lib/google-play'
 import { getServerSupabase } from '@/lib/mobile-auth'
@@ -51,6 +55,125 @@ async function sendTelegramNotification(message: string) {
 }
 
 // ──────────────────────────────────────────────────────────────────
+// B39: RTDN 자동 권한부여 (self-heal)
+//   결제는 됐는데 앱이 verify 를 못 보낸 경우(결제 직후 네트워크 단절 등),
+//   subscriptions 행이 없어 아래 handler 가 skip 된다. 이때 RTDN 만으로 권한을 부여한다.
+//   흐름: Play API v2 조회 → obfuscatedExternalAccountId(=users.id) 로 사용자 매핑
+//         → 활성 상태면 subscriptions/payments insert + users premium + acknowledge.
+//   멱등: payment_id(purchaseToken) 로 중복 방지. 이후 앱이 같은 토큰으로 verify 해도
+//         verify 의 기존행 체크가 중복부여를 막는다.
+// ──────────────────────────────────────────────────────────────────
+async function selfHealGrant(purchaseToken: string, notificationType: number) {
+  const supabase = getServerSupabase()
+
+  let purchase
+  try {
+    purchase = await verifySubscriptionV2(purchaseToken)
+  } catch (e) {
+    console.error('[webhook][self-heal] verify failed:', (e as Error).message)
+    return { handled: false, reason: 'verify_failed' }
+  }
+
+  // obfuscatedExternalAccountId = 앱이 결제 시 넣은 users.id (v2.0+). 없으면 레거시 구매 → 매핑 불가.
+  const userId = purchase.externalAccountIdentifiers?.obfuscatedExternalAccountId
+  if (!userId) {
+    console.warn(`[webhook][self-heal] no obfuscatedExternalAccountId (legacy purchase) — token=${purchaseToken.slice(0, 20)}...`)
+    return { handled: false, reason: 'no_external_account_id' }
+  }
+
+  const { data: u } = await supabase
+    .from('users')
+    .select('id, premium_expires_at')
+    .eq('id', userId)
+    .maybeSingle()
+  if (!u) {
+    console.warn(`[webhook][self-heal] user not found for id=${userId}`)
+    return { handled: false, reason: 'user_not_found' }
+  }
+
+  // 활성/유예 상태만 부여
+  if (!isSubscriptionPayable(purchase)) {
+    return { handled: false, reason: 'not_payable', state: purchase.subscriptionState }
+  }
+
+  // 멱등 재확인 (verify 와의 경합 대비) — payment_id 기준
+  const { data: dup } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('payment_id', purchaseToken)
+    .maybeSingle()
+  if (dup) return { handled: true, type: 'already_granted' }
+
+  const basePlanId = extractBasePlanId(purchase)
+  const product = basePlanId ? getProductInfoByBasePlan(basePlanId) : null
+  if (!product) {
+    return { handled: false, reason: 'unknown_plan', basePlanId }
+  }
+
+  const expiryStr = extractExpiryTime(purchase)
+  if (!expiryStr) return { handled: false, reason: 'no_expiry' }
+  const startTime = new Date(purchase.startTime)
+  const expiresAt = new Date(expiryStr)
+  const orderId = purchase.latestOrderId || purchaseToken
+  const autoRenew = !!purchase.lineItems?.[0]?.autoRenewingPlan?.autoRenewEnabled
+
+  // payments (best-effort)
+  await supabase
+    .from('payments')
+    .insert({
+      user_id: userId,
+      order_id: orderId,
+      status: 'success',
+      tid: orderId,
+      amount: product.price,
+      goods_name: product.label,
+      payment_method: 'PLAY_IAP',
+      order_date: startTime.toISOString(),
+      raw_response: purchase,
+    })
+    .then(() => {}, () => {})
+
+  // subscriptions (payment_id = 멱등 키)
+  const { error: subErr } = await supabase.from('subscriptions').insert({
+    user_id: userId,
+    plan: product.plan,
+    status: 'active',
+    started_at: startTime.toISOString(),
+    expires_at: expiresAt.toISOString(),
+    payment_id: purchaseToken,
+    price: product.price,
+    payment_method: 'PLAY_IAP',
+    auto_renew: autoRenew,
+  })
+  if (subErr) {
+    console.error('[webhook][self-heal] subscriptions insert error:', subErr.message)
+    return { handled: false, reason: 'insert_failed', error: subErr.message }
+  }
+
+  // users premium (더 늦은 만료일 유지)
+  const cur = u.premium_expires_at ? new Date(u.premium_expires_at) : null
+  const finalExp = cur && cur > expiresAt ? cur : expiresAt
+  await supabase
+    .from('users')
+    .update({ tier: 'premium', premium_expires_at: finalExp.toISOString() })
+    .eq('id', userId)
+
+  // acknowledge (3일 내 안 하면 자동 환불)
+  if (purchase.acknowledgementState !== 'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED') {
+    acknowledgeSubscriptionV2(purchaseToken).catch(() => {})
+  }
+
+  await sendTelegramNotification(
+    `🛟 <b>RTDN 자동 권한부여</b> (앱 verify 누락 복구)\n\n` +
+      `👤 user_id: ${userId}\n` +
+      `📋 plan: ${product.plan}\n` +
+      `🆔 token: ${purchaseToken.slice(0, 20)}...`
+  )
+  console.log(`[webhook][self-heal] granted — user=${userId}, plan=${product.plan} (type=${notificationType})`)
+  return { handled: true, type: 'self_heal_granted', userId, plan: product.plan }
+}
+
+// ──────────────────────────────────────────────────────────────────
 // notificationType별 처리
 // ──────────────────────────────────────────────────────────────────
 
@@ -68,9 +191,22 @@ async function handleSubscriptionNotification(
     .eq('payment_id', purchaseToken)
     .maybeSingle()
 
-  // 첫 PURCHASED 알림이 verify보다 빨리 올 수 있음 — 그 경우 sub가 없을 수 있음
-  // 그땐 그냥 무시 (verify가 곧 처리할 것)
+  // subscriptions 행이 없음 — 앱 verify 가 아직/영영 안 온 경우.
+  //  · 권한부여 성격 알림(PURCHASED/RENEWED/RECOVERED/RESTARTED)이면 B39 self-heal 로 직접 부여.
+  //  · 그 외(CANCEL/EXPIRE/REVOKE 등)는 부여할 대상이 없으니 skip.
   if (!sub) {
+    const GRANT_TYPES: number[] = [
+      SubscriptionNotificationType.PURCHASED,
+      SubscriptionNotificationType.RENEWED,
+      SubscriptionNotificationType.RECOVERED,
+      SubscriptionNotificationType.RESTARTED,
+    ]
+    if (GRANT_TYPES.includes(notificationType)) {
+      console.log(
+        `[webhook] no subscription row (type=${notificationType}) → B39 self-heal 시도`
+      )
+      return await selfHealGrant(purchaseToken, notificationType)
+    }
     console.log(
       `[webhook] no subscription row for purchaseToken (type=${notificationType}, productId=${productId}) — skipping`
     )
