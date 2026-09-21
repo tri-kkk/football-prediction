@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { validateDeeplink, isAppBannerSlot } from '@/lib/deeplinkAllowlist'
 
 // Supabase 클라이언트
 const supabase = createClient(
@@ -94,6 +95,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // B32: 앱 홈 배너 슬롯만 link_url 허용 목록 검증 (웹 배너 슬롯은 웹 라우팅이라 제외)
+    if (isAppBannerSlot(slot_type)) {
+      const dl = validateDeeplink(link_url)
+      if (!dl.ok) {
+        return NextResponse.json(
+          { error: dl.reason || '허용되지 않는 링크입니다', suggestion: dl.suggestion },
+          { status: 400 }
+        )
+      }
+    }
+
     const { data, error } = await supabase
       .from('advertisements')
       .insert({
@@ -152,6 +164,29 @@ export async function PUT(request: NextRequest) {
     for (const field of allowedFields) {
       if (field in updateData) {
         filteredData[field] = updateData[field]
+      }
+    }
+
+    // B32: link_url 수정 시, 앱 홈 배너 슬롯이면 허용 목록 검증
+    if ('link_url' in filteredData) {
+      // slot_type 이 이번 수정에 없으면 기존 행에서 조회
+      let slotType: string | null = filteredData.slot_type ?? null
+      if (!slotType) {
+        const { data: existing } = await supabase
+          .from('advertisements')
+          .select('slot_type')
+          .eq('id', id)
+          .single()
+        slotType = existing?.slot_type ?? null
+      }
+      if (isAppBannerSlot(slotType)) {
+        const dl = validateDeeplink(filteredData.link_url)
+        if (!dl.ok) {
+          return NextResponse.json(
+            { error: dl.reason || '허용되지 않는 링크입니다', suggestion: dl.suggestion },
+            { status: 400 }
+          )
+        }
       }
     }
 

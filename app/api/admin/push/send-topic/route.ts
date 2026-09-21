@@ -32,6 +32,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { sendToTopic, toFCMData, type FCMSendOptions } from '@/lib/fcm'
 import { applyPromoPolicy, isNightKST } from '@/lib/promoPolicy'
+import { validateDeeplink } from '@/lib/deeplinkAllowlist'
 
 // B29: marketing 토픽 폐지 → promo 로 교체 (marketing 은 발송 차단)
 const ALLOWED_TOPICS = new Set(['app_general', 'match_events', 'promo'])
@@ -95,6 +96,20 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       )
+    }
+
+    // B32: 딥링크 허용 목록 검증 — 목록 밖 앱 내부 경로/v1 경로는 발송 차단
+    if (extraData && 'deeplink' in extraData) {
+      const dl = validateDeeplink(extraData.deeplink)
+      if (!dl.ok) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: { code: 'INVALID_DEEPLINK', message: dl.reason || '허용되지 않는 딥링크입니다.', suggestion: dl.suggestion },
+          },
+          { status: 400 }
+        )
+      }
     }
 
     // B30: 광고성 정책 — promo 토픽 고정 + 제목 (광고) 자동표기 + 본문 수신거부 자동첨부

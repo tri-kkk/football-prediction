@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { applyPromoPolicy, isNightHourKST } from '@/lib/promoPolicy'
+import { validateDeeplink } from '@/lib/deeplinkAllowlist'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,11 @@ export async function POST(req: NextRequest) {
     if (!TOPICS.has(topic)) return NextResponse.json({ error: 'invalid topic' }, { status: 400 })
     if (!b.ko?.title?.trim() || !b.ko?.body?.trim())
       return NextResponse.json({ error: 'ko title/body required' }, { status: 400 })
+
+    // B32: 딥링크 허용 목록 검증 — 목록 밖 앱 내부 경로/v1 경로/트레일링 슬래시는 저장 차단
+    const dl = validateDeeplink(b.deeplink)
+    if (!dl.ok)
+      return NextResponse.json({ error: dl.reason || '허용되지 않는 딥링크입니다.', suggestion: dl.suggestion }, { status: 400 })
 
     // B30: 광고성 정책 — promo 고정 + (광고) 표기 + 수신거부 첨부 (저장 시 정규화)
     const koIn = { title: b.ko.title.trim(), body: b.ko.body.trim() }
