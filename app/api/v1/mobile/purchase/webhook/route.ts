@@ -168,12 +168,9 @@ async function selfHealGrant(purchaseToken: string, notificationType: number) {
     acknowledgeSubscriptionV2(purchaseToken).catch(() => {})
   }
 
-  await sendTelegramNotification(
-    `🛟 <b>RTDN 자동 권한부여</b> (앱 verify 누락 복구)\n\n` +
-      `👤 user_id: ${userId}\n` +
-      `📋 plan: ${product.plan}\n` +
-      `🆔 token: ${purchaseToken.slice(0, 20)}...`
-  )
+  // B40: 「🛟 RTDN 자동 권한부여」 텔레그램 알림 중단 — 대부분 실제 누락이 아니라
+  //      RTDN이 앱 verify보다 먼저 도착한 경합이라 노이즈였음.
+  //      권한부여·acknowledge·멱등은 유지하고, 추적은 서버 로그로만 남긴다(결제 문의 시 조회용).
   console.log(`[webhook][self-heal] granted — user=${userId}, plan=${product.plan} (type=${notificationType})`)
   return { handled: true, type: 'self_heal_granted', userId, plan: product.plan }
 }
