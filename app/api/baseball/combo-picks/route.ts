@@ -116,45 +116,53 @@ export async function GET(request: NextRequest) {
     return Promise.all(picks.map((p) => localizeCombo(p)))
   }
 
-  // 로고 없는 픽에 DB에서 로고 URL 보강
+  // 픽 레그에 DB에서 로고 URL + 킥오프 시각 보강
+  // B37 4-4: 각 레그에 킥오프 timestamp(ISO 8601 UTC) 추가.
+  //   - 필드명은 baseball/matches 목록 API와 동일하게: timestamp(킥오프), date(경기일).
+  //   - 경기 ID는 레그에 이미 matchId(=api_match_id, 목록 API의 id와 동일 체계)로 들어있음.
+  //   - 기존엔 matchTime(로컬 시:분 문자열)만 있어 앱이 킥오프를 못 그리고 「—」로 뒀음.
   async function enrichPicksWithLogos(picks: any[]) {
-    // 모든 matchId 수집
+    // 모든 matchId 수집 (로고뿐 아니라 킥오프 보강을 위해 전체 레그 대상)
     const matchIds = new Set<number>()
     for (const combo of picks) {
       for (const p of combo.picks || []) {
-        if (!p.homeLogo && !p.awayLogo && p.matchId) {
-          matchIds.add(p.matchId)
-        }
+        if (p.matchId) matchIds.add(p.matchId)
       }
     }
     if (matchIds.size === 0) return picks
 
-    // 매치 데이터에서 로고 조회
+    // 매치 데이터에서 로고 + 킥오프 조회
     const { data: matches } = await supabase
       .from('baseball_matches')
-      .select('api_match_id, home_team_logo, away_team_logo')
+      .select('api_match_id, home_team_logo, away_team_logo, match_timestamp, match_date')
       .in('api_match_id', Array.from(matchIds))
 
     if (!matches || matches.length === 0) return picks
 
-    const logoMap = new Map<number, { homeLogo: string; awayLogo: string }>()
+    const matchMap = new Map<
+      number,
+      { homeLogo: string; awayLogo: string; timestamp: string | null; date: string | null }
+    >()
     for (const m of matches) {
-      logoMap.set(m.api_match_id, {
+      matchMap.set(m.api_match_id, {
         homeLogo: m.home_team_logo || '',
         awayLogo: m.away_team_logo || '',
+        // 목록 API와 동일 규칙: match_timestamp(ISO UTC) 우선, 없으면 match_date
+        timestamp: m.match_timestamp || m.match_date || null,
+        date: m.match_date || null,
       })
     }
 
-    // 픽에 로고 보강
+    // 레그에 로고(없을 때만) + 킥오프(없을 때 채움) 보강
     for (const combo of picks) {
       for (const p of combo.picks || []) {
-        if (!p.homeLogo || !p.awayLogo) {
-          const logos = logoMap.get(p.matchId)
-          if (logos) {
-            if (!p.homeLogo) p.homeLogo = logos.homeLogo
-            if (!p.awayLogo) p.awayLogo = logos.awayLogo
-          }
-        }
+        const info = p.matchId ? matchMap.get(p.matchId) : undefined
+        if (!info) continue
+        if (!p.homeLogo) p.homeLogo = info.homeLogo
+        if (!p.awayLogo) p.awayLogo = info.awayLogo
+        // B37 4-4: 킥오프 timestamp(ISO UTC) + date. 기존 값이 있으면 보존.
+        if (p.timestamp == null) p.timestamp = info.timestamp
+        if (p.date == null) p.date = info.date
       }
     }
     return picks
