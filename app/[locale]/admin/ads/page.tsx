@@ -2299,9 +2299,33 @@ export default function AdminDashboard() {
     }
   }
 
+  // 배너 게재기간은 KST(GMT+9) 기준으로 입력받아 UTC instant 로 저장한다.
+  //  - datetime-local 입력값('YYYY-MM-DDTHH:mm')을 KST 벽시계로 해석 → UTC ISO 로 변환해 저장
+  //  - GET 필터(/api/ads)는 UTC now 와 비교하므로, 저장이 정확한 UTC instant 면 KST 경계가 정확해진다
+  const kstLocalToUtcIso = (local?: string | null): string | null => {
+    if (!local) return null
+    const s = local.length === 16 ? `${local}:00` : local // 초 보정
+    const d = new Date(`${s}+09:00`)
+    return isNaN(d.getTime()) ? null : d.toISOString()
+  }
+  const utcToKstLocal = (iso?: string | null): string => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return ''
+    const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+    return kst.toISOString().slice(0, 16) // 'YYYY-MM-DDTHH:mm' (KST 벽시계)
+  }
+  const formatKstRange = (iso?: string | null): string => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return '—'
+    const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+    return kst.toISOString().slice(2, 16).replace('T', ' ') // 'YY-MM-DD HH:mm' (KST)
+  }
+
   const handleAdSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!adFormData.name || !adFormData.image_url || !adFormData.link_url) {
       alert('필수 항목을 모두 입력해주세요')
       return
@@ -2309,7 +2333,13 @@ export default function AdminDashboard() {
 
     try {
       const method = editingAd ? 'PUT' : 'POST'
-      const body = editingAd ? { ...adFormData, id: editingAd.id } : adFormData
+      const base = editingAd ? { ...adFormData, id: editingAd.id } : { ...adFormData }
+      // 게재기간 KST → UTC 변환 후 저장 (빈 값은 null = 무기한)
+      const body = {
+        ...base,
+        start_date: kstLocalToUtcIso(adFormData.start_date),
+        end_date: kstLocalToUtcIso(adFormData.end_date),
+      }
 
       const response = await fetch('/api/ads', {
         method,
@@ -2367,8 +2397,8 @@ export default function AdminDashboard() {
       width: ad.width,
       height: ad.height,
       priority: ad.priority,
-      start_date: ad.start_date ? new Date(ad.start_date).toISOString().slice(0, 10) : '',
-      end_date: ad.end_date ? new Date(ad.end_date).toISOString().slice(0, 10) : '',
+      start_date: utcToKstLocal(ad.start_date), // UTC → KST 벽시계('YYYY-MM-DDTHH:mm')
+      end_date: utcToKstLocal(ad.end_date),
       locale: ad.locale || 'all',
     })
     setIsAdModalOpen(true)
@@ -3997,9 +4027,9 @@ export default function AdminDashboard() {
                           <td className="px-3 py-2 text-center text-gray-400 text-xs whitespace-nowrap">
                             {ad.start_date || ad.end_date ? (
                               <>
-                                {ad.start_date ? new Date(ad.start_date).toISOString().slice(2, 10) : '—'}
+                                {formatKstRange(ad.start_date)}
                                 <span className="text-gray-600 mx-1">~</span>
-                                {ad.end_date ? new Date(ad.end_date).toISOString().slice(2, 10) : '—'}
+                                {formatKstRange(ad.end_date)}
                               </>
                             ) : (
                               <span className="text-gray-600">무기한</span>
@@ -5874,10 +5904,10 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    시작일 (선택)
+                    시작일시 (KST · 선택)
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={adFormData.start_date}
                     onChange={(e) => setAdFormData({ ...adFormData, start_date: e.target.value })}
                     className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-emerald-500"
@@ -5885,16 +5915,19 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    종료일 (선택)
+                    종료일시 (KST · 선택)
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={adFormData.end_date}
                     onChange={(e) => setAdFormData({ ...adFormData, end_date: e.target.value })}
                     className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
+              <p className="text-xs text-gray-500 -mt-2">
+                한국 시간(KST · GMT+9) 기준으로 입력하세요. 시·분까지 지정할 수 있으며, 비우면 무기한입니다.
+              </p>
 
               <div className="flex gap-3 pt-4">
                 <button
