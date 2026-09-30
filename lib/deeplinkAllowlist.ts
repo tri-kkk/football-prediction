@@ -28,6 +28,14 @@ export const V2_ALLOWED_PATHS: readonly string[] = [
 
 const ALLOWED_SET = new Set(V2_ALLOWED_PATHS)
 
+// B32 정정(2026-09-30): 푸시 딥링크와 배너 link_url 은 요구가 달라 채널별로 허용 목록을 분리한다.
+//  - 토픽 푸시: 로그인된 사용자에게 로그인 화면은 무의미 → /login 차단(현행 유지).
+//  - 배너: 게스트 유도용 「로그인하고 시작하기」 동선이 정상 → /login 허용.
+// 두 채널 모두 계속 차단: /signup/*, /menu/payment/*, 단건조회(/matches/:sport/:id · /reports/combo/:id) —
+//   이들은 허용 목록·별칭에 없으므로 기본 차단 규칙으로 자동 차단된다.
+export type DeeplinkChannel = 'push' | 'banner'
+const BANNER_EXTRA_ALLOWED = new Set(['/login'])
+
 // B32: 배너(advertisements) 중 앱 홈 배너 슬롯만 딥링크 허용 목록을 강제한다.
 //      웹 배너 슬롯(web_home_top, desktop_banner, sidebar 등)은 웹 라우팅을 쓰므로 검증 대상 아님.
 export function isAppBannerSlot(slotType?: string | null): boolean {
@@ -55,8 +63,12 @@ export interface DeeplinkCheck {
 /**
  * 딥링크·link_url 값이 저장 가능한지 검증.
  * 저장을 막는 경우는 "허용 목록에 없는 앱 내부 경로(/로 시작)" 뿐이다.
+ * @param channel 'push'(기본, 토픽 푸시 deeplink) | 'banner'(배너 link_url — /login 추가 허용)
  */
-export function validateDeeplink(raw?: string | null): DeeplinkCheck {
+export function validateDeeplink(
+  raw?: string | null,
+  channel: DeeplinkChannel = 'push',
+): DeeplinkCheck {
   const v = (raw ?? '').trim()
   if (!v) return { ok: true, kind: 'empty' }
 
@@ -74,6 +86,8 @@ export function validateDeeplink(raw?: string | null): DeeplinkCheck {
       }
     }
     if (ALLOWED_SET.has(v)) return { ok: true, kind: 'internal' }
+    // 배너 채널 전용 추가 허용(예: /login)
+    if (channel === 'banner' && BANNER_EXTRA_ALLOWED.has(v)) return { ok: true, kind: 'internal' }
     if (DYNAMIC_ALLOWED.some((re) => re.test(v))) return { ok: true, kind: 'internal' }
     if (V1_TO_V2_ALIAS[v]) {
       return {

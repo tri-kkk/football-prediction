@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     // B32: 앱 홈 배너 슬롯만 link_url 허용 목록 검증 (웹 배너 슬롯은 웹 라우팅이라 제외)
     if (isAppBannerSlot(slot_type)) {
-      const dl = validateDeeplink(link_url)
+      const dl = validateDeeplink(link_url, 'banner')
       if (!dl.ok) {
         return NextResponse.json(
           { error: dl.reason || '허용되지 않는 링크입니다', suggestion: dl.suggestion },
@@ -180,7 +180,7 @@ export async function PUT(request: NextRequest) {
         slotType = existing?.slot_type ?? null
       }
       if (isAppBannerSlot(slotType)) {
-        const dl = validateDeeplink(filteredData.link_url)
+        const dl = validateDeeplink(filteredData.link_url, 'banner')
         if (!dl.ok) {
           return NextResponse.json(
             { error: dl.reason || '허용되지 않는 링크입니다', suggestion: dl.suggestion },
