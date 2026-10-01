@@ -58,11 +58,20 @@ export interface DeeplinkCheck {
   kind: 'empty' | 'internal' | 'external' | 'host' | 'blocked'
   reason?: string
   suggestion?: string   // v1 별칭 등 권장 v2 경로
+  normalized?: string   // 저장에 쓸 정규화 값 (허용 목록은 정식 표기로 보정). ok=true 일 때 이 값을 저장한다.
 }
 
+// 정규화용 소문자→정식표기 맵 (자유 입력의 대소문자 변형을 정식 표기로 흡수).
+const CANON_BY_LOWER = new Map<string, string>(V2_ALLOWED_PATHS.map((p) => [p.toLowerCase(), p]))
+const BANNER_CANON_BY_LOWER = new Map<string, string>(
+  [...V2_ALLOWED_PATHS, ...BANNER_EXTRA_ALLOWED].map((p) => [p.toLowerCase(), p]),
+)
+
 /**
- * 딥링크·link_url 값이 저장 가능한지 검증.
+ * 딥링크·link_url 값이 저장 가능한지 검증하고, 저장용 정규화 값(normalized)을 돌려준다.
  * 저장을 막는 경우는 "허용 목록에 없는 앱 내부 경로(/로 시작)" 뿐이다.
+ * 정규화: 앞뒤 공백 제거 + 끝 슬래시 제거 + 허용 목록은 대소문자 무시 매칭 후 정식 표기로 저장.
+ *   → 자유 입력의 '/login/','/Login','/login ' 변형이 모두 '/login' 으로 저장돼 앱 무동작을 방지.
  * @param channel 'push'(기본, 토픽 푸시 deeplink) | 'banner'(배너 link_url — /login 추가 허용)
  */
 export function validateDeeplink(
@@ -70,31 +79,26 @@ export function validateDeeplink(
   channel: DeeplinkChannel = 'push',
 ): DeeplinkCheck {
   const v = (raw ?? '').trim()
-  if (!v) return { ok: true, kind: 'empty' }
+  if (!v) return { ok: true, kind: 'empty', normalized: '' }
 
-  // 외부 URL — 허용
-  if (/^https?:\/\//i.test(v)) return { ok: true, kind: 'external' }
+  // 외부 URL — 허용 (URL 은 대소문자 민감 → trim 만)
+  if (/^https?:\/\//i.test(v)) return { ok: true, kind: 'external', normalized: v }
 
   // 앱 내부 경로
   if (v.startsWith('/')) {
-    if (v.length > 1 && v.endsWith('/')) {
+    const p = v.replace(/\/+$/, '') || '/' // 끝 슬래시 제거 (루트는 '/')
+    const lower = p.toLowerCase()
+    const canonMap = channel === 'banner' ? BANNER_CANON_BY_LOWER : CANON_BY_LOWER
+    const canon = canonMap.get(lower)
+    if (canon) return { ok: true, kind: 'internal', normalized: canon }
+    // 동적 slug 는 대소문자 보존 (slug 가 대소문자 민감할 수 있음)
+    if (DYNAMIC_ALLOWED.some((re) => re.test(p))) return { ok: true, kind: 'internal', normalized: p }
+    if (V1_TO_V2_ALIAS[lower]) {
       return {
         ok: false,
         kind: 'blocked',
-        reason: `끝에 '/'를 붙이지 않습니다. '${v.replace(/\/+$/, '')}' 로 저장하세요.`,
-        suggestion: v.replace(/\/+$/, ''),
-      }
-    }
-    if (ALLOWED_SET.has(v)) return { ok: true, kind: 'internal' }
-    // 배너 채널 전용 추가 허용(예: /login)
-    if (channel === 'banner' && BANNER_EXTRA_ALLOWED.has(v)) return { ok: true, kind: 'internal' }
-    if (DYNAMIC_ALLOWED.some((re) => re.test(v))) return { ok: true, kind: 'internal' }
-    if (V1_TO_V2_ALIAS[v]) {
-      return {
-        ok: false,
-        kind: 'blocked',
-        reason: `'${v}' 는 v1 경로입니다. v2 경로 '${V1_TO_V2_ALIAS[v]}' 로 저장하세요.`,
-        suggestion: V1_TO_V2_ALIAS[v],
+        reason: `'${v}' 는 v1 경로입니다. v2 경로 '${V1_TO_V2_ALIAS[lower]}' 로 저장하세요.`,
+        suggestion: V1_TO_V2_ALIAS[lower],
       }
     }
     return {
@@ -105,5 +109,5 @@ export function validateDeeplink(
   }
 
   // 스킴·슬래시 없는 값 (예: m.spolive.com) — 배너 link_url 만 유효(https 부착), 허용
-  return { ok: true, kind: 'host' }
+  return { ok: true, kind: 'host', normalized: v }
 }

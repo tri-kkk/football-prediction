@@ -96,6 +96,8 @@ export async function POST(request: NextRequest) {
     }
 
     // B32: 앱 홈 배너 슬롯만 link_url 허용 목록 검증 (웹 배너 슬롯은 웹 라우팅이라 제외)
+    // 통과 시 정규화 값(공백/끝슬래시/대소문자 보정)으로 저장 → 앱 무동작 방지
+    let finalLinkUrl = link_url
     if (isAppBannerSlot(slot_type)) {
       const dl = validateDeeplink(link_url, 'banner')
       if (!dl.ok) {
@@ -104,6 +106,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+      if (dl.normalized != null) finalLinkUrl = dl.normalized
     }
 
     const { data, error } = await supabase
@@ -112,7 +115,7 @@ export async function POST(request: NextRequest) {
         name,
         slot_type,
         image_url,
-        link_url,
+        link_url: finalLinkUrl,
         alt_text: alt_text || null,
         width: width || null,
         height: height || null,
@@ -187,6 +190,7 @@ export async function PUT(request: NextRequest) {
             { status: 400 }
           )
         }
+        if (dl.normalized != null) filteredData.link_url = dl.normalized // 정규화 값으로 저장
       }
     }
 
