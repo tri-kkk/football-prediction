@@ -80,17 +80,18 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    const { 
-      name, 
-      slot_type, 
-      image_url, 
-      link_url, 
+    const {
+      name,
+      slot_type,
+      image_url,
+      link_url,
       alt_text,
       width,
       height,
       priority,
       start_date,
-      end_date 
+      end_date,
+      locale
     } = body
 
     // 필수 필드 검증
@@ -128,6 +129,8 @@ export async function POST(request: NextRequest) {
         priority: priority || 0,
         start_date: start_date || null,
         end_date: end_date || null,
+        // 🆕 로케일 저장 (누락 시 전체). 허용값만: ko / en / all
+        locale: ['ko', 'en', 'all'].includes(locale) ? locale : 'all',
         is_active: true,
         click_count: 0,
         impression_count: 0,
@@ -166,14 +169,20 @@ export async function PUT(request: NextRequest) {
     // 업데이트 가능한 필드만 추출
     const allowedFields = [
       'name', 'slot_type', 'image_url', 'link_url', 'alt_text',
-      'width', 'height', 'priority', 'start_date', 'end_date', 'is_active'
+      'width', 'height', 'priority', 'start_date', 'end_date', 'is_active',
+      'locale' // 🆕 로케일 수정 저장
     ]
-    
+
     const filteredData: Record<string, any> = {}
     for (const field of allowedFields) {
       if (field in updateData) {
         filteredData[field] = updateData[field]
       }
+    }
+
+    // 🆕 locale 허용값만 저장(ko/en/all) — 그 외 값은 'all'로 정규화
+    if ('locale' in filteredData && !['ko', 'en', 'all'].includes(filteredData.locale)) {
+      filteredData.locale = 'all'
     }
 
     // B32: link_url 수정 시, 앱 홈 배너 슬롯이면 허용 목록 검증
