@@ -5,7 +5,8 @@ import { useLanguage } from '../../contexts/LanguageContext'
 
 // 버전 히스토리
 const VERSIONS = [
-  { id: 'v2.0', date: '2026-02-06', label_ko: '2026년 2월 6일 (현재)', label_en: 'February 6, 2026 (Current)' },
+  { id: 'v2.1', date: '2026-10-01', label_ko: '2026년 10월 1일 (현재)', label_en: 'October 1, 2026 (Current)' },
+  { id: 'v2.0', date: '2026-02-06', label_ko: '2026년 2월 6일', label_en: 'February 6, 2026' },
   { id: 'v1.1', date: '2025-01-14', label_ko: '2025년 1월 14일', label_en: 'January 14, 2025' },
   { id: 'v1.0', date: '2025-11-06', label_ko: '2025년 11월 6일', label_en: 'November 6, 2025' },
 ]
@@ -13,7 +14,7 @@ const VERSIONS = [
 export default function PrivacyPage() {
   const { language } = useLanguage()
   const isKo = language === 'ko'
-  const [selectedVersion, setSelectedVersion] = useState('v2.0')
+  const [selectedVersion, setSelectedVersion] = useState('v2.1')
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white py-12">
@@ -45,7 +46,9 @@ export default function PrivacyPage() {
 
         {/* Content */}
         <div className="prose prose-invert max-w-none">
-          {selectedVersion === 'v2.0' ? (
+          {selectedVersion === 'v2.1' ? (
+            <PrivacyV2_1 isKo={isKo} />
+          ) : selectedVersion === 'v2.0' ? (
             <PrivacyV2_0 isKo={isKo} />
           ) : selectedVersion === 'v1.1' ? (
             <PrivacyV1_1 isKo={isKo} />
@@ -60,6 +63,103 @@ export default function PrivacyPage() {
             ← {isKo ? '홈으로' : 'Back to Home'}
           </a>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// v2.1 - 2026년 10월 1일 (모바일 앱 조항 추가: 수집·국외이전·행태광고 / 10-01 Crashlytics 반영)
+// 웹 방침(v2.0) 본문 + 모바일 앱(Android) 추가 조항을 함께 렌더한다.
+function PrivacyV2_1({ isKo }: { isKo: boolean }) {
+  return (
+    <div className="space-y-8">
+      <PrivacyV2_0 isKo={isKo} />
+
+      {/* ───────── 모바일 앱(Android) 추가 조항 ───────── */}
+      <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-gray-800 space-y-8">
+        <div className="border-b border-gray-700 pb-4">
+          <h2 className="text-2xl font-bold text-white">
+            {isKo ? '모바일 앱(Android) 서비스 추가 조항' : 'Mobile App (Android) — Additional Provisions'}
+          </h2>
+          <p className="text-gray-400 text-sm mt-2">
+            {isKo
+              ? '본 조항은 TrendSoccer 모바일 앱에 적용됩니다. (iOS 출시 시 동일 조항을 적용하고 iOS 항목을 보강합니다.) 시행일: 2026-10-01'
+              : 'These provisions apply to the TrendSoccer mobile app (same provisions will apply to iOS at launch). Effective: 2026-10-01'}
+          </p>
+          {!isKo && (
+            <p className="text-gray-500 text-xs mt-1">This mobile-app addendum is provided in Korean.</p>
+          )}
+        </div>
+
+        {/* 앱-1 */}
+        <section>
+          <h3 className="text-xl font-semibold mb-3 text-emerald-400">앱-1. 모바일 앱에서 수집하는 개인정보</h3>
+          <p className="text-gray-300 mb-2">회사는 TrendSoccer 모바일 앱(이하 「앱」) 이용 과정에서 다음 정보를 수집합니다.</p>
+          <p className="text-gray-300 font-semibold mt-3">1) 회원가입 및 로그인 시 (필수)</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>Google 또는 네이버 계정 로그인: 이름, 이메일 주소, 로그인 서비스의 회원 식별값</li>
+          </ul>
+          <p className="text-gray-300 font-semibold mt-3">2) 앱 이용 과정에서 자동으로 수집되는 정보</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>기기 정보: 광고식별자(ADID), 앱 인스턴스 식별값, 기기 모델, 운영체제 버전, 앱 버전</li>
+            <li>앱 이용 기록: 화면 방문 및 기능 이용 기록, 경기 리포트 열람 기록, 가입 방식(Google·네이버)</li>
+            <li>구매 기록: 구독 상품 정보, 결제 금액, 결제 통화</li>
+            <li>접속 정보: IP 주소 및 이를 통해 추정되는 대략적인 위치(국가·도시 단위)</li>
+            <li>앱 성능 정보: 앱 실행 시간, 비정상 종료율 등 진단 정보, 앱 비정상 종료 시의 오류 기록(비정상 종료 로그·오류 발생 위치·기기 모델·OS 버전·앱 설치 식별값)</li>
+            <li>알림 수신용 토큰(푸시 알림 수신에 동의한 경우)</li>
+          </ul>
+          <p className="text-gray-400 text-sm mt-3">회사는 결제 수단 정보(카드 번호 등)를 수집하지 않습니다. 인앱 결제는 Google Play 결제 시스템에서 처리됩니다.</p>
+        </section>
+
+        {/* 앱-2 */}
+        <section>
+          <h3 className="text-xl font-semibold mb-3 text-emerald-400">앱-2. 개인정보 처리위탁 및 국외 이전</h3>
+          <p className="text-gray-300 mb-3">회사는 앱 서비스 제공을 위해 아래와 같이 개인정보 처리를 위탁하거나 국외로 이전합니다. 정보는 앱 이용 시점에 암호화된 네트워크(TLS)를 통해 전송됩니다.</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-3 ml-4">
+            <li><strong>Google LLC (Firebase Analytics, Cloud Messaging, Remote Config)</strong> — 이전국가: 미국 / 이전항목: 앱 인스턴스 식별값, 기기 정보, 앱 이용 기록, 알림 토큰 / 목적: 서비스 이용 통계 분석, 푸시 알림 발송, 앱 설정 배포 / 보유·이용 기간: 회원 탈퇴 또는 위탁 계약 종료 시까지</li>
+            <li><strong>Google LLC (Firebase Crashlytics)</strong> — 이전국가: 미국 / 이전항목: 비정상 종료 로그, 오류 발생 위치, 기기 모델, OS 버전, 앱 설치 식별값 / 목적: 앱 오류 분석 및 안정성 개선 / 보유·이용 기간: 수집일로부터 90일</li>
+            <li><strong>Google LLC (AdMob)</strong> — 이전국가: 미국 / 이전항목: 광고식별자, IP 주소, 앱 이용 기록, 진단 정보 / 목적: 광고 게재, 광고 성과 측정, 부정 이용 방지 / 보유·이용 기간: 회원 탈퇴 또는 위탁 계약 종료 시까지</li>
+            <li><strong>Google LLC (Google Play 결제, Google 로그인)</strong> — 이전국가: 미국 / 이전항목: 구매 기록, Google 계정 식별값 / 목적: 인앱 결제 처리, 로그인 인증 / 보유·이용 기간: 관련 법령에 따른 보존 기간까지</li>
+            <li><strong>Meta Platforms, Inc.</strong> — 이전국가: 미국 / 이전항목: 광고식별자, 기기 정보, 앱 이용 기록(가입 방식, 리포트 열람), 구매 기록(금액, 통화) / 목적: 광고 성과 측정 및 마케팅 / 보유·이용 기간: 회원 탈퇴 또는 위탁 계약 종료 시까지</li>
+            <li><strong>Supabase, Inc.</strong> — 이전국가: 호주(시드니 리전 서버) / 이전항목: 이름, 이메일 주소, 로그인 서비스 식별값, 구독·구매 정보 / 목적: 회원 정보 저장 및 인증 처리 / 보유·이용 기간: 회원 탈퇴 후 30일까지(법령상 보존 항목은 해당 기간까지)</li>
+          </ul>
+
+          <p className="text-gray-300 font-semibold mt-4">이전받는 자의 개인정보 보호 문의처</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>Google LLC: <a href="https://policies.google.com/privacy" className="text-emerald-400 hover:text-blue-300">https://policies.google.com/privacy</a></li>
+            <li>Meta Platforms, Inc.: <a href="https://www.facebook.com/privacy/policy" className="text-emerald-400 hover:text-blue-300">https://www.facebook.com/privacy/policy</a></li>
+            <li>Supabase, Inc.: <a href="https://supabase.com/privacy" className="text-emerald-400 hover:text-blue-300">https://supabase.com/privacy</a></li>
+          </ul>
+
+          <p className="text-gray-300 font-semibold mt-4">국외 이전 거부 방법 및 효과</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>이용자는 회원 탈퇴 또는 고객센터(trikilab2025@gmail.com)를 통해 국외 이전을 거부할 수 있습니다.</li>
+            <li>Google 로그인, 회원 정보 저장(Supabase), 인앱 결제는 서비스 제공에 필수이므로, 거부할 경우 앱 이용이 제한됩니다.</li>
+            <li>광고 목적의 이전(AdMob, Meta)은 「앱-3」의 방법으로 광고식별자 사용을 중지해 거부할 수 있으며, 이 경우에도 앱의 기본 기능은 이용할 수 있습니다.</li>
+          </ul>
+          <p className="text-gray-400 text-sm mt-3">국내 처리위탁: 네이버㈜ — 네이버 계정 로그인 인증 (국외 이전 없음)</p>
+        </section>
+
+        {/* 앱-3 */}
+        <section>
+          <h3 className="text-xl font-semibold mb-3 text-emerald-400">앱-3. 맞춤형 광고 및 행태정보</h3>
+          <p className="text-gray-300 mb-3">회사는 앱에서 광고를 게재하고 광고 성과를 측정하기 위해 행태정보를 수집·이용합니다.</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li><strong>수집하는 행태정보:</strong> 앱 이용 기록(화면·기능 이용, 리포트 열람), 구매 기록, 광고식별자</li>
+            <li><strong>수집 방법:</strong> 앱 실행 및 이용 시 자동 수집</li>
+            <li><strong>이용 목적:</strong> 이용자 관심에 맞는 광고 게재, 광고 성과 측정</li>
+            <li><strong>행태정보를 수집·처리하는 사업자:</strong> Google LLC (AdMob), Meta Platforms, Inc.</li>
+            <li><strong>보유·이용 기간:</strong> 수집일로부터 6개월 또는 회원 탈퇴 시까지</li>
+          </ul>
+          <p className="text-gray-300 font-semibold mt-4">이용자의 통제 방법</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>Android: 기기의 「설정 → Google → 모든 서비스 → 광고」에서 광고 ID를 삭제하거나 재설정할 수 있습니다. 메뉴 명칭은 기기 제조사와 OS 버전에 따라 다를 수 있습니다.</li>
+            <li>광고 ID를 삭제하면 맞춤형 광고가 중지되며, 일반 광고는 계속 표시될 수 있습니다.</li>
+            <li>유료 구독 이용자에게는 앱 내 광고가 표시되지 않습니다.</li>
+          </ul>
+          <p className="text-gray-300 font-semibold mt-4">행태정보 관련 문의 — 개인정보 보호책임자</p>
+          <p className="text-gray-300 ml-1">성명: 김기탁 (대표자) / 이메일: trikilab2025@gmail.com</p>
+        </section>
       </div>
     </div>
   )
