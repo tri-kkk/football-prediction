@@ -34,6 +34,12 @@ export async function GET(request: NextRequest) {
     // 🆕 언어 필터 (ko 요청 시 → locale in ('ko', 'all'), en 요청 시 → locale in ('en', 'all'))
     if (lang === 'ko' || lang === 'en') {
       query = query.in('locale', [lang, 'all'])
+    } else if (activeOnly) {
+      // 🆕 로케일 미지정 디스플레이 요청(앱/웹 노출)의 안전 기본값:
+      //    로케일 중립 배너('all' 또는 locale 미지정)만 반환한다.
+      //    → lang 을 못 받는 요청에 ko/en 전용 배너가 새지 않음(영어 기기에 한국어 전용 배너 노출 방지).
+      //    어드민 목록 조회는 active=true 를 쓰지 않으므로 이 분기에 걸리지 않고 전체를 반환한다.
+      query = query.or('locale.eq.all,locale.is.null')
     }
 
     // 활성 광고만
