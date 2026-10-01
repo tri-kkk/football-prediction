@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { predict as ksmPredict, buildTeamStats as ksmBuildTeamStats } from '@/lib/ksmModel'  // 🔗 정본 승률 모델 + 통계집계 (코치와 공유)
+import { resolveCurrentSeason } from '@/lib/currentSeason'  // 🔗 리그 현재 시즌(API-Football 기준) — 승격 보정 판정용 (B안)
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -322,7 +323,8 @@ async function getAggregatedStats(
     aggregated.away_concede_first_games += season.away_concede_first_games || 0
     aggregated.away_concede_first_wins += season.away_concede_first_wins || 0
     
-    // 현재 시즌 승격팀 체크
+    // 승격 보정: 팀의 '리그 현재 시즌'(currentSeason) 행이 존재하고 그 행이 승격팀일 때만 적용.
+    // → 강등 후 추적이 끊긴 팀은 현재 시즌 행이 없어(또는 불일치) 과거 승격 보정을 더 받지 않는다.
     if (season.season === currentSeason && season.is_promoted) {
       aggregated.is_promoted = true
       aggregated.promotion_factor = season.promotion_factor || 0.85
@@ -337,14 +339,21 @@ async function getAggregatedStats(
 // ============================================
 
 async function predict(input: PredictionInput): Promise<PredictionResult> {
-  const { homeTeam, awayTeam, homeTeamId, awayTeamId, leagueCode, season } = input
-  
+  const { homeTeam, awayTeam, homeTeamId, awayTeamId, leagueCode, season, leagueId } = input
+
   // ============================================
   // 1단계: 팀 통계 조회 (전체 시즌 합산)
   // ============================================
-  
-  const homeStats = await getAggregatedStats(homeTeamId, homeTeam, season)
-  const awayStats = await getAggregatedStats(awayTeamId, awayTeam, season)
+
+  // B안(2026-10-01): 승격 보정 판정 기준을 '앱이 보낸 season' 대신 '리그의 현재 시즌'으로 교체.
+  //  - 현재 시즌은 API-Football(current:true)에서 해석 → 리그별 라벨 차이(J1=2027 등) 자동 대응.
+  //  - 앱의 season 값은 더 이상 쓰이지 않는다(현행대로 보내도 무해).
+  //  - 효과: 강등 등으로 추적이 끊긴 팀(최신 행이 과거 승격 시즌)은 현재 시즌과 불일치 → 보정 미적용.
+  const leagueCurrentSeason = String(
+    await resolveCurrentSeason(leagueId, Number(season) || new Date().getFullYear())
+  )
+  const homeStats = await getAggregatedStats(homeTeamId, homeTeam, leagueCurrentSeason)
+  const awayStats = await getAggregatedStats(awayTeamId, awayTeam, leagueCurrentSeason)
   
   // 🌍 둘 다 fallback이면 분석 신뢰도 없음 (월드컵/국가전 등 fg_team_stats에 데이터 없는 케이스)
   const noStatsAvailable = !homeStats && !awayStats
