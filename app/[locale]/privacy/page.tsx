@@ -75,20 +75,12 @@ function PrivacyV2_1({ isKo }: { isKo: boolean }) {
     <div className="space-y-8">
       <PrivacyV2_0 isKo={isKo} />
 
-      {/* ───────── 모바일 앱(Android) 추가 조항 ───────── */}
+      {/* ───────── 모바일 앱(Android) 추가 조항 — 한국어 ───────── */}
+      {isKo && (
       <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-gray-800 space-y-8">
         <div className="border-b border-gray-700 pb-4">
-          <h2 className="text-2xl font-bold text-white">
-            {isKo ? '모바일 앱(Android) 서비스 추가 조항' : 'Mobile App (Android) — Additional Provisions'}
-          </h2>
-          <p className="text-gray-400 text-sm mt-2">
-            {isKo
-              ? '본 조항은 TrendSoccer 모바일 앱에 적용됩니다. (iOS 출시 시 동일 조항을 적용하고 iOS 항목을 보강합니다.) 시행일: 2026-10-01'
-              : 'These provisions apply to the TrendSoccer mobile app (same provisions will apply to iOS at launch). Effective: 2026-10-01'}
-          </p>
-          {!isKo && (
-            <p className="text-gray-500 text-xs mt-1">This mobile-app addendum is provided in Korean.</p>
-          )}
+          <h2 className="text-2xl font-bold text-white">모바일 앱(Android) 서비스 추가 조항</h2>
+          <p className="text-gray-400 text-sm mt-2">본 조항은 TrendSoccer 모바일 앱에 적용됩니다. (iOS 출시 시 동일 조항을 적용하고 iOS 항목을 보강합니다.) 시행일: 2026-10-01</p>
         </div>
 
         {/* 앱-1 */}
@@ -161,6 +153,98 @@ function PrivacyV2_1({ isKo }: { isKo: boolean }) {
           <p className="text-gray-300 ml-1">성명: 김기탁 (대표자) / 이메일: trikilab2025@gmail.com</p>
         </section>
       </div>
+      )}
+
+      {/* ───────── Mobile App (Android) Additional Provisions — English ───────── */}
+      {!isKo && (
+      <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-gray-800 space-y-8">
+        <div className="border-b border-gray-700 pb-4">
+          <h2 className="text-2xl font-bold text-white">Mobile App (Android) — Additional Provisions</h2>
+          <p className="text-gray-400 text-sm mt-2">These provisions apply to the TrendSoccer mobile app (the same provisions will apply to iOS at launch). Effective: 2026-10-01</p>
+        </div>
+
+        {/* App-1 */}
+        <section>
+          <h3 className="text-xl font-semibold mb-3 text-emerald-400">App-1. Personal Information Collected Through the Mobile App</h3>
+          <p className="text-gray-300 mb-2">When you use the TrendSoccer mobile app (the "App"), we collect the following information.</p>
+          <p className="text-gray-300 font-semibold mt-3">1) When you sign up or log in (required)</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>Google or Naver account login: name, email address, and the account identifier issued by the login service</li>
+          </ul>
+          <p className="text-gray-300 font-semibold mt-3">2) Information collected automatically while you use the App</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>Device information: advertising ID (ADID), app instance ID, device model, operating system version, app version</li>
+            <li>App usage records: screens visited and features used, match reports viewed, sign-up method (Google or Naver)</li>
+            <li>Purchase records: subscription product, payment amount, payment currency</li>
+            <li>Connection information: IP address and the approximate location (country/city level) inferred from it</li>
+            <li>App performance information: app launch time, crash rate and other diagnostics, and error records when the App crashes (crash logs, error location, device model, OS version, app installation ID)</li>
+            <li>Push notification token (only if you allow push notifications)</li>
+          </ul>
+          <p className="text-gray-400 text-sm mt-3">We do not collect payment card numbers or other payment instrument details. In-app purchases are processed by the Google Play billing system.</p>
+        </section>
+
+        {/* App-2 */}
+        <section>
+          <h3 className="text-xl font-semibold mb-3 text-emerald-400">App-2. Outsourcing of Processing and Cross-Border Transfer of Personal Information</h3>
+          <p className="text-gray-300 mb-3">To provide the App, we entrust the processing of personal information to, or transfer it to, the parties listed below. Information is transmitted over an encrypted network connection (TLS) at the time you use the App.</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-3 ml-4">
+            <li><strong>Google LLC (Firebase Analytics, Cloud Messaging, Remote Config)</strong> — Country: United States / Items: app instance ID, device information, app usage records, push notification token / Purpose: usage analytics, sending push notifications, distributing app configuration / Retention: until account deletion or termination of the service agreement</li>
+            <li><strong>Google LLC (Firebase Crashlytics)</strong> — Country: United States / Items: crash logs, error location, device model, OS version, app installation ID / Purpose: analyzing app errors and improving stability / Retention: 90 days from collection</li>
+            <li><strong>Google LLC (AdMob)</strong> — Country: United States / Items: advertising ID, IP address, app usage records, diagnostics / Purpose: serving ads, measuring ad performance, preventing fraud / Retention: until account deletion or termination of the service agreement</li>
+            <li><strong>Google LLC (Google Play Billing, Google Sign-In)</strong> — Country: United States / Items: purchase records, Google account identifier / Purpose: processing in-app payments, login authentication / Retention: for the period required by applicable law</li>
+            <li><strong>Meta Platforms, Inc.</strong> — Country: United States / Items: advertising ID, device information, app usage records (sign-up method, report views), purchase records (amount, currency) / Purpose: measuring ad performance and marketing / Retention: until account deletion or termination of the service agreement</li>
+            <li><strong>Supabase, Inc.</strong> — Country: Australia (Sydney region servers) / Items: name, email address, login service identifier, subscription and purchase information / Purpose: storing member information and processing authentication / Retention: up to 30 days after account deletion (items that must be retained by law are kept for the legally required period)</li>
+          </ul>
+
+          <p className="text-gray-300 font-semibold mt-4">Privacy contacts of the recipients</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>Google LLC: <a href="https://policies.google.com/privacy" className="text-emerald-400 hover:text-blue-300">https://policies.google.com/privacy</a></li>
+            <li>Meta Platforms, Inc.: <a href="https://www.facebook.com/privacy/policy" className="text-emerald-400 hover:text-blue-300">https://www.facebook.com/privacy/policy</a></li>
+            <li>Supabase, Inc.: <a href="https://supabase.com/privacy" className="text-emerald-400 hover:text-blue-300">https://supabase.com/privacy</a></li>
+          </ul>
+
+          <p className="text-gray-300 font-semibold mt-4">How to refuse cross-border transfer, and what happens if you do</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>You may refuse cross-border transfer by deleting your account or by contacting us at trikilab2025@gmail.com.</li>
+            <li>Google Sign-In, member data storage (Supabase), and in-app payments are essential to the service. If you refuse these transfers, your use of the App will be limited.</li>
+            <li>You may refuse transfers for advertising purposes (AdMob, Meta) by stopping the use of your advertising ID as described in App-3. You can still use the App's core features in that case.</li>
+          </ul>
+          <p className="text-gray-400 text-sm mt-3">Domestic (Korea) outsourcing: NAVER Corp. — Naver account login authentication (no cross-border transfer)</p>
+        </section>
+
+        {/* App-3 */}
+        <section>
+          <h3 className="text-xl font-semibold mb-3 text-emerald-400">App-3. Personalized Advertising and Behavioral Information</h3>
+          <p className="text-gray-300 mb-3">We collect and use behavioral information to show ads in the App and to measure their performance.</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li><strong>Behavioral information collected:</strong> app usage records (screens and features used, report views), purchase records, advertising ID</li>
+            <li><strong>Collection method:</strong> collected automatically when you open and use the App</li>
+            <li><strong>Purpose:</strong> showing ads relevant to your interests, measuring ad performance</li>
+            <li><strong>Businesses that collect and process behavioral information:</strong> Google LLC (AdMob), Meta Platforms, Inc.</li>
+            <li><strong>Retention period:</strong> 6 months from collection, or until account deletion</li>
+          </ul>
+          <p className="text-gray-300 font-semibold mt-4">How you can control it</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+            <li>Android: go to <strong>Settings → Google → All services → Ads</strong> on your device to delete or reset your advertising ID. Menu names may differ by device manufacturer and OS version.</li>
+            <li>If you delete your advertising ID, personalized ads stop. Non-personalized ads may still be shown.</li>
+            <li>Paid subscribers do not see ads in the App.</li>
+          </ul>
+          <p className="text-gray-300 font-semibold mt-4">Contact for behavioral information — Chief Privacy Officer</p>
+          <p className="text-gray-300 ml-1">Name: Kim Gi-tak (Representative) / Email: trikilab2025@gmail.com</p>
+        </section>
+
+        {/* App-4 */}
+        <section>
+          <h3 className="text-xl font-semibold mb-3 text-emerald-400">App-4. Users Outside the Republic of Korea</h3>
+          <p className="text-gray-300 mb-3">TrendSoccer is operated by Tri-Ki Co., Ltd. in the Republic of Korea. If you use the App outside Korea, your information is processed in Korea and transferred to the countries listed in App-2 (United States and Australia).</p>
+          <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
+            <li><strong>Your rights.</strong> Depending on where you live, you may have the right to access, correct, delete, or obtain a copy of your personal information, to object to or restrict certain processing, and to withdraw consent. To exercise these rights, contact us at trikilab2025@gmail.com. We will respond within the period required by applicable law.</li>
+            <li><strong>Advertising and "sharing".</strong> We do not sell your personal information for money. We do share the advertising ID, app usage records and purchase records with Google (AdMob) and Meta for advertising measurement as described in App-2 and App-3. Under some laws (for example, certain U.S. state privacy laws), this may be considered "sharing" for targeted advertising. You can opt out at any time by deleting or resetting your advertising ID as described in App-3, or by contacting us.</li>
+            <li><strong>Children.</strong> The App is not directed to children, and we do not knowingly collect personal information from children under the age required by applicable law.</li>
+          </ul>
+        </section>
+      </div>
+      )}
     </div>
   )
 }
