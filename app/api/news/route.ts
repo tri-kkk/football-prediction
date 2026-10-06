@@ -80,7 +80,8 @@ const NEWS_CATEGORIES = {
       name: 'Korean Football',
       nameKo: '국내 축구',
       nameEn: 'K-League',
-      search: 'K리그',
+      search: '축구 | K리그 | 손흥민 | 이강인 | 김민재 | 대표팀',
+      fallbackEn: 'Son Heung-min | Lee Kang-in | Kim Min-jae | South Korea football | K League',
       logo: 'https://media.api-sports.io/football/leagues/292.png',
     },
     { 
@@ -89,6 +90,7 @@ const NEWS_CATEGORIES = {
       nameKo: '프리미어리그',
       nameEn: 'Premier League',
       search: '프리미어리그',
+      fallbackEn: 'Premier League',
       logo: 'https://media.api-sports.io/football/leagues/39.png',
     },
     { 
@@ -97,6 +99,7 @@ const NEWS_CATEGORIES = {
       nameKo: '라리가',
       nameEn: 'La Liga',
       search: '라리가',
+      fallbackEn: 'La Liga | Real Madrid | Barcelona | Atletico Madrid',
       logo: 'https://media.api-sports.io/football/leagues/140.png',
     },
     { 
@@ -105,6 +108,7 @@ const NEWS_CATEGORIES = {
       nameKo: '챔피언스리그',
       nameEn: 'Champions League',
       search: '챔피언스리그',
+      fallbackEn: 'Champions League UEFA football',
       logo: 'https://media.api-sports.io/football/leagues/2.png',
     },
   ]
@@ -233,6 +237,12 @@ function deduplicateArticles(
 
 // 빅리그(번역 포함) 결과 인메모리 캐시 — 번역(Claude) 호출 비용 절감 + 20분마다 최신 갱신
 let bigCache: { t: number; data: any[] } | null = null
+// 뉴스 페이지(ko) 결과 캐시 — 영어 보충 기사 번역 비용 절감
+let koPageCache: { t: number; data: any[] } | null = null
+const KO_PAGE_TTL = 20 * 60_000
+// 한국어 기사 신선도 기준: 이보다 오래된 기사만 있으면 영어 최신 기사로 보충
+const KO_FRESH_MS = 3 * 24 * 60 * 60_000
+const KO_MIN_FRESH = 3
 const BIG_TTL = 20 * 60_000
 
 export async function GET(request: NextRequest) {
@@ -384,6 +394,17 @@ export async function GET(request: NextRequest) {
     }
     
     // 🔹 뉴스 페이지용: UI 언어에 맞는 카테고리만 반환
+    if (uiLang === 'ko' && koPageCache && Date.now() - koPageCache.t < KO_PAGE_TTL) {
+      return NextResponse.json({
+        success: true,
+        categories: koPageCache.data,
+        uiLang,
+        totalArticles: koPageCache.data.reduce((sum: number, cat: any) => sum + cat.articles.length, 0),
+        updatedAt: new Date(koPageCache.t).toISOString(),
+        cached: true,
+      })
+    }
+
     const usedIds = new Set<string>()
     const usedTitles = new Set<string>()
     const results = []
@@ -396,7 +417,31 @@ export async function GET(request: NextRequest) {
       const articles = await fetchNews(category.search, fetchLang, 10)
       
       // 토토/베팅 관련 기사 필터링
-      const filteredArticles = filterArticles(articles)
+      let filteredArticles = filterArticles(articles)
+
+      // 🔸 ko 신선도 보정: TheNewsAPI 한국어 인덱스는 수집 매체가 적어(사실상 스포츠동아)
+      //    축구 기사가 몇 주씩 끊김 → 최근 기사가 부족하면 영어 최신 기사로 보충 + 제목 한글 번역
+      const fallbackEn = (category as any).fallbackEn as string | undefined
+      if (uiLang === 'ko' && fallbackEn) {
+        const now = Date.now()
+        const isFresh = (a: ProcessedArticle) => now - new Date(a.publishedAt).getTime() < KO_FRESH_MS
+        const freshKo = filteredArticles.filter(isFresh)
+        if (freshKo.length < KO_MIN_FRESH) {
+          const staleKo = filteredArticles.filter((a) => !isFresh(a))
+          const en = filterArticles(await fetchNews(fallbackEn, 'en', 10))
+            .filter((a) => a.imageUrl && isFresh(a))
+            .filter((a) => !usedIds.has(a.id))
+            .slice(0, 6 - freshKo.length)
+          let enKo = en
+          if (en.length) {
+            const ko = await translateTitlesToKo(en.map((a) => a.title))
+            enKo = en.map((a, i) => ({ ...a, title: ko[i] || a.title, description: '' }))
+          }
+          filteredArticles = [...freshKo, ...enKo]
+            .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+          filteredArticles = [...filteredArticles, ...staleKo] // 그래도 모자라면 오래된 한국어 기사로 채움
+        }
+      }
       
       const unique = deduplicateArticles(filteredArticles, usedIds, usedTitles, 6)
       
@@ -416,6 +461,8 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    if (uiLang === 'ko' && results.length) koPageCache = { t: Date.now(), data: results }
+
     return NextResponse.json({
       success: true,
       categories: results,
