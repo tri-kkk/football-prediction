@@ -544,23 +544,45 @@ function getCurrentSeason(leagueCode: string): number {
 
 export async function GET(request: NextRequest) {
   try {
+    // 백필 파라미터 (기본: 최근 3일·전체 리그 — 평소 크론과 동일).
+    //   days=N(최대 90) / from=YYYY-MM-DD&to=YYYY-MM-DD 로 수집 창 확대,
+    //   league=KL1,KL2 로 특정 리그만. 창 확대·명시범위·리그필터는 CRON_SECRET 필요.
+    const { searchParams } = new URL(request.url)
+    const daysParam = parseInt(searchParams.get('days') || '3', 10)
+    const days = Math.min(Math.max(isNaN(daysParam) ? 3 : daysParam, 1), 90)
+    const fromParam = searchParams.get('from')
+    const toParam = searchParams.get('to')
+    const leagueFilter = (searchParams.get('league') || '').split(',').map(s => s.trim()).filter(Boolean)
+
+    const needsAuth = days > 7 || !!fromParam || !!toParam || leagueFilter.length > 0
+    if (needsAuth) {
+      const secret = request.headers.get('x-internal-secret') || searchParams.get('secret') || ''
+      if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+        return NextResponse.json({ error: 'backfill params require valid secret' }, { status: 401 })
+      }
+    }
+
+    const targetLeagues = leagueFilter.length > 0
+      ? LEAGUES.filter(l => leagueFilter.includes(l.code))
+      : LEAGUES
+
     console.log('🔄 경기 결과 수집 시작...')
-    console.log(`📊 총 ${LEAGUES.length}개 리그 처리`)
+    console.log(`📊 총 ${targetLeagues.length}개 리그 처리`)
 
-    // 지난 3일 범위
+    // 수집 범위: from/to 명시 우선, 없으면 최근 days 일
     const today = new Date()
-    const threeDaysAgo = new Date()
-    threeDaysAgo.setDate(today.getDate() - 3)
+    const back = new Date()
+    back.setDate(today.getDate() - days)
 
-    const fromDate = threeDaysAgo.toISOString().split('T')[0]
-    const toDate = today.toISOString().split('T')[0]
+    const fromDate = fromParam || back.toISOString().split('T')[0]
+    const toDate = toParam || today.toISOString().split('T')[0]
 
     console.log(`📅 수집 기간: ${fromDate} ~ ${toDate}`)
 
     let allFinishedMatches: any[] = []
 
     // 각 리그별 종료된 경기 가져오기
-    for (const league of LEAGUES) {
+    for (const league of targetLeagues) {
       const season = await resolveCurrentSeason(league.apiId, getCurrentSeason(league.code))
       console.log(`\n🏆 ${league.name} (${league.code}) 처리 중... (시즌: ${season})`)
       
@@ -717,7 +739,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      leaguesProcessed: LEAGUES.length,
+      leaguesProcessed: targetLeagues.length,
       dateRange: `${fromDate} ~ ${toDate}`,
       finishedMatches: allFinishedMatches.length,
       uniqueMatches: uniqueMatches.length,
