@@ -741,7 +741,33 @@ function translateH2hInsight(text: string, homeKo: string, awayKo: string, homeE
   return result
 }
 
-function getTeamNameKo(name: string): string {
+// 🌐 team_id → 한글명 (team_translations 기준, 요청마다 1회 로드).
+//    이름 매핑보다 우선 — "Suwon City FC"가 접두 매칭으로 "수원 삼성"이 되던 버그 방지.
+const teamKoById = new Map<number, string>()
+async function loadTeamKoById(teamIds: Array<number | string | null | undefined>): Promise<void> {
+  const ids = Array.from(new Set(teamIds.filter((x) => x != null).map(Number)))
+  if (ids.length === 0) return
+  try {
+    const { data } = await supabase
+      .from('team_translations')
+      .select('team_id,korean_name')
+      .in('team_id', ids)
+    for (const t of data || []) {
+      if ((t as any)?.team_id != null && (t as any)?.korean_name) {
+        teamKoById.set(Number((t as any).team_id), (t as any).korean_name)
+      }
+    }
+  } catch (e) {
+    console.error('loadTeamKoById error:', e)
+  }
+}
+
+function getTeamNameKo(name: string, teamId?: number | string | null): string {
+  // 0. team_id 우선 (team_translations) — 이름 접두 매칭 오류 방지
+  if (teamId != null) {
+    const byId = teamKoById.get(Number(teamId))
+    if (byId) return byId
+  }
   // 1. 직접 매핑
   if (TEAM_NAME_KO[name]) return TEAM_NAME_KO[name]
   // 2. 대소문자 무시
@@ -749,10 +775,13 @@ function getTeamNameKo(name: string): string {
   for (const [key, val] of Object.entries(TEAM_NAME_KO)) {
     if (key.toLowerCase() === lowerName) return val
   }
-  // 3. 부분 매핑 (API가 짧은 팀명 반환 시: "Heracles" → "Heracles Almelo")
+  // 3. 부분 매핑 — API가 "짧은" 팀명을 반환할 때만: "Heracles" → "Heracles Almelo".
+  //    ⚠️ 긴 API 이름(예: "Suwon City FC")이 짧은 키("Suwon")의 접두로 걸려 엉뚱한 팀
+  //    (수원 삼성)으로 매핑되던 사고를 막기 위해, 'API 이름이 키의 접두'인 방향만 허용한다.
+  //    (team_id 매핑이 최우선이라 보통 여기까지 오지 않음)
   for (const [key, val] of Object.entries(TEAM_NAME_KO)) {
     const lowerKey = key.toLowerCase()
-    if (lowerKey.startsWith(lowerName) || lowerName.startsWith(lowerKey)) {
+    if (lowerKey === lowerName || lowerKey.startsWith(lowerName + ' ')) {
       return val
     }
   }
@@ -1269,8 +1298,8 @@ function generateContentKo(
   h2h: any, leagueInfo: any,
   ai: AISections | null = null,
 ): string {
-  const homeKo = getTeamNameKo(match.home_team)
-  const awayKo = getTeamNameKo(match.away_team)
+  const homeKo = getTeamNameKo(match.home_team, match.home_team_id)
+  const awayKo = getTeamNameKo(match.away_team, match.away_team_id)
   // KST = UTC + 9
   const matchDateKST = new Date(new Date(match.commence_time).getTime() + 9 * 60 * 60 * 1000)
   const dateStr = `${matchDateKST.getUTCMonth() + 1}월 ${matchDateKST.getUTCDate()}일`
@@ -1390,8 +1419,15 @@ function generateContentKo(
       h2h.recentMatches.slice(0, 3).forEach((m: any) => {
         const icon = m.result === 'W' ? '승' : m.result === 'L' ? '패' : '무'
         const date = m.date ? ` (${m.date.slice(0, 10)})` : ''
-        const hName = getTeamNameKo(m.homeTeam || match.home_team)
-        const aName = getTeamNameKo(m.awayTeam || match.away_team)
+        // h2h 과거 경기도 결국 이 매치의 두 팀 — 영문명으로 team_id를 되찾아 한글 매핑
+        const idFor = (nm: string): number | string | null | undefined =>
+          nm === match.home_team ? match.home_team_id
+          : nm === match.away_team ? match.away_team_id
+          : (m.homeTeamId ?? m.awayTeamId ?? null)
+        const hRaw = m.homeTeam || match.home_team
+        const aRaw = m.awayTeam || match.away_team
+        const hName = getTeamNameKo(hRaw, idFor(hRaw))
+        const aName = getTeamNameKo(aRaw, idFor(aRaw))
         c += `${icon} ${hName} **${m.homeScore} - ${m.awayScore}** ${aName}${date}\n\n`
       })
     }
@@ -1657,8 +1693,8 @@ function generateContentEn(
 // 태그 생성
 // ============================================
 function generateTags(match: any, leagueInfo: any): string[] {
-  const homeKo = getTeamNameKo(match.home_team)
-  const awayKo = getTeamNameKo(match.away_team)
+  const homeKo = getTeamNameKo(match.home_team, match.home_team_id)
+  const awayKo = getTeamNameKo(match.away_team, match.away_team_id)
   // CL/EL은 유럽축구 대신 대회 특화 태그
   const isCup = ['CL', 'EL'].includes(match.league_code)
   const tags: string[] = [
@@ -1722,7 +1758,11 @@ export async function GET(request: NextRequest) {
       (leagueFilter.length === 0 || leagueFilter.includes(m.league_code))
     )
     console.log(`📝 ${supportedMatches.length}/${upcomingMatches.length} matches in supported leagues`)
-    
+
+    // 🌐 팀 한글명 로드 (team_id 기준, team_translations) — 이름 접두 매칭 오류 방지
+    teamKoById.clear()
+    await loadTeamKoById(supportedMatches.flatMap(m => [m.home_team_id, m.away_team_id]))
+
     // 중복 체크
     const existingSlugs = new Set<string>()
     const { data: existingPosts } = await supabase
@@ -1783,8 +1823,8 @@ export async function GET(request: NextRequest) {
         }
         
         // 4. AI 섹션 생성 (실패 시 null → 기존 템플릿)
-        const homeKo = getTeamNameKo(match.home_team)
-        const awayKo = getTeamNameKo(match.away_team)
+        const homeKo = getTeamNameKo(match.home_team, match.home_team_id)
+        const awayKo = getTeamNameKo(match.away_team, match.away_team_id)
         const seasonCtx = detectSeasonContext(match.league_code, homeStats, awayStats)
         let ai: AISections | null = null
         try {
@@ -1943,8 +1983,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Abnormal season stats detected (likely data error)' }, { status: 422 })
     }
 
-    const homeKo = getTeamNameKo(match.home_team)
-    const awayKo = getTeamNameKo(match.away_team)
+    const homeKo = getTeamNameKo(match.home_team, match.home_team_id)
+    const awayKo = getTeamNameKo(match.away_team, match.away_team_id)
     const slug = generateSlug(match.home_team, match.away_team, match.league_code, match.commence_time)
 
     let ai: AISections | null = null
