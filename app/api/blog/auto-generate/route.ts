@@ -1686,7 +1686,7 @@ export async function GET(request: NextRequest) {
   try {
     const now = new Date()
     // 🔁 재생성 모드: force=true (CRON_SECRET 필요) → 기존 글도 덮어쓰기(upsert, 발행일 유지).
-    //    hours=N 으로 대상 창 확대(기본 24h, 최대 14일), league=DED,PL 로 리그 필터.
+    //    hours=N 으로 대상 창 확대(기본 48h, 최대 14일), league=DED,PL 로 리그 필터.
     const { searchParams } = new URL(request.url)
     const secret = request.headers.get('x-internal-secret') || searchParams.get('secret') || ''
     const isAuthed = !!process.env.CRON_SECRET && secret === process.env.CRON_SECRET
@@ -1694,10 +1694,11 @@ export async function GET(request: NextRequest) {
     if (force && !isAuthed) {
       return NextResponse.json({ error: 'force regenerate requires valid secret' }, { status: 401 })
     }
-    const windowHours = Math.min(Math.max(parseInt(searchParams.get('hours') || '24', 10) || 24, 1), 336)
+    const windowHours = Math.min(Math.max(parseInt(searchParams.get('hours') || '48', 10) || 48, 1), 336)
     const leagueFilter = (searchParams.get('league') || '').split(',').map(s => s.trim()).filter(Boolean)
 
-    // D-1 발행: 기본은 경기 시작 24시간 이내 경기 대상 (재생성 시 windowHours로 확대)
+    // D-2 발행: 기본은 경기 시작 48시간 이내 경기 대상 (재생성 시 windowHours로 확대)
+    //   이미 생성된 글은 slug 중복 체크로 스킵되므로 창을 넓혀도 매 틱 부하는 늘지 않는다.
     const windowEnd = new Date(now.getTime() + windowHours * 60 * 60 * 1000)
 
     const { data: upcomingMatches, error: matchError } = await supabase
