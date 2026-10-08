@@ -908,6 +908,8 @@ async function generateAISections(
     const sk = (s: any) => { const k = s?.recentForm?.currentStreak; if (!k || k.count < 2) return ''; return k.type === 'W' ? `${k.count}연승` : k.type === 'L' ? `${k.count}연패` : '' }
     const avg = (a: any[], f: string) => a?.length > 0 ? (a.reduce((s:number,m:any) => s+(m[f]||0), 0) / a.length).toFixed(1) : '?'
     const hR = hS?.homeStats, aR = aS?.awayStats
+    // 경기당 득실은 표(fg_team_stats 홈/원정)와 동일 기준으로 — 최근10경기 평균을 쓰면 표와 숫자가 어긋나 보임
+    const pg = (r: any, f: string) => (r && r.played > 0) ? (r[f] / r.played).toFixed(1) : '?'
     const hM = hS?.recentMatches?.slice(0,10) || [], aM = aS?.recentMatches?.slice(0,10) || []
     const h2hSum = h2h?.overall ? `통산 ${h2h.overall.totalMatches}경기: ${hKo} ${h2h.overall.homeWins}승 / 무 ${h2h.overall.draws} / ${aKo} ${h2h.overall.awayWins}승` : '상대전적 없음'
 
@@ -936,8 +938,8 @@ async function generateAISections(
 - ${aKo} 최근 5경기: ${fm(aS)} ${sk(aS)?'('+sk(aS)+')':''}
 - ${hKo} 홈: ${hR ? `${hR.wins}승 ${hR.draws}무 ${hR.losses}패 (${hR.winRate}%)` : '데이터 없음'}
 - ${aKo} 원정: ${aR ? `${aR.wins}승 ${aR.draws}무 ${aR.losses}패 (${aR.winRate}%)` : '데이터 없음'}
-- 경기당 득점: ${hKo} ${avg(hM,'goalsFor')}골 vs ${aKo} ${avg(aM,'goalsFor')}골
-- 경기당 실점: ${hKo} ${avg(hM,'goalsAgainst')}골 vs ${aKo} ${avg(aM,'goalsAgainst')}골
+- ${hKo} 홈 경기당 득점/실점: ${pg(hR,'goalsFor')}골 / ${pg(hR,'goalsAgainst')}골 (위 홈 성적과 동일 기준)
+- ${aKo} 원정 경기당 득점/실점: ${pg(aR,'goalsFor')}골 / ${pg(aR,'goalsAgainst')}골 (위 원정 성적과 동일 기준)
 
 ## 강점/약점
 ${hKo} 강점: ${(hS?.strengths||[]).slice(0,3).join(', ')||'없음'}
@@ -956,7 +958,7 @@ ${h2hSum}${seasonNote}${newsContext}
 
 ### 문체: 스포츠 데이터 애널리스트
 - **객관적 서술**: "~를 기록했다", "~로 나타난다", "~수치를 보이고 있다"
-- **데이터 인용**: 반드시 구체적 수치를 근거로 제시 (예: "최근 10경기 평균 1.5골")
+- **데이터 인용**: 위에 제공된 수치만 그대로 인용 (예: "홈 경기당 1.3골", "원정 승률 40%"). 제공되지 않은 득점/실점 평균을 임의로 계산하거나 만들어내지 말 것 — 특히 "경기당 X골"은 위 홈/원정 경기당 득실 수치만 사용
 - **단정 금지**: "~할 것이다" 대신 "~가능성이 높다" 또는 "데이터상 ~로 나타난다"
 - 한글은 간결한 구어체 적절히 혼용 (~인데, ~거든요) 하되 분석 톤 유지
 
