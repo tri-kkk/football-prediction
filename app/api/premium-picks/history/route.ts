@@ -43,6 +43,28 @@ export async function GET() {
       }
     }
     
+    // 🌐 한글 팀명(team_id→korean_name) — team_translations 기준으로 보강
+    const teamIds = Array.from(
+      new Set(
+        (picks || [])
+          .flatMap((p: any) => [p.home_team_id, p.away_team_id])
+          .filter((x: any) => x != null)
+          .map(Number),
+      ),
+    )
+    const koMap = new Map<number, string>()
+    if (teamIds.length > 0) {
+      const { data: trans } = await supabase
+        .from('team_translations')
+        .select('team_id,korean_name')
+        .in('team_id', teamIds)
+      for (const t of trans || []) {
+        if (t?.team_id != null && t?.korean_name) koMap.set(Number(t.team_id), t.korean_name)
+      }
+    }
+    // 한글 없으면 null (앱이 영문으로 폴백)
+    const koFor = (id: any): string | null => (id != null && koMap.get(Number(id))) || null
+
     // D10: 축구·야구 카드 통일용 camelCase 별칭 부여 (raw 필드도 유지 — 하위호환)
     const mappedPicks = (picks || []).map((p: any) => ({
       ...p,
@@ -50,6 +72,11 @@ export async function GET() {
       league: p.league_code,
       homeTeam: p.home_team,
       awayTeam: p.away_team,
+      // 🌐 한글 팀명 (snake + camel 둘 다 — 앱 호환)
+      home_team_ko: koFor(p.home_team_id),
+      away_team_ko: koFor(p.away_team_id),
+      homeTeamKo: koFor(p.home_team_id),
+      awayTeamKo: koFor(p.away_team_id),
       homeScore: p.actual_home_score,
       awayScore: p.actual_away_score,
       homeTeamLogo: p.home_team_id ? `https://media.api-sports.io/football/teams/${p.home_team_id}.png` : null,  // D11

@@ -18,6 +18,36 @@ function getTeamKo(name: string | null | undefined): string | null {
   return TEAM_NAME_KR[name] ?? null
 }
 
+// 🌐 v7 (2026-10-08): 한글 팀명을 team_id 기준으로 team_translations 에서 조회.
+//   기존 getTeamKo 는 영문 이름 매칭이라 표기 차이(움라우트·접두 숫자)·승격팀·
+//   KL1/KL2/J1/MLS 등에서 대량 누락이 발생했다. team_translations(613행)는
+//   team_id·korean_name 을 전 리그 보유하므로 id 매칭으로 전환하면 한 번에 해소된다.
+//   전체 테이블을 6시간 인메모리 캐시(작음, ~20KB). 실패 시 이름 매칭으로 폴백.
+let _teamKoCache: { at: number; map: Map<number, string> } | null = null
+async function getTeamKoMap(
+  baseUrl: string,
+  headers: Record<string, string>,
+): Promise<Map<number, string>> {
+  const TTL = 6 * 60 * 60 * 1000
+  if (_teamKoCache && Date.now() - _teamKoCache.at < TTL) return _teamKoCache.map
+  try {
+    const res = await fetch(
+      `${baseUrl}/rest/v1/team_translations?select=team_id,korean_name&limit=5000`,
+      { headers, next: { revalidate: 21600 } },
+    )
+    if (!res.ok) return _teamKoCache?.map ?? new Map()
+    const rows = await res.json()
+    const m = new Map<number, string>()
+    for (const row of rows) {
+      if (row?.team_id != null && row?.korean_name) m.set(Number(row.team_id), row.korean_name)
+    }
+    _teamKoCache = { at: Date.now(), map: m }
+    return m
+  } catch {
+    return _teamKoCache?.map ?? new Map()
+  }
+}
+
 // === 사용 컬럼 명시 (응답 페이로드 슬림화) ===
 const ODDS_LATEST_COLUMNS = [
   'match_id',
@@ -499,6 +529,11 @@ export async function GET(request: Request) {
       'Authorization': `Bearer ${supabaseKey}`
     }
 
+    // 🌐 v7: 한글 팀명 맵(team_id→korean_name) 로드. 실패해도 이름 매칭으로 폴백되어 안전.
+    const koMap = await getTeamKoMap(supabaseUrl, headers)
+    const koFor = (teamId: any, name: string | null | undefined): string | null =>
+      (teamId != null && koMap.get(Number(teamId))) || getTeamKo(name)
+
     // 1️⃣ 예정된 경기 (match_odds_latest) — 필요한 컬럼만 select
     let upcomingUrl = `${supabaseUrl}/rest/v1/match_odds_latest?select=${ODDS_LATEST_COLUMNS}`
     if (league !== 'ALL') {
@@ -587,8 +622,8 @@ export async function GET(request: Request) {
             leagueLogo: leagueInfo.logo,
             home_team: match.home_team,
             away_team: match.away_team,
-            home_team_ko: getTeamKo(match.home_team),
-            away_team_ko: getTeamKo(match.away_team),
+            home_team_ko: koFor(match.home_team_id, match.home_team),
+            away_team_ko: koFor(match.away_team_id, match.away_team),
             home_team_id: match.home_team_id,
             away_team_id: match.away_team_id,
             home_crest: match.home_crest,
@@ -630,8 +665,8 @@ export async function GET(request: Request) {
         return {
           ...match,
           match_id: matchId,
-          home_team_ko: getTeamKo(match.home_team),
-          away_team_ko: getTeamKo(match.away_team),
+          home_team_ko: koFor(match.home_team_id, match.home_team),
+          away_team_ko: koFor(match.away_team_id, match.away_team),
           leagueName: leagueInfo.name,
           leagueNameEn: leagueInfo.nameEn,
           leaguePriority: leagueInfo.priority,
@@ -650,8 +685,8 @@ export async function GET(request: Request) {
       return {
         ...match,
         match_id: matchId,
-        home_team_ko: getTeamKo(match.home_team),
-        away_team_ko: getTeamKo(match.away_team),
+        home_team_ko: koFor(match.home_team_id, match.home_team),
+        away_team_ko: koFor(match.away_team_id, match.away_team),
         leagueName: leagueInfo.name,
         leagueNameEn: leagueInfo.nameEn,
         leaguePriority: leagueInfo.priority,

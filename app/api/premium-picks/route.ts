@@ -83,6 +83,29 @@ export async function GET() {
         })
       }
 
+      // 🌐 한글 팀명(team_id→korean_name) — team_translations 기준
+      const teamIds = Array.from(
+        new Set(
+          enrichedPicks
+            .flatMap((p: any) => [p.home_team_id, p.away_team_id])
+            .filter((x: any) => x != null)
+            .map(Number),
+        ),
+      )
+      const koMap = new Map<number, string>()
+      if (teamIds.length > 0) {
+        const { data: trans } = await supabase
+          .from('team_translations')
+          .select('team_id,korean_name')
+          .in('team_id', teamIds)
+        for (const t of trans || []) {
+          if ((t as any)?.team_id != null && (t as any)?.korean_name) {
+            koMap.set(Number((t as any).team_id), (t as any).korean_name)
+          }
+        }
+      }
+      const koFor = (id: any): string | null => (id != null && koMap.get(Number(id))) || null
+
       enrichedPicks = enrichedPicks.map((p: any) => {
         const logos = logoMap.get(String(p.match_id))
         // confidence 계산: pick 팀의 finalProb 값 (0~100 %)
@@ -100,6 +123,11 @@ export async function GET() {
 
         return {
           ...p,
+          // 🌐 한글 팀명 (snake + camel 둘 다 — 앱 호환)
+          home_team_ko: koFor(p.home_team_id),
+          away_team_ko: koFor(p.away_team_id),
+          homeTeamKo: koFor(p.home_team_id),
+          awayTeamKo: koFor(p.away_team_id),
           home_team_logo: logos?.home ?? null,
           away_team_logo: logos?.away ?? null,
           // D11: 카멜케이스 로고 (team_id CDN 규칙 우선, 없으면 조인 로고 fallback)
