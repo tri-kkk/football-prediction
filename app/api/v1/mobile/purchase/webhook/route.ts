@@ -83,7 +83,7 @@ async function selfHealGrant(purchaseToken: string, notificationType: number) {
 
   const { data: u } = await supabase
     .from('users')
-    .select('id, premium_expires_at')
+    .select('id, email, premium_expires_at')
     .eq('id', userId)
     .maybeSingle()
   if (!u) {
@@ -168,9 +168,20 @@ async function selfHealGrant(purchaseToken: string, notificationType: number) {
     acknowledgeSubscriptionV2(purchaseToken).catch(() => {})
   }
 
-  // B40: 「🛟 RTDN 자동 권한부여」 텔레그램 알림 중단 — 대부분 실제 누락이 아니라
-  //      RTDN이 앱 verify보다 먼저 도착한 경합이라 노이즈였음.
-  //      권한부여·acknowledge·멱등은 유지하고, 추적은 서버 로그로만 남긴다(결제 문의 시 조회용).
+  // 💰 매출 알림 — self-heal 로 "신규" 부여된 경우에만(위 already_granted 분기는 여기 안 옴).
+  //   B40에서 알림을 껐으나, self-heal 이 사실상 주 결제 처리 경로가 되면서 매출이 전부
+  //   조용히 처리되는 부작용이 생겨 복원. verify 와 self-heal 중 먼저 insert 한 쪽만 여기 도달하므로
+  //   (나머지는 payment_id 중복으로 already_granted) 알림은 매출당 정확히 1건만 발송된다.
+  await sendTelegramNotification(
+    `💰 <b>매출 발생!</b>\n\n` +
+      `📋 상품: ${product.label}\n` +
+      `💳 금액: ₩${product.price.toLocaleString()}\n` +
+      `👤 이메일: ${u.email ?? '(unknown)'}\n` +
+      `🆔 주문번호: ${orderId}\n` +
+      `🕐 시간: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}\n` +
+      `🚪 채널: 📱 모바일 앱 (Play IAP · RTDN)`
+  )
+
   console.log(`[webhook][self-heal] granted — user=${userId}, plan=${product.plan} (type=${notificationType})`)
   return { handled: true, type: 'self_heal_granted', userId, plan: product.plan }
 }
