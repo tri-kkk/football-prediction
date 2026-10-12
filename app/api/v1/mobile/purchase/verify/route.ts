@@ -28,7 +28,6 @@ import {
 } from '@/lib/mobile-api'
 import {
   getMobileSession,
-  requireAuth,
   getServerSupabase,
 } from '@/lib/mobile-auth'
 import {
@@ -69,11 +68,28 @@ export async function POST(request: NextRequest) {
   try {
     // 1. 인증 (모바일 JWT)
     const session = await getMobileSession(request)
-    const authError = requireAuth(session)
-    if (authError) return authError
+    if (!session) {
+      return errorResponse(401, ErrorCode.UNAUTHORIZED, 'Authentication required')
+    }
 
-    const userId = session!.userId
-    const userEmail = session!.email
+    // 🆕 약관 동의는 토큰 클레임(termsAgreed, 발급 시점 스냅샷)이 아니라 DB(terms_agreed_at)로 판정.
+    //   신규 가입 직후엔 동의를 마쳐도 앱이 들고 있는 토큰이 아직 termsAgreed=false라
+    //   requireAuth 가 409 CONSENT_REQUIRED 를 내던 문제(2.1.6 체험 중 결제 차단)를 해소한다.
+    //   B36(신규 세션 JWT sub=pending_users.id) 대비 email 폴백으로 실제 users 행을 확정하고,
+    //   이후 payments/subscriptions/users insert·update 가 올바른 users.id 를 쓰게 한다.
+    const supabase = getServerSupabase()
+    let dbUser =
+      (await supabase.from('users').select('id, email, terms_agreed_at').eq('id', session.userId).maybeSingle()).data
+    if (!dbUser && session.email) {
+      dbUser =
+        (await supabase.from('users').select('id, email, terms_agreed_at').eq('email', session.email.toLowerCase()).maybeSingle()).data
+    }
+    if (!dbUser || !dbUser.terms_agreed_at) {
+      return errorResponse(409, ErrorCode.CONSENT_REQUIRED, '약관 동의가 필요합니다.')
+    }
+
+    const userId = dbUser.id as string
+    const userEmail = (dbUser.email as string) || session.email || ''
 
     // 2. body 파싱
     let body: any
@@ -123,8 +139,6 @@ export async function POST(request: NextRequest) {
         `[purchase/verify] body email (${bodyEmail}) != JWT email (${userEmail}) — JWT 사용`
       )
     }
-
-    const supabase = getServerSupabase()
 
     // 3. 멱등성 — 같은 purchaseToken이 이미 처리되었는지
     const { data: existing } = await supabase
