@@ -24,16 +24,31 @@ import {
 } from '@/lib/mobile-api'
 import {
   getMobileSession,
-  requireAuth,
   getServerSupabase,
 } from '@/lib/mobile-auth'
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getMobileSession(request)
-    const authError = requireAuth(session)
-    if (authError) return authError
-    const userId = session!.userId
+    if (!session) {
+      return errorResponse(401, ErrorCode.UNAUTHORIZED, 'Authentication required')
+    }
+
+    // 약관 동의는 토큰 클레임이 아니라 DB(terms_agreed_at)로 판정 — 신규 가입 직후
+    //   stale 토큰(termsAgreed=false)이어도 DB에 동의가 있으면 통과(verify 와 동일 패턴).
+    //   B36: JWT sub 가 pending_users.id 일 수 있어 email 폴백으로 실제 users 행을 확정하고,
+    //   이후 알림 마이그레이션이 올바른 users.id 를 쓰게 한다.
+    const supabase = getServerSupabase()
+    let dbUser =
+      (await supabase.from('users').select('id, terms_agreed_at').eq('id', session.userId).maybeSingle()).data
+    if (!dbUser && session.email) {
+      dbUser =
+        (await supabase.from('users').select('id, terms_agreed_at').eq('email', session.email.toLowerCase()).maybeSingle()).data
+    }
+    if (!dbUser || !dbUser.terms_agreed_at) {
+      return errorResponse(409, ErrorCode.CONSENT_REQUIRED, '약관 동의가 필요합니다.')
+    }
+    const userId = dbUser.id as string
 
     let body: any
     try {
@@ -47,7 +62,6 @@ export async function POST(request: NextRequest) {
       return errorResponse(400, ErrorCode.VALIDATION_ERROR, 'token (FCM device token) is required')
     }
 
-    const supabase = getServerSupabase()
     const now = new Date().toISOString()
 
     // 1. device_tokens — user_id 채움 (이미 다른 user에 등록된 경우는 그 user로 재할당)
