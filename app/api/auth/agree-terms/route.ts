@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 import { sendTelegram } from '@/lib/telegram'
+import { signMobileJWT, resolveCurrentTier, TOKEN_MAX_AGE_SEC } from '@/lib/mobile-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,6 +10,36 @@ const supabase = createClient(
 )
 
 const PROMO_END_DATE = new Date('2026-03-01T00:00:00+09:00')
+
+/**
+ * 🆕 2.1.6: 약관 동의 완료 시 모바일 JWT 재발급용 세션 객체.
+ *   로그인 응답(`/api/v1/mobile/auth/*`)의 `session`과 동일 구조 — { accessToken, tokenType, expiresAt }.
+ *   claims: termsAgreed=true, sub=users.id (effective tier/만료는 resolveCurrentTier로 최신값).
+ *   refresh token 없음(시스템에 없음) — access token 단일 + 만료시각(30일).
+ *   응답에 '추가'만 하므로 구버전 앱은 이 필드를 무시해도 기존 동작 그대로.
+ */
+async function buildMobileSession(
+  userId: string,
+  email: string,
+  name: string | null,
+  avatarUrl: string | null,
+) {
+  const { tier, premiumExpiresAt } = await resolveCurrentTier(userId)
+  const accessToken = await signMobileJWT({
+    userId,
+    email,
+    name: name ?? null,
+    avatarUrl: avatarUrl ?? null,
+    tier,
+    premiumExpiresAt,
+    termsAgreed: true,
+  })
+  return {
+    accessToken,
+    tokenType: 'Bearer' as const,
+    expiresAt: new Date(Date.now() + TOKEN_MAX_AGE_SEC * 1000).toISOString(),
+  }
+}
 
 export async function POST(request: NextRequest) {
   let body: any = {}
@@ -57,7 +88,11 @@ export async function POST(request: NextRequest) {
       
       if (existingUser.terms_agreed_at) {
         console.log('✅ 이미 약관 동의함')
-        return NextResponse.json({ success: true, alreadyAgreed: true })
+        return NextResponse.json({
+          success: true,
+          alreadyAgreed: true,
+          session: await buildMobileSession(existingUser.id, emailLower, null, null),
+        })
       }
       
       // 약관 미동의 상태 → 업데이트
@@ -77,7 +112,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Update failed' }, { status: 500 })
       }
 
-      return NextResponse.json({ success: true, message: '약관 동의가 완료되었습니다.' })
+      return NextResponse.json({
+        success: true,
+        message: '약관 동의가 완료되었습니다.',
+        session: await buildMobileSession(existingUser.id, emailLower, null, null),
+      })
     }
 
     // ✅ pending_users 확인
@@ -239,6 +278,12 @@ export async function POST(request: NextRequest) {
         : trialUsed
           ? '🎁 48시간 프리미엄 체험이 시작되었습니다!'
           : '✅ 회원가입이 완료되었습니다.',
+      session: await buildMobileSession(
+        newUser.id,
+        emailLower,
+        pendingUser.name ?? null,
+        pendingUser.avatar_url ?? null,
+      ),
     })
 
   } catch (error) {
