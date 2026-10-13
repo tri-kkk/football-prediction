@@ -72,6 +72,9 @@ export async function POST(request: NextRequest) {
       return errorResponse(401, ErrorCode.UNAUTHORIZED, 'Authentication required')
     }
 
+    // 🧪 QA 임시 로그 — 수신 토큰(앱이 보낸 것)의 claims 확인용. QA 종료 후 제거할 것.
+    console.log(`[purchase/verify][QA-DEBUG] incoming token — termsAgreed=${session.termsAgreed}, sub=${session.userId}, email=${session.email}`)
+
     // 🆕 약관 동의는 토큰 클레임(termsAgreed, 발급 시점 스냅샷)이 아니라 DB(terms_agreed_at)로 판정.
     //   신규 가입 직후엔 동의를 마쳐도 앱이 들고 있는 토큰이 아직 termsAgreed=false라
     //   requireAuth 가 409 CONSENT_REQUIRED 를 내던 문제(2.1.6 체험 중 결제 차단)를 해소한다.
