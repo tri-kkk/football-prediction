@@ -43,6 +43,25 @@ async function sendOne(row: any): Promise<SendOutcome> {
     const re = await sendToTopic(`${finalTopic}_en`, en)
     results.push({ locale: 'en', topic: `${finalTopic}_en`, ok: re.ok, messageId: re.messageId, error: re.error })
   }
+
+  // 발송 내역 기록 (best-effort — 테이블 없거나 실패해도 발송엔 영향 없음)
+  try {
+    await supabase.from('push_send_history').insert({
+      source: 'scheduled',
+      topic: row.topic,
+      ko_title: pol.ko!.title,
+      ko_body: pol.ko!.body,
+      en_title: pol.en?.title ?? null,
+      en_body: pol.en?.body ?? null,
+      deeplink: row.deeplink ?? null,
+      ok: results.every((r) => r.ok),
+      results,
+      scheduled_id: row.id,
+    })
+  } catch (e) {
+    console.warn('[send-scheduled-push] history log failed:', (e as Error)?.message)
+  }
+
   return { skipped: null, results }
 }
 

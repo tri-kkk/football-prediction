@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { PUSH_TEMPLATES, TEMPLATE_CATEGORIES } from '@/lib/pushTemplates'
+import { V2_ALLOWED_PATHS } from '@/lib/deeplinkAllowlist'
 
 type Topic = 'app_general' | 'match_events' | 'promo'
 type Mode = 'now' | 'once' | 'daily' | 'weekly'
@@ -28,6 +29,21 @@ interface Scheduled {
   status: string
   last_run_at: string | null
   created_at: string
+}
+
+interface PushHistory {
+  id: number
+  created_at: string
+  source: 'now' | 'scheduled' | string
+  topic: string
+  ko_title: string | null
+  ko_body: string | null
+  en_title: string | null
+  en_body: string | null
+  deeplink: string | null
+  ok: boolean
+  results: any
+  scheduled_id: number | null
 }
 
 const TOPIC_OPTIONS: { value: Topic; label: string; desc: string }[] = [
@@ -65,6 +81,15 @@ export default function PushSendPanel() {
   const [scheduleMsg, setScheduleMsg] = useState<string | null>(null)
 
   const [list, setList] = useState<Scheduled[]>([])
+  const [history, setHistory] = useState<PushHistory[]>([])
+
+  const resetAll = () => {
+    setTopic('app_general')
+    setTitleKo(''); setBodyKo(''); setTitleEn(''); setBodyEn('')
+    setIncludeEn(false); setDeeplinkPath('')
+    setMode('now'); setOnceAt(''); setRunTime('09:00'); setWeekday(1)
+    setResults(null); setError(null); setScheduleMsg(null)
+  }
 
   const applyTemplate = (id: string) => {
     const t = PUSH_TEMPLATES.find((x) => x.id === id)
@@ -82,7 +107,13 @@ export default function PushSendPanel() {
       .then((d) => setList(Array.isArray(d) ? d : []))
       .catch(() => {})
   }, [])
-  useEffect(() => { loadList() }, [loadList])
+  const loadHistory = useCallback(() => {
+    fetch('/api/admin/push/history?limit=50')
+      .then((r) => r.json())
+      .then((d) => setHistory(Array.isArray(d?.rows) ? d.rows : []))
+      .catch(() => {})
+  }, [])
+  useEffect(() => { loadList(); loadHistory() }, [loadList, loadHistory])
 
   const baseValid =
     !!topic && !!titleKo.trim() && !!bodyKo.trim() &&
@@ -112,7 +143,7 @@ export default function PushSendPanel() {
       })
       const data = await res.json()
       if (!res.ok) setError(data?.error?.message ?? `HTTP ${res.status}`)
-      else setResults(data.results ?? [])
+      else { setResults(data.results ?? []); loadHistory() }
     } catch (e: any) { setError(e?.message ?? String(e)) }
     finally { setLoading(false) }
   }
@@ -233,8 +264,14 @@ export default function PushSendPanel() {
         {/* 딥링크 */}
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-300 mb-1">딥링크 경로 (옵션)</label>
-          <input type="text" value={deeplinkPath} onChange={(e) => setDeeplinkPath(e.target.value)} placeholder="/premium 또는 https://..." className={inputCls} />
-          <p className="text-[10px] text-gray-500 mt-1">data.deeplink로 전달. 앱에서 알림 탭 시 해당 경로로 이동.</p>
+          <select value={deeplinkPath} onChange={(e) => setDeeplinkPath(e.target.value)} className={inputCls}>
+            <option value="">(없음 · 앱만 열림)</option>
+            {V2_ALLOWED_PATHS.map((p) => <option key={p} value={p}>{p}</option>)}
+            {deeplinkPath && !V2_ALLOWED_PATHS.includes(deeplinkPath) && (
+              <option value={deeplinkPath}>{deeplinkPath} (사용자 지정)</option>
+            )}
+          </select>
+          <p className="text-[10px] text-gray-500 mt-1">사전 허용된 v2 경로만 선택 가능(오입력 방지) · data.deeplink로 전달돼 알림 탭 시 이동.</p>
         </div>
 
         {/* 발송 방식 */}
@@ -273,6 +310,11 @@ export default function PushSendPanel() {
             !canSubmit ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-500'
           }`}>
           {loading ? '처리 중...' : mode === 'now' ? '🚀 즉시 발송' : '📅 예약 등록'}
+        </button>
+
+        <button type="button" onClick={resetAll} disabled={loading}
+          className="w-full mt-2 py-2 rounded-lg text-sm text-gray-400 border border-gray-700 hover:text-white hover:border-gray-500 transition-colors disabled:opacity-50">
+          ↺ 전체 초기화
         </button>
 
         {error && <div className="mt-5 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">❌ {error}</div>}
@@ -319,6 +361,35 @@ export default function PushSendPanel() {
                     취소
                   </button>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 발송 내역 */}
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-white">🧾 발송 내역</h2>
+          <button onClick={loadHistory} className="text-xs text-gray-400 hover:text-white">새로고침</button>
+        </div>
+        {history.length === 0 ? (
+          <div className="text-sm text-gray-500 text-center py-6">발송 내역이 없습니다.</div>
+        ) : (
+          <div className="space-y-2">
+            {history.map((h) => (
+              <div key={h.id} className="flex items-start gap-3 p-3 rounded-lg bg-gray-900/40 border border-gray-700/50">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] border ${h.ok ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-red-500/15 text-red-300 border-red-500/30'}`}>{h.ok ? '성공' : '실패'}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] border ${h.source === 'scheduled' ? 'bg-sky-500/15 text-sky-300 border-sky-500/30' : 'bg-gray-600/20 text-gray-300 border-gray-600/40'}`}>{h.source === 'scheduled' ? '예약' : '즉시'}</span>
+                    <span className="text-xs text-gray-400">{h.topic}</span>
+                    <span className="text-xs text-gray-500">{new Date(h.created_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  </div>
+                  <div className="text-sm text-white font-medium mt-1 truncate">{h.ko_title}</div>
+                  <div className="text-xs text-gray-500 truncate">{h.ko_body}</div>
+                  {h.deeplink && <div className="text-[10px] text-emerald-400/80 mt-0.5 truncate">↪ {h.deeplink}</div>}
+                </div>
               </div>
             ))}
           </div>

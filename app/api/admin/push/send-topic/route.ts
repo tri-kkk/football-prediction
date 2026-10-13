@@ -30,9 +30,24 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 
+import { createClient } from '@supabase/supabase-js'
+
 import { sendToTopic, toFCMData, type FCMSendOptions } from '@/lib/fcm'
 import { applyPromoPolicy, isNightKST } from '@/lib/promoPolicy'
 import { validateDeeplink } from '@/lib/deeplinkAllowlist'
+
+// 발송 내역 기록 (best-effort). 테이블 없거나 실패해도 발송엔 영향 없음.
+async function logPushHistory(row: Record<string, any>) {
+  try {
+    const sb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    await sb.from('push_send_history').insert(row)
+  } catch (e) {
+    console.warn('[push/send-topic] history log failed:', (e as Error)?.message)
+  }
+}
 
 // B29: marketing 토픽 폐지 → promo 로 교체 (marketing 은 발송 차단)
 const ALLOWED_TOPICS = new Set(['app_general', 'match_events', 'promo'])
@@ -178,6 +193,18 @@ export async function POST(request: NextRequest) {
         error: enResult.error,
       })
     }
+
+    await logPushHistory({
+      source: 'now',
+      topic,
+      ko_title: finalKo.title,
+      ko_body: finalKo.body,
+      en_title: finalEn?.title ?? null,
+      en_body: finalEn?.body ?? null,
+      deeplink: extraData?.deeplink ?? null,
+      ok: results.every((r) => r.ok),
+      results,
+    })
 
     return NextResponse.json({
       success: results.every((r) => r.ok),
