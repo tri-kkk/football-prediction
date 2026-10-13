@@ -228,8 +228,8 @@ function detectSeasonContext(leagueCode: string, homeStats: any, awayStats: any)
   // 유럽 컵 대회: 토너먼트 방식 (시즌 개막/후반 개념 다름)
   if (['CL', 'EL'].includes(leagueCode)) {
     if (month >= 9 && month <= 12) {
-      return { phaseKo: '조별리그', phaseEn: 'group stage', isOpening: false,
-        cautionNote: '챔피언스리그/유로파리그 조별리그 단계입니다. 각 팀의 조별 성적과 통과 가능성 맥락을 반영하세요. 리그 순위 경쟁 언급은 적절히 최소화하세요.' }
+      return { phaseKo: '리그 페이즈', phaseEn: 'league phase', isOpening: false,
+        cautionNote: '챔피언스리그/유로파리그 리그 페이즈(league phase) 단계입니다. 2024-25 시즌부터 조별리그가 폐지되고 36팀 단일 리그(리그 페이즈)로 바뀌었으니 "조별리그"·"조(Group)"·"조별 통과"라는 표현은 절대 쓰지 말고 "리그 페이즈" 맥락으로 서술하세요. 또한 아래 제공된 홈/원정 성적·득실 수치는 이 대회(챔스/유로파) 성적이 아니라 각 팀의 "국내 리그" 성적이므로, 이를 대회 성적처럼 쓰지 말고 "국내 리그 기준"임을 문장에 명시하세요.' }
     }
     if (month >= 1 && month <= 3) {
       return { phaseKo: '16강/8강', phaseEn: 'knockout stage', isOpening: false,
@@ -948,7 +948,7 @@ ${aKo} 강점: ${(aS?.strengths||[]).slice(0,3).join(', ')||'없음'}
 ${aKo} 약점: ${(aS?.weaknesses||[]).slice(0,2).join(', ')||'없음'}
 
 ## 분석 근거
-${(pred.recommendation.reasons||[]).slice(0,4).join('\n')}
+${(pred.recommendation.reasons||[]).slice(0,4).map((r: string) => translateReason(r)).join('\n')}
 
 ## 상대전적
 ${h2hSum}${seasonNote}${newsContext}
@@ -969,6 +969,7 @@ ${h2hSum}${seasonNote}${newsContext}
 - **예상 라인업 작성 절대 금지** — 라인업 데이터가 없으므로 포지션/전형 추측도 하지 마세요
 - **대회 형식/라운드 구조 언급 금지** — "단판전", "단판 승부", "1차전", "2차전", "원정 골 규칙" 등 대회 진행 방식을 임의로 서술하지 마세요. 이 경기 자체의 데이터만 다루세요
 - 데이터에 없는 내용 창작 (감독 전술 스타일, 팀 문화, 구단 역사 등) — 제공된 수치와 통계만 사용
+- **내부 지표 영문명 노출 금지** — "Power diff", "Prob edge", "1st goal win", "Pattern", "Data" 같은 내부 지표명을 본문에 그대로 쓰지 마세요. 숫자는 한국어 서술로만 표현하세요(예: "파워지수 차이 102점", "선제골 시 승률 87%").
 - 단, 뉴스에 명시된 선수명/감독명은 뉴스 섹션(news_ko/news_en)에서만 인용 가능
 - **분석 결과(승/무/패, 확률%) 언급 금지** — 인트로와 전술에서 결과를 암시하지 마세요
 
@@ -1273,7 +1274,9 @@ function formatFormTextEn(results: string[]): string {
 }
 
 function getGradeKo(grade: string): string {
-  return grade === 'PICK' ? 'TOP (분석 우위)' : grade === 'GOOD' ? 'WATCH (참고)' : 'PASS (해당 없음)'
+  // 커버(OG) 이미지 뱃지는 원시 등급코드(PICK/GOOD)를 쓰므로 본문 라벨도 같은 코드를 유지한다.
+  //   (기존 'TOP/WATCH/PASS' 리네이밍이 커버와 불일치해 보였던 문제 해소)
+  return grade === 'PICK' ? 'PICK (분석 우위)' : grade === 'GOOD' ? 'GOOD (참고)' : 'PASS (해당 없음)'
 }
 
 function getPickKo(pick: string): string {
@@ -1374,15 +1377,26 @@ function generateContentKo(
   const homeRelOk = homeRel && !(homeRel.wins === 0 && homeRel.losses >= 10)
   const awayRelOk = awayRel && !(awayRel.wins === 0 && awayRel.losses >= 10)
   
+  // 🏆 CL/EL(컵대회)은 team-stats가 각 팀의 "국내 리그" 성적을 돌려주므로 제목·주석에 그 사실을 밝힌다.
+  const isCupKo = ['CL', 'EL'].includes(match.league_code)
+  const seasonHeadingKo = isCupKo ? '국내 리그 시즌 성적' : `${leagueInfo.nameKo} 시즌 성적`
+  const homeDomesticKo = LEAGUE_INFO[homeStats?.leagueCode]?.nameKo || '국내 리그'
+  const awayDomesticKo = LEAGUE_INFO[awayStats?.leagueCode]?.nameKo || '국내 리그'
+  const cupNoteKo = isCupKo
+    ? `> ※ ${leagueInfo.nameKo}는 경기 수가 적어, 위 성적은 각 팀 **국내 리그** 기준입니다 (${homeKo}=${homeDomesticKo} / ${awayKo}=${awayDomesticKo}).\n\n`
+    : ''
+
   if (homeRelOk && awayRelOk) {
-    c += `## ${leagueInfo.nameKo} 시즌 성적\n\n`
+    c += `## ${seasonHeadingKo}\n\n`
     c += `| | ${homeKo} (홈) | ${awayKo} (원정) |\n|:---|:---:|:---:|\n`
     c += `| 승-무-패 | **${homeRel.wins}-${homeRel.draws}-${homeRel.losses}** | **${awayRel.wins}-${awayRel.draws}-${awayRel.losses}** |\n`
     c += `| 승률 | **${homeRel.winRate}%** | **${awayRel.winRate}%** |\n\n`
+    c += cupNoteKo
   } else if (homeRelOk || awayRelOk) {
-    c += `## ${leagueInfo.nameKo} 시즌 성적\n\n`
+    c += `## ${seasonHeadingKo}\n\n`
     if (homeRelOk) c += `**${homeKo} (홈)**: ${homeRel.wins}승 ${homeRel.draws}무 ${homeRel.losses}패 (승률 **${homeRel.winRate}%**)\n\n`
     if (awayRelOk) c += `**${awayKo} (원정)**: ${awayRel.wins}승 ${awayRel.draws}무 ${awayRel.losses}패 (승률 **${awayRel.winRate}%**)\n\n`
+    c += cupNoteKo
   }
   
   // ===== 📈 핵심 스탯 비교 =====
@@ -1587,15 +1601,24 @@ function generateContentEn(
   const awayRelEn = awayStats?.awayStats
   const homeRelEnOk = homeRelEn && !(homeRelEn.wins === 0 && homeRelEn.losses >= 10)
   const awayRelEnOk = awayRelEn && !(awayRelEn.wins === 0 && awayRelEn.losses >= 10)
+  const isCupEn = ['CL', 'EL'].includes(match.league_code)
+  const seasonHeadingEn = isCupEn ? 'Domestic League Record' : `${leagueInfo.nameEn} Season Record`
+  const homeDomesticEn = LEAGUE_INFO[homeStats?.leagueCode]?.nameEn || 'domestic league'
+  const awayDomesticEn = LEAGUE_INFO[awayStats?.leagueCode]?.nameEn || 'domestic league'
+  const cupNoteEn = isCupEn
+    ? `> ※ ${leagueInfo.nameEn} has few matches, so the figures above are each club's **domestic league** record (${home}=${homeDomesticEn} / ${away}=${awayDomesticEn}).\n\n`
+    : ''
   if (homeRelEnOk && awayRelEnOk) {
-    c += `## ${leagueInfo.nameEn} Season Record\n\n`
+    c += `## ${seasonHeadingEn}\n\n`
     c += `| | ${home} (Home) | ${away} (Away) |\n|:---|:---:|:---:|\n`
     c += `| W-D-L | **${homeRelEn.wins}-${homeRelEn.draws}-${homeRelEn.losses}** | **${awayRelEn.wins}-${awayRelEn.draws}-${awayRelEn.losses}** |\n`
     c += `| Win Rate | **${homeRelEn.winRate}%** | **${awayRelEn.winRate}%** |\n\n`
+    c += cupNoteEn
   } else if (homeRelEnOk || awayRelEnOk) {
-    c += `## ${leagueInfo.nameEn} Season Record\n\n`
+    c += `## ${seasonHeadingEn}\n\n`
     if (homeRelEnOk) c += `**${home} (Home)**: ${homeRelEn.wins}W ${homeRelEn.draws}D ${homeRelEn.losses}L (**${homeRelEn.winRate}%** win rate)\n\n`
     if (awayRelEnOk) c += `**${away} (Away)**: ${awayRelEn.wins}W ${awayRelEn.draws}D ${awayRelEn.losses}L (**${awayRelEn.winRate}%** win rate)\n\n`
+    c += cupNoteEn
   }
   
   // Key Stats
