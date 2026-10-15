@@ -191,11 +191,11 @@ export default function BlogPostClient({ initialPost }: BlogPostClientProps) {
       {/* 커버 이미지 (콤팩트 배너) */}
       {post.cover_image && (
         <div className="w-full max-w-3xl mx-auto px-4 mt-4">
-          <div className="relative w-full h-[170px] md:h-[230px] overflow-hidden rounded-2xl bg-[#0f1623] border border-white/10">
+          <div className="relative w-full aspect-[1200/630] overflow-hidden rounded-2xl bg-[#0f1623] border border-white/10">
             <img
               src={post.cover_image}
               alt={getTitle()}
-              className="absolute inset-0 w-full h-full object-contain"
+              className="absolute inset-0 w-full h-full object-cover"
             />
           </div>
         </div>
