@@ -10,6 +10,18 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+// =============================================================================
+// 실행 시간 / 조기 종료 (generate-predictions 와 동일 패턴)
+//
+// 이 라우트는 리그 수 × 경기별 배당 조회를 순차로 돈다. maxDuration 이 없으면
+// 기본 제한에 걸려 중간에 죽고, 리스트 뒤쪽 리그(아메리카·아시아: MLS/K리그/J리그/
+// 브라질 등)는 만성적으로 수집되지 않는다(→ 일정 누락 + 리포트 미생성).
+// 그래서 maxDuration 을 주고, 시간 임박 시 조기 종료하며, ?group=k&of=m 으로
+// 리그를 쪼개 크론이 분할 호출할 수 있게 한다.
+// =============================================================================
+export const maxDuration = 600
+const TIME_GUARD_MS = 540 * 1000
+
 // ============================================================
 // 🔥 리그 설정 (50개 - 아프리카 추가!)
 // ============================================================
@@ -242,15 +254,29 @@ async function fetchFromApiFootball(endpoint: string) {
 }
 
 export async function POST(request: Request) {
+  const startTime = Date.now()
   try {
+    const sp = new URL(request.url).searchParams
     // ⚡ ?league=J1,J2 → 해당 리그만 수집(테스트/부분 갱신). 없으면 전체.
-    const leagueParam = new URL(request.url).searchParams.get('league')
+    const leagueParam = sp.get('league')
     const wanted = leagueParam ? leagueParam.split(',').map((s) => s.trim().toUpperCase()) : null
-    const targetLeagues = wanted ? LEAGUES.filter((l) => wanted.includes(l.code)) : LEAGUES
+    let targetLeagues = wanted ? LEAGUES.filter((l) => wanted.includes(l.code)) : LEAGUES
+
+    // ⚡ ?group=k&of=m → 전체 리그를 m등분해 k번째 묶음만 처리(크론 분할 호출용).
+    //   인덱스 나머지로 나눠 무거운 리그가 묶음마다 분산되고, 리그가 추가돼도 크론 SQL 불변.
+    const group = Number(sp.get('group') || 0)
+    const of = Number(sp.get('of') || 0)
+    const useGroup = Number.isInteger(of) && of >= 2 && Number.isInteger(group) && group >= 1 && group <= of
+    if (useGroup) {
+      targetLeagues = targetLeagues.filter((_, i) => i % of === group - 1)
+    }
+    const scope = wanted ? `filter: ${wanted.join(',')}` : useGroup ? `group ${group}/${of}` : 'all'
+
+    let timedOut = false
 
     console.log('🔥 ========== EXPANDED Odds Collection Started ==========')
     console.log('⏰ Time:', new Date().toISOString())
-    console.log(`📊 Total Leagues: ${targetLeagues.length}${wanted ? ` (filter: ${wanted.join(',')})` : ''}`)
+    console.log(`📊 Target Leagues: ${targetLeagues.length} (${scope})`)
 
     const results = {
       success: true,
@@ -272,6 +298,15 @@ export async function POST(request: Request) {
 
     // 각 리그별로 처리
     for (const league of targetLeagues) {
+      // 제한 시간 임박 시 조기 종료 — 남은 리그는 다음 실행/다음 묶음에서 처리
+      if (Date.now() - startTime > TIME_GUARD_MS) {
+        timedOut = true
+        const done = targetLeagues.findIndex((l) => l.code === league.code)
+        console.warn(`⏱️ Time guard: ${done}/${targetLeagues.length} 리그 처리 후 중단 (next: ${league.code})`)
+        results.errors.push(`TIME_GUARD: stopped before ${league.code} (${done}/${targetLeagues.length} done)`)
+        break
+      }
+
       try {
         console.log(`\n🔍 Processing ${league.name} (${league.code})...`)
 
@@ -599,10 +634,12 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
+      timedOut,
+      elapsed: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
       // 하나라도 이상 리그가 있으면 alert=true (로그/응답에서 바로 확인용)
       alert: results.errors.length > 0,
       summary: {
-        leaguesProcessed: LEAGUES.length,
+        leaguesProcessed: results.leagues.length,
         totalMatches: results.totalMatches,
         totalSaved: results.totalSaved,
         errorCount: results.errors.length,
