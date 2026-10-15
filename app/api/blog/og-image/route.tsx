@@ -3,118 +3,36 @@ import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
 
-interface LeagueTheme {
-  primary: string
-  accent: string
-  bg: string
-  glow1: string
-  glow2: string
-  textColor: string
-  labelBg: string
-  labelBorder: string
+// 리그 풀네임(nameEn) → 코드. 구 cover_image URL은 leaguecode 없이 league(nameEn)만 담고 있어
+// 하위호환을 위해 매핑으로 배경을 결정한다.
+const NAME_TO_CODE: Record<string, string> = {
+  'Premier League': 'PL',
+  'La Liga': 'PD',
+  'Bundesliga': 'BL1',
+  'Serie A': 'SA',
+  'Ligue 1': 'FL1',
+  'Champions League': 'CL',
+  'Europa League': 'EL',
+  'Eredivisie': 'DED',
+  'K League 1': 'KL1',
+  'K League 2': 'KL2',
+  'J1 League': 'J1',
+  'J2 League': 'J2',
+  'Major League Soccer': 'MLS',
 }
 
-const LEAGUE_THEMES: Record<string, LeagueTheme> = {
-  'Premier League': {
-    primary: '#3d195b', accent: '#e90052',
-    bg: 'linear-gradient(135deg, #380e5c 0%, #2a0845 30%, #1a0530 50%, #4a0028 70%, #6b0035 100%)',
-    glow1: 'rgba(61,25,91,0.7)', glow2: 'rgba(233,0,82,0.5)',
-    textColor: '#00ff85',
-    labelBg: 'rgba(0,255,133,0.12)', labelBorder: 'rgba(0,255,133,0.3)',
-  },
-  'La Liga': {
-    primary: '#1a3c6e', accent: '#ee8707',
-    bg: 'linear-gradient(135deg, #0d2240 0%, #132d52 30%, #1a3a68 50%, #2a4a7a 70%, #1a3058 100%)',
-    glow1: 'rgba(26,60,110,0.7)', glow2: 'rgba(238,135,7,0.4)',
-    textColor: '#ee8707',
-    labelBg: 'rgba(238,135,7,0.12)', labelBorder: 'rgba(238,135,7,0.3)',
-  },
-  'Bundesliga': {
-    primary: '#d20515', accent: '#ffffff',
-    bg: 'linear-gradient(135deg, #3a0508 0%, #5a0a10 30%, #7a1018 50%, #5a0a10 70%, #2a0305 100%)',
-    glow1: 'rgba(210,5,21,0.6)', glow2: 'rgba(210,5,21,0.3)',
-    textColor: '#ffffff',
-    labelBg: 'rgba(255,255,255,0.1)', labelBorder: 'rgba(255,255,255,0.2)',
-  },
-  'Serie A': {
-    primary: '#024494', accent: '#009b3a',
-    bg: 'linear-gradient(135deg, #051530 0%, #082040 30%, #0a2a50 50%, #052838 70%, #041828 100%)',
-    glow1: 'rgba(2,68,148,0.6)', glow2: 'rgba(0,155,58,0.3)',
-    textColor: '#4fc3f7',
-    labelBg: 'rgba(79,195,247,0.12)', labelBorder: 'rgba(79,195,247,0.25)',
-  },
-  'Ligue 1': {
-    primary: '#091c3e', accent: '#c8ff00',
-    bg: 'linear-gradient(135deg, #060e1e 0%, #0a1830 30%, #0e2040 50%, #0a1830 70%, #060e1e 100%)',
-    glow1: 'rgba(9,28,62,0.8)', glow2: 'rgba(200,255,0,0.2)',
-    textColor: '#c8ff00',
-    labelBg: 'rgba(200,255,0,0.08)', labelBorder: 'rgba(200,255,0,0.2)',
-  },
-  'Champions League': {
-    primary: '#00003e', accent: '#f4c300',
-    bg: 'linear-gradient(135deg, #000020 0%, #000838 30%, #001050 50%, #000838 70%, #000020 100%)',
-    glow1: 'rgba(0,0,80,0.7)', glow2: 'rgba(244,195,0,0.25)',
-    textColor: '#f4c300',
-    labelBg: 'rgba(244,195,0,0.1)', labelBorder: 'rgba(244,195,0,0.25)',
-  },
-  'Europa League': {
-    primary: '#f26522', accent: '#000000',
-    bg: 'linear-gradient(135deg, #1a0800 0%, #2a1005 30%, #3a180a 50%, #2a1005 70%, #1a0800 100%)',
-    glow1: 'rgba(242,101,34,0.5)', glow2: 'rgba(255,140,0,0.3)',
-    textColor: '#ffffff',
-    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
-  },
-  'Eredivisie': {
-    primary: '#e4002b', accent: '#ff6b35',
-    bg: 'linear-gradient(135deg, #2a0508 0%, #3a0a10 30%, #4a1018 50%, #3a0a10 70%, #2a0508 100%)',
-    glow1: 'rgba(228,0,43,0.5)', glow2: 'rgba(255,107,53,0.3)',
-    textColor: '#ffffff',
-    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
-  },
-  'K League 1': {
-    primary: '#003da5', accent: '#c8102e',
-    bg: 'linear-gradient(135deg, #041028 0%, #081a3a 30%, #0c2450 50%, #0a1a38 70%, #061028 100%)',
-    glow1: 'rgba(0,61,165,0.5)', glow2: 'rgba(200,16,46,0.3)',
-    textColor: '#ffffff',
-    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
-  },
-  'K League 2': {
-    primary: '#005a32', accent: '#003da5',
-    bg: 'linear-gradient(135deg, #041a10 0%, #062a18 30%, #083a22 50%, #062a18 70%, #041a10 100%)',
-    glow1: 'rgba(0,90,50,0.5)', glow2: 'rgba(0,61,165,0.3)',
-    textColor: '#ffffff',
-    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
-  },
-  'J1 League': {
-    primary: '#c41230', accent: '#1a1a6c',
-    bg: 'linear-gradient(135deg, #1a0810 0%, #2a1018 30%, #3a1822 50%, #2a1018 70%, #1a0810 100%)',
-    glow1: 'rgba(196,18,48,0.5)', glow2: 'rgba(26,26,108,0.3)',
-    textColor: '#ffffff',
-    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
-  },
-  'J2 League': {
-    primary: '#1a1a6c', accent: '#c41230',
-    bg: 'linear-gradient(135deg, #0c0c28 0%, #141440 30%, #1c1c58 50%, #141440 70%, #0c0c28 100%)',
-    glow1: 'rgba(26,26,108,0.5)', glow2: 'rgba(196,18,48,0.3)',
-    textColor: '#ffffff',
-    labelBg: 'rgba(255,255,255,0.08)', labelBorder: 'rgba(255,255,255,0.18)',
-  },
-  'Major League Soccer': {
-    primary: '#0b2137', accent: '#c3032a',
-    bg: 'linear-gradient(135deg, #060f1a 0%, #0c1a2e 30%, #122540 50%, #0c1a2e 70%, #060f1a 100%)',
-    glow1: 'rgba(11,33,55,0.6)', glow2: 'rgba(195,3,42,0.3)',
-    textColor: '#ffffff',
-    labelBg: 'rgba(195,3,42,0.12)', labelBorder: 'rgba(195,3,42,0.25)',
-  },
-}
+const BG_CODES = new Set([
+  'PL','PD','BL1','SA','FL1','CL','EL','DED','KL1','KL2','J1','J2','MLS',
+])
 
-const DEFAULT_THEME: LeagueTheme = {
-  primary: '#2563eb', accent: '#3b82f6',
-  bg: 'linear-gradient(135deg, #0a0e1a 0%, #101828 50%, #0a0e1a 100%)',
-  glow1: 'rgba(37,99,235,0.3)', glow2: 'rgba(239,68,68,0.2)',
-  textColor: '#60a5fa',
-  labelBg: 'rgba(96,165,250,0.08)', labelBorder: 'rgba(96,165,250,0.2)',
-}
+const NAVY = '#0d1728'
+const GREEN = '#9bec4b'
+
+// 가운데 은은한 정규분포(stats) 곡선 — data URI SVG로 img 처리 (Satori 안전)
+const CURVE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="760" height="170" viewBox="0 0 760 170"><path d="M0 158 C 190 158 300 24 380 24 C 460 24 570 158 760 158" fill="none" stroke="%23ccd4e0" stroke-width="3"/></svg>`
+    .replace(/%23/g, '#')
+)}`
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -124,147 +42,128 @@ export async function GET(request: NextRequest) {
   const awayLogo = searchParams.get('awaylogo') || ''
   const league = searchParams.get('league') || ''
   const leagueLogo = searchParams.get('leaguelogo') || ''
+  const date = searchParams.get('date') || ''
 
-  const theme = LEAGUE_THEMES[league] || DEFAULT_THEME
-  const siteLogoUrl = `${origin}/logo.svg`
+  // 배경 코드: leaguecode 우선, 없으면 league 이름으로 역매핑, 그래도 없으면 default
+  let code = (searchParams.get('leaguecode') || '').toUpperCase()
+  if (!BG_CODES.has(code)) code = NAME_TO_CODE[league] || ''
+  const bgCode = BG_CODES.has(code) ? code : 'default'
+  const bgUrl = `${origin}/og-bg/og-bg-${bgCode}.jpg`
+  const logoUrl = `${origin}/logo.svg`
+
+  const hasMatch = Boolean(homeLogo || awayLogo || leagueLogo)
 
   return new ImageResponse(
     (
       <div style={{
         width: '1200px', height: '630px',
-        display: 'flex', flexDirection: 'column',
-        background: theme.bg,
-        fontFamily: 'sans-serif',
-        position: 'relative', overflow: 'hidden',
+        display: 'flex', position: 'relative',
+        fontFamily: 'sans-serif', backgroundColor: '#0a0e1a',
       }}>
 
-        {/* ===== 배경 글로우 ===== */}
+        {/* ===== 배경 이미지 ===== */}
+        <img
+          src={bgUrl}
+          width={1200}
+          height={630}
+          style={{ position: 'absolute', top: 0, left: 0, width: '1200px', height: '630px', objectFit: 'cover' as const }}
+        />
+
+        {/* ===== 스크림(가독성) ===== */}
         <div style={{
-          position: 'absolute', top: '0', left: '0', width: '55%', height: '100%',
-          background: `radial-gradient(ellipse at 25% 50%, ${theme.glow1}, transparent 70%)`,
-          display: 'flex',
-        }} />
-        <div style={{
-          position: 'absolute', top: '0', right: '0', width: '55%', height: '100%',
-          background: `radial-gradient(ellipse at 75% 50%, ${theme.glow2}, transparent 70%)`,
-          display: 'flex',
+          position: 'absolute', top: 0, left: 0, width: '1200px', height: '630px', display: 'flex',
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.3) 18%, rgba(0,0,0,0.22) 50%, rgba(0,0,0,0.3) 82%, rgba(0,0,0,0.45) 100%)',
         }} />
 
-        {/* ===== 상단 MATCH PREVIEW ===== */}
+        {/* ===== 상단 TrendSoccer 로고 ===== */}
         <div style={{
-          position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)',
-          display: 'flex',
-          background: theme.labelBg, border: `1px solid ${theme.labelBorder}`,
-          borderRadius: '6px', padding: '5px 18px',
+          position: 'absolute', top: '36px', left: 0, width: '1200px',
+          display: 'flex', justifyContent: 'center', zIndex: 10,
+        }}>
+          <img src={logoUrl} width={250} height={62} style={{ width: '250px', height: '62px' }} />
+        </div>
+
+        {/* ===== 카드 ===== */}
+        <div style={{
+          position: 'absolute', top: '150px', left: '160px',
+          width: '880px', height: '438px',
+          display: 'flex', flexDirection: 'column',
+          borderRadius: '24px',
+          boxShadow: '0 22px 55px rgba(0,0,0,0.5)',
+          backgroundColor: '#ffffff',
           zIndex: 10,
         }}>
-          <span style={{
-            color: theme.textColor, fontSize: '13px', fontWeight: 700,
-            letterSpacing: '3px',
-          }}>
-            MATCH PREVIEW
-          </span>
-        </div>
 
-        {/* ===== 메인: 홈로고 | 리그 | 원정로고 ===== */}
-        <div style={{
-          display: 'flex', flex: 1,
-          alignItems: 'center', justifyContent: 'center',
-          position: 'relative',
-        }}>
-
-          {/* 홈팀 로고 — 거대 */}
+          {/* 상단 띠: 리그 엠블럼 + 리그명 */}
           <div style={{
-            position: 'absolute',
-            left: '-30px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '520px', height: '480px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            height: '84px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: NAVY,
+            borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
+            borderBottom: `4px solid ${GREEN}`,
           }}>
-            {homeLogo ? (
-              <img
-                src={homeLogo}
-                width={420}
-                height={420}
-                style={{
-                  objectFit: 'contain' as const,
-                  filter: 'drop-shadow(0 0 50px rgba(0,0,0,0.5))',
-                  opacity: 0.92,
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: '200px' }}>⚽</span>
-            )}
-          </div>
-
-          {/* 가운데: 리그 엠블럼 */}
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            gap: '14px',
-            zIndex: 10,
-          }}>
+            {leagueLogo ? (
+              <img src={leagueLogo} width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain' as const, marginRight: '18px' }} />
+            ) : null}
             <span style={{
-              color: theme.textColor, fontSize: '16px', fontWeight: 800,
-              letterSpacing: '3px', textTransform: 'uppercase' as const,
-              textShadow: '0 2px 10px rgba(0,0,0,0.7)',
-              textAlign: 'center',
+              color: '#ffffff', fontSize: '34px', fontWeight: 800,
+              letterSpacing: '4px', textTransform: 'uppercase' as const,
             }}>
-              {league}
+              {league || 'FOOTBALL'}
             </span>
-
-            {leagueLogo && (
-              <div style={{
-                width: '120px', height: '120px', borderRadius: '50%',
-                background: 'rgba(255,255,255,0.95)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 4px 40px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.15), 0 0 60px ${theme.primary}30`,
-              }}>
-                <img src={leagueLogo} width={78} height={78} style={{ objectFit: 'contain' as const }} />
-              </div>
-            )}
           </div>
 
-          {/* 원정팀 로고 — 거대 */}
+          {/* 가운데: 홈 | 날짜 | 원정 */}
           <div style={{
-            position: 'absolute',
-            right: '-30px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '520px', height: '480px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0 64px', position: 'relative',
           }}>
-            {awayLogo ? (
-              <img
-                src={awayLogo}
-                width={420}
-                height={420}
-                style={{
-                  objectFit: 'contain' as const,
-                  filter: 'drop-shadow(0 0 50px rgba(0,0,0,0.5))',
-                  opacity: 0.92,
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: '200px' }}>⚽</span>
-            )}
+            {/* stats 곡선 */}
+            <img src={CURVE} width={760} height={170} style={{ position: 'absolute', left: '60px', bottom: '14px', width: '760px', height: '170px', opacity: 0.6 }} />
+
+            {/* 홈 로고 */}
+            <div style={{ display: 'flex', width: '150px', height: '150px', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+              {homeLogo ? (
+                <img src={homeLogo} width={150} height={150} style={{ objectFit: 'contain' as const }} />
+              ) : (
+                <span style={{ fontSize: '90px' }}>⚽</span>
+              )}
+            </div>
+
+            {/* 가운데: 날짜 or VS */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+              <span style={{ color: NAVY, fontSize: '42px', fontWeight: 800, letterSpacing: '1px' }}>
+                {date || 'VS'}
+              </span>
+              <div style={{ display: 'flex', width: '66px', height: '5px', marginTop: '10px', backgroundColor: '#6cc93a', borderRadius: '3px' }} />
+            </div>
+
+            {/* 원정 로고 */}
+            <div style={{ display: 'flex', width: '150px', height: '150px', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+              {awayLogo ? (
+                <img src={awayLogo} width={150} height={150} style={{ objectFit: 'contain' as const }} />
+              ) : (
+                <span style={{ fontSize: '90px' }}>⚽</span>
+              )}
+            </div>
+          </div>
+
+          {/* 하단 띠 */}
+          <div style={{
+            height: '72px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: NAVY,
+            borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px',
+            borderTop: `4px solid ${GREEN}`,
+          }}>
+            <span style={{ color: '#ffffff', fontSize: '28px', fontWeight: 700, letterSpacing: '3px' }}>
+              PREDICTIONS · STATS · TRENDS
+            </span>
           </div>
         </div>
 
-        {/* ===== 하단: TrendSoccer 로고 ===== */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 0 16px 0',
-          position: 'relative', zIndex: 10,
-        }}>
-          <img
-            src={siteLogoUrl}
-            width={130}
-            height={32}
-            style={{ opacity: 0.35 }}
-          />
-        </div>
+        {/* 매치 정보가 전혀 없을 때(비매치 글)는 카드 가운데를 비워두되 로고/띠는 유지 */}
+        {!hasMatch ? (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', display: 'flex' }} />
+        ) : null}
       </div>
     ),
     {

@@ -1136,6 +1136,13 @@ function isSeasonStatsAbnormal(homeStats: any, awayStats: any): boolean {
 // ============================================
 // 썸네일 URL 생성 (OG 이미지용)
 // ============================================
+function ogDateStr(match: any): string {
+  if (!match.commence_time) return ''
+  const d = new Date(new Date(match.commence_time).getTime() + 9 * 60 * 60 * 1000)
+  const mon = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getUTCMonth()]
+  return `${d.getUTCDate()} ${mon}`
+}
+
 function generateThumbnailUrl(match: any, prediction: any, leagueInfo: any): string {
   // /api/blog/og-image 엔드포인트로 동적 OG 이미지 생성
   const params = new URLSearchParams({
@@ -1144,7 +1151,9 @@ function generateThumbnailUrl(match: any, prediction: any, leagueInfo: any): str
     homelogo: match.home_team_logo || `https://media.api-sports.io/football/teams/${match.home_team_id || 0}.png`,
     awaylogo: match.away_team_logo || `https://media.api-sports.io/football/teams/${match.away_team_id || 0}.png`,
     league: leagueInfo.nameEn,
+    leaguecode: match.league_code || '',
     leaguelogo: leagueInfo.leagueLogo,
+    date: ogDateStr(match),
     pick: prediction.recommendation.pick,
     grade: prediction.recommendation.grade,
     homeprob: Math.round(prediction.finalProb.home * 100).toString(),
