@@ -99,7 +99,8 @@ function Ko() {
         <H>제6조 (하트)</H>
         <Ul>
           <li>하트는 게임 안에서만 쓰는 이용권이며 현금이나 다른 재화로 바꾸거나, 다른 사람에게 양도·판매할 수 없습니다.</li>
-          <li>게임 안에서는 유료·무료 하트를 구분하지 않고 함께 사용합니다.</li>
+          <li>화면에는 하트 수가 합쳐서 표시되지만, 회사는 유료 하트를 구매별로 따로 기록합니다. 게임을 시작할 때는 <strong>무료 하트를 먼저</strong> 사용하고, 무료 하트가 없을 때 <strong>먼저 구매한 유료 하트부터</strong> 사용합니다.</li>
+          <li>구매한 유료 하트의 남은 수와 사용 수는 게임의 하트 화면 → 「구매 내역」에서 확인할 수 있습니다. 무료 하트는 유료 하트를 갖고 있어도 시간이 지나면 계속 채워집니다.</li>
           <li>하트는 서비스가 종료될 때까지 유효합니다. 우편함의 보상은 우편마다 표시된 기간이 지나면 받을 수 없습니다.</li>
         </Ul>
       </section>
@@ -109,12 +110,12 @@ function Ko() {
         <Ul>
           <li>유료 하트는 Google Play 결제 시스템으로 구매하며, 결제·영수증·결제 수단 관리는 Google Play 정책을 따릅니다.</li>
           <li>
-            이용자는 유료 하트를 구매한 날부터 <strong>7일 이내</strong>에, 구매한 하트를 사용하지 않은 경우 청약을 철회할 수 있습니다
-            (「전자상거래 등에서의 소비자보호에 관한 법률」 제17조).
+            이용자는 유료 하트를 구매한 날부터 <strong>7일 이내</strong>에 청약을 철회할 수 있습니다
+            (「전자상거래 등에서의 소비자보호에 관한 법률」 제17조). 일부를 사용한 경우에는 「구매 내역」에 표시된 남은 유료 하트만큼 철회할 수 있습니다.
           </li>
           <li>
-            유료 하트는 구매 즉시 지급되어 사용 가능한 상품이므로, <strong>구매한 하트를 사용한 경우</strong>에는 사용한 만큼 청약철회가 제한됩니다.
-            이 내용은 상점 화면에도 표시합니다.
+            유료 하트는 구매 즉시 지급되어 사용 가능한 상품이므로, <strong>이미 사용한 유료 하트</strong>는 청약철회가 제한됩니다.
+            보너스로 함께 받은 하트는 무료 하트로서 철회·환불 대상이 아니며, 철회 시 회수됩니다. 이 내용은 상점 화면에도 표시합니다.
           </li>
           <li>
             미성년자가 법정대리인의 동의 없이 결제한 경우, 본인 또는 법정대리인은 그 결제를 취소할 수 있습니다. 다만 미성년자가 성년자로 속이거나
@@ -244,7 +245,8 @@ function En() {
         <H>6. Hearts</H>
         <Ul>
           <li>Hearts are a limited license to use in-game features. They have no cash value, cannot be exchanged for money or other items, and cannot be transferred or sold.</li>
-          <li>Paid and free Hearts are used together in the Game without distinction.</li>
+          <li>The Game shows one combined number, but we keep a separate record of each purchase. When you start a game, <strong>free Hearts are used first</strong>; when you have none, <strong>your oldest Paid Hearts</strong> are used.</li>
+          <li>You can see how many Paid Hearts from each purchase are left or used under Hearts → “Purchases” in the Game. Free Hearts keep refilling over time even while you hold Paid Hearts.</li>
           <li>Hearts remain valid until the service ends. Rewards in the mailbox expire on the date shown on each mail.</li>
         </Ul>
       </section>
@@ -253,7 +255,7 @@ function En() {
         <H>7. Purchases, cancellations and refunds</H>
         <Ul>
           <li>Paid Hearts are sold through Google Play billing. Payments, receipts and payment methods are handled under Google Play’s policies.</li>
-          <li>Paid Hearts are delivered immediately when you buy them. Where your local law gives you a right to cancel, it may be limited or lost for Hearts you have already used.</li>
+          <li>Paid Hearts are delivered immediately when you buy them. Where your local law gives you a right to cancel, it may be limited or lost for Paid Hearts you have already used; unused Paid Hearts shown under “Purchases” can be cancelled within that period. Bonus Hearts are free items and are removed if the purchase is cancelled.</li>
           <li>EEA/UK users: by asking for immediate delivery of digital content you acknowledge that you may lose your 14-day right of withdrawal once delivery has started.</li>
           <li>If you were charged but did not receive your Hearts, or there is another error on our side, we will deliver the Hearts or refund you.</li>
           <li>To request a refund, use Google Play’s refund request or email us with your Google Play order number (starts with “GPA”). Refunds are made to the original payment method under Google Play’s policies.</li>
