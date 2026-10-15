@@ -3,7 +3,7 @@
 //   ko: https://www.trendsoccer.com/apps/tapchamps/privacy
 //   en: https://www.trendsoccer.com/en/apps/tapchamps/privacy
 
-const EFFECTIVE = '2026-10-15'
+const EFFECTIVE = '2026-10-16'
 const EMAIL = 'trikilab2025@gmail.com'
 
 export default async function TapChampsPrivacyPage({
@@ -77,8 +77,9 @@ function Ko() {
         <H>1. 처리하는 정보와 목적</H>
         <Ul>
           <li>
-            <strong>게임 기록 (기기에 저장)</strong> — 게임별 최고 기록, 플레이 횟수, 하트 수, 설정(언어·소리).
-            이용자의 기기 안에만 저장되며, 앱을 삭제하면 함께 삭제됩니다.
+            <strong>게임 기록 (기기 + 클라우드 저장)</strong> — 게임별 최고 기록, 플레이 횟수, 하트 수, 트로피 보상·옷, 설정(언어·소리), 결제 처리 기록(중복 지급 방지용 결제 토큰).
+            기기 안에 암호화해 저장하며, Google Play 게임즈에 로그인한 경우 같은 내용을 Google Play 게임즈 「저장된 게임」(이용자 본인의 Google 계정 저장공간)에 백업해
+            앱을 다시 설치하거나 기기를 바꿔도 이어서 할 수 있게 합니다. 백업은 Google 계정 설정에서 앱 데이터를 삭제하여 지울 수 있습니다.
           </li>
           <li>
             <strong>나라 대항전 기록 (서버에 저장)</strong> — 앱이 자동으로 만드는 익명 식별값, 국가 코드, 트로피 수, 게임별 최고 기록.
@@ -208,8 +209,11 @@ function En() {
         <H>1. Information we process and why</H>
         <Ul>
           <li>
-            <strong>Game data (stored on your device)</strong> — best score and play count for each game, hearts, settings (language, sound).
-            It stays on your device and is deleted when you uninstall the App.
+            <strong>Game data (on your device and in your cloud save)</strong> — best score and play count for each game, hearts, trophy rewards and outfits,
+            settings (language, sound) and purchase processing records (purchase tokens used to prevent double delivery). It is stored encrypted on
+            your device and, if you are signed in to Google Play Games, backed up to Google Play Games “Saved Games” (storage in your own Google
+            Account) so you can continue after reinstalling or changing devices. You can delete the backup by removing the app’s data in your Google
+            Account settings.
           </li>
           <li>
             <strong>Country Battle data (stored on our server)</strong> — an anonymous ID created automatically by the App, a country code,
