@@ -3,7 +3,7 @@
 //   ko: https://www.trendsoccer.com/apps/tapchamps/privacy
 //   en: https://www.trendsoccer.com/en/apps/tapchamps/privacy
 
-const EFFECTIVE = '2026-10-16'
+const EFFECTIVE = '2026-10-17'
 const EMAIL = 'trikilab2025@gmail.com'
 
 export default async function TapChampsPrivacyPage({
@@ -94,6 +94,11 @@ function Ko() {
             <strong>광고 관련 정보</strong> — 광고식별자(ADID), IP 주소, 기기 모델·OS 버전, 광고 노출·클릭 기록, 진단 정보.
             목적: 보상형 광고(하트 받기·이어하기) 게재, 광고 성과 측정, 부정 이용 방지.
           </li>
+          <li>
+            <strong>앱 이용 기록과 오류 정보</strong> — 앱 인스턴스 ID, 기기 모델·OS 버전, 언어·국가 설정, 게임 시작·종료·점수·단계,
+            화면 이용(상점·랭킹 열기 등), 광고 시청 여부, 앱 비정상 종료 기록과 오류 내용.
+            목적: 게임 난이도·화면 개선, 서비스 안정성 확보(오류 수정). 이름·연락처는 수집하지 않습니다.
+          </li>
         </Ul>
       </section>
 
@@ -113,6 +118,10 @@ function Ko() {
           <li>
             <strong>Google LLC (AdMob, 사용자 메시지 플랫폼)</strong> — 이전국가: 미국 / 항목: 광고식별자, IP 주소, 기기 정보,
             광고 이용 기록 / 목적: 광고 게재·측정, 동의 관리 / 보유 기간: Google 정책에 따름
+          </li>
+          <li>
+            <strong>Google LLC (Firebase Analytics, Firebase Crashlytics)</strong> — 이전국가: 미국 / 항목: 앱 인스턴스 ID, 기기 정보,
+            앱 이용 기록, 오류·비정상 종료 기록 / 목적: 이용 통계, 오류 분석 / 보유 기간: 이용 기록 최대 14개월, 오류 기록 90일
           </li>
         </Ul>
         <P>
@@ -228,6 +237,11 @@ function En() {
             <strong>Advertising data</strong> — advertising ID, IP address, device model and OS version, ad impressions and clicks, diagnostics.
             Purpose: showing rewarded ads (extra hearts, continue), measuring ad performance, preventing fraud.
           </li>
+          <li>
+            <strong>App usage and error data</strong> — app instance ID, device model and OS version, language and country settings, game starts,
+            ends, scores and stages, screen usage (e.g. opening the shop or rankings), whether ads were watched, crash logs and error details.
+            Purpose: improving game difficulty and screens, keeping the App stable (fixing errors). We do not collect your name or contact details.
+          </li>
         </Ul>
       </section>
 
@@ -246,6 +260,10 @@ function En() {
           <li>
             <strong>Google LLC (AdMob, User Messaging Platform)</strong> — Country: United States / Data: advertising ID, IP address, device
             information, ad interaction data / Purpose: serving and measuring ads, consent management / Retention: according to Google&apos;s policy
+          </li>
+          <li>
+            <strong>Google LLC (Firebase Analytics, Firebase Crashlytics)</strong> — Country: United States / Data: app instance ID, device
+            information, app usage, error and crash logs / Purpose: usage statistics, error analysis / Retention: usage data up to 14 months, crash data 90 days
           </li>
         </Ul>
         <P>
